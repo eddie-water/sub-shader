@@ -1,3 +1,6 @@
 class View:
     def __init__(self) -> None:
-        print("Hello view")
+        pass
+
+    def start(self) -> None:
+        pass
