@@ -13,14 +13,16 @@ class Plotter:
         self.figure, self.axis = plt.subplots()
 
         # TODO figure out why do I need the ","
-        self.line, = self.axis.plot(
+        (self.line,) = self.axis.plot(
             self.x_data,
             self.y_data,
             animated = True)
 
+        plt.show(block = False)
+        plt.pause(0.1)
+
         self.bm = BlitManager(self.figure.canvas, [self.line])
 
-    # TODO why isn't this drawing anything?
     def update(self) -> None:
         self.line.set_ydata(self.y_data)
         self.bm.update()
