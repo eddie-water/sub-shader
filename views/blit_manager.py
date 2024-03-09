@@ -1,3 +1,5 @@
+# From https://matplotlib.org/stable/users/explain/animations/blitting.html
+
 class BlitManager:
     def __init__(self, canvas, animated_artists=()):
         """
@@ -22,14 +24,15 @@ class BlitManager:
         self._artists = []
 
         for a in animated_artists:
-            print(a)
             self.add_artist(a)
 
         # grab the background on every draw
         self.cid = canvas.mpl_connect("draw_event", self.on_draw)
 
     def on_draw(self, event):
-        """Callback to register with 'draw_event'."""
+        """
+        Callback to register with 'draw_event'.
+        """
         cv = self.canvas
         if event is not None:
             if event.canvas != cv:
@@ -56,13 +59,17 @@ class BlitManager:
         self._artists.append(art)
 
     def _draw_animated(self):
-        """Draw all of the animated artists."""
+        """
+        Draw all of the animated artists.
+        """
         fig = self.canvas.figure
         for a in self._artists:
             fig.draw_artist(a)
 
     def update(self):
-        """Update the screen with animated artists."""
+        """
+        Update the screen with animated artists.
+        """
         cv = self.canvas
         fig = cv.figure
         # paranoia in case we missed the draw event,
