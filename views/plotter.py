@@ -24,5 +24,6 @@ class Plotter:
         self.bm = BlitManager(self.figure.canvas, [self.line])
 
     def update(self) -> None:
+        self.y_data = 1.001*self.y_data
         self.line.set_ydata(self.y_data)
         self.bm.update()
