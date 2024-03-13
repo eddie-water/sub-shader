@@ -6,6 +6,11 @@ class Controller:
         self.model = model
         self.view = view
 
-    def start(self) -> None:
-        self.model.start()
-        self.view.start()
+    def run(self) -> None:
+        try:
+            while(1):
+                data = self.model.audio_task()
+                self.view.plot_task(data)
+
+        except Exception as e:
+                print("Exception: ", e)

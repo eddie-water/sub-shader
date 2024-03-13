@@ -6,7 +6,7 @@ def main():
     model = Model()
     view = View()
     controller = Controller(model, view)
-    controller.start()
+    controller.run()
 
 if __name__ == "__main__":
      main()
