@@ -12,7 +12,6 @@ class FileOperations:
         self.file_path = file_path
         self.pos = 0
 
-    # TODO this was really only used for debugging, decide whether it's worth keeping or not
     def display_file_info(self) -> None:
         with sf.SoundFile(self.file_path, 'r') as f:
             print("Information about the file:", self.file_path)
