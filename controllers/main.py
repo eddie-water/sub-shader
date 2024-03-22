@@ -1,3 +1,4 @@
+import time
 from models.main import Model
 from views.main import View
 
@@ -11,6 +12,7 @@ class Controller:
             while(1):
                 data = self.model.audio_task()
                 self.view.plot_task(data)
+                time.sleep(.05)
 
         except Exception as e:
                 print("Exception: ", e)

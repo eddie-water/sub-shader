@@ -1,17 +1,36 @@
 import numpy as np
+import soundfile as sf
+
+# TODO figure out where to maintain FRAME_SIZE and CHUNK_SIZE in the view
+# TODO be consistent, let's pick what to call it frames, chunks, window, etc
+FRAME_SIZE = 4096
+
+# TODO HALF_FRAME when implementing sliding window
 
 class FileOperations:
     def __init__(self, file_path: str) -> None:
         self.file_path = file_path
-        self.sample_rate, self.data = wavfile.read(self.file_path)
+        self.pos = 0
 
-        self.num_channels = self.data.shape[1]
-        length = self.data.shape[0] / self.sample_rate
+    # TODO this was really only used for debugging, decide whether it's worth keeping or not
+    def display_file_info(self) -> None:
+        with sf.SoundFile(self.file_path, 'r') as f:
+            print("Information about the file:", self.file_path)
+            print("mode", f.mode)
+            print("samplerate", f.samplerate)
+            print("frames", f.frames)
+            print("channels", f.channels)
+            print("format", f.format)
+            print("subtype", f.subtype)
+            print("format info", f.format_info)
+            print("extra info", f.extra_info)
+            print("seekable()", f.seekable())
 
-        time = np.linspace(0., length, self.data.shape[0])
+    def get_chunk(self) -> np.ndarray:
+        with sf.SoundFile(self.file_path, 'r') as f:
+            f.seek(self.pos)
+            self.data = f.read(FRAME_SIZE)
+            self.pos = f.tell()
+            self.data = self.data[:, 0]
 
-        print("Reading", self.file_path) 
-        print(self.file_path, "has", self.num_channels, "channels")
-
-    def get_chunk(self) -> int:
-        pass
+        return self.data
