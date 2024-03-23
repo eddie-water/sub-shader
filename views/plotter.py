@@ -3,11 +3,8 @@ import matplotlib.pyplot as plt
 from .blit_manager import BlitManager
 
 class Plotter:
-
-    # TODO: pass in chunk size to plotter object
-    CHUNK_SIZE = 4096 / 2
-
-    def __init__(self) -> None:
+    def __init__(self, frame_size: int) -> None:
+        self.x_axis_length = frame_size / 2
 
         # Create figure and axis from plot
         self.figure, self.axis = plt.subplots(
@@ -16,7 +13,7 @@ class Plotter:
 
         # Stylize the plot and prevent it from hogging the program
         plt.style.use('_mpl-gallery')
-        plt.axis([0, Plotter.CHUNK_SIZE, -0.5, 0.5])
+        plt.axis([0, self.x_axis_length, 0, 0.25])
         plt.show(block = False)
         plt.pause(0.1)
 
@@ -25,7 +22,7 @@ class Plotter:
             0,
             0,
             animated = True)
-        self.line.set_xdata(np.arange(0, Plotter.CHUNK_SIZE, 1))
+        self.line.set_xdata(np.arange(0, self.x_axis_length, 1))
 
         # TODO: explore the relationship between the canvas, renderer, and artist
         self.bm = BlitManager(self.figure.canvas, [self.line])
