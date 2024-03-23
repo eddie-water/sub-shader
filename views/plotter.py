@@ -5,7 +5,7 @@ from .blit_manager import BlitManager
 class Plotter:
 
     # TODO: pass in chunk size to plotter object
-    CHUNK_SIZE = 4096
+    CHUNK_SIZE = 4096 / 2
 
     def __init__(self) -> None:
 
@@ -16,7 +16,7 @@ class Plotter:
 
         # Stylize the plot and prevent it from hogging the program
         plt.style.use('_mpl-gallery')
-        plt.axis([0, Plotter.CHUNK_SIZE, -1, 1])
+        plt.axis([0, Plotter.CHUNK_SIZE, -0.5, 0.5])
         plt.show(block = False)
         plt.pause(0.1)
 

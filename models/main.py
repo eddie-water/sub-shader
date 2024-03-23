@@ -1,9 +1,6 @@
 # Number of samples per frame
 FRAME_SIZE = 4096
 
-# Percentage of frame overlap
-OVERLAP = 50.0
-
 from .audio_input import AudioInput
 from .fft_machine import FftMachine
 import numpy as np
@@ -14,12 +11,13 @@ class Model:
 
         self.audio_input = AudioInput(
             path = self.audio_file,
-            frame_size = FRAME_SIZE,
-            overlap = OVERLAP)
+            frame_size = FRAME_SIZE)
 
-        self.fft_machine = FftMachine()
+        self.fft_machine = FftMachine(
+            frame_size = FRAME_SIZE,
+            sample_rate = self.audio_input.sample_rate)
 
     # Sliding Discrete Fourier Transform
-    def sdft(self) -> np.ndarray:
-        audio_data = self.audio_input.get_next_frame()
-        return self.fft_machine.process(audio_data)
+    def perform_sdft(self) -> np.ndarray:
+        audio_data = self.audio_input.get_frame()
+        return self.fft_machine.compute_fft(audio_data)
