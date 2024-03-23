@@ -4,13 +4,15 @@ from .blit_manager import BlitManager
 
 class Plotter:
 
-    # TODO pass in chunk size to plotter object
+    # TODO: pass in chunk size to plotter object
     CHUNK_SIZE = 4096
 
     def __init__(self) -> None:
 
         # Create figure and axis from plot
-        self.figure, self.axis = plt.subplots(figsize=(7,5), layout = 'constrained')
+        self.figure, self.axis = plt.subplots(
+            figsize = (7,5), 
+            layout = 'constrained')
 
         # Stylize the plot and prevent it from hogging the program
         plt.style.use('_mpl-gallery')
@@ -25,7 +27,7 @@ class Plotter:
             animated = True)
         self.line.set_xdata(np.arange(0, Plotter.CHUNK_SIZE, 1))
 
-        # TODO explore the relationship between the canvas, renderer, and artist
+        # TODO: explore the relationship between the canvas, renderer, and artist
         self.bm = BlitManager(self.figure.canvas, [self.line])
 
     def update(self, data: np.ndarray) -> None:
