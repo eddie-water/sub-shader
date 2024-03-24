@@ -10,8 +10,6 @@ class Controller:
     def run(self) -> None:
         try:
             while(1):
-                # TODO: Implement some kind of timing bench mark around these
-                # two operations
                 fft_data = self.model.perform_sdft()
                 self.view.plot(fft_data)
                 time.sleep(.05)
