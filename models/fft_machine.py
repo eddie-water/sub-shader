@@ -1,13 +1,11 @@
 import numpy as np
 from .fourier import Fourier
 
-# TODO: come up with a more fitting class name
 class FftMachine:
     def __init__(self, frame_size: int, sample_rate: int):
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
-        # TODO: explore windowing options (Hamming?)
         self.window = np.hanning(frame_size)
         self.fourier = Fourier(sample_rate = self.sample_rate)
 

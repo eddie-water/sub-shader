@@ -15,7 +15,6 @@ class Fourier:
 
         self.fourier = scipy.fft.rfft(signal)
         self.amplitudes = 2*np.abs(self.fourier)/len(signal)
-        
-        # TODO: is it okay to just throw away the last bin?
+
         size = self.amplitudes.size - 1
         return self.amplitudes[0:size]

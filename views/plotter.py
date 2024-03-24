@@ -24,7 +24,6 @@ class Plotter:
             animated = True)
         self.line.set_xdata(np.arange(0, self.x_axis_length, 1))
 
-        # TODO: explore the relationship between the canvas, renderer, and artist
         self.bm = BlitManager(self.figure.canvas, [self.line])
 
     def update(self, data: np.ndarray) -> None:

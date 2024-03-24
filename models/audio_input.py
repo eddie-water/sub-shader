@@ -16,7 +16,6 @@ class AudioInput:
         self.overlap = OVERLAP / 100.0
         self.slide_amount = int(self.frame_size * self.overlap)
 
-    # TODO: investigate latency from opening/closing the file descriptor often
     def get_frame(self) -> np.ndarray:
         with sf.SoundFile(self.file_path, 'r') as f:
             # Read one frame's worth of audio sample
