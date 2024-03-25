@@ -13,8 +13,8 @@ class Fourier:
             len(signal), 
             d = self.time_step)
 
+        # rfft returns (n/2)+1 array
         self.fourier = scipy.fft.rfft(signal)
         self.amplitudes = 2*np.abs(self.fourier)/len(signal)
 
-        size = self.amplitudes.size - 1
-        return self.amplitudes[0:size]
+        return self.amplitudes

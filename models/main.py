@@ -5,7 +5,7 @@ import numpy as np
 class Model:
     def __init__(self, frame_size: int) -> None:
         self.frame_size = frame_size
-        self.audio_file = "models/audio_files/c_octaves.wav"
+        self.audio_file = "models/audio_files/zionsville.wav"
 
         self.audio_input = AudioInput(
             path = self.audio_file,
