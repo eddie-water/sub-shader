@@ -22,7 +22,7 @@ class AudioInput:
             self.data = f.read(self.frame_size)
             self.data = self.data[:, 0]
 
-            # Slide frame 
+            # Slide the frame 
             self.pos = f.tell() - self.slide_amount
 
         return self.data
