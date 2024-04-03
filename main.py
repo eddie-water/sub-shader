@@ -4,7 +4,9 @@ from controllers.main import Controller
 
 def main():
     model = Model()
-    view = View()
+    config_data = model.get_config_data()
+    view = View(config_data)
+
     controller = Controller(model, view)
     controller.run()
 

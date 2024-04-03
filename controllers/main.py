@@ -10,8 +10,8 @@ class Controller:
     def run(self) -> None:
         try:
             while(1):
-                data = self.model.audio_task()
-                self.view.plot_task(data)
+                fft_data = self.model.sliding_fft()
+                self.view.plot(fft_data)
                 time.sleep(.05)
 
         except Exception as e:

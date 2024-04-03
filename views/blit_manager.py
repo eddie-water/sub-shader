@@ -5,10 +5,10 @@ class BlitManager:
         """
         Description:
         This class implements blitting, a standard technique in raster graphics
-        that improves plotting performance. Blitting speeds up repetitive drawing
-        byy rendering all non-changing graphic elements into a background image
-        once. Then for every draw, only the changing elements need to be redrawn
-        onto the background
+        that improves plotting performance. Blitting speeds up repetitive 
+        drawing by rendering all non-changing graphic elements into a background 
+        image once. Then for every draw, only the changing elements need to be 
+        redrawn onto the background
 
         Parameters:
         canvas : FigureCanvasAgg
