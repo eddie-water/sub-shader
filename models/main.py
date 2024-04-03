@@ -14,7 +14,7 @@ class Model:
             path = self.audio_file,
             frame_size = self.frame_size)
 
-        self.sample_rate = self.audio_input.sample_rate
+        self.sample_rate = self.audio_input.get_sample_rate()
 
         self.fft_machine = FftMachine(
             frame_size = self.frame_size,
@@ -27,6 +27,6 @@ class Model:
             sample_rate = self.sample_rate)
 
     # Sliding Discrete Fourier Transform
-    def perform_sdft(self) -> np.ndarray:
+    def sliding_fft(self) -> np.ndarray:
         audio_data = self.audio_input.get_frame()
         return self.fft_machine.compute_fft(audio_data)

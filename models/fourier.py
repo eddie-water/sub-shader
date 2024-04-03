@@ -10,7 +10,7 @@ class Fourier:
 
     def compute_amplitude(self, signal: np.ndarray) -> np.ndarray:
         self.frequencies = scipy.fft.rfftfreq(
-            len(signal), 
+            n = len(signal), 
             d = self.time_step)
 
         # rfft returns (n/2)+1 array

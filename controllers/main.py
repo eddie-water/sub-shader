@@ -10,7 +10,7 @@ class Controller:
     def run(self) -> None:
         try:
             while(1):
-                fft_data = self.model.perform_sdft()
+                fft_data = self.model.sliding_fft()
                 self.view.plot(fft_data)
                 time.sleep(.05)
 

@@ -6,7 +6,7 @@ class FftMachine:
         self.sample_rate = sample_rate
         self.frame_size = frame_size
 
-        self.window = np.hanning(frame_size)
+        self.window = np.hanning(M = self.frame_size)
         self.fourier = Fourier(sample_rate = self.sample_rate)
 
     def compute_fft(self, data: np.ndarray) -> np.ndarray:

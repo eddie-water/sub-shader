@@ -9,7 +9,6 @@ class AudioInput:
         # File attributes
         self.file_path = path
         self.pos = 0
-        self.sample_rate = self._get_sample_rate()
 
         # Sliding frame attributes
         self.frame_size = frame_size
@@ -28,7 +27,7 @@ class AudioInput:
 
         return self.data
 
-    def _get_sample_rate(self) -> int:
+    def get_sample_rate(self) -> int:
         with sf.SoundFile(self.file_path, 'r') as f:
             return f.samplerate
 
