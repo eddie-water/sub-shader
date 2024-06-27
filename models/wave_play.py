@@ -47,6 +47,7 @@ def create_mixed_signal(time, sinusoid_list, length, sample_rate):
 
     return (signal[0] + signal[1] + signal[2])
 
+# TODO moves this to example file
 if __name__ == "__main__":
 
     # The audio was sampled at 44100 Hz
