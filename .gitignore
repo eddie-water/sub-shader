@@ -1,4 +1,8 @@
-*.txt
-*.pyc
-documentation/*
+# VS Code Debug Files
 .vscode/*
+
+# Virtual Environment
+.venv/*
+
+# Compiled Python
+*.pyc

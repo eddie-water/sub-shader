@@ -1,0 +1,6 @@
+numpy==2.0.0
+scipy==1.14.0
+PyWavelets==1.6.0
+matplotlib==3.9.0
+# TODO replace matplotlib with PyQt5==5.15.11
+Soundfile==0.12.
