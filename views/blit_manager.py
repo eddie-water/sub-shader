@@ -72,15 +72,19 @@ class BlitManager:
         """
         cv = self.canvas
         fig = cv.figure
+
         # paranoia in case we missed the draw event,
         if self._bg is None:
             self.on_draw(None)
         else:
             # restore the background
             cv.restore_region(self._bg)
+
             # draw all of the animated artists
             self._draw_animated()
+
             # update the GUI state
             cv.blit(fig.bbox)
+
         # let the GUI event loop process anything it has to do
         cv.flush_events()
