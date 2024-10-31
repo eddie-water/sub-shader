@@ -2,34 +2,43 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pywt
 
-def create_mixed_signal(time, sinusoid_list):
+class SignalGenerator():
+    def __init__(self, sample_rate: float) -> None:
+        self.sample_rate = sample_rate
+        self.sample_period = 1.0 / self.sample_rate
+        pass
 
-    num_samples = time.size
+    def create_mixed_signal(time: np.ndarray, sinusoid_list) -> np.ndarray:
+        """
+        Keyword Argument:
+            time: the 
+        """
+        num_samples = time.size
 
-    signal = np.zeros(num_samples)
+        signal = np.zeros(num_samples)
 
-    for start, end, freq in sinusoid_list:
-        n = time
+        for start, end, freq in sinusoid_list:
+            n = time
 
-        # Create impulse using start and end %
-        start = n[int((start/100.0)*num_samples)]
-        end = n[int((end/100.0)*num_samples) - 1]
+            # Create impulse using start and end %
+            start = n[int((start/100.0)*num_samples)]
+            end = n[int((end/100.0)*num_samples) - 1]
 
-        # Creates a pulse mask
-        mask = []
-        for j in n:
-            if ((j >= start) and (j <= end)):
-                mask.append(1)
-            else:
-                mask.append(0)
-        mask = np.array(mask)
+            # Creates a pulse mask
+            mask = []
+            for j in n:
+                if ((j >= start) and (j <= end)):
+                    mask.append(1)
+                else:
+                    mask.append(0)
+            mask = np.array(mask)
 
-        # Apply mask
-        n = n * mask
+            # Apply mask
+            n = n * mask
 
-        signal += np.sin(2*np.pi*freq*n)
+            signal += np.sin(2*np.pi*freq*n)
 
-    return signal
+        return signal
 
 # TODO moves this to example file
 if __name__ == "__main__":
@@ -40,11 +49,11 @@ if __name__ == "__main__":
     # print("The Sampling Frequency:", SAMPLING_FREQUENCY, "Hz and Sampling Period", SAMPLING_PERIOD, "seconds")
 
     # How long the audio is in seconds
-    AUDIO_LENGTH_SECONDS = 1
+    AUDIO_LENGTH_SECONDS = .1
 
     # When using numpy.linspace, you need to know number of steps
-    ta = np.linspace(0, AUDIO_LENGTH_SECONDS, AUDIO_LENGTH_SECONDS*SAMPLING_FREQUENCY)
-    ta_sample_period = np.diff(ta).mean()
+    # ta = np.linspace(0, AUDIO_LENGTH_SECONDS, AUDIO_LENGTH_SECONDS*SAMPLING_FREQUENCY)
+    # ta_sample_period = np.diff(ta).mean()
 
     # When using numpy.arange, you need to know step_size
     tb = np.arange(0, AUDIO_LENGTH_SECONDS, SAMPLING_PERIOD)
