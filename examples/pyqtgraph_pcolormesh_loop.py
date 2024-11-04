@@ -84,14 +84,15 @@ PColorMeshItem
     autoLevels  - autoscales the colormap levels when setData() is called
 """
 # TODO NOW why this equation?
-c = np.exp(-(x))**2/1000
+# c = np.exp(-(x*x_range))**2/1000
+c = np.sin(2*np.pi*x)
 c = c[:-1,:-1]
 
 colorMap        = pg.colormap.get('magma')
 edgeColors      = None
 antialiasing    = False 
 # TODO SOON describe the explicit relationship between autoscaling and levels and etc
-levels          = None
+levels          = (-1, 1)
 autoLevels      = False
 
 # Autoscaling is performed just once, when color data is first supplied
@@ -131,10 +132,10 @@ plot.addItem(textBox)
 """
 Wave Parameters
 
-TODO NOW clean up these wave parameters
+TODO NEXT clean up these wave parameters
 """
 wave_amplitude  = 3
-wave_speed      = 0.16
+wave_speed      = 0.02
 wave_length     = 10
 color_speed     = 0.32
 color_noise_freq = 0.05
@@ -147,9 +148,11 @@ def updateData():
     global i
 
     # Use x for horizontal change, y for vertical change
-    # TODO NOW fix color wave so its periodic with the the x range 2*pi*x_range?
-    # I think?
-    c = np.exp(-(x-np.cos(i*color_speed)*x_range)**2/1000)
+    # TODO NOW Modulate the sine wave with a walking gaussian
+    old_gauss = np.exp(-(x - x_range*np.cos(i*color_speed))**2/1000)
+    sin = np.sin((2 * np.pi / x_range) * x - i)
+
+    c = sin
     c = c[:-1,:-1]
 
     # Update the color plot
