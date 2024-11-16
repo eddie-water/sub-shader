@@ -148,11 +148,14 @@ def updateData():
     global i
 
     # Use x for horizontal change, y for vertical change
-    # TODO NOW Modulate the sine wave with a walking gaussian
+    # TODO NOW make the gaussian curve walk back and forth using sine
     old_gauss = np.exp(-(x - x_range*np.cos(i*color_speed))**2/1000)
-    sin = np.sin((2 * np.pi / x_range) * x - i)
+    sin_moving = np.sin((2 * np.pi / x_range) * x - i)
 
-    c = sin
+    sin = x_range * np.sin((2 * np.pi * i))
+    gauss = np.exp(-(x - sin)**2/1000)
+
+    c = gauss
     c = c[:-1,:-1]
 
     # Update the color plot
