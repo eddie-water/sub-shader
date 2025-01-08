@@ -14,7 +14,9 @@ Audio Input, Characteristics and Wavelet Object
 sampling_rate = 44100.0
 sampling_period = (1.0 / sampling_rate)
 file_path = "models/audio_files/zionsville.wav"
-frame_size = 4096
+
+# TODO LATER - determine what is an appropriate window size
+frame_size = 1024
 
 audio_input = AudioInput(path = file_path, frame_size = frame_size)
 
