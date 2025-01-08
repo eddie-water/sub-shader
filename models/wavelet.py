@@ -38,7 +38,7 @@ class Wavelet():
         f_norm = self.freq / SAMPLING_FREQUENCY # TODO add comment why we do this
         self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
 
-    def get_result_shape(self) -> np.ndarray.shape:
+    def get_shape(self) -> np.ndarray.shape:
         """Computes the shape of the resultant CWT data
         
         Returns:

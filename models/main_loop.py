@@ -1,3 +1,5 @@
+# TODO NOW figure out where I left off 
+# TODO NOW am I working in model/main or model/main_loop
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore

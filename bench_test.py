@@ -1,6 +1,11 @@
 import time
 import numpy as np
 
+# pyqtgraph dependencies
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore
+from .utils import FrameCounter # TODO SOON mvdir somewhere better
+
 from models.audio_input import AudioInput
 from models.wavelet import Wavelet
 from views.plotter import Plotter 
@@ -10,10 +15,12 @@ NUM_ITERATIONS = 10
 
 FILE_PATH = "models/audio_files/zionsville.wav"
 
+# TODO NOW > NEXT > SOON > LATER
+
 class Benchtest():
     def __init__(self) -> None:
-        self.sample_frequency = 44100.0
-        self.sample_period = (1 / self.sample_frequency)
+        self.sampling_rate = 44100.0 # Hz
+        self.sample_period = (1 / self.sampling_rate)
 
         self.frame_size = 4096
 
@@ -22,14 +29,16 @@ class Benchtest():
         self.t_total = 0
 
         # Setup
-        self.audio_input = AudioInput(path= FILE_PATH,
-                                      frame_size= self.frame_size)
+        self.audio_input = AudioInput(
+            path= FILE_PATH,
+            frame_size= self.frame_size)
 
         self.wavelet = Wavelet(frame_size= self.frame_size)
 
-        self.plotter = Plotter(data_shape= self.wavelet.get_result_shape(),
-                               sample_frequency= self.sample_frequency,
-                               plot_name= "Bench Testing Zionsville")
+        self.plotter = Plotter(
+            data_shape= self.wavelet.get_shape(),
+            sampling_rate= self.sampling_rate,
+            plot_name= "Bench Testing Zionsville")
 
     def main(self):
         """
