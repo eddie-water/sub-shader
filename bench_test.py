@@ -1,6 +1,11 @@
 import time
 import numpy as np
 
+# pyqtgraph dependencies
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore
+from .utils import FrameCounter # TODO SOON mvdir somewhere better
+
 from models.audio_input import AudioInput
 from models.wavelet import Wavelet
 from views.plotter import Plotter 

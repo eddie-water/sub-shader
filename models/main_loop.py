@@ -1,3 +1,5 @@
+# TODO NOW figure out where I left off 
+# TODO NOW am I working in model/main or model/main_loop
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
@@ -12,7 +14,9 @@ Audio Input, Characteristics and Wavelet Object
 sampling_rate = 44100.0
 sampling_period = (1.0 / sampling_rate)
 file_path = "models/audio_files/zionsville.wav"
-frame_size = 4096
+
+# TODO LATER - determine what is an appropriate window size
+frame_size = 1024
 
 audio_input = AudioInput(path = file_path, frame_size = frame_size)
 
@@ -66,7 +70,7 @@ x_range = data_shape[1]
 y_range = data_shape[0]
 
 # Increasing density increases processing workload
-# TODO SOON dont think I need density, delete this for now
+# TODO NOW dont think I need density, delete this for now
 density = 1 
 x_n = x_range * density
 y_n = y_range * density
@@ -74,10 +78,16 @@ y_n = y_range * density
 x = np.linspace(1, x_range, x_n)
 x = np.repeat(x, y_n)
 x = x.reshape(y_n, x_n)
+x = x[::, ::64]
+x_range = x.shape[1]
 
+# TODO NOW fix the y rangeuyh+
 y = np.linspace(1, y_range, y_n)
-y = np.tile(y, x_n)
-y = y.reshape(y_n, x_n)
+y = np.repeat(y, x_n)
+
+# TODO NEXT reshape using x_shape, not x_n
+y = y.reshape(x_n, y_n)
+y = y[::64, ::]
 
 # Plot Boundaries
 x_min = np.min(x)
@@ -164,10 +174,13 @@ Update Plot
 def update_plot():
     audio_data = audio_input.get_frame()
     coefs = wavelet.compute_cwt(audio_data)
-    # z = coefs[:-1,:-1]
+    coefs = coefs[::, ::64]
+    coefs = coefs[:,:-1]
+
+    # TODO NOW Downsample x y and coefs to have a total size of ~10k points
 
     # Update the color plot
-    pcmi.setData(x, y, coefs)
+    pcmi.setData(coefs)
 
     framecnt.update()
 

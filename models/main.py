@@ -27,7 +27,7 @@ class Model:
     def get_config_data(self) -> dict:
         return dict(
             song_name = self.audio_file.split("/")[-1].removesuffix(".wav"),
-            data_shape = self.wavelet.get_result_shape(),
+            data_shape = self.wavelet.get_shape(),
             sample_rate = self.sample_rate)
 
     # Short Time Fourier Transform aka Sliding Window FFT
