@@ -1,6 +1,7 @@
-numpy==2.0.0
+# TODO figure out why I'm using Python 3.8?
+numpy==1.24.4
 scipy==1.14.0
-PyWavelets==1.6.0
+PyWavelets==1.4.1
 matplotlib==3.9.0
 # TODO replace matplotlib with PyQt5==5.15.11
 Soundfile==0.12.
