@@ -67,11 +67,8 @@ Create two sets of 2D arrays, represent the horizontal and vertical axes
 x_range = data_shape[1]
 y_range = data_shape[0]
 
-# Increasing density increases processing workload
-# TODO NOW dont think I need density, delete this for now
-density = 1 
-x_n = x_range * density
-y_n = y_range * density
+x_n = x_range
+y_n = y_range
 
 x = np.linspace(1, x_range, x_n)
 x = np.repeat(x, y_n)
