@@ -1,7 +1,11 @@
-# TODO figure out why I'm using Python 3.8?
-numpy==1.24.4
-scipy==1.14.0
-PyWavelets==1.4.1
-matplotlib==3.9.0
-# TODO replace matplotlib with PyQt5==5.15.11
-Soundfile==0.12.
+# TODO eventually set specific versions
+numpy
+soundfile
+PyWavelets
+matplotlib
+pyqtgraph
+
+# If PyQt5 says something like:
+# "AttributeError: module 'sipbuild.api' has no attribute 'prepare_metadata_for_build_wheel'" 
+# Run "$ pip install --upgrade pip setuptools wheel"
+PyQt5

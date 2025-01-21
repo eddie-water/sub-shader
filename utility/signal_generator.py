@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pywt
 
 class SignalGenerator():
     def __init__(self, sample_rate: float) -> None:
