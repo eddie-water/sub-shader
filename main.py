@@ -10,13 +10,15 @@ from wavelet import Wavelet
 
 """
 Defines
-"""
-FRAME_SIZE = 1024
 
-DOWNSAMPLE_FACTOR = 64
+Assumptions:
+    Ideally we have the biggest frame size and the smallest downsample possible
+"""
+FRAME_SIZE = 256
+DOWNSAMPLE_FACTOR = 8
 
 """
-Audio Input, Characteristics and Wavelet Object
+Audio Input, Characteristics 
 """
 frame_size = FRAME_SIZE
 file_path = "audio_files/zionsville.wav"
@@ -26,8 +28,10 @@ audio_input = AudioInput(path = file_path, frame_size = frame_size)
 sampling_rate = audio_input.get_sample_rate() # 44.1 kHz
 sampling_period = (1.0 / sampling_rate)
 
+"""
+Wavelet Object
+"""
 wavelet = Wavelet(frame_size = frame_size)
-
 data_shape = wavelet.get_shape()
 
 """
@@ -80,7 +84,7 @@ x = np.repeat(x, y_n)
 x = x.reshape(y_n, x_n)
 
 # TODO NEXT figure out the best amount to downsample 
-x = x[::, ::64]
+x = x[::, ::(DOWNSAMPLE_FACTOR)]
 x_range = x.shape[1]
 
 # TODO NOW fix the y range 
@@ -89,7 +93,7 @@ y = np.repeat(y, x_n)
 
 # TODO NEXT reshape using x_shape, not x_n
 y = y.reshape(x_n, y_n)
-y = y[::64, ::]
+y = y[::(DOWNSAMPLE_FACTOR), ::]
 
 # Plot Boundaries
 x_min = np.min(x)
@@ -177,16 +181,15 @@ def update_plot():
     audio_data = audio_input.get_frame()
     coefs = wavelet.compute_cwt(audio_data)
 
-    # TODO NEXT figure out the best amount to downsample 
-    coefs = coefs[::, ::64]
+    # TODO NEXT figure out the best way to downsample 
+    coefs = coefs[::, ::(DOWNSAMPLE_FACTOR)]
     coefs = coefs[:,:-1]
     coefs = np.transpose(coefs)
-
-    # TODO NOW Downsample x y and coefs to have a total size of ~10k points
 
     # Update the color plot
     pcmi.setData(coefs)
 
+    # Update FPS Count
     framecnt.update()
 
 # TODO SOON what's the timer freq/period? ASAP? Or a default period?
