@@ -1,7 +1,5 @@
-# TODO NOW figure out where I left off 
-# TODO NOW am I working in model/main or model/main_loop
-# TODO NOW figure out where I left off 
-# TODO NOW am I working in model/main or model/main_loop
+# TODO NOW > NEXT > SOON > LATER
+
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
@@ -25,8 +23,6 @@ audio_input = AudioInput(path = file_path, frame_size = frame_size)
 wavelet = Wavelet(frame_size = frame_size)
 
 data_shape = wavelet.get_shape()
-
-# TODO NOW > NEXT > SOON > LATER
 
 """
 Global Backend Config Options
@@ -80,10 +76,12 @@ y_n = y_range * density
 x = np.linspace(1, x_range, x_n)
 x = np.repeat(x, y_n)
 x = x.reshape(y_n, x_n)
+
+# TODO NEXT figure out the best amount to downsample 
 x = x[::, ::64]
 x_range = x.shape[1]
 
-# TODO NOW fix the y rangeuyh+
+# TODO NOW fix the y range 
 y = np.linspace(1, y_range, y_n)
 y = np.repeat(y, x_n)
 
@@ -176,6 +174,8 @@ Update Plot
 def update_plot():
     audio_data = audio_input.get_frame()
     coefs = wavelet.compute_cwt(audio_data)
+
+    # TODO NEXT figure out the best amount to downsample 
     coefs = coefs[::, ::64]
     coefs = coefs[:,:-1]
     coefs = np.transpose(coefs)
