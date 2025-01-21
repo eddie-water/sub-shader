@@ -9,16 +9,22 @@ from audio_input import AudioInput
 from wavelet import Wavelet
 
 """
+Defines
+"""
+FRAME_SIZE = 1024
+
+DOWNSAMPLE_FACTOR = 64
+
+"""
 Audio Input, Characteristics and Wavelet Object
 """
-sampling_rate = 44100.0
-sampling_period = (1.0 / sampling_rate)
+frame_size = FRAME_SIZE
 file_path = "audio_files/zionsville.wav"
 
-# TODO LATER - determine what is an appropriate window size
-frame_size = 1024
-
 audio_input = AudioInput(path = file_path, frame_size = frame_size)
+
+sampling_rate = audio_input.get_sample_rate() # 44.1 kHz
+sampling_period = (1.0 / sampling_rate)
 
 wavelet = Wavelet(frame_size = frame_size)
 
@@ -29,12 +35,11 @@ Global Backend Config Options
     useOpenGL           - enables OpenGL (seems to make things ~2x faster)
     enableExperimental  - use PyOpenGL for curve drawing TODO LATER is this 
                           really even needed?
+App, Widget, Plot
+
 """
 pg.setConfigOptions(useOpenGL = True, enableExperimental = True)
 
-"""
-App, Widget, Plot
-"""
 app = pg.mkQApp("PColorMesh Example")
 win = pg.GraphicsLayoutWidget()
 win.show()  
