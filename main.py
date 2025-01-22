@@ -7,9 +7,7 @@ from audio_input import AudioInput
 from wavelet import Wavelet
 
 """
-Defines
-
-Assumptions:
+Constants
     Ideally we have the biggest frame size and the smallest downsample possible
 """
 FRAME_SIZE = 256
@@ -23,13 +21,13 @@ file_path = "audio_files/zionsville.wav"
 
 audio_input = AudioInput(path = file_path, frame_size = frame_size)
 
-sampling_rate = audio_input.get_sample_rate() # 44.1 kHz
-sampling_period = (1.0 / sampling_rate)
+sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
+sampling_period = (1.0 / sampling_freq)
 
 """
 Wavelet Object
 """
-wavelet = Wavelet(frame_size = frame_size)
+wavelet = Wavelet(sampling_freq = sampling_freq, frame_size = frame_size)
 data_shape = wavelet.get_shape()
 
 """
@@ -52,46 +50,6 @@ plot = win.addPlot(row = 0,
                    colspan = 1,
                    title = "PColorMesh Plot",
                    enableMenu = False)
-
-"""
-Mesh Grid Points, Range, Density
-    x_length - horizontal boundary of the mesh
-    y_length - vertical boundary of the mesh
-    x_length     - all the horizontal points evaluated within the range
-    y_length     - all the vertical points evaluated within the range
-
-Create two sets of 2D arrays, represent the horizontal and vertical grid points
-    X Array - [1, 1, ... , 1]
-              [2, 2, ... , 2]
-              ...
-              [x_length, x_length, ... , x_length]
-
-    Y Array - [1, 2, ..., y_length]
-              [1, 2, ..., y_length]
-              ...
-              [1, 2, ..., y_length]
-"""
-x_length = data_shape[1]
-y_length = data_shape[0]
-
-# Create X and Y Array
-x = np.linspace(1, x_length, x_length)
-x = np.repeat(x, y_length)
-x = x.reshape(y_length, x_length)
-
-y = np.linspace(1, y_length, y_length)
-y = np.repeat(y, x_length)
-y = y.reshape(x_length, y_length)
-
-# Downsample the arrays becuase Python can't graph large things fast
-x = x[::, ::(DOWNSAMPLE_FACTOR)]
-y = y[::(DOWNSAMPLE_FACTOR), ::]
-
-# Plot Boundaries
-x_min = np.min(x)
-x_max = np.max(x)
-y_min = np.min(y)
-y_max = np.max(y)
 
 """
 Color Array and Plot
@@ -141,7 +99,7 @@ win.addItem(bar, 0, 1, 1, 1)
 
 textBox = pg.TextItem(anchor = (0, 1),
                       fill = 'black')
-textBox.setPos(x_min + 1, y_min + 1)
+textBox.setPos(1, 1)
 plot.addItem(textBox)
 
 """
@@ -151,12 +109,12 @@ def update_plot():
     # Grab a frame of audio
     audio_data = audio_input.get_frame()
 
-    # Compute CWT 
+    # Compute CWT on that frame
     coefs = wavelet.compute_cwt(audio_data)
 
     # Downsample
     coefs = coefs[::, ::(DOWNSAMPLE_FACTOR)]
-    coefs = coefs[:,:-1]
+    coefs = coefs[:, :-1]
     coefs = np.transpose(coefs)
 
     # Update the color mesh grid
@@ -165,6 +123,7 @@ def update_plot():
     # Update FPS Count
     framecnt.update()
 
+# QTimer with timeout of 0 to time out ASAP
 timer = QtCore.QTimer()
 timer.timeout.connect(update_plot)
 timer.start()
