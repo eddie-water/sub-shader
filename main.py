@@ -151,13 +151,10 @@ TextItem
     anchor      - (x, y) what corner of the text box anchors the text's position
     fill        - the background color fill
 """
-# TODO LATER make the color bar the same height as the z axis
 bar = pg.ColorBarItem(label = "Z Value",
                       interactive = False,
                       rounding = 0.1)
 bar.setImageItem([pcmi])
-
-# TODO LATER make all positional args relative to plot variables
 win.addItem(bar, 0, 1, 1, 1)
 
 textBox = pg.TextItem(anchor = (0, 1),
@@ -166,24 +163,12 @@ textBox.setPos(x_min + 1, y_min + 1)
 plot.addItem(textBox)
 
 """
-Wave Parameters
-
-TODO NEXT clean up these wave parameters
-"""
-wave_amplitude  = 3
-wave_speed      = 0.01
-wave_length     = 10
-color_speed     = 0.32
-color_noise_freq = 0.05
-
-"""
 Update Plot
 """
 def update_plot():
     audio_data = audio_input.get_frame()
     coefs = wavelet.compute_cwt(audio_data)
 
-    # TODO NEXT figure out the best way to downsample 
     coefs = coefs[::, ::(DOWNSAMPLE_FACTOR)]
     coefs = coefs[:,:-1]
     coefs = np.transpose(coefs)
@@ -194,12 +179,10 @@ def update_plot():
     # Update FPS Count
     framecnt.update()
 
-# TODO SOON what's the timer freq/period? ASAP? Or a default period?
 timer = QtCore.QTimer()
 timer.timeout.connect(update_plot)
 timer.start()
 
-# TODO SOON where does 'fps' come from? Is it inside FrameCounter?
 framecnt = FrameCounter()
 framecnt.sigFpsUpdate.connect(lambda fps: textBox.setText(f'{fps:.1f} fps'))
 
