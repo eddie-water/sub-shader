@@ -10,7 +10,7 @@ NUM_OCTAVES = 10
 ROOT_NOTE_A0 = 27.5
 
 class Wavelet():
-    def __init__(self, sampling_freq: int, frame_size: int):
+    def __init__(self, sampling_freq: int, frame_size: int, downsample_factor: int):
         if (sampling_freq != TYPICAL_SAMPLING_FREQ):
             raise ValueError("Irregular Sampling Frequency")
 
@@ -18,15 +18,18 @@ class Wavelet():
         self.sampling_freq = sampling_freq
         self.nyquist_freq = (sampling_freq / 2.0)
         self.sampling_period = (1.0 / self.sampling_freq)
+
         self.frame_size = frame_size
+
+        self.downsample_factor = downsample_factor
 
         # Wavelet info
         self.wavelet_name = "cmor1.5-1.0" # TODO LATER why 1.5-1.0?
 
-        # Configure time and frequency axes
+        # Time Axis
         self.time = np.arange(0, frame_size) * self.sampling_period
 
-        # Frequency array that mimics the variable step size of musical notes
+        # Frequency Axis that mimics the variable step size of musical scales
         scale_factor = 2**(1/NOTES_PER_OCTAVE)
         i = np.arange(0, NOTES_PER_OCTAVE*NUM_OCTAVES, 1)
         s = scale_factor**i
@@ -39,31 +42,39 @@ class Wavelet():
         f_norm = (self.freq / self.sampling_freq) # TODO comment why we do this
         self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
 
-    def get_shape(self) -> np.ndarray.shape:
-        """Computes the shape of the resultant CWT data
-        
-        Returns:
-            Shape of the computed CWT data"""
+    """
+    Computes the shape of the resultant CWT data
 
+    Returns:
+        Shape of the computed CWT data
+    """
+    def get_shape(self) -> np.ndarray.shape:
         return np.empty((self.freq.size, self.time.size)).shape
 
+    """
+    Performs the CWT
+
+    Args:
+        audio_data: audio signal data
+
+    Returns:
+        abs_coefs: the absolute values of the CWT coefficients
+    """
     def compute_cwt(self, audio_data): 
-        """Performs the CWT
-
-        Args:
-            audio_data: audio signal data
-
-        Returns:
-            abs_coefs: the absolute values of the CWT coefficients
-        """
         coefs, freqs = pywt.cwt(data= audio_data,
                                 scales= self.scales,
                                 wavelet= self.wavelet_name,
                                 sampling_period= self.sampling_period)
 
-        # Important step - take abs value of the data and reduce axes by 1
-        abs_coefs = np.abs(coefs[:-1, :-1])
+        # Take absolute value of coefs
+        coefs = np.abs(coefs)
 
+        # Sharpen the coef magnitudes on a log scale
         # TODO here is where we would use a log scale to sharpen the colors
 
-        return abs_coefs
+        # Downsample Stage (python can't graph large things fast)
+        coefs = coefs[::, ::(self.downsample_factor)]
+
+        # Swap axes because the CWT function flips the freq and time axes 
+        coefs = np.transpose(coefs)
+        return coefs

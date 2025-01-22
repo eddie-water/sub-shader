@@ -27,7 +27,9 @@ sampling_period = (1.0 / sampling_freq)
 """
 Wavelet Object
 """
-wavelet = Wavelet(sampling_freq = sampling_freq, frame_size = frame_size)
+wavelet = Wavelet(sampling_freq = sampling_freq, 
+                  frame_size = frame_size,
+                  downsample_factor = DOWNSAMPLE_FACTOR)
 data_shape = wavelet.get_shape()
 
 """
@@ -111,11 +113,6 @@ def update_plot():
 
     # Compute CWT on that frame
     coefs = wavelet.compute_cwt(audio_data)
-
-    # Downsample
-    coefs = coefs[::, ::(DOWNSAMPLE_FACTOR)]
-    coefs = coefs[:, :-1]
-    coefs = np.transpose(coefs)
 
     # Update the color mesh grid
     pcmi.setData(coefs)
