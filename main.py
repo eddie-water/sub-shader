@@ -49,8 +49,10 @@ win = pg.GraphicsLayoutWidget()
 win.show()  
 win.setWindowTitle('ColorMesh')
 
-# TODO SOON make all positional args relative to plot variables
-plot = win.addPlot(0, 0, 1, 1,
+plot = win.addPlot(row = 0, 
+                   col = 0, 
+                   rowspan = 1,
+                   colspan = 1,
                    title = "PColorMesh Plot",
                    enableMenu = False)
 
