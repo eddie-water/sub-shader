@@ -1,5 +1,3 @@
-# TODO NOW > NEXT > SOON > LATER
-
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
@@ -40,14 +38,13 @@ Global Backend Config Options
     enableExperimental  - use PyOpenGL for curve drawing TODO LATER is this 
                           really even needed?
 App, Widget, Plot
-
 """
 pg.setConfigOptions(useOpenGL = True, enableExperimental = True)
 
-app = pg.mkQApp("PColorMesh Example")
+app = pg.mkQApp("CWT of Zionsville")
 win = pg.GraphicsLayoutWidget()
 win.show()  
-win.setWindowTitle('ColorMesh')
+win.setWindowTitle('Continuous Wavelet Transform')
 
 plot = win.addPlot(row = 0, 
                    col = 0, 
@@ -58,43 +55,36 @@ plot = win.addPlot(row = 0,
 
 """
 Mesh Grid Points, Range, Density
-    x_range - horizontal boundary of the mesh
-    y_range - vertical boundary of the mesh
-    density - scalar for the resolution between each integer in the range
-    x_n     - all the horizontal points evaluated within the range
-    y_n     - all the vertical points evaluated within the range
+    x_length - horizontal boundary of the mesh
+    y_length - vertical boundary of the mesh
+    x_length     - all the horizontal points evaluated within the range
+    y_length     - all the vertical points evaluated within the range
 
-Create two sets of 2D arrays, represent the horizontal and vertical axes
+Create two sets of 2D arrays, represent the horizontal and vertical grid points
     X Array - [1, 1, ... , 1]
               [2, 2, ... , 2]
               ...
-              [x_range, x_range, ... , x_range]
+              [x_length, x_length, ... , x_length]
 
-    Y Array - [1, 2, ..., y_range]
-              [1, 2, ..., y_range]
+    Y Array - [1, 2, ..., y_length]
+              [1, 2, ..., y_length]
               ...
-              [1, 2, ..., y_range]
+              [1, 2, ..., y_length]
 """
-x_range = data_shape[1]
-y_range = data_shape[0]
+x_length = data_shape[1]
+y_length = data_shape[0]
 
-x_n = x_range
-y_n = y_range
+# Create X and Y Array
+x = np.linspace(1, x_length, x_length)
+x = np.repeat(x, y_length)
+x = x.reshape(y_length, x_length)
 
-x = np.linspace(1, x_range, x_n)
-x = np.repeat(x, y_n)
-x = x.reshape(y_n, x_n)
+y = np.linspace(1, y_length, y_length)
+y = np.repeat(y, x_length)
+y = y.reshape(x_length, y_length)
 
-# TODO NEXT figure out the best amount to downsample 
+# Downsample the arrays becuase Python can't graph large things fast
 x = x[::, ::(DOWNSAMPLE_FACTOR)]
-x_range = x.shape[1]
-
-# TODO NOW fix the y range 
-y = np.linspace(1, y_range, y_n)
-y = np.repeat(y, x_n)
-
-# TODO NEXT reshape using x_shape, not x_n
-y = y.reshape(x_n, y_n)
 y = y[::(DOWNSAMPLE_FACTOR), ::]
 
 # Plot Boundaries
@@ -102,8 +92,6 @@ x_min = np.min(x)
 x_max = np.max(x)
 y_min = np.min(y)
 y_max = np.max(y)
-
-plot.setYRange(y_min, y_max)
 
 """
 Color Array and Plot
@@ -119,15 +107,9 @@ PColorMeshItem
     levels      - min and max values of the color map
     autoLevels  - autoscales the colormap levels when setData() is called
 """
-# TODO NOW why this equation?
-# c = np.exp(-(x*x_range))**2/1000
-c = np.sin(2*np.pi*x)
-c = c[:-1,:-1]
-
-colorMap        = pg.colormap.get('magma')
+colorMap        = pg.colormap.get('inferno')
 edgeColors      = None
 antialiasing    = False 
-# TODO SOON describe the explicit relationship between autoscaling and levels and etc
 levels          = (-1, 1)
 autoLevels      = False
 
@@ -151,7 +133,7 @@ TextItem
     anchor      - (x, y) what corner of the text box anchors the text's position
     fill        - the background color fill
 """
-bar = pg.ColorBarItem(label = "Z Value",
+bar = pg.ColorBarItem(label = "Magnitude",
                       interactive = False,
                       rounding = 0.1)
 bar.setImageItem([pcmi])
@@ -166,14 +148,18 @@ plot.addItem(textBox)
 Update Plot
 """
 def update_plot():
+    # Grab a frame of audio
     audio_data = audio_input.get_frame()
+
+    # Compute CWT 
     coefs = wavelet.compute_cwt(audio_data)
 
+    # Downsample
     coefs = coefs[::, ::(DOWNSAMPLE_FACTOR)]
     coefs = coefs[:,:-1]
     coefs = np.transpose(coefs)
 
-    # Update the color plot
+    # Update the color mesh grid
     pcmi.setData(coefs)
 
     # Update FPS Count
