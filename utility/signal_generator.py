@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pywt
 
 class SignalGenerator():
     def __init__(self, sample_rate: float) -> None:
@@ -40,7 +39,6 @@ class SignalGenerator():
 
         return signal
 
-# TODO moves this to example file
 if __name__ == "__main__":
 
     # The audio was sampled at 44100 Hz
