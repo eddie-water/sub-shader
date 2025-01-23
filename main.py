@@ -13,13 +13,12 @@ Constants
 FRAME_SIZE = 256
 DOWNSAMPLE_FACTOR = 8
 
+FILE_PATH = "audio_files/zionsville.wav"
+
 """
 Audio Input, Characteristics 
 """
-frame_size = FRAME_SIZE
-file_path = "audio_files/zionsville.wav"
-
-audio_input = AudioInput(path = file_path, frame_size = frame_size)
+audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 
 sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
 sampling_period = (1.0 / sampling_freq)
@@ -28,7 +27,7 @@ sampling_period = (1.0 / sampling_freq)
 Wavelet Object
 """
 wavelet = Wavelet(sampling_freq = sampling_freq, 
-                  frame_size = frame_size,
+                  frame_size = FRAME_SIZE,
                   downsample_factor = DOWNSAMPLE_FACTOR)
 data_shape = wavelet.get_shape()
 
@@ -50,7 +49,7 @@ plot = win.addPlot(row = 0,
                    col = 0, 
                    rowspan = 1,
                    colspan = 1,
-                   title = "Zionsville.wav",
+                   title = FILE_PATH,
                    enableMenu = False)
 
 """
@@ -87,7 +86,7 @@ Color Bar, Text Box
 ColorBarItem
     label       - title for color bar
     interactive - True would override enableAutoLevels in PColorMesh
-    rounding    - TODO LATER how fine of a rounding do we need
+    rounding    - TODO EVENTUALLY how fine of a rounding do we need
 
 TextItem
     anchor      - (x, y) what corner of the text box anchors the text's position
