@@ -63,9 +63,9 @@ class Wavelet():
     """
     def compute_cwt(self, audio_data): 
         coefs, _ = pywt.cwt(data= audio_data,
-                                scales= self.scales,
-                                wavelet= self.wavelet_name,
-                                sampling_period= self.sampling_period)
+                            scales= self.scales,
+                            wavelet= self.wavelet_name,
+                            sampling_period= self.sampling_period)
 
         # Take absolute value of coefs
         coefs = np.abs(coefs)
