@@ -119,7 +119,11 @@ def update_plot():
     # Update FPS Count
     framecnt.update()
 
-# QTimer with timeout of 0 to time out ASAP
+"""
+Qt Timer and Frame Counter
+    QTimer with timeout of 0 to time out ASAP
+    Frame Counter is a utility from PyQtGraph that I stole
+"""
 timer = QtCore.QTimer()
 timer.timeout.connect(update_plot)
 timer.start()
@@ -127,5 +131,8 @@ timer.start()
 framecnt = FrameCounter()
 framecnt.sigFpsUpdate.connect(lambda fps: textBox.setText(f'{fps:.1f} fps'))
 
+"""
+Main 
+"""
 if __name__ == '__main__':
     pg.exec()
