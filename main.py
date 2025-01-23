@@ -41,7 +41,7 @@ App, Widget, Plot
 """
 pg.setConfigOptions(useOpenGL = True, enableExperimental = True)
 
-app = pg.mkQApp("CWT of Zionsville")
+app = pg.mkQApp("Sub Shader")
 win = pg.GraphicsLayoutWidget()
 win.show()  
 win.setWindowTitle('Continuous Wavelet Transform')
@@ -50,7 +50,7 @@ plot = win.addPlot(row = 0,
                    col = 0, 
                    rowspan = 1,
                    colspan = 1,
-                   title = "PColorMesh Plot",
+                   title = "Zionsville.wav",
                    enableMenu = False)
 
 """
