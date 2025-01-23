@@ -70,7 +70,7 @@ class Wavelet():
         coefs = np.abs(coefs)
 
         # Sharpen the coef magnitudes on a log scale
-        # TODO here is where we would use a log scale to sharpen the colors
+        # TODO SOON here is where we would use a log scale to sharpen the colors
 
         # Downsample Stage (python can't graph large things fast)
         coefs = coefs[::, ::(self.downsample_factor)]

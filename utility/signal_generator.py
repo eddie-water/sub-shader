@@ -39,7 +39,6 @@ class SignalGenerator():
 
         return signal
 
-# TODO moves this to example file
 if __name__ == "__main__":
 
     # The audio was sampled at 44100 Hz

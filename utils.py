@@ -1,12 +1,7 @@
-# TODO SOON rename this to fps_utility and move out of examples
-
 from argparse import Namespace
 from collections import OrderedDict
 from time import perf_counter
 from pyqtgraph.Qt import QtCore
-
-# TODO SOON figure out why do I need this in my project, and why its not just a 
-# part of pyqtgraph?
 
 # Avoid clash with module name
 examples_ = OrderedDict([

@@ -15,7 +15,6 @@ class AudioInput:
         self.overlap = OVERLAP / 100.0
         self.slide_amount = int(self.frame_size * self.overlap)
 
-    # TODO add an arg that specifies frame size instead of using self.frame_size
     def get_frame(self) -> np.ndarray:
         with sf.SoundFile(self.file_path, 'r') as f:
             # Read one frame's worth of audio sample
