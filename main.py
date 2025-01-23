@@ -18,6 +18,9 @@ FILE_PATH = "audio_files/zionsville.wav"
 """
 Start Up
 """
+# Start Up Timing 
+t_start_up_start = time.perf_counter()
+
 # Audio Input, Audio Characteristics 
 audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 
@@ -34,13 +37,18 @@ data_shape = wavelet.get_shape()
 # Plotter Object
 plotter = Plotter(file_path = FILE_PATH)
 
-# Loop Timing
-print("Loop Timing Analysis:")
-loop_count = 0
+# Print Start Up Timing Analysis
+t_start_up_delta = time.perf_counter() - t_start_up_start
+print("Start Up Timing Analysis:", t_start_up_delta)
+print('\n')
 
 """
 Runtime Loop
 """
+# Loop Timing
+print("Runtime Loop Timing Analysis:")
+loop_count = 0
+
 def main_loop():
     # Grab the global loop variable
     global loop_count
@@ -65,13 +73,16 @@ def main_loop():
     fps_counter.update()
     t_fps = time.perf_counter() - t_start
 
-    # Print Timing Analysis
-    print("Runtime Loop:", loop_count)
-    print("Audio Get Frame:", t_audio)
-    print("Wavelet CWT    :", t_cwt)
-    print("Update Plot    :", t_plot)
-    print("Update FPS     :", t_fps)
+    # Print Runtime Loop Timing Analysis
+    t_loop_total = t_audio + t_cwt + t_plot + t_fps
+    print("Loop", loop_count, ":", t_loop_total)
+
+    print("Audio :", t_audio)
+    print("CWT   :", t_cwt)
+    print("Plot  :", t_plot)
+    print("FPS   :", t_fps)
     print("\n")
+
     loop_count += 1
 
 timer = QtCore.QTimer()
