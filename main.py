@@ -29,6 +29,7 @@ Wavelet Object
 wavelet = Wavelet(sampling_freq = sampling_freq, 
                   frame_size = FRAME_SIZE,
                   downsample_factor = DOWNSAMPLE_FACTOR)
+
 data_shape = wavelet.get_shape()
 
 """
