@@ -25,14 +25,11 @@ t_start_up_start = time.perf_counter()
 audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 
 sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
-sampling_period = (1.0 / sampling_freq)
 
 # Wavelet Object
 wavelet = Wavelet(sampling_freq = sampling_freq, 
                   frame_size = FRAME_SIZE,
                   downsample_factor = DOWNSAMPLE_FACTOR)
-
-data_shape = wavelet.get_shape()
 
 # Plotter Object
 plotter = Plotter(file_path = FILE_PATH)
