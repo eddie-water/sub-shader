@@ -1,5 +1,4 @@
 import time
-import numpy as np
 
 from audio_input import AudioInput
 from wavelet import Wavelet
@@ -27,6 +26,8 @@ class Benchtest():
         # Audio Input
         audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 
+        dummy_audio = audio_input.get_frame()
+
         sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
 
         # Wavelet Object
@@ -34,56 +35,32 @@ class Benchtest():
                           frame_size = FRAME_SIZE,
                           downsample_factor = DOWNSAMPLE_FACTOR)
 
+        dummy_coefs = wavelet.compute_cwt(dummy_audio)
+
         # Plotter Object
         plotter = Plotter(file_path = FILE_PATH)
 
+        # Function List
+        self.function_list = [
+            (audio_input.get_frame, ()),
+            (wavelet.compute_cwt,   (dummy_audio,)),
+            (plotter.update_plot,   (dummy_coefs,))
+        ]
+
     def main(self):
-        """
-        Audio Data Acquisition
-        """
-        t_start = time.perf_counter()
-        audio_data = self.audio_input.get_frame()
-        t_delta = time.perf_counter() - t_start
-        print(f"Audio Data Retrieval:               {t_delta:.6f} seconds")
+        print("Timing Analysis")
 
-        self.t_total += t_delta
+        for item in self.function_list:
+            func = item[0]
+            args = item[1] if len(item) > 1 else ()
+            kwargs = item[2] if len(item) > 2 else {}
 
-        """
-        CWT Computation 
-        """
-        t_start = time.perf_counter()
-        coefs = self.wavelet.compute_cwt(audio_data)
-        t_delta = time.perf_counter() - t_start
-        print(f"CWT Computation:                    {t_delta:.6f} seconds")
+            t_start = time.perf_counter()
+            _ = func(*args, **kwargs)
+            t_end = time.perf_counter()
+            t_delta = t_end - t_start
 
-        self.t_total += t_delta
-
-        """
-        Plotting CWT Data
-        """
-        t_start = time.perf_counter()
-        self.plotter.update_cwt_pcm(coefs= coefs)
-        t_delta = time.perf_counter() - t_start
-        print(f"Plotting CWT Data:                  {t_delta:.6f} seconds")
-
-        self.t_total += t_delta
-
-        """
-        Calculating Time Metrics
-        """
-        print("\n")
-        print(f"Total Average Function Time:        {self.t_total:.6f} seconds")
-        print(f"Total Average Function Time Goal:  <{self.t_total_max:.6f} seconds")
-
-        # Assess
-        percent_error = 100 * (((self.t_total_max - self.t_total) / self.t_total_max))
-
-        print("\n")
-        if (percent_error < 0):
-            print(f"Fail. Percent Error: {percent_error:.2f} %")
-        else:
-            print(f"Success. Percent Error: {percent_error:.2f} %")
-        print("\n")
+            print(f"{func.__name__}:\n -> {t_delta:6f} s")
 
 if __name__ == '__main__':
     benchtest = Benchtest()
