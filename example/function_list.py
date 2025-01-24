@@ -16,6 +16,9 @@ class Foo():
         print("foo_bar:", number)
         return number
 
+    def barbar(self):
+        print("No Args")
+
 foo = Foo()
 
 # Create a list of functions with their arguments (as tuples)
@@ -23,7 +26,8 @@ function_list = [
     (greet,     ("Alice",)),        # Single argument requires a trailing comma in tuple
     (add,       (5, 3)),            # Two positional arguments
     (multiply,  (4,), {'y': 2}),    # Mixing positional and keyword arguments
-    (foo.bar,   (10,))
+    (foo.bar,   (10,)),
+    (foo.barbar, ())
 ]
 
 # Loop through the list and call each function with its arguments
