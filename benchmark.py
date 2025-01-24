@@ -4,7 +4,6 @@ from audio_input import AudioInput
 from wavelet import Wavelet
 from plotter import Plotter 
 
-NUM_FUNCTIONS = 3
 NUM_ITERATIONS = 10
 
 # TODO NEXT make a list of frame sizes and downsample factors to see
@@ -50,17 +49,26 @@ class Benchtest():
     def main(self):
         print("Timing Analysis")
 
-        for item in self.function_list:
-            func = item[0]
-            args = item[1] if len(item) > 1 else ()
-            kwargs = item[2] if len(item) > 2 else {}
+        loop_count = 0
 
-            t_start = time.perf_counter()
-            _ = func(*args, **kwargs)
-            t_end = time.perf_counter()
-            t_delta = t_end - t_start
+        for i in range(NUM_ITERATIONS):
+            print(f"Loop {loop_count}:")
 
-            print(f"{func.__name__}:\n -> {t_delta:6f} s")
+            for item in self.function_list:
+                func = item[0]
+                args = item[1] if len(item) > 1 else ()
+                kwargs = item[2] if len(item) > 2 else {}
+
+                t_start = time.perf_counter()
+                _ = func(*args, **kwargs)
+                t_end = time.perf_counter()
+                t_delta = t_end - t_start
+
+                print(f"{func.__name__}:")
+                print(f"-> {t_delta:6f} s")
+
+            loop_count += 1
+            print()
 
 if __name__ == '__main__':
     benchtest = Benchtest()
