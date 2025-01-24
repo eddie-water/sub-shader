@@ -13,8 +13,6 @@ NUM_ITERATIONS = 10
 FRAME_SIZE = 256
 DOWNSAMPLE_FACTOR = 8
 
-FILE_PATH = "audio_files/zionsville.wav"
-
 # TODO NEXT Create a wav for bench testing
 FILE_PATH = "audio_files/zionsville.wav"
 
