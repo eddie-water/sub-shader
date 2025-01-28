@@ -35,9 +35,6 @@ wavelet = Wavelet(sampling_freq = sampling_freq,
 plotter = Plotter(file_path = FILE_PATH)
 
 def main_loop():
-    # Grab the global loop variable
-    global loop_count
-
     # Grab a frame of audio
     audio_data = audio_input.get_frame()
 
