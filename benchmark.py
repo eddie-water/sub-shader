@@ -7,12 +7,11 @@ from plotter import Plotter
 
 NUM_ITERATIONS = 100
 
-# TODO NEXT make a list of frame sizes and downsample factors to see
+# TODO SOON make a list of frame sizes and downsample factors to see
 # which combo gets the best performance
 FRAME_SIZE = 256
 DOWNSAMPLE_FACTOR = 8
 
-# TODO NEXT Create a wav for bench testing
 FILE_PATH = "audio_files/c_4_arps.wav"
 
 class Benchtest():
@@ -34,21 +33,20 @@ class Benchtest():
         # Plotter Object
         plotter = Plotter(file_path = FILE_PATH)
 
-        # Function List AN
+        # Function List and Dummy Arguments
         self.func_list = [
             (audio_input.get_frame, ()),
             (wavelet.compute_cwt,   (dummy_audio,)),
             (plotter.update_plot,   (dummy_coefs,))
         ]
 
+        # Tracks the run time of each function
         self.func_times = np.zeros(len(self.func_list))
 
     def main(self):
         print("Timing Analysis")
 
         for i in range(NUM_ITERATIONS):
-            # print(f"Loop {i}:")
-
             for i, item in enumerate(self.func_list):
                 # Grab the function
                 func = item[0]
@@ -66,7 +64,7 @@ class Benchtest():
         # Average the times
         self.avg_func_times = self.func_times / int(NUM_ITERATIONS)
 
-        print(f"Time to run each function averaged at {NUM_ITERATIONS} times")
+        print(f"Function runtimes averaged over {NUM_ITERATIONS} iterations")
 
         for i, item in enumerate(self.func_list):
             func = item[0]
