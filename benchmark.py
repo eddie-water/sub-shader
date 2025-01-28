@@ -13,7 +13,7 @@ FRAME_SIZE = 256
 DOWNSAMPLE_FACTOR = 8
 
 # TODO NEXT Create a wav for bench testing
-FILE_PATH = "audio_files/zionsville.wav"
+FILE_PATH = "audio_files/c_4_arps.wav"
 
 class Benchtest():
     def __init__(self) -> None:
