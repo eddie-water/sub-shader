@@ -1,13 +1,14 @@
-# Create a virtual environment and activate (I'm using WSL)
-$ py -m venv .venv
-$ source .venv/bin/activate
+# Create a virtual environment and activate 
+I'm using WSL so I do:  
+$ py -m venv .venv  
+$ source .venv/bin/activate  
 
 # Install the dependencies
 $ py install -r requirements.txt
 
-# If PyQt5 says something like:
+### If PyQt5 says something like:  
 "AttributeError: module 'sipbuild.api' has no attribute 
-    'prepare_metadata_for_build_wheel'" 
+'prepare_metadata_for_build_wheel'" 
 
 $ pip install --upgrade pip setuptools wheel
 

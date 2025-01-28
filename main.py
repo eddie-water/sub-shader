@@ -6,40 +6,26 @@ from audio_input import AudioInput
 from wavelet import Wavelet
 from plotter import Plotter
 
-"""
-Constants
-    Ideally we have the biggest frame size and the smallest downsample possible
-"""
+# Constants: 
+#   Ideally have the biggest frame size and the smallest downsample factor 
 FRAME_SIZE = 256
 DOWNSAMPLE_FACTOR = 8
 
-FILE_PATH = "audio_files/zionsville.wav"
+FILE_PATH = "audio_files/c_4_arps.wav"
 
-"""
-Audio Input, Audio Characteristics 
-"""
+# Audio Input, Audio Characteristics 
 audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 
 sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
-sampling_period = (1.0 / sampling_freq)
 
-"""
-Wavelet Object
-"""
+# Wavelet Object
 wavelet = Wavelet(sampling_freq = sampling_freq, 
                   frame_size = FRAME_SIZE,
                   downsample_factor = DOWNSAMPLE_FACTOR)
 
-data_shape = wavelet.get_shape()
-
-"""
-Plotter Object
-"""
+# Plotter Object
 plotter = Plotter(file_path = FILE_PATH)
 
-"""
-Main Loop
-"""
 def main_loop():
     # Grab a frame of audio
     audio_data = audio_input.get_frame()
@@ -57,15 +43,10 @@ timer = QtCore.QTimer()
 timer.timeout.connect(main_loop)
 timer.start()
 
-"""
-FPS Counter
-    Stolen from PyQtGraph
-"""
+# FPS Counter (stolen from PyQtGraph)
 fps_counter = FrameCounter()
 fps_counter.sigFpsUpdate.connect(lambda fps: plotter.update_fps(fps))
 
-"""
-Main 
-"""
+# Main 
 if __name__ == '__main__':
     pg.exec()
