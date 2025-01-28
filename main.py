@@ -6,20 +6,12 @@ from audio_input import AudioInput
 from wavelet import Wavelet
 from plotter import Plotter
 
-import time
-
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
 FRAME_SIZE = 256
 DOWNSAMPLE_FACTOR = 8
 
-FILE_PATH = "audio_files/zionsville.wav"
-
-"""
-Start Up
-"""
-# Start Up Timing 
-t_start_up_start = time.perf_counter()
+FILE_PATH = "audio_files/c_4_arps.wav"
 
 # Audio Input, Audio Characteristics 
 audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)

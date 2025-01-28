@@ -23,11 +23,11 @@ foo = Foo()
 
 # Create a list of functions with their arguments (as tuples)
 function_list = [
-    (greet,     ("Alice",)),        # Single argument requires a trailing comma in tuple
+    (greet,     ("Alice",)),        # Single arg requires a trailing comma 
     (add,       (5, 3)),            # Two positional arguments
     (multiply,  (4,), {'y': 2}),    # Mixing positional and keyword arguments
-    (foo.bar,   (10,)),
-    (foo.barbar, ())
+    (foo.bar,   (10,)),             # Single arg for object
+    (foo.barbar, ())                # No arg
 ]
 
 # Loop through the list and call each function with its arguments

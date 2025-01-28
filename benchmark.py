@@ -46,7 +46,7 @@ class Benchtest():
     def main(self):
         print("Timing Analysis")
 
-        for i in range(NUM_ITERATIONS):
+        for _ in range(NUM_ITERATIONS):
             for i, item in enumerate(self.func_list):
                 # Grab the function
                 func = item[0]
@@ -57,8 +57,8 @@ class Benchtest():
                 t_start = time.perf_counter()
                 _ = func(*args, **kwargs)
                 t_end = time.perf_counter()
-                t_delta = t_end - t_start
 
+                t_delta = t_end - t_start
                 self.func_times[i] += t_delta
 
         # Average the times
