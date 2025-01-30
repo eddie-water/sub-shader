@@ -79,18 +79,21 @@ class Wavelet():
         # Swap axes because the CWT function flips the freq and time axes 
         coefs = np.transpose(coefs)
         return coefs
-
+    """
+    TODO NOW explain all the stages in the normalization 
+    """
     def compute_cwt_norm(self, audio_data): 
-        coefs, _ = pywt.cwt(data= audio_data,
-                            scales= self.scales,
-                            wavelet= self.wavelet_name,
-                            sampling_period= self.sampling_period)
+        coefs = self.compute_cwt(audio_data)
 
         # Take absolute value of coefs
         coefs_abs = np.abs(coefs)
 
+        # TODO NOW normalize all the data in a single method
+        # Normalize for energy accumulation bias at higher scales 
+        coefs_scaled = coefs_abs / np.sqrt(self.scales[:, None])
+
         # Sharpen the coef magnitudes on a log scale (log1p avoids log(0) issue)
-        coefs_log = np.log1p(coefs_abs)
+        coefs_log = np.log1p(coefs_scaled)
 
         # Normalize between 0 and 1 (Min-Max Normalization)
         coefs_min = np.min(coefs_log)
