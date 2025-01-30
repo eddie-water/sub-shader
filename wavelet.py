@@ -52,57 +52,42 @@ class Wavelet():
         return np.empty((self.freq.size, self.time.size)).shape
 
     """
-    Performs the CWT
+    Performs the Continuous Wavelet Transform and normalizes the data
+    - Computes the CWT on the raw audio data
+    - Takes the absolute value to get the magnitude of the resultant coefs
+    - Normalizes the coefs against the scale to compensate for energy 
+      accumulation bias in the CWT with higher scales (low frequencies)
+    - Normalizes the coefs so the min and max map to 0 and 1
+    - Downsamples the coefs to reduce plotting time
+    - Transposes the coefs because the CWT swaps the axes for some reason
 
     Args:
-        audio_data: audio signal data
+        audio_data: raw audio signal data
 
     Returns:
-        coefs: the absolute values of the CWT coefficients
+        coefs: the normalized CWT coefficients
 
     """
     def compute_cwt(self, audio_data): 
-        coefs, _ = pywt.cwt(data= audio_data,
-                            scales= self.scales,
-                            wavelet= self.wavelet_name,
-                            sampling_period= self.sampling_period)
+        coefs, _ = pywt.cwt(data = audio_data,
+                            scales = self.scales,
+                            wavelet = self.wavelet_name,
+                            sampling_period = self.sampling_period)
 
-        # Take absolute value of coefs
-        coefs = np.abs(coefs)
-
-        # Sharpen the coef magnitudes on a log scale
-        # TODO SOON here is where we would use a log scale to sharpen the colors
-
-        # Downsample Stage (python can't graph large things fast)
-        coefs = coefs[::, ::(self.downsample_factor)]
-
-        # Swap axes because the CWT function flips the freq and time axes 
-        coefs = np.transpose(coefs)
-        return coefs
-    """
-    TODO NOW explain all the stages in the normalization 
-    """
-    def compute_cwt_norm(self, audio_data): 
-        coefs = self.compute_cwt(audio_data)
-
-        # Take absolute value of coefs
+        # Absolute Value 
         coefs_abs = np.abs(coefs)
 
-        # TODO NOW normalize all the data in a single method
-        # Normalize for energy accumulation bias at higher scales 
+        # Scale-Based Normalization 
         coefs_scaled = coefs_abs / np.sqrt(self.scales[:, None])
 
-        # Sharpen the coef magnitudes on a log scale (log1p avoids log(0) issue)
-        coefs_log = np.log1p(coefs_scaled)
+        # Min-Max Normalization 
+        coefs_min = np.min(coefs_scaled)
+        coefs_max = np.max(coefs_scaled)
+        coefs_norm = (coefs_scaled - coefs_min) / (coefs_max - coefs_min)
 
-        # Normalize between 0 and 1 (Min-Max Normalization)
-        coefs_min = np.min(coefs_log)
-        coefs_max = np.max(coefs_log)
-        coefs_norm = (coefs_log - coefs_min) / (coefs_max - coefs_min)
-
-        # Downsample Stage (python can't graph large things fast)
+        # Downsample 
         coefs = coefs_norm[::, ::(self.downsample_factor)]
 
-        # Swap axes because the CWT function flips the freq and time axes 
+        # Swap Axes
         coefs = np.transpose(coefs)
         return coefs
