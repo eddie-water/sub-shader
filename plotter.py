@@ -74,6 +74,7 @@ class Plotter():
         """
         self.bar = pg.ColorBarItem(label = "Magnitude",
                                    interactive = False,
+                                   limits = (0, 1),
                                    rounding = 0.1)
         self.bar.setImageItem([self.pcolormesh])
         self.win.addItem(self.bar, 0, 1, 1, 1)
