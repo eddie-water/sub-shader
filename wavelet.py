@@ -23,8 +23,8 @@ class Wavelet():
 
         self.downsample_factor = downsample_factor
 
-        # Wavelet info
-        self.wavelet_name = "cmor1.5-1.0" # TODO LATER why 1.5-1.0?
+        # Wavelet info TODO LATER why 1.5-1.0?
+        self.wavelet_name = "cmor1.5-1.0"
 
         # Time Axis
         self.time = np.arange(0, frame_size) * self.sampling_period
@@ -39,7 +39,7 @@ class Wavelet():
         self.freq = self.freq[self.freq < self.nyquist_freq]
 
         # Scale array used to specify wavelet dilation amounts during cwt
-        f_norm = (self.freq / self.sampling_freq) # TODO comment why we do this
+        f_norm = (self.freq / self.sampling_freq)
         self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
 
     """
@@ -52,30 +52,42 @@ class Wavelet():
         return np.empty((self.freq.size, self.time.size)).shape
 
     """
-    Performs the CWT
+    Performs the Continuous Wavelet Transform and normalizes the data
+    - Computes the CWT on the raw audio data
+    - Takes the absolute value to get the magnitude of the resultant coefs
+    - Normalizes the coefs against the scale to compensate for energy 
+      accumulation bias in the CWT with higher scales (low frequencies)
+    - Normalizes the coefs so the min and max map to 0 and 1
+    - Downsamples the coefs to reduce plotting time
+    - Transposes the coefs because the CWT swaps the axes for some reason
 
     Args:
-        audio_data: audio signal data
+        audio_data: raw audio signal data
 
     Returns:
-        coefs: the absolute values of the CWT coefficients
+        coefs: the normalized CWT coefficients
 
     """
     def compute_cwt(self, audio_data): 
-        coefs, _ = pywt.cwt(data= audio_data,
-                            scales= self.scales,
-                            wavelet= self.wavelet_name,
-                            sampling_period= self.sampling_period)
+        coefs, _ = pywt.cwt(data = audio_data,
+                            scales = self.scales,
+                            wavelet = self.wavelet_name,
+                            sampling_period = self.sampling_period)
 
-        # Take absolute value of coefs
-        coefs = np.abs(coefs)
+        # Absolute Value 
+        coefs_abs = np.abs(coefs)
 
-        # Sharpen the coef magnitudes on a log scale
-        # TODO SOON here is where we would use a log scale to sharpen the colors
+        # Scale-Based Normalization 
+        coefs_scaled = coefs_abs / np.sqrt(self.scales[:, None])
 
-        # Downsample Stage (python can't graph large things fast)
-        coefs = coefs[::, ::(self.downsample_factor)]
+        # Min-Max Normalization 
+        coefs_min = np.min(coefs_scaled)
+        coefs_max = np.max(coefs_scaled)
+        coefs_norm = (coefs_scaled - coefs_min) / (coefs_max - coefs_min)
 
-        # Swap axes because the CWT function flips the freq and time axes 
+        # Downsample 
+        coefs = coefs_norm[::, ::(self.downsample_factor)]
+
+        # Swap Axes
         coefs = np.transpose(coefs)
         return coefs

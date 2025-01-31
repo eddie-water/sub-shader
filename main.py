@@ -8,10 +8,10 @@ from plotter import Plotter
 
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
-FRAME_SIZE = 256
+FRAME_SIZE = 4096
 DOWNSAMPLE_FACTOR = 8
 
-FILE_PATH = "audio_files/c_4_arps.wav"
+FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
 # Audio Input, Audio Characteristics 
 audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
