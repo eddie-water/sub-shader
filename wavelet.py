@@ -23,8 +23,8 @@ class Wavelet():
 
         self.downsample_factor = downsample_factor
 
-        # Wavelet info
-        self.wavelet_name = "cmor1.5-1.0" # TODO LATER why 1.5-1.0?
+        # Wavelet info TODO LATER why 1.5-1.0?
+        self.wavelet_name = "cmor1.5-1.0"
 
         # Time Axis
         self.time = np.arange(0, frame_size) * self.sampling_period
@@ -39,7 +39,7 @@ class Wavelet():
         self.freq = self.freq[self.freq < self.nyquist_freq]
 
         # Scale array used to specify wavelet dilation amounts during cwt
-        f_norm = (self.freq / self.sampling_freq) # TODO comment why we do this
+        f_norm = (self.freq / self.sampling_freq)
         self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
 
     """

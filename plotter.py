@@ -8,8 +8,7 @@ class Plotter():
         Global Backend Config Options
             useOpenGL           - enables OpenGL (seems to make things ~2x 
                                   faster)
-            enableExperimental  - use PyOpenGL for curve drawing TODO LATER is 
-                                  this really even needed?
+            enableExperimental  - use PyOpenGL for curve drawing 
 
         App, Widget, Plot
         """
@@ -65,7 +64,7 @@ class Plotter():
         ColorBarItem
             label       - title for color self.bar
             interactive - True would override enableAutoLevels in PColorMesh
-            rounding    - TODO EVENTUALLY how fine of a rounding do we need
+            rounding    - Decimal precision
 
         TextItem
             anchor  - x, y what corner of the text box anchors the text's 
