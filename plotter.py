@@ -64,7 +64,7 @@ class Plotter():
         ColorBarItem
             label       - title for color self.bar
             interactive - True would override enableAutoLevels in PColorMesh
-            rounding    - Decimal precision
+            rounding    - decimal precision
 
         TextItem
             anchor  - x, y what corner of the text box anchors the text's 
