@@ -30,9 +30,9 @@ class Wavelet():
         self.time = np.arange(0, frame_size) * self.sampling_period
 
         # Frequency Axis that mimics the variable step size of musical scales
-        scale_factor = 2**(1/NOTES_PER_OCTAVE)
+        self.scale_factor = 2**(1/NOTES_PER_OCTAVE)
         i = np.arange(0, NOTES_PER_OCTAVE*NUM_OCTAVES, 1)
-        s = scale_factor**i
+        s = self.scale_factor**i
         self.freq = ROOT_NOTE_A0*s
 
         # Discard frequencies that are unmeasurable
@@ -50,6 +50,23 @@ class Wavelet():
     """
     def get_shape(self) -> np.ndarray.shape:
         return np.empty((self.freq.size, self.time.size)).shape
+
+    """
+    Get the time resolution for the data
+    Returns:
+        Sampling period
+    """
+    def get_sample_period(self) -> float:
+        return self.sampling_period
+    
+    """
+    Gets the scale factor
+
+    Returns:
+        Scale factor
+    """
+    def get_scale_factor(self) -> float:
+        return self.scale_factor
 
     """
     Performs the Continuous Wavelet Transform and normalizes the data
