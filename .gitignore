@@ -2,7 +2,7 @@
 .vscode/*
 
 # Virtual Environment
-.venv/*
+env/*
 
 # Compiled Python
 *.pyc
