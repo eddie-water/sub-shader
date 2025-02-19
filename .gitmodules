@@ -1,0 +1,3 @@
+[submodule "PyTorchWavelets"]
+	path = PyTorchWavelets
+	url = git@github.com:tomrunia/PyTorchWavelets.git
