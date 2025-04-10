@@ -1,3 +1,6 @@
 [submodule "PyTorchWavelets"]
 	path = PyTorchWavelets
 	url = git@github.com:tomrunia/PyTorchWavelets.git
+[submodule "pywt"]
+	path = pywt
+	url = git@github.com:PyWavelets/pywt.git
