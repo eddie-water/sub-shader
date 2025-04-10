@@ -4,8 +4,9 @@ import scipy.datasets
 import matplotlib.pyplot as plt
 
 from audio_input import AudioInput
-from wavelet import Wavelet
 from plotter import Plotter
+from wavelet import Wavelet
+from wavelet import ShadeWavelet
 
 from pycudwt import Wavelets
 from wavelets_pytorch.transform import WaveletTransformTorch
@@ -23,27 +24,23 @@ audio_data = audio_input.get_frame()
 sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
 
 # PyWavelet
-wavelet_pywavelet = Wavelet(sampling_freq = sampling_freq, 
+pywavelet = Wavelet(sampling_freq = sampling_freq, 
                             frame_size = FRAME_SIZE,
                             downsample_factor = DOWNSAMPLE_FACTOR)
-coefs_pywavelet = wavelet_pywavelet.compute_cwt(audio_data)
+
+# TODO SOON wait why am I transposing this if it's being transposed in the compute_cwt method?
+coefs_pywavelet = pywavelet.compute_cwt(audio_data)
 coefs_pywavelet = np.transpose(coefs_pywavelet)
 
-# PyTorchWavelet
-dt = wavelet_pywavelet.get_sample_period()
-dj = wavelet_pywavelet.get_scale_factor()
-wavelet_torch = WaveletTransformTorch(dt = dt, dj = dj, unbias = False)
-coefs_torch = wavelet_torch.power(audio_data)
+# Non Accelerated Manual CWT # TODO LATER find a better name for this object class
+shade_wavelet = ShadeWavelet(sampling_freq = sampling_freq, 
+                             frame_size = FRAME_SIZE)
 
-# PyCuDwt (doesn't have CWT unforunately)
-wavelet_pcudwt = Wavelets(audio_data, "db2", 3)
-wavelet_pcudwt.forward()
-wavelet_pcudwt.soft_threshold(10)
-wavelet_pcudwt.inverse()
-coefs_pycudwt = wavelet_pcudwt.image
+coefs_shade_wavelet = shade_wavelet.compute_cwt(audio_data)
+
 
 # Plot
-fig, axes = plt.subplots(4, 1, figsize=(10,5))
+fig, axes = plt.subplots(3, 1, figsize=(10,5))
 
 axes[0].set_title("Signal Time Series")
 axes[0].plot(audio_data)
@@ -53,13 +50,10 @@ axes[1].set_title("PyWavelet")
 axes[1].imshow(coefs_pywavelet, cmap = "magma", aspect = "auto")
 axes[1].axis('off')
 
-axes[2].set_title("PyTorchWavelet")
-axes[2].imshow(coefs_torch, cmap = "magma", aspect = "auto")
+axes[2].set_title("Shade Wavelet")
+axes[2].imshow(coefs_shade_wavelet, cmap = "magma", aspect = "auto")
 axes[2].axis('off')
 
-axes[3].set_title("PyCuDwt")
-axes[3].imshow(coefs_pycudwt, cmap = "magma", aspect="auto")
-axes[3].axis('off')
 
 plt.show()
 

@@ -1,8 +1,5 @@
+from abc import ABC, abstractmethod
 import numpy as np
-
-import sys, os
-sys.path.insert(0, os.path.abspath("./pywt"))
-
 import pywt
 
 # Most audio is sampled 44.1 kHz
@@ -13,7 +10,8 @@ NOTES_PER_OCTAVE = 12
 NUM_OCTAVES = 10
 ROOT_NOTE_A0 = 27.5
 
-class Wavelet():
+# TODO NEXT begin creating the shade wavelet class that also inherits this class
+class Wavelet(ABC):
     def __init__(self, sampling_freq: int, frame_size: int, downsample_factor: int):
         if (sampling_freq != TYPICAL_SAMPLING_FREQ):
             raise ValueError("Irregular Sampling Frequency")
@@ -75,7 +73,21 @@ class Wavelet():
     """
     Performs the Continuous Wavelet Transform and normalizes the data
     - Computes the CWT on the raw audio data
-    - Takes the absolute value to get the magnitude of the resultant coefs
+
+    Args:
+        audio_data: raw audio signal data
+
+    Returns:
+        raw_coefs: raw CWT coefficients
+
+    """
+    @abstractmethod
+    def compute_cwt(self, audio_data) -> np.ndarray: 
+        pass
+    
+    """
+    Cleans up the coef data for plotting
+    - Takes the absolute values of to get the magnitude of the resultant coefs
     - Normalizes the coefs against the scale to compensate for energy 
       accumulation bias in the CWT with higher scales (low frequencies)
     - Normalizes the coefs so the min and max map to 0 and 1
@@ -83,20 +95,14 @@ class Wavelet():
     - Transposes the coefs because the CWT swaps the axes for some reason
 
     Args:
-        audio_data: raw audio signal data
+        raw_coefs: raw CWT coefficients 
 
     Returns:
-        coefs: the normalized CWT coefficients
-
+        coefs: normalized CWT coefficients
     """
-    def compute_cwt(self, audio_data): 
-        coefs, _ = pywt.cwt(data = audio_data,
-                            scales = self.scales,
-                            wavelet = self.wavelet_name,
-                            sampling_period = self.sampling_period)
-
+    def sanitize_cwt_data(self, raw_coefs) -> np.ndarray:
         # Absolute Value 
-        coefs_abs = np.abs(coefs)
+        coefs_abs = np.abs(raw_coefs)
 
         # Scale-Based Normalization 
         coefs_scaled = coefs_abs / np.sqrt(self.scales[:, None])
@@ -110,5 +116,22 @@ class Wavelet():
         coefs = coefs_norm[::, ::(self.downsample_factor)]
 
         # Swap Axes
+        # TODO SOON wait why am I transposing this if it's being transposed in the compute_cwt method?
         coefs = np.transpose(coefs)
         return coefs
+    
+class PyWavelet(Wavelet):
+    def __init__(self, sampling_freq, frame_size, downsample_factor):
+        super().__init__(sampling_freq, frame_size, downsample_factor)
+
+    def compute_cwt(self, audio_data):
+        raw_coefs, _ = pywt.cwt(data = audio_data,
+                    scales = self.scales,
+                    wavelet = self.wavelet_name,
+                    sampling_period = self.sampling_period)
+
+        return raw_coefs
+
+class ShadeWavelet(Wavelet):
+    def __init__(self, sampling_freq, frame_size, downsample_factor):
+        super().__init__(sampling_freq, frame_size, downsample_factor)
