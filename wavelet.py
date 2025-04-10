@@ -87,7 +87,8 @@ class Wavelet(ABC):
     
     """
     Cleans up the coef data for plotting
-    - Takes the absolute values of to get the magnitude of the resultant coefs
+    - Takes the absolute values of the raw coefs to get the magnitude of the 
+      resultant coefs
     - Normalizes the coefs against the scale to compensate for energy 
       accumulation bias in the CWT with higher scales (low frequencies)
     - Normalizes the coefs so the min and max map to 0 and 1
@@ -112,11 +113,11 @@ class Wavelet(ABC):
         coefs_max = np.max(coefs_scaled)
         coefs_norm = (coefs_scaled - coefs_min) / (coefs_max - coefs_min)
 
-        # Downsample 
+        # Downsample TODO LATER downsample shouldn't? be needed if cwt is fast enough
         coefs = coefs_norm[::, ::(self.downsample_factor)]
 
         # Swap Axes
-        # TODO SOON wait why am I transposing this if it's being transposed in the compute_cwt method?
+        # TODO SOON wait why am I transposing this if it's being transposed outside the compute_cwt method?
         coefs = np.transpose(coefs)
         return coefs
     
@@ -126,12 +127,18 @@ class PyWavelet(Wavelet):
 
     def compute_cwt(self, audio_data):
         raw_coefs, _ = pywt.cwt(data = audio_data,
-                    scales = self.scales,
-                    wavelet = self.wavelet_name,
-                    sampling_period = self.sampling_period)
+                                scales = self.scales,
+                                wavelet = self.wavelet_name,
+                                sampling_period = self.sampling_period)
 
-        return raw_coefs
+        return self.sanitize_cwt_data(raw_coefs)
 
 class ShadeWavelet(Wavelet):
     def __init__(self, sampling_freq, frame_size, downsample_factor):
         super().__init__(sampling_freq, frame_size, downsample_factor)
+    
+    def compute_cwt(self, audio_data) -> np.ndarray:        
+        # TODO NEXT implement my own CWT
+        print("Performing the Shade CWT")
+
+        return np.zeros(self.get_shape())

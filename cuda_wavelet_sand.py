@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 from audio_input import AudioInput
 from plotter import Plotter
-from wavelet import Wavelet
+from wavelet import PyWavelet
 from wavelet import ShadeWavelet
 
 from pycudwt import Wavelets
@@ -24,7 +24,7 @@ audio_data = audio_input.get_frame()
 sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
 
 # PyWavelet
-pywavelet = Wavelet(sampling_freq = sampling_freq, 
+pywavelet = PyWavelet(sampling_freq = sampling_freq, 
                             frame_size = FRAME_SIZE,
                             downsample_factor = DOWNSAMPLE_FACTOR)
 
@@ -34,7 +34,8 @@ coefs_pywavelet = np.transpose(coefs_pywavelet)
 
 # Non Accelerated Manual CWT # TODO LATER find a better name for this object class
 shade_wavelet = ShadeWavelet(sampling_freq = sampling_freq, 
-                             frame_size = FRAME_SIZE)
+                             frame_size = FRAME_SIZE,
+                             downsample_factor = DOWNSAMPLE_FACTOR)
 
 coefs_shade_wavelet = shade_wavelet.compute_cwt(audio_data)
 
