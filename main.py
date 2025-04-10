@@ -9,7 +9,7 @@ from plotter import Plotter
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
 FRAME_SIZE = 4096
-DOWNSAMPLE_FACTOR = 8
+DOWNSAMPLE_FACTOR = 2
 
 FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 

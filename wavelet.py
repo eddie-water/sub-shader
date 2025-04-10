@@ -1,4 +1,8 @@
 import numpy as np
+
+import sys, os
+sys.path.insert(0, os.path.abspath("./pywt"))
+
 import pywt
 
 # Most audio is sampled 44.1 kHz
@@ -32,8 +36,8 @@ class Wavelet():
         # Frequency Axis that mimics the variable step size of musical scales
         self.scale_factor = 2**(1/NOTES_PER_OCTAVE)
         i = np.arange(0, NOTES_PER_OCTAVE*NUM_OCTAVES, 1)
-        s = self.scale_factor**i
-        self.freq = ROOT_NOTE_A0*s
+        self.s = self.scale_factor**i
+        self.freq = ROOT_NOTE_A0*self.s
 
         # Discard frequencies that are unmeasurable
         self.freq = self.freq[self.freq < self.nyquist_freq]
