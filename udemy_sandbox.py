@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-fig, axes = plt.subplots(2, 1, figsize=(5,5))
+fig, axes = plt.subplots(3, 1, figsize=(5,5))
 
 SAMPLE_RATE = 1000
 step = 1/SAMPLE_RATE
@@ -12,13 +12,14 @@ f_wavelet = 2*np.pi
 
 sine_wave = np.cos(2*np.pi*f_wavelet*t)
 
-
 fwhm = 0.5
 gaus_win = np.exp((-4 * np.log(2) * t**2) / (fwhm**2))
-morlet_wavelet = np.dot(sine_wave, gaus_win)
+
+morlet_wavelet = sine_wave * gaus_win
 
 axes[0].plot(t, sine_wave)
 axes[1].plot(t, gaus_win)
+axes[2].plot(t, morlet_wavelet)
 
 plt.tight_layout()
 plt.show()
