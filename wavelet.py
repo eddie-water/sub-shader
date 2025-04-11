@@ -101,7 +101,7 @@ class Wavelet(ABC):
     Returns:
         coefs: normalized CWT coefficients
     """
-    def sanitize_cwt_data(self, raw_coefs) -> np.ndarray:
+    def normalize_coefs(self, raw_coefs) -> np.ndarray:
         # Absolute Value 
         coefs_abs = np.abs(raw_coefs)
 
@@ -113,7 +113,7 @@ class Wavelet(ABC):
         coefs_max = np.max(coefs_scaled)
         coefs_norm = (coefs_scaled - coefs_min) / (coefs_max - coefs_min)
 
-        # Downsample TODO LATER downsample shouldn't? be needed if cwt is fast enough
+        # Downsample TODO LATER remove - downsample shouldn't be needed if cwt is fast enough
         coefs = coefs_norm[::, ::(self.downsample_factor)]
 
         # Swap Axes
@@ -131,7 +131,7 @@ class PyWavelet(Wavelet):
                                 wavelet = self.wavelet_name,
                                 sampling_period = self.sampling_period)
 
-        return self.sanitize_cwt_data(raw_coefs)
+        return self.normalize_coefs(raw_coefs)
 
 class ShadeWavelet(Wavelet):
     def __init__(self, sampling_freq, frame_size, downsample_factor):
