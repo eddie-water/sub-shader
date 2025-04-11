@@ -17,9 +17,12 @@ gaus_win = np.exp((-4 * np.log(2) * t**2) / (fwhm**2))
 
 morlet_wavelet = sine_wave * gaus_win
 
-axes[0].plot(t, sine_wave)
-axes[1].plot(t, gaus_win)
-axes[2].plot(t, morlet_wavelet)
+axes[0].plot(t, sine_wave, color = 'dodgerblue')
+axes[1].plot(t, gaus_win, color = 'orange')
+
+axes[2].plot(t, sine_wave, color = 'dodgerblue')
+axes[2].plot(t, gaus_win, color = 'orange')
+axes[2].plot(t, morlet_wavelet, lw = 3, color = 'black')
 
 plt.tight_layout()
 plt.show()
