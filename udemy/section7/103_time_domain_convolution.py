@@ -3,12 +3,15 @@ import matplotlib.pyplot as plt
 from numpy.fft import fft
 
 """
-Kernel Play 1
+Kernels and Convolutions in the Time Domain 1
 
-What is a convolution?
-    - When you convolve a signal and a kernel (filter) you are effectively 
-    asking at the current time 't', what is the the total accumulated effect
-    of all the past inputs, weighted by the system's response to those inputs.
+What is a kernel and what's their purpose?
+    - A sequence of numbers that acts like a template or filter for processing
+    signals or data
+    - Tells you how to weight the affect of nearby points in the data you are
+    analyzing
+    - Can be used to modify the data or detect features in the data when used
+    in convolution (or correlation)
 """
 fig, axes = plt.subplots(3, 3)
 
@@ -70,17 +73,22 @@ axes[2, 2].plot(edge_result, color = 'red')
 axes[2, 2].set_title('Output Signal')
 
 """
-Kernel Play 2
+Kernels and Convolutions in the Time Domain 2
 
-Why do you flip the kernel when convolving in the time domain?
-    - Convolution in the time domain is taking the kernel, overlapping it with
-    the input signal, performing the dot (inner) product, storing that result in
-    the output signal, sliding the kernel over, and then repeat until the kernel 
-    has been slid over the entire input signal.
-    - Since we are saying time increases from left to right in our sequences, 
-
-    So if you didn't flip the kernel, and you took the ker
-
+What is convolution and why do we need to flip the kernel when doing it?
+    - Convolution is a model of causality aka cause-and-effect: at the current 
+    time 't', what is the total accumulated effect of all the past inputs, 
+    weighted by the system's response to those inputs
+    - Time domain convolution occurs when you flip the kernel, overlap it with
+    the input signal, perform the dot (inner) product, store that result in the
+    output signal, slide the kernel over by one, and then repeat until the 
+    kernel has slid over the entire input 
+    - Since we want to see how past events affect the current one, we need to 
+    flip the kernel because we are saying time increases from left to right 
+    - If you don't flip the kernel, you would be applying the right most sample
+    of the kernel to left most sample of the signal, which is basically saying:
+    how does a future moment (which hasn't happened yet) affect the current 
+    moment (which doesn't make sense for a cause-and-effect model)
 """
 fig, axes = plt.subplots(3, 2)
 
