@@ -92,15 +92,15 @@ What is convolution and why do we need to flip the kernel when doing it?
 """
 fig, axes = plt.subplots(3, 2)
 
+# Input Signal
 arrays = [np.zeros(8), np.ones(7), np.zeros(5)]
 signal = np.concatenate(arrays)
 
 # Linearly Decreasing Kernel
 kernel = np.array([1, .8, .6, .4, .2])
 
-signal_length = len(signal)
-kernel_length = len(kernel)
-conv_length = signal_length + kernel_length - 1
+# Convolution using NumPy
+numpy_result = np.convolve(signal, kernel, mode = 'same')
 
 axes[0, 0].plot(signal, color = 'black')
 axes[0, 0].set_title('Input Signal')
@@ -108,33 +108,57 @@ axes[0, 0].set_title('Input Signal')
 axes[1, 0].plot(kernel)
 axes[1, 0].set_title('Linearly Decreasing Kernel')
 
-result = np.convolve(signal, kernel, mode = 'same')
 axes[2, 0].plot(signal, color = 'black')
-axes[2, 0].plot(result, color = 'red')
+axes[2, 0].plot(numpy_result, color = 'red')
 axes[2, 0].set_title('Output Signal')
 
-# Reverse the kernel and shift it down by the kernels average value
-mean_centered_kernel = kernel[::-1] - np.mean(kernel)
+axes[0, 1].plot(signal, color = 'black')
+axes[0, 1].set_title('Convolution Result - NumPy')
 
-"""
-Why do we reverse the kernel?
+# Convolution using Old Skool methods
+sig_length = len(signal)
+kern_length = len(kernel)
+conv_length = sig_length + kern_length - 1
 
+half_kern_length = int(np.floor(kern_length / 2))
 
-"""
+# Reverse ze kernel 
+flipped_kernel = kernel[::-1] 
+
+# TODO SOON Shift it down by the kernel's average value
+# mean_centered_kernel = flipped_kernel - np.mean(kernel)
+
+# Pad the signal with zeros - half the size of the kernel on each side
+arrays = [np.zeros(half_kern_length), signal, np.zeros(half_kern_length)]
+padded_signal = np.concatenate(arrays)
+
+# Destination array for convolution 
+result = np.zeros(conv_length)
+
+# Do the time domain convolution by hand
+i_start = half_kern_length + 1
+i_end = conv_length - half_kern_length
+
+for i in range(i_start, i_end):
+    # TODO NOW this + 1 is shifting everything over by 2?? lol fix this in the AM
+    signal_slice = padded_signal[(i - half_kern_length):(i + half_kern_length + 1)]
+    result[i] = np.sum(signal_slice * flipped_kernel)
+
+    # TODO NEXT sleep(DELAY), then update plot to animate the vision
 
 axes[0, 1].plot(signal, color = 'black')
 axes[0, 1].set_title('Input Signal')
 
-axes[1, 1].plot(mean_centered_kernel)
-axes[1, 1].set_title('Mean Centered Kernel')
+axes[1, 1].plot(flipped_kernel)
+axes[1, 1].set_title('Flipped Kernel')
 
-result = np.convolve(signal, mean_centered_kernel, mode = 'same')
 axes[2, 1].plot(signal, color = 'black')
 axes[2, 1].plot(result, color = 'red')
-axes[2, 1].set_title('Output Signal')
+axes[2, 1].set_title('Convolution Result - Old Skool')
 
 """
 Display Plot
 """
+plt.style.use('dark_background')
 plt.tight_layout()
 plt.show()
