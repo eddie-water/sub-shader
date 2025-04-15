@@ -6,6 +6,8 @@ from audio_input import AudioInput
 from wavelet import Wavelet
 from plotter import Plotter
 
+# goodnight git
+
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
 FRAME_SIZE = 4096
