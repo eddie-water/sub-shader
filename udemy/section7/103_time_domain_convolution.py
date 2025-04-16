@@ -90,7 +90,7 @@ What is convolution and why do we need to flip the kernel when doing it?
     how does a future moment (which hasn't happened yet) affect the current 
     moment (which doesn't make sense for a cause-and-effect model)
 """
-fig, axes = plt.subplots(3, 2)
+fig, axes = plt.subplots(3)
 
 # Input Signal
 arrays = [np.zeros(8), np.ones(7), np.zeros(5)]
@@ -102,28 +102,40 @@ kernel = np.array([1, .8, .6, .4, .2])
 # Convolution using NumPy
 numpy_result = np.convolve(signal, kernel, mode = 'same')
 
-axes[0, 0].plot(signal, color = 'black')
-axes[0, 0].set_title('Input Signal')
+axes[0].plot(signal, color = 'black')
+axes[0].set_title('Input Signal')
 
-axes[1, 0].plot(kernel)
-axes[1, 0].set_title('Linearly Decreasing Kernel')
+axes[1].plot(kernel)
+axes[1].set_title('Linearly Decreasing Kernel')
 
-axes[2, 0].plot(signal, color = 'black')
-axes[2, 0].plot(numpy_result, color = 'red')
-axes[2, 0].set_title('Output Signal')
-
-axes[0, 1].plot(signal, color = 'black')
-axes[0, 1].set_title('Convolution Result - NumPy')
+axes[2].plot(signal, color = 'black')
+axes[2].plot(numpy_result, color = 'red')
+axes[2].set_title('Output Signal')
 
 # Convolution using Old Skool methods
-sig_length = len(signal)
-kern_length = len(kernel)
-conv_length = sig_length + kern_length - 1
+import time
 
-half_kern_length = int(np.floor(kern_length / 2))
+plt.ion()
+
+fig, ax = plt.subplots()
+
+signal_len = len(signal)
+kernel_len = len(kernel)
+result_len = signal_len + kernel_len - 1
+
+half_kern_length = int(np.floor(kernel_len / 2))
+
+ax.set_ylim(-3, 3)
+
+# Vertical Dashed Lines
+ax.axvline(x = half_kern_length, color = 'gray', linestyle='--')
+ax.axvline(x = (half_kern_length + signal_len), color = 'gray', linestyle='--')
+
+signal_plot_line, = ax.plot(signal, color = 'black')
 
 # Reverse ze kernel 
 flipped_kernel = kernel[::-1] 
+kernel_plot_line, = ax.plot([], [], color = 'red')
 
 # TODO SOON Shift it down by the kernel's average value
 # mean_centered_kernel = flipped_kernel - np.mean(kernel)
@@ -133,32 +145,28 @@ arrays = [np.zeros(half_kern_length), signal, np.zeros(half_kern_length)]
 padded_signal = np.concatenate(arrays)
 
 # Destination array for convolution 
-result = np.zeros(conv_length)
+result = np.zeros(result_len)
+# result_plot_line, = ax.plot(result, color = 'mediumslateblue')
 
 # Do the time domain convolution by hand
 i_start = half_kern_length + 1
-i_end = conv_length - half_kern_length
+i_end = result_len - half_kern_length
 
 for i in range(i_start, i_end):
     # TODO NOW this + 1 is shifting everything over by 2?? lol fix this in the AM
     signal_slice = padded_signal[(i - half_kern_length):(i + half_kern_length + 1)]
     result[i] = np.sum(signal_slice * flipped_kernel)
+    # result_plot_line.set_data(result)
 
-    # TODO NEXT sleep(DELAY), then update plot to animate the vision
+    kernel_x_vals = np.arange(i, i + kernel_len)
+    kernel_y_vals = flipped_kernel
+    kernel_plot_line.set_data(kernel_x_vals, kernel_y_vals)
 
-axes[0, 1].plot(signal, color = 'black')
-axes[0, 1].set_title('Input Signal')
+    fig.canvas.draw()
+    fig.canvas.flush_events()
 
-axes[1, 1].plot(flipped_kernel)
-axes[1, 1].set_title('Flipped Kernel')
+    time.sleep(1)
 
-axes[2, 1].plot(signal, color = 'black')
-axes[2, 1].plot(result, color = 'red')
-axes[2, 1].set_title('Convolution Result - Old Skool')
-
-"""
-Display Plot
-"""
 plt.style.use('dark_background')
 plt.tight_layout()
 plt.show()
