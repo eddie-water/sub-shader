@@ -3,7 +3,7 @@ from pyqtgraph.Qt import QtCore
 from utils import FrameCounter
 
 from audio_input import AudioInput
-from wavelet import Wavelet
+from wavelet import PyWavelet
 from plotter import Plotter
 
 # goodnight git
@@ -21,7 +21,7 @@ audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
 
 # Wavelet Object
-wavelet = Wavelet(sampling_freq = sampling_freq, 
+wavelet = PyWavelet(sampling_freq = sampling_freq, 
                   frame_size = FRAME_SIZE,
                   downsample_factor = DOWNSAMPLE_FACTOR)
 
