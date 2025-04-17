@@ -5,13 +5,13 @@ from numpy.fft import fft
 """
 Kernels and Convolutions in the Time Domain 1
 
-What is a kernel and what's their purpose?
+What is a kernel and what's its purpose?
     - A sequence of numbers that acts like a template or filter for processing
-    signals or data
+      signals or data
     - Tells you how to weight the affect of nearby points in the data you are
-    analyzing
-    - Can be used to modify the data or detect features in the data when used
-    in convolution (or correlation)
+      analyzing
+    - Can be used to modify, boost, or reduce parts of the data or detect 
+      features in the data when used in convolution (or correlation)
 """
 fig, axes = plt.subplots(3, 3)
 
@@ -77,23 +77,23 @@ Kernels and Convolutions in the Time Domain 2
 
 What is convolution and why do we need to flip the kernel when doing it?
     - Convolution is a model of causality aka cause-and-effect: at the current 
-    time 't', what is the total accumulated effect of all the past inputs, 
-    weighted by the system's response to those inputs
+      time 't', what is the total accumulated effect of all the past inputs, 
+      weighted by the system's response to those inputs
     - Time domain convolution occurs when you flip the kernel, overlap it with
-    the input signal, perform the dot (inner) product, store that result in the
-    output signal, slide the kernel over by one, and then repeat until the 
-    kernel has slid over the entire input 
+      the input signal, perform the dot (inner) product, store that result in the
+      output signal, slide the kernel over by one, and then repeat until the 
+      kernel has slid over the entire input 
     - Since we want to see how past events affect the current one, we need to 
-    flip the kernel because we are saying time increases from left to right 
+      flip the kernel because we are saying time increases from left to right 
     - If you don't flip the kernel, you would be applying the right most sample
-    of the kernel to left most sample of the signal, which is basically saying:
-    how does a future moment (which hasn't happened yet) affect the current 
-    moment (which doesn't make sense for a cause-and-effect model)
+      of the kernel to left most sample of the signal, which is basically saying:
+      how does a future moment (which hasn't happened yet) affect the current 
+      moment (which doesn't make sense for a cause-and-effect model)
 """
 fig, axes = plt.subplots(3)
 
 # Input Signal
-arrays = [np.zeros(8), np.ones(7), np.zeros(5)]
+arrays = [np.zeros(7), np.ones(8), np.zeros(6)]
 signal = np.concatenate(arrays)
 
 # Linearly Decreasing Kernel
@@ -125,34 +125,33 @@ result_len = signal_len + kernel_len - 1
 
 half_kern_length = int(np.floor(kernel_len / 2))
 
-ax.set_ylim(-3, 3)
+ax.set_ylim(-1, 3)
 
 # Vertical Dashed Lines
 ax.axvline(x = half_kern_length, color = 'gray', linestyle='--')
-ax.axvline(x = (half_kern_length + signal_len), color = 'gray', linestyle='--')
+ax.axvline(x = (half_kern_length + signal_len - 1), color = 'gray', linestyle='--')
 
-signal_plot_line, = ax.plot(signal, color = 'black')
-
-# Reverse ze kernel 
+# Reverse ze kernel (nifty way of instantiating empty 2D array)
 flipped_kernel = kernel[::-1] 
-kernel_plot_line, = ax.plot([], [], color = 'red')
-
-# TODO SOON Shift it down by the kernel's average value
-# mean_centered_kernel = flipped_kernel - np.mean(kernel)
 
 # Pad the signal with zeros - half the size of the kernel on each side
 arrays = [np.zeros(half_kern_length), signal, np.zeros(half_kern_length)]
 padded_signal = np.concatenate(arrays)
 
+signal_plot_line, = ax.plot(padded_signal, '-o', color = 'black', zorder = 1)
+kernel_plot_line, = ax.plot([], [], '-o', color = 'red', zorder = 2)
+
 # Destination array for convolution 
 result = np.zeros(result_len)
-# result_plot_line, = ax.plot(result, color = 'mediumslateblue')
+# result_plot_line, = ax.plot(result, '-o', color = 'mediumslateblue')
 
 # Do the time domain convolution by hand
-i_start = half_kern_length + 1
-i_end = result_len - half_kern_length
+i_start = 2``
+i_end = result_len - half_kern_length - 2 # note the minus 2
 
 for i in range(i_start, i_end):
+    time.sleep(3)
+
     # TODO NOW this + 1 is shifting everything over by 2?? lol fix this in the AM
     signal_slice = padded_signal[(i - half_kern_length):(i + half_kern_length + 1)]
     result[i] = np.sum(signal_slice * flipped_kernel)
@@ -165,7 +164,6 @@ for i in range(i_start, i_end):
     fig.canvas.draw()
     fig.canvas.flush_events()
 
-    time.sleep(1)
 
 plt.style.use('dark_background')
 plt.tight_layout()
