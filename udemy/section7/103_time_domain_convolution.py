@@ -143,28 +143,29 @@ kernel_plot_line, = ax.plot([], [], '-o', color = 'red', zorder = 2)
 
 # Destination array for convolution 
 result = np.zeros(result_len)
-# result_plot_line, = ax.plot(result, '-o', color = 'mediumslateblue')
+result_plot_line, = ax.plot([], [], '-o', color = 'mediumslateblue')
 
 # Do the time domain convolution by hand
-i_start = 2``
-i_end = result_len - half_kern_length - 2 # note the minus 2
+i_start = half_kern_length
+i_end = result_len - half_kern_length
 
 for i in range(i_start, i_end):
-    time.sleep(3)
-
-    # TODO NOW this + 1 is shifting everything over by 2?? lol fix this in the AM
     signal_slice = padded_signal[(i - half_kern_length):(i + half_kern_length + 1)]
-    result[i] = np.sum(signal_slice * flipped_kernel)
-    # result_plot_line.set_data(result)
+    result[i - i_start] = np.sum(signal_slice * flipped_kernel)
+    result_plot_line.set_data(np.arange(i + 1), result[:i + 1])
 
-    kernel_x_vals = np.arange(i, i + kernel_len)
+    kernel_x_vals = np.arange(i - half_kern_length, i - half_kern_length + kernel_len)
     kernel_y_vals = flipped_kernel
     kernel_plot_line.set_data(kernel_x_vals, kernel_y_vals)
 
     fig.canvas.draw()
     fig.canvas.flush_events()
 
+    time.sleep(1)
 
 plt.style.use('dark_background')
 plt.tight_layout()
 plt.show()
+
+while(True):
+    pass
