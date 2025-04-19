@@ -125,7 +125,7 @@ result_len = signal_len + kernel_len - 1
 
 half_kern_length = int(np.floor(kernel_len / 2))
 
-ax.set_ylim(-1, 3)
+ax.set_ylim(-1, 4)
 
 # Vertical Dashed Lines
 ax.axvline(x = half_kern_length, color = 'gray', linestyle='--')
@@ -151,7 +151,7 @@ i_end = result_len - half_kern_length
 
 for i in range(i_start, i_end):
     signal_slice = padded_signal[(i - half_kern_length):(i + half_kern_length + 1)]
-    result[i - i_start] = np.sum(signal_slice * flipped_kernel)
+    result[i] = np.sum(signal_slice * flipped_kernel)
     result_plot_line.set_data(np.arange(i + 1), result[:i + 1])
 
     kernel_x_vals = np.arange(i - half_kern_length, i - half_kern_length + kernel_len)
