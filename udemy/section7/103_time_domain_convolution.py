@@ -121,7 +121,7 @@ fig, ax = plt.subplots()
 
 signal_len = len(signal)
 kernel_len = len(kernel)
-result_len = signal_len + kernel_len - 1
+result_len = signal_len
 
 half_kern_length = int(np.floor(kernel_len / 2))
 
@@ -139,29 +139,41 @@ arrays = [np.zeros(half_kern_length), signal, np.zeros(half_kern_length)]
 padded_signal = np.concatenate(arrays)
 
 signal_plot_line, = ax.plot(padded_signal, '-o', color = 'black', zorder = 1)
-kernel_plot_line, = ax.plot([], [], '-o', color = 'red', zorder = 2)
+kernel_x_vals = np.arange(kernel_len)
+kernel_y_vals = np.array(flipped_kernel).flatten()
+
+kernel_plot_line, = ax.plot(kernel_x_vals, kernel_y_vals, '-o', color = 'red', zorder = 2)
 
 # Destination array for convolution 
 result = np.zeros(result_len)
 result_plot_line, = ax.plot([], [], '-o', color = 'mediumslateblue')
 
 # Do the time domain convolution by hand
-i_start = half_kern_length
-i_end = result_len - half_kern_length
+i_start = 0
+i_end = result_len + half_kern_length
 
-for i in range(i_start, i_end):
-    signal_slice = padded_signal[(i - half_kern_length):(i + half_kern_length + 1)]
+for i in range(0, i_end):
+    if (i == 25):
+        print("Break Point!")
+
+    signal_slice = padded_signal[i : i + kernel_len]  # TODO NEXT +1 or no
+    print(signal_slice)
     result[i] = np.sum(signal_slice * flipped_kernel)
-    result_plot_line.set_data(np.arange(i + 1), result[:i + 1])
 
-    kernel_x_vals = np.arange(i - half_kern_length, i - half_kern_length + kernel_len)
+    result_x_vals = np.arange(half_kern_length, half_kern_length + i + 1)
+    result_y_vals = result[0 : i + 1]
+    result_plot_line.set_data(result_x_vals, result_y_vals)
+
+    kernel_x_vals = np.arange(i, i + kernel_len)
+
     kernel_y_vals = flipped_kernel
     kernel_plot_line.set_data(kernel_x_vals, kernel_y_vals)
 
     fig.canvas.draw()
     fig.canvas.flush_events()
 
-    time.sleep(1)
+
+    time.sleep(1) 
 
 plt.style.use('dark_background')
 plt.tight_layout()
