@@ -150,7 +150,7 @@ result_plot_line, = ax.plot([], [], '-o', color = 'mediumslateblue')
 
 # Do the time domain convolution by hand
 i_start = 0
-i_end = result_len + half_kern_length
+i_end = result_len
 
 for i in range(0, i_end):
     if (i == 25):
@@ -178,6 +178,3 @@ for i in range(0, i_end):
 plt.style.use('dark_background')
 plt.tight_layout()
 plt.show()
-
-while(True):
-    pass
