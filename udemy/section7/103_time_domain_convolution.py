@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.fft import fft
+from plot_time_domain_conv import plot_time_domain_conv
 
 """
 Kernels and Convolutions in the Time Domain 1
@@ -112,69 +113,21 @@ axes[2].plot(signal, color = 'black')
 axes[2].plot(numpy_result, color = 'red')
 axes[2].set_title('Output Signal')
 
-# Convolution using Old Skool methods
-import time
-
-plt.ion()
-
-fig, ax = plt.subplots()
-
-signal_len = len(signal)
-kernel_len = len(kernel)
-result_len = signal_len
-
-half_kern_length = int(np.floor(kernel_len / 2))
-
-ax.set_ylim(-1, 4)
-
-# Vertical Dashed Lines
-ax.axvline(x = half_kern_length, color = 'gray', linestyle='--')
-ax.axvline(x = (half_kern_length + signal_len - 1), color = 'gray', linestyle='--')
-
-# Reverse ze kernel (nifty way of instantiating empty 2D array)
-flipped_kernel = kernel[::-1] 
-
-# Pad the signal with zeros - half the size of the kernel on each side
-arrays = [np.zeros(half_kern_length), signal, np.zeros(half_kern_length)]
-padded_signal = np.concatenate(arrays)
-
-signal_plot_line, = ax.plot(padded_signal, '-o', color = 'black', zorder = 1)
-kernel_x_vals = np.arange(kernel_len)
-kernel_y_vals = np.array(flipped_kernel).flatten()
-
-kernel_plot_line, = ax.plot(kernel_x_vals, kernel_y_vals, '-o', color = 'red', zorder = 2)
-
-# Destination array for convolution 
-result = np.zeros(result_len)
-result_plot_line, = ax.plot([], [], '-o', color = 'mediumslateblue')
-
-# Do the time domain convolution by hand
-i_start = 0
-i_end = result_len
-
-for i in range(0, i_end):
-    if (i == 25):
-        print("Break Point!")
-
-    signal_slice = padded_signal[i : i + kernel_len]  # TODO NEXT +1 or no
-    print(signal_slice)
-    result[i] = np.sum(signal_slice * flipped_kernel)
-
-    result_x_vals = np.arange(half_kern_length, half_kern_length + i + 1)
-    result_y_vals = result[0 : i + 1]
-    result_plot_line.set_data(result_x_vals, result_y_vals)
-
-    kernel_x_vals = np.arange(i, i + kernel_len)
-
-    kernel_y_vals = flipped_kernel
-    kernel_plot_line.set_data(kernel_x_vals, kernel_y_vals)
-
-    fig.canvas.draw()
-    fig.canvas.flush_events()
-
-
-    time.sleep(1) 
-
-plt.style.use('dark_background')
+# Plot still figures
 plt.tight_layout()
 plt.show()
+
+# Infinite loop of a time domain convolution animation
+plt.ion
+
+while(True):
+    try:
+        plot_time_domain_conv(signal, kernel)
+    except Exception as e:
+        print("Caught exception:", e)
+        break
+    except KeyboardInterrupt as e:
+        print("Caught keyboard exception")
+        break
+
+plt.ioff
