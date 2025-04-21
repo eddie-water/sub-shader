@@ -114,20 +114,43 @@ axes[2].plot(numpy_result, color = 'red')
 axes[2].set_title('Output Signal')
 
 # Plot still figures
-plt.tight_layout()
+# plt.tight_layout()
 plt.show()
 
-# Infinite loop of a time domain convolution animation
+# Turn on interactive plotting for the next few examples
 plt.ion
 
-while(True):
-    try:
-        plot_time_domain_conv(signal, kernel)
-    except Exception as e:
-        print("Caught exception:", e)
-        break
-    except KeyboardInterrupt as e:
-        print("Caught keyboard exception")
-        break
+# Infinite loop of a time domain convolution animation
+try:
+    plot_time_domain_conv(signal, kernel, -1, 4)
+except Exception as e:
+    print("Caught exception:", e)
+except KeyboardInterrupt as e:
+    print("Caught keyboard exception")
+
+'''
+Kernels and Convolutions in the Time Domain 3
+
+What is the point of mean centering the kernel?
+    -
+'''
+# Mean center the kernel
+kernel = kernel - np.mean(kernel)
+
+try:
+    plot_time_domain_conv(signal, kernel, -2, 2)
+except Exception as e:
+    print("Caught exception:", e)
+except KeyboardInterrupt as e:
+    print("Caught keyboard exception")
+
+'''
+Kernels and Convolutions in the Time Domain 4
+
+How can you get the Output Signal to have the same relative magnitude as the
+Input Signal?
+  - Trivial Answer: You take the highest value in the Input Signal, and then
+    normalize (divide every member of) the Output Signal by it
+'''
 
 plt.ioff
