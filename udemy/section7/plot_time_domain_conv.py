@@ -3,16 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # TODO LATER move this in to the plotting utilities
-DELAY = 0.5 # seconds
 
-def plot_time_domain_conv(input_signal, kernel, y_min, y_max):
-    plt.ion()
+def plot_time_domain_conv(input_signal, kernel, y_min, y_max, delay):
+    # Delay must be > 0 or else the interactive plot silently breaks by 
+    # starving the GUI event loop, force it to a non-zero value
+    if (delay == 0):
+        delay == 0.001
+
     fig, ax = plt.subplots(figsize = (12, 8))
 
-
     # Get signal params for configuring buffer lengths, normalizaiton, and stuff
-    signal_max = np.max(input_signal)
-    signal_min = np.min(input_signal)
     signal_len = len(input_signal)
     kernel_len = len(kernel)
     # TODO LATER what happens when the kernel happens to be even? How would that
@@ -28,12 +28,19 @@ def plot_time_domain_conv(input_signal, kernel, y_min, y_max):
     # Reverse ze kernel (must be done in time domain to preserve 'causality')
     flipped_kernel = kernel[::-1] 
 
-    while(True):
-        # Configure and populate elements on figure
-        ax.set_ylim(y_min, y_max)
+    # Only plot things if the figure isn't closed
+    while(plt.fignum_exists(fig.number)):
+        # Flush Matplotlib GUI event loop
+        plt.pause(0.001)
+
+        # Configure and populate initial elements on the figure
         ax.set_title("Time Domain Convolution")
         ax.axvline(x = half_kern_len, color = 'gray', linestyle='--')
         ax.axvline(x = (half_kern_len + signal_len - 1), color = 'gray', linestyle='--')
+
+        # Auto resizing in interactive mode may break things, so do it explicitly 
+        ax.set_xlim(-1, len(padded_signal))
+        ax.set_ylim(y_min, y_max)
 
         # Initial x and y values for initially drawn kernel
         kernel_x_vals = np.arange(kernel_len)
@@ -44,7 +51,7 @@ def plot_time_domain_conv(input_signal, kernel, y_min, y_max):
 
         # Instantiate plot lines (result gets plotted but its empty)
         signal_plot, = ax.plot(padded_signal, 
-                               label = 'Input', 
+                               label = 'Input (Padded)', 
                                marker = 'o', 
                                linestyle = '-',
                                color = 'black', zorder = 1)
@@ -86,7 +93,7 @@ def plot_time_domain_conv(input_signal, kernel, y_min, y_max):
             kernel_plot.set_data(kernel_x_vals, kernel_y_vals)
 
             # Plot the normalized version of the result
-            if i == result_len - 1:
+            if i == (result_len - 1):
                 normalized_result = result / np.max(result)
                 norm_x_vals = np.arange(half_kern_len, half_kern_len + i + 1)
                 norm_y_vals = normalized_result[0 : i + 1]
@@ -100,9 +107,15 @@ def plot_time_domain_conv(input_signal, kernel, y_min, y_max):
                 ax.legend(loc = 'upper right')
 
             # Refresh figure and slow it down for the viewer
-            fig.canvas.draw()
-            fig.canvas.flush_events()
-            time.sleep(DELAY)
+            if plt.fignum_exists(fig.number):
+                fig.canvas.draw()
+                fig.canvas.flush_events()
+                plt.pause(delay)
 
-        time.sleep(25*DELAY)
-        ax.cla()
+        # Display the final results and then clear the plots before restarting
+        if plt.fignum_exists(fig.number):
+            plt.pause(5)
+            ax.cla()
+
+    # The User closed the window, but still explicitly close it
+    plt.close(fig)

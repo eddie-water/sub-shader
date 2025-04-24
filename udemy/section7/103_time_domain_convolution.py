@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.fft import fft
 from plot_time_domain_conv import plot_time_domain_conv
 
 """
@@ -37,12 +36,12 @@ axes[0, 0].plot(signal, color = 'black')
 axes[0, 0].set_title('Input Signal')
 
 axes[1, 0].plot(kernel)
-axes[1, 0].set_title('Kernel')
+axes[1, 0].set_title('Smoothing Kernel')
 
 result = np.convolve(signal, kernel, mode = 'same')
 axes[2, 0].plot(signal, color = 'black')
 axes[2, 0].plot(result, color = 'red')
-axes[2, 0].set_title('Output Signal')
+axes[2, 0].set_title('Output Signal - Smoothed')
 
 # Inverted Smoothing Kernel
 inverted_kernel = -1*kernel
@@ -52,11 +51,11 @@ axes[0, 1].plot(signal, color = 'black')
 axes[0, 1].set_title('Input Signal')
 
 axes[1, 1].plot(inverted_kernel)
-axes[1, 1].set_title('Inverted Kernel')
+axes[1, 1].set_title('Inverted Smoothing Kernel')
 
 axes[2, 1].plot(signal, color = 'black')
 axes[2, 1].plot(inverted_result, color = 'red')
-axes[2, 1].set_title('Output Signal')
+axes[2, 1].set_title('Output Signal - Inverted Smoothed')
 
 # Signed Edge Detection Kernel
 arrays = [np.zeros(9), np.ones(1), -1*np.ones(1), np.zeros(9)]
@@ -71,7 +70,7 @@ axes[1, 2].set_title('Edge Detection Kernel')
 
 axes[2, 2].plot(signal, color = 'black')
 axes[2, 2].plot(edge_result, color = 'red')
-axes[2, 2].set_title('Output Signal')
+axes[2, 2].set_title('Output Signal - Edge Detection')
 
 """
 Kernels and Convolutions in the Time Domain 2
@@ -114,7 +113,7 @@ axes[2].plot(numpy_result, color = 'red')
 axes[2].set_title('Output Signal')
 
 # Plot still figures
-# plt.tight_layout()
+plt.tight_layout()
 plt.show()
 
 # Turn on interactive plotting for the next few examples
@@ -122,7 +121,11 @@ plt.ion
 
 # Infinite loop of a time domain convolution animation
 try:
-    plot_time_domain_conv(signal, kernel, -1, 4)
+    plot_time_domain_conv(input_signal = signal, 
+                          kernel = kernel, 
+                          y_min = -1, 
+                          y_max = 4,
+                          delay = 0.5)
 except Exception as e:
     print("Caught exception:", e)
 except KeyboardInterrupt as e:
@@ -132,25 +135,50 @@ except KeyboardInterrupt as e:
 Kernels and Convolutions in the Time Domain 3
 
 What is the point of mean centering the kernel?
-    -
+    - TODO EVENTUALLY
 '''
 # Mean center the kernel
 kernel = kernel - np.mean(kernel)
 
 try:
-    plot_time_domain_conv(signal, kernel, -2, 2)
+    plot_time_domain_conv(input_signal = signal, 
+                          kernel = kernel, 
+                          y_min = -2, 
+                          y_max = 2,
+                          delay = 0.5)
+
 except Exception as e:
     print("Caught exception:", e)
 except KeyboardInterrupt as e:
     print("Caught keyboard exception")
 
-'''
-Kernels and Convolutions in the Time Domain 4
+# Time domain convolution using the morlet wavelet as the kernel
+SAMPLE_RATE = 50 # NumPy and Matplotlib can't handle too many points
+step = 1 / SAMPLE_RATE
 
-How can you get the Output Signal to have the same relative magnitude as the
-Input Signal?
-  - Trivial Answer: You take the highest value in the Input Signal, and then
-    normalize (divide every member of) the Output Signal by it
-'''
+t = np.arange(-1, 1, step)
+
+f_wavelet = 5 # Hz
+sine_wave = np.cos(2*np.pi*f_wavelet*t)
+
+fwhm = 0.5 # Full wave half maximum
+gaus_win = np.exp((-4 * np.log(2) * t**2) / (fwhm**2))
+
+
+morlet_wavelet = sine_wave * gaus_win
+
+t = np.arange(0, 2*np.pi, step)
+sine_wave = np.cos(2*np.pi*f_wavelet*t)
+
+try:
+    plot_time_domain_conv(input_signal = sine_wave, 
+                          kernel = morlet_wavelet, 
+                          y_min = -20, 
+                          y_max = 20,
+                          delay = 0.1)
+except Exception as e:
+    print("Caught exception:", e)
+except KeyboardInterrupt as e:
+    print("Caught keyboard exception")
 
 plt.ioff
