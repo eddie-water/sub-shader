@@ -1,10 +1,15 @@
+"""
+Kernels and Convolutions in the Time Domain
+
+This file follows and adapts Mike X Cohen's Udemy course Complete Neural Signal 
+Processing and Analysis: Zero to Hero | Lesson 103 Time-Domain Convolution. The
+original lesson is in Matlab but I've adapted it for Python
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 from plot_time_domain_conv import plot_time_domain_conv
 
 """
-Kernels and Convolutions in the Time Domain 1
-
 What is a kernel and what's its purpose?
     - A sequence of numbers that acts like a template or filter for processing
       signals or data
@@ -73,22 +78,20 @@ axes[2, 2].plot(edge_result, color = 'red')
 axes[2, 2].set_title('Output Signal - Edge Detection')
 
 """
-Kernels and Convolutions in the Time Domain 2
-
 What is convolution and why do we need to flip the kernel when doing it?
     - Convolution is a model of causality aka cause-and-effect: at the current 
       time 't', what is the total accumulated effect of all the past inputs, 
       weighted by the system's response to those inputs
     - Time domain convolution occurs when you flip the kernel, overlap it with
-      the input signal, perform the dot (inner) product, store that result in the
-      output signal, slide the kernel over by one, and then repeat until the 
-      kernel has slid over the entire input 
+      the input signal, perform the dot (inner) product, store that result in 
+      the output signal, slide the kernel over by one, and then repeat until 
+      the kernel has slid over the entire input 
     - Since we want to see how past events affect the current one, we need to 
       flip the kernel because we are saying time increases from left to right 
     - If you don't flip the kernel, you would be applying the right most sample
-      of the kernel to left most sample of the signal, which is basically saying:
-      how does a future moment (which hasn't happened yet) affect the current 
-      moment (which doesn't make sense for a cause-and-effect model)
+      of the kernel to left most sample of the signal, which is basically 
+      saying: how does a future moment (which hasn't happened yet) affect the 
+      current moment (which doesn't make sense for a cause-and-effect model)
 """
 fig, axes = plt.subplots(3)
 
@@ -120,37 +123,33 @@ plt.show()
 plt.ion
 
 # Infinite loop of a time domain convolution animation
-try:
-    plot_time_domain_conv(input_signal = signal, 
-                          kernel = kernel, 
-                          y_min = -1, 
-                          y_max = 4,
-                          delay = 0.5)
-except Exception as e:
-    print("Caught exception:", e)
-except KeyboardInterrupt as e:
-    print("Caught keyboard exception")
+plot_time_domain_conv(input_signal = signal, 
+                      kernel = kernel, 
+                      y_min = -1, 
+                      y_max = 4,
+                      delay = 0.5)
 
 '''
-Kernels and Convolutions in the Time Domain 3
-
 What is the point of mean centering the kernel?
-    - TODO EVENTUALLY
+    - Mean centering a kernel is subtracting its mean from all the points so
+      all its points have a zero mean and is a common DSP pre-processing step
+    - The purpose is to ensure the kernel emphasizes changes or deviations in 
+      the signal rather than its absolute level
+    - It removes the "DC Component" aka the constant offset making the kernel
+      only sensitive to variations in the input
+    - Rather than amplifying constant offsets in the input signal, it reacts
+      more to local structures in the data like edges, transients, or textures
+    - Good for edge-detection, feature extraction, zero-mean filters
+    - Not good for smoothing, averaging, or low pass filtering
 '''
 # Mean center the kernel
 kernel = kernel - np.mean(kernel)
 
-try:
-    plot_time_domain_conv(input_signal = signal, 
-                          kernel = kernel, 
-                          y_min = -2, 
-                          y_max = 2,
-                          delay = 0.5)
-
-except Exception as e:
-    print("Caught exception:", e)
-except KeyboardInterrupt as e:
-    print("Caught keyboard exception")
+plot_time_domain_conv(input_signal = signal, 
+                      kernel = kernel, 
+                      y_min = -2, 
+                      y_max = 2,
+                      delay = 0.5)
 
 # Time domain convolution using the morlet wavelet as the kernel
 SAMPLE_RATE = 50 # NumPy and Matplotlib can't handle too many points
@@ -164,21 +163,15 @@ sine_wave = np.cos(2*np.pi*f_wavelet*t)
 fwhm = 0.5 # Full wave half maximum
 gaus_win = np.exp((-4 * np.log(2) * t**2) / (fwhm**2))
 
-
 morlet_wavelet = sine_wave * gaus_win
 
 t = np.arange(0, 2*np.pi, step)
 sine_wave = np.cos(2*np.pi*f_wavelet*t)
 
-try:
-    plot_time_domain_conv(input_signal = sine_wave, 
-                          kernel = morlet_wavelet, 
-                          y_min = -20, 
-                          y_max = 20,
-                          delay = 0.1)
-except Exception as e:
-    print("Caught exception:", e)
-except KeyboardInterrupt as e:
-    print("Caught keyboard exception")
+plot_time_domain_conv(input_signal = sine_wave, 
+                      kernel = morlet_wavelet, 
+                      y_min = -20, 
+                      y_max = 20,
+                      delay = 0.1)
 
 plt.ioff
