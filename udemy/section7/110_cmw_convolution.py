@@ -70,24 +70,31 @@ conv = conv[half_kern_n : -half_kern_n+1]
 # I don't trust this guy's x-axes... but here goes it
 hz = np.linspace(0, (sample_rate / 2), (conv_n//2) + 1)
 
+# Plot all the signals
 fig, axes = plt.subplots(2)
-axes[0].plot(hz, abs(data_x[0:len(hz)]))
-axes[0].plot(hz, abs(kern_x[0:len(hz)]) * max(abs(data_x))/2)
-axes[0].plot(hz, abs(conv_x[0:len(hz)]), color = 'black', linewidth = 2)
 
-axes[0].set_title('Frequency Plot')
+# Frequency Domain
+axes[0].plot(hz, abs(data_x[0:len(hz)]), color = 'orange', label = "Input Signal")
+axes[0].plot(hz, abs(kern_x[0:len(hz)]) * max(abs(data_x))/2, color = 'blue', label = '45 Hz Wavelet Kernel')
+axes[0].plot(hz, abs(conv_x[0:len(hz)]), color = 'black', linewidth = 2, label = 'Ouput Signal')
+
+axes[0].set_title('Frequency Domain Plot')
 axes[0].set_xlabel('Frequency (Hz)')
-axes[0].set_xlim(0, 90)
+axes[0].set_xlim(0, 2*freq)
 axes[0].set_ylabel('Amplitude (A. U.)')
 axes[0].set_ylim(0, 3e5)
+axes[0].legend(loc = 'upper right')
 
-axes[1].plot(t, data, color = 'orange', label = "LFP data")
-axes[1].plot(t, abs(conv), color = 'black', linewidth = 2, label = 'Convolved Data')
-axes[1].set_title('Time Plot')
+# Time Domain
+axes[1].plot(t, data, color = 'orange', label = "Input Signal")
+axes[1].plot(t, conv.real, color = 'black', linewidth = 2, label = 'Ouput Signal')
+
+axes[1].set_title('Time Domain Plot')
 axes[1].set_xlabel('Time (ms)')
 axes[1].set_xlim(-0.1, 1.3)
 axes[1].set_ylabel('Amplitude (uV)')
 axes[1].set_ylim(-2000, 2000)
+axes[1].legend(loc = 'upper right')
 
 plt.tight_layout()
 plt.show()
