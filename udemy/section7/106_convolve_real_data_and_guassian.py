@@ -48,5 +48,5 @@ plt.plot(t, conv.real,'r',linewidth=2, label='Gaussian-convolved')
 plt.xlim([-.1, 1.4])
 plt.legend()
 plt.xlabel('Time (s)')
-plt.ylabel('Activity (\muV)') # TODO SOON Fix deprecation error
+plt.ylabel('Activity (uV)') # TODO SOON Fix deprecation error
 plt.show()

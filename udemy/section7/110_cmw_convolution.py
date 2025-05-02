@@ -58,7 +58,7 @@ hz = np.linspace(0, sample_rate / 2, (conv_n//2+1))
 
 # Result of a convolution of a CMW centered at 45 Hz and 
 plt.plot(t, data, color = 'orange', label = "LFP data")
-plt.plot(t, abs(conv), 'k', linewidth = 2, label = 'Convolved Data')
+plt.plot(t, abs(conv), color = 'black', linewidth = 2, label = 'Convolved Data')
 plt.xlabel('Time (ms)')
 plt.ylabel('Amplitude (uV)')
 plt.show()
