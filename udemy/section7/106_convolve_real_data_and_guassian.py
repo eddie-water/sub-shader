@@ -1,3 +1,6 @@
+# Following this:
+# https://github.com/dxganta/Neural-Signal-Processing-Analysis/blob/main/Section%207/uANTS_timefreq.ipynb
+
 import numpy as np
 from numpy.fft import fft, ifft
 from scipy.io import loadmat
