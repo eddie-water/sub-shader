@@ -22,7 +22,7 @@ cmw_t = cmw_t - np.mean(cmw_t)
 # 'Center Frequency' of the Wavelet (I think)
 freq = 45
 
-# Create a guassian window using the 'num-cycles' formula. Don'cmw_t know what that is?
+# Guassian window using the 'num-cycles' formula. Don't know what that is...?
 s = 7 / (2*pi*freq)
 
 # Create a Complex Morlet Wavelet
@@ -44,23 +44,35 @@ domain data / spectrum data
 
 # FFT the signal and the kernel, normalize the kernel
 data_x = fft(data, conv_n)
+
 kern_x = fft(cmw, conv_n)
 kern_x = kern_x / max(kern_x)
 
-# Need to plot these separately bc they have such a large magnitude discrepancy
-plt.plot(abs(data_x))
-plt.show()
-plt.show()
-
-plt.plot(abs(kern_x))
-plt.show()
-
-# Multiply the spectra
+# Multiply the spectra (this is equivalent to time domain convolution)
 conv_x = data_x * kern_x
 
-# These plots are off by a little: compare this plot to Lesson 110 @ 8:13 
-plt.plot(abs(data_x))
-plt.plot(abs(conv_x))
+# Need to plot these separately bc they have such a large magnitude discrepancy
+fig, axes = plt.subplots(5)
+
+fig.canvas.manager.set_window_title('Convolution of Signal and Complex Morlet Wavelet')
+
+axes[0].plot(data, color = 'orange')
+axes[0].set_title('Input Signal (Time Domain)')
+
+axes[1].plot(abs(data_x), color = 'orange')
+axes[1].set_title('Input Signal (Frequency Domain)')
+
+axes[2].plot(cmw, color = 'blue')
+axes[2].set_title('45 Hz CMW (Time Domain)')
+
+axes[3].plot(abs(kern_x), color = 'blue')
+axes[3].set_title('45 Hz CMW (Frequency Domain)')
+
+axes[4].plot(abs(data_x), color = 'orange')
+axes[4].plot(abs(conv_x), color = 'black')
+axes[4].set_title('Input and Output Signal (Frequency Domain)')
+
+plt.tight_layout()
 plt.show()
 
 # IFFT result back to the time domain and cut off wings
@@ -87,7 +99,7 @@ axes[0].legend(loc = 'upper right')
 
 # Time Domain
 axes[1].plot(t, data, color = 'orange', label = "Input Signal")
-axes[1].plot(t, conv.real, color = 'black', linewidth = 2, label = 'Ouput Signal')
+axes[1].plot(t, conv.real, color = 'black', linewidth = 2, label = 'Output Signal [Real]')
 
 axes[1].set_title('Time Domain Plot')
 axes[1].set_xlabel('Time (ms)')
