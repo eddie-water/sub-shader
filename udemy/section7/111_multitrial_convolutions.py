@@ -16,6 +16,7 @@ lesson, it is automatically defined when loading the .mat file in Matlab
 file_data = loadmat("./udemy/section7/ANTS_matlab/v1_laminar.mat")
 csd = file_data["csd"]
 data = np.squeeze(csd[5,:,:])
+data = data.astype(np.float64) # double precision
 
 # Reshape the data - TODO NEXT Why do we need to reshape it?
 data_r = np.reshape(data, -1, order='F')
@@ -60,3 +61,28 @@ Transform back into the time domain, trim the wings and reshape back into the
 original data shape. Extract the power of the filtered signal. Average the 
 power of all the trials and store it in a matrix to easily plot the '3D' result.
 '''
+
+# TODO SOON Figure out the significance of this parameter
+s = 0.3
+
+# TODO NEXT figure out why we create the wavelet on a different time vector
+for i in range(num_freq):
+    # TODO SOON Determine the significance of the parameters of the guassian envelope
+    cmw_k = np.exp(1j*2*pi*freqs[i]*cmw_t) * np.exp(-4*np.log(2)*cmw_t**2 / s**2)
+    cmw_x = fft(cmw_k, conv_n)
+    cmw_x = cmw_x / max(cmw_x)
+
+    conv = ifft(data_x * cmw_x)
+    conv = conv[(half_kern_n):(-half_kern_n+1)]
+    conv_pow = abs(conv)**2
+    conv_pow = np.reshape(conv_pow, data.shape, order = 'F')
+    tf[i,:] = np.mean(conv_pow, 1)
+
+fig, ax = plt.subplots()
+
+ax.contourf(np.squeeze(t), freqs, tf, 40, vmin = 0, vmax = 10000, cmap = "jet")
+ax.set_xlabel('Time (s)')
+ax.set_ylabel('Frequency (Hz)')
+
+plt.tight_layout()
+plt.show()
