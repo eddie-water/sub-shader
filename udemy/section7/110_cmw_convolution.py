@@ -8,14 +8,15 @@ pi = np.pi
 
 '''
 Load the data from a file and prepare for the convolution
+
+Note: the sample rate needs to be defined explicitly here because in the video
+lesson, it is automatically defined when loading the .mat file in Matlab
 '''
 file_data = loadmat("./udemy/section7/ANTS_matlab/v1_laminar.mat")
 csd = file_data["csd"]
 data = csd[5,:,9] 
 data = data.flatten()
 
-# Not part of the Matlab code, but the .mat file defines this when it gets 
-# loaded in Matlab the script. Need to do it explicitly myself 
 sample_rate = 762.9395
 
 # Create a centered time vector for the CMW
