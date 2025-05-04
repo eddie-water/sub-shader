@@ -18,10 +18,10 @@ FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 # Audio Input, Audio Characteristics 
 audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 
-sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
+sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
 # Wavelet Object
-wavelet = PyWavelet(sampling_freq = sampling_freq, 
+wavelet = PyWavelet(sample_rate = sample_rate, 
                   frame_size = FRAME_SIZE,
                   downsample_factor = DOWNSAMPLE_FACTOR)
 

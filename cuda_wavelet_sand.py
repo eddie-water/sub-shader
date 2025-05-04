@@ -21,19 +21,19 @@ FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 # Audio Input, Audio Characteristics 
 audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 audio_data = audio_input.get_frame()
-sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
+sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
 # PyWavelet
-pywavelet = PyWavelet(sampling_freq = sampling_freq, 
-                            frame_size = FRAME_SIZE,
-                            downsample_factor = DOWNSAMPLE_FACTOR)
+pywavelet = PyWavelet(sample_rate = sample_rate, 
+                      frame_size = FRAME_SIZE,
+                      downsample_factor = DOWNSAMPLE_FACTOR)
 
 # TODO SOON wait why am I transposing this if it's being transposed in the compute_cwt method?
 coefs_pywavelet = pywavelet.compute_cwt(audio_data)
 coefs_pywavelet = np.transpose(coefs_pywavelet)
 
 # Non Accelerated Manual CWT # TODO LATER find a better name for this object class
-shade_wavelet = ShadeWavelet(sampling_freq = sampling_freq, 
+shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
                              frame_size = FRAME_SIZE,
                              downsample_factor = DOWNSAMPLE_FACTOR)
 
@@ -55,7 +55,7 @@ axes[2].set_title("Shade Wavelet")
 axes[2].imshow(coefs_shade_wavelet, cmap = "magma", aspect = "auto")
 axes[2].axis('off')
 
-
+plt.tight_layout()
 plt.show()
 
 while(True):

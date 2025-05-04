@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 import numpy as np
 import pywt
+from numpy.fft import fft, ifft
 
-# Most audio is sampled 44.1 kHz
+# Audio is typically sampled at 44.1 kHz
 TYPICAL_SAMPLING_FREQ = 44100
 
 # Musical Scale parameters 
@@ -10,16 +11,17 @@ NOTES_PER_OCTAVE = 12
 NUM_OCTAVES = 10
 ROOT_NOTE_A0 = 27.5
 
+pi = np.pi
 # TODO NEXT begin creating the shade wavelet class that also inherits this class
 class Wavelet(ABC):
-    def __init__(self, sampling_freq: int, frame_size: int, downsample_factor: int):
-        if (sampling_freq != TYPICAL_SAMPLING_FREQ):
+    def __init__(self, sample_rate: int, frame_size: int, downsample_factor: int):
+        if (sample_rate != TYPICAL_SAMPLING_FREQ):
             raise ValueError("Irregular Sampling Frequency")
 
         # Sampling Info
-        self.sampling_freq = sampling_freq
-        self.nyquist_freq = (sampling_freq / 2.0)
-        self.sampling_period = (1.0 / self.sampling_freq)
+        self.sample_rate = sample_rate
+        self.nyquist_freq = (sample_rate / 2.0)
+        self.sampling_period = (1.0 / self.sample_rate)
 
         self.frame_size = frame_size
 
@@ -35,13 +37,14 @@ class Wavelet(ABC):
         self.scale_factor = 2**(1/NOTES_PER_OCTAVE)
         i = np.arange(0, NOTES_PER_OCTAVE*NUM_OCTAVES, 1)
         self.s = self.scale_factor**i
-        self.freq = ROOT_NOTE_A0*self.s
+        self.freqs = ROOT_NOTE_A0*self.s
 
         # Discard frequencies that are unmeasurable
-        self.freq = self.freq[self.freq < self.nyquist_freq]
+        self.freqs = self.freqs[self.freqs < self.nyquist_freq]
+        self.num_freqs = len(self.freqs)
 
         # Scale array used to specify wavelet dilation amounts during cwt
-        f_norm = (self.freq / self.sampling_freq)
+        f_norm = (self.freqs / self.sample_rate)
         self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
 
     """
@@ -51,7 +54,7 @@ class Wavelet(ABC):
         Shape of the computed CWT data
     """
     def get_shape(self) -> np.ndarray.shape:
-        return np.empty((self.freq.size, self.time.size)).shape
+        return np.empty((self.freqs.size, self.time.size)).shape
 
     """
     Get the time resolution for the data
@@ -122,8 +125,8 @@ class Wavelet(ABC):
         return coefs
     
 class PyWavelet(Wavelet):
-    def __init__(self, sampling_freq, frame_size, downsample_factor):
-        super().__init__(sampling_freq, frame_size, downsample_factor)
+    def __init__(self, sample_rate, frame_size, downsample_factor):
+        super().__init__(sample_rate, frame_size, downsample_factor)
 
     def compute_cwt(self, audio_data):
         raw_coefs, _ = pywt.cwt(data = audio_data,
@@ -134,11 +137,43 @@ class PyWavelet(Wavelet):
         return self.normalize_coefs(raw_coefs)
 
 class ShadeWavelet(Wavelet):
-    def __init__(self, sampling_freq, frame_size, downsample_factor):
-        super().__init__(sampling_freq, frame_size, downsample_factor)
+    def __init__(self, sample_rate, frame_size, downsample_factor):
+        super().__init__(sample_rate, frame_size, downsample_factor)
     
-    def compute_cwt(self, audio_data) -> np.ndarray:        
-        # TODO NEXT implement my own CWT
-        print("Performing the Shade CWT")
+    def compute_cwt(self, audio_data) -> np.ndarray:  
+        data = audio_data.astype(np.float64)
+        
+        # Create a centered time vector for the CMW
+        cmw_t = np.arange(2*self.sample_rate) / self.sample_rate
+        cmw_t = cmw_t - np.mean(cmw_t) 
 
-        return np.zeros(self.get_shape())
+        # N's of convolution, note we're using the size of the reshaped data
+        data_n = len(data)
+        kern_n = len(cmw_t)
+        conv_n = data_n + kern_n - 1
+        half_kern_n = kern_n // 2
+
+        t = np.arange(len(data)) * self.sample_rate
+
+        # Transform the Data time series into a spectrum
+        data_x = fft(data, conv_n)
+
+        # Initialize the time-frequency matrix
+        tf = np.zeros((self.num_freqs, len(t)))
+
+        # Full-Width Half Maximum - try different out some different values
+        s = 0.3 
+
+        # TODO NEXT figure out why we create the wavelet on a different time vector
+        for i in range(self.num_freqs):
+            # TODO SOON Determine the significance of the parameters of the guassian envelope
+            cmw_k = np.exp(1j*2*pi*self.freqs[i]*cmw_t) * np.exp(-4*np.log(2)*cmw_t**2 / s**2)
+            cmw_x = fft(cmw_k, conv_n)
+            cmw_x = cmw_x / max(cmw_x)
+
+            conv = ifft(data_x * cmw_x)
+            conv = conv[(half_kern_n):(-half_kern_n+1)]
+            conv_pow = abs(conv)**2
+            tf[i,:] = conv_pow
+
+        return tf
