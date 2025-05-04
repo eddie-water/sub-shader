@@ -39,7 +39,6 @@ shade_wavelet = ShadeWavelet(sample_rate = sample_rate,
 
 coefs_shade_wavelet = shade_wavelet.compute_cwt(audio_data)
 
-
 # Plot
 fig, axes = plt.subplots(3, 1, figsize=(10,5))
 
