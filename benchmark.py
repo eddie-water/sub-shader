@@ -26,8 +26,8 @@ class Benchtest():
 
         # PyWavelet Object
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
-                              frame_size = FRAME_SIZE,
-                              downsample_factor = DOWNSAMPLE_FACTOR)
+                               frame_size = FRAME_SIZE,
+                               downsample_factor = DOWNSAMPLE_FACTOR)
 
         py_coefs = py_wavelet.compute_cwt(dummy_audio)
 
