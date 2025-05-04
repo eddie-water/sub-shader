@@ -13,8 +13,8 @@ from wavelets_pytorch.transform import WaveletTransformTorch
 
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
-FRAME_SIZE = 1024
-DOWNSAMPLE_FACTOR = 8
+FRAME_SIZE = 4096
+DOWNSAMPLE_FACTOR = 1
 
 FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
@@ -42,17 +42,21 @@ coefs_shade_wavelet = shade_wavelet.compute_cwt(audio_data)
 # Plot
 fig, axes = plt.subplots(3, 1, figsize=(10,5))
 
-axes[0].set_title("Signal Time Series")
+axes[0].set_title("Test Signal Time Series")
 axes[0].plot(audio_data)
-axes[0].axis('off')
+axes[0].set_xlabel("Time")
+axes[0].set_ylabel("Amplitude")
+axes[0].margins(x=0, y=0)
 
-axes[1].set_title("PyWavelet")
+axes[1].set_title("CWT of Test Signal (PyWavelet)")
 axes[1].imshow(coefs_pywavelet, cmap = "magma", aspect = "auto")
-axes[1].axis('off')
+axes[1].set_xlabel("Time")
+axes[1].set_ylabel("Scale")
 
-axes[2].set_title("Shade Wavelet")
+axes[2].set_title("CWT of Test Signal (Shade Wavelet)")
 axes[2].imshow(coefs_shade_wavelet, cmap = "magma", aspect = "auto")
-axes[2].axis('off')
+axes[2].set_xlabel("Time")
+axes[2].set_ylabel("Scale")
 
 plt.tight_layout()
 plt.show()
