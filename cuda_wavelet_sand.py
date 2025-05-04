@@ -4,16 +4,13 @@ import scipy.datasets
 import matplotlib.pyplot as plt
 
 from audio_input import AudioInput
-from plotter import Plotter
 from wavelet import PyWavelet
 from wavelet import ShadeWavelet
 
-from pycudwt import Wavelets
-from wavelets_pytorch.transform import WaveletTransformTorch
-
-# Constants: 
-#   Ideally have the biggest frame size and the smallest downsample factor 
+# Size of audio samples frames processed by CWT
 FRAME_SIZE = 4096
+
+# Number of samples to skip when plotting (inceasing this speeds up plotting)
 DOWNSAMPLE_FACTOR = 1
 
 FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
@@ -41,6 +38,8 @@ coefs_shade_wavelet = shade_wavelet.compute_cwt(audio_data)
 
 # Plot
 fig, axes = plt.subplots(3, 1, figsize=(10,5))
+
+# TODO NEXT Fix the axes so they display freqs, not scales
 
 axes[0].set_title("Test Signal Time Series")
 axes[0].plot(audio_data)

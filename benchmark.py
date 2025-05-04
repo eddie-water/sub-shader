@@ -2,15 +2,15 @@ import time
 import numpy as np
 
 from audio_input import AudioInput
-from wavelet import Wavelet
+from wavelet import PyWavelet, ShadeWavelet
 from plotter import Plotter 
 
-NUM_ITERATIONS = 100
+NUM_ITERATIONS = 10
 
 # TODO SOON make a list of frame sizes and downsample factors to see
 # which combo gets the best performance
-FRAME_SIZE = 256
-DOWNSAMPLE_FACTOR = 8
+FRAME_SIZE = 4096
+DOWNSAMPLE_FACTOR = 1
 
 FILE_PATH = "audio_files/c_4_arps.wav"
 
@@ -19,25 +19,34 @@ class Benchtest():
         # Audio Input
         audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 
+        # TODO NEXT create 
         dummy_audio = audio_input.get_frame()
 
-        sampling_freq = audio_input.get_sample_rate() # 44.1 kHz
+        sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
-        # Wavelet Object
-        wavelet = Wavelet(sampling_freq = sampling_freq, 
-                          frame_size = FRAME_SIZE,
-                          downsample_factor = DOWNSAMPLE_FACTOR)
+        # PyWavelet Object
+        py_wavelet = PyWavelet(sample_rate = sample_rate, 
+                              frame_size = FRAME_SIZE,
+                              downsample_factor = DOWNSAMPLE_FACTOR)
 
-        dummy_coefs = wavelet.compute_cwt(dummy_audio)
+        py_coefs = py_wavelet.compute_cwt(dummy_audio)
+
+        # Shade Wavelet Object
+        shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
+                                     frame_size = FRAME_SIZE,
+                                     downsample_factor = DOWNSAMPLE_FACTOR)
+
+        shade_coefs = shade_wavelet.compute_cwt(dummy_audio)
 
         # Plotter Object
         plotter = Plotter(file_path = FILE_PATH)
 
-        # Function List and Dummy Arguments
+        # Function List and Dummy Arguments (note special python ',' syntax)
         self.func_list = [
-            (audio_input.get_frame, ()),
-            (wavelet.compute_cwt,   (dummy_audio,)),
-            (plotter.update_plot,   (dummy_coefs,))
+            (audio_input.get_frame,         ()),
+            (py_wavelet.compute_cwt,        (dummy_audio,)),
+            (shade_wavelet.compute_cwt,     (dummy_audio,)),
+            (plotter.update_plot,           (py_coefs,))
         ]
 
         # Tracks the run time of each function
@@ -48,12 +57,12 @@ class Benchtest():
 
         for _ in range(NUM_ITERATIONS):
             for i, item in enumerate(self.func_list):
-                # Grab the function
+                # Grab the function and its arg(s)
                 func = item[0]
                 args = item[1] if len(item) > 1 else ()
                 kwargs = item[2] if len(item) > 2 else {}
 
-                # Time the function
+                # Time the runtime of the function
                 t_start = time.perf_counter()
                 _ = func(*args, **kwargs)
                 t_end = time.perf_counter()
@@ -61,14 +70,13 @@ class Benchtest():
                 t_delta = t_end - t_start
                 self.func_times[i] += t_delta
 
-        # Average the times
+        # Average the runtimes
         self.avg_func_times = self.func_times / int(NUM_ITERATIONS)
-
         print(f"Function runtimes averaged over {NUM_ITERATIONS} iterations")
 
         for i, item in enumerate(self.func_list):
             func = item[0]
-            print(f"-> {func.__name__}\t{self.avg_func_times[i]:6f} sec")
+            print(f"-> {func.__self__.__class__.__name__}.{func.__name__}()\t{self.avg_func_times[i]:6f} sec")
 
 if __name__ == '__main__':
     benchtest = Benchtest()
