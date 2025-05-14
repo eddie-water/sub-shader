@@ -1,3 +1,7 @@
+"""
+How to call a list of functions with arguments in Python
+"""
+
 # Define some sample functions
 def greet(name):
     return f"Hello, {name}!"

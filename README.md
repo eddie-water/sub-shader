@@ -19,6 +19,8 @@ $ py main.py
 NOW > NEXT > SOON > LATER > EVENTUALLY
 
 # Questions
+
+DSP Stuff
 Q: Why is it useful or beneficial to perform the CWT with **Complex** Morlet 
 Wavelets? Specifically, what is it about them being complex helps with time
 frequency analysis?
@@ -48,3 +50,20 @@ it was in the time domain, the more energy it had in the frequency domain, so
 it was sharper at filtering things out (or maybe I have that backwards?). 
 Relate this kind of intuition to the Complex Morlet Wavelet, which is a sine 
 wave being manhandled by a Guassian, being used as a kernel during the CWT.
+
+Python Stuff
+
+GPU Acceleration Stuff
+Q: Need to still make sense of the threads per block (TPB), blocks per grid 
+(BPG), and block width (BW). What is an intuitive way of looking at it? Why does the position
+flatten the indeces in that way? Conceptually, how is it analogous to 2D arrays?
+
+Q: How do you decide what the values for the TPB, BPG, and BW are?
+
+Q: Why use Shared Memory? First of all, what exactly is it, and I thought 
+accessing it is really slow and clunky and bottle necks the entire procedure?
+Maybe we can access it up front and its not a big deal. 
+"For objects created in shared memory, each thread will have access to the 
+objects because each thread will receive a reference to this memory. Normally, 
+kernel code gets replicated multiple times, however, using cuda.shared.array()
+only the reference will be created, not instantiated." Hmm okay
