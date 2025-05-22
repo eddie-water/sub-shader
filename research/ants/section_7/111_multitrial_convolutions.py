@@ -62,8 +62,6 @@ freqs = np.linspace(min_freq, max_freq, num_freq)
 tf = np.zeros((num_freq, len(t)))
 
 '''
-TODO NOW
-
 Create a for loop that:
 Creates a wavelet centered around a particular frequency from our list of 
 frequencies. Transform the wavelet kernel into a spectrum and normalize it. 

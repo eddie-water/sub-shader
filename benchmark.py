@@ -2,7 +2,7 @@ import time
 import numpy as np
 
 from audio_input import AudioInput
-from wavelet import PyWavelet, ShadeWavelet
+from wavelet import PyWavelet, AntsWavelet
 from plotter import Plotter 
 
 NUM_ITERATIONS = 10
@@ -32,11 +32,11 @@ class Benchtest():
         py_coefs = py_wavelet.compute_cwt(dummy_audio)
 
         # Shade Wavelet Object
-        shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
+        ants_wavelet = AntsWavelet(sample_rate = sample_rate, 
                                      frame_size = FRAME_SIZE,
                                      downsample_factor = DOWNSAMPLE_FACTOR)
 
-        shade_coefs = shade_wavelet.compute_cwt(dummy_audio)
+        shade_coefs = ants_wavelet.compute_cwt(dummy_audio)
 
         # Plotter Object
         plotter = Plotter(file_path = FILE_PATH)
@@ -45,7 +45,7 @@ class Benchtest():
         self.func_list = [
             (audio_input.get_frame,         ()),
             (py_wavelet.compute_cwt,        (dummy_audio,)),
-            (shade_wavelet.compute_cwt,     (dummy_audio,)),
+            (ants_wavelet.compute_cwt,     (dummy_audio,)),
             (plotter.update_plot,           (py_coefs,))
         ]
 

@@ -5,8 +5,11 @@ import matplotlib.pyplot as plt
 
 from audio_input import AudioInput
 from wavelet import PyWavelet
-from wavelet import ShadeWavelet
+from wavelet import AntsWavelet
 
+"""
+Configurations
+"""
 # Size of audio samples frames processed by CWT
 FRAME_SIZE = 4096
 
@@ -20,6 +23,9 @@ audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
 audio_data = audio_input.get_frame()
 sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
+"""
+Wavelet Objects
+"""
 # PyWavelet
 pywavelet = PyWavelet(sample_rate = sample_rate, 
                       frame_size = FRAME_SIZE,
@@ -30,13 +36,15 @@ coefs_pywavelet = pywavelet.compute_cwt(audio_data)
 coefs_pywavelet = np.transpose(coefs_pywavelet)
 
 # Non Accelerated Manual CWT # TODO LATER find a better name for this object class
-shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
+ants_wavelet = AntsWavelet(sample_rate = sample_rate, 
                              frame_size = FRAME_SIZE,
                              downsample_factor = DOWNSAMPLE_FACTOR)
 
-coefs_shade_wavelet = shade_wavelet.compute_cwt(audio_data)
+coefs_ants_wavelet = ants_wavelet.compute_cwt(audio_data)
 
-# Plot
+"""
+Plotting
+"""
 fig, axes = plt.subplots(3, 1, figsize=(10,5))
 
 # TODO NEXT Fix the axes so they display freqs, not scales
@@ -53,7 +61,7 @@ axes[1].set_xlabel("Time")
 axes[1].set_ylabel("Scale")
 
 axes[2].set_title("CWT of Test Signal (Shade Wavelet)")
-axes[2].imshow(coefs_shade_wavelet, cmap = "magma", aspect = "auto")
+axes[2].imshow(coefs_ants_wavelet, cmap = "magma", aspect = "auto")
 axes[2].set_xlabel("Time")
 axes[2].set_ylabel("Scale")
 
