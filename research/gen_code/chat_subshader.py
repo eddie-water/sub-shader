@@ -84,6 +84,15 @@ def audio_producer():
 
 # === MAIN ===
 def main():
+    # Detect and warn if not using an NVIDIA GPU for OpenGL rendering
+    renderer = glGetString(GL_RENDERER)
+    if renderer:
+        decoded_renderer = renderer.decode()
+        print("OpenGL Renderer:", decoded_renderer)
+        if "NVIDIA" not in decoded_renderer:
+            print("This may cause OpenGL context errors in WSL.")
+            print("Try installing the full NVIDIA driver stack and restarting WSL.")
+
     global audio_gpu
 
     # === Load and normalize audio ===
