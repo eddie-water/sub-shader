@@ -34,20 +34,21 @@ chunk_queue = []
 queue_lock = threading.Lock()
 
 def audio_producer():
+    # Simulates real-time streaming by chunking the loaded audio
     global audio_gpu
-    pos = 0
-    while pos + CHUNK_SIZE < len(audio_gpu):
-        chunk = audio_gpu[pos:pos + CHUNK_SIZE]
+    i = 0
+    while i + CHUNK_SIZE < len(audio_gpu):
+        chunk = audio_gpu[i : i + CHUNK_SIZE]
         with queue_lock:
             chunk_queue.append(chunk)
-        pos += CHUNK_SIZE
+        i += CHUNK_SIZE
         time.sleep(CHUNK_SIZE / SAMPLE_RATE)
 
-# === MAIN ===
+# === MAIN LOOP ===
 def main():
     global audio_gpu
 
-    # Load and normalize audio
+    # Load and normalize audio 
     rate, audio = wavfile.read(AUDIO_PATH)
     if audio.ndim > 1:
         audio = audio.mean(axis=1)
@@ -55,7 +56,7 @@ def main():
     audio /= np.max(np.abs(audio))
     audio_gpu = cp.asarray(audio)
 
-    # Init GLFW
+    # Initialize GLFW window and OpenGL context 
     if not glfw.init():
         raise RuntimeError("Failed to initialize GLFW")
 
@@ -71,7 +72,7 @@ def main():
     glfw.make_context_current(window)
     ctx = moderngl.create_context()
 
-    # Shaders
+    # Compile shaders and set up program 
     prog = ctx.program(
         vertex_shader="""
         #version 330
@@ -94,7 +95,7 @@ def main():
         """,
     )
 
-    # Quad setup
+    # Set up quad vertex buffer and vertex array object 
     quad = np.array([
         -1.0, -1.0,
          1.0, -1.0,
@@ -104,29 +105,53 @@ def main():
     vbo = ctx.buffer(quad.tobytes())
     vao = ctx.simple_vertex_array(prog, vbo, 'position')
 
-    # Texture placeholder
+    # Create 2D texture placeholder for scalogram 
     texture = ctx.texture((CHUNK_SIZE, len(CWT_FREQS)), 1, dtype='f4')
     texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
     prog['scalogram'] = 0  # texture unit 0
 
-    # Start producer thread
+    # Start real-time audio chunking thread ===
     threading.Thread(target=audio_producer, daemon=True).start()
 
+    # Timing and FPS setup 
+    frame_times = []
+    fps_timer = time.time()
+
     while not glfw.window_should_close(window):
+        frame_start = time.perf_counter()
+
         glfw.poll_events()
 
+        # Get audio chunk from queue 
         with queue_lock:
             chunk = chunk_queue.pop(0) if chunk_queue else None
 
+        # Perform CWT and update texture 
         if chunk is not None:
+            t0 = time.perf_counter()
             cwt_out = cwt_gpu(chunk, CWT_FREQS, SAMPLE_RATE)
+            t1 = time.perf_counter()
+
             cwt_np = cp.asnumpy(cwt_out).astype('f4')
             texture.write(cwt_np.tobytes())
+            t2 = time.perf_counter()
 
+            print(f"CWT: {(t1 - t0)*1000:.2f} ms \t | Texture update: {(t2 - t1)*1000:.2f} ms")
+
+        # Render frame 
         texture.use(location=0)
         ctx.clear(0.2, 0.2, 0.2)
         vao.render(moderngl.TRIANGLE_STRIP)
         glfw.swap_buffers(window)
+
+        # FPS Calculation 
+        frame_end = time.perf_counter()
+        frame_times.append(frame_end - frame_start)
+        if time.time() - fps_timer > 1.0:
+            avg_frame = sum(frame_times) / len(frame_times)
+            print(f"FPS: {1.0 / avg_frame:.2f}")
+            frame_times.clear()
+            fps_timer = time.time()
 
     glfw.terminate()
 
