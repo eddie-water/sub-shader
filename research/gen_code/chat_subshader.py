@@ -9,22 +9,26 @@ import time
 # === PARAMETERS ===
 SAMPLE_RATE = 44100
 CHUNK_SIZE = 4096
-CWT_FREQS = cp.linspace(20, 8000, 128)
+CWT_FREQS = cp.linspace(20, 8000, 128) # TODO NOW Fix frequency range
 AUDIO_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
-# === CWT FUNCTION ===
+# === CWT KERNEL ===
 def morlet_wavelet(freq, scale, n, sample_rate):
+    # TODO NEXT Verify wavelet setup
     t = cp.linspace(-1, 1, n)
     s = scale / sample_rate
     wavelet = cp.exp(2j * cp.pi * freq * t) * cp.exp(-t ** 2 / (2 * s ** 2))
-    return wavelet / cp.sqrt(s)
+    return wavelet / cp.sqrt(s) 
 
+# === CWT FUNCTION ===
 def cwt_gpu(signal_gpu, freqs, sample_rate):
     n = signal_gpu.shape[0]
     output = cp.zeros((len(freqs), n), dtype=cp.complex64)
     signal_fft = cp.fft.fft(signal_gpu)
     for i, f in enumerate(freqs):
         wavelet = morlet_wavelet(f, n, n, sample_rate)
+
+        # TODO NEXT Weird way to do this, fix readability
         output[i] = cp.fft.ifft(signal_fft * cp.fft.fft(wavelet))
     return cp.abs(output)
 
@@ -33,8 +37,8 @@ audio_gpu = None
 chunk_queue = []
 queue_lock = threading.Lock()
 
+# === AUDIO STREAM THREAD ===
 def audio_producer():
-    # Simulates real-time streaming by chunking the loaded audio
     global audio_gpu
     i = 0
     while i + CHUNK_SIZE < len(audio_gpu):
@@ -51,6 +55,7 @@ def main():
     # Load and normalize audio 
     rate, audio = wavfile.read(AUDIO_PATH)
     if audio.ndim > 1:
+        # Convert stereo to mono
         audio = audio.mean(axis=1)
     audio = audio.astype(np.float32)
     audio /= np.max(np.abs(audio))
@@ -116,6 +121,7 @@ def main():
     # Timing and FPS setup 
     frame_times = []
     fps_timer = time.time()
+    fps_value = 0.0
 
     while not glfw.window_should_close(window):
         frame_start = time.perf_counter()
