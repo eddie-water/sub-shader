@@ -9,7 +9,7 @@ NUM_ITERATIONS = 10
 
 # TODO SOON make a list of frame sizes and downsample factors to see
 # which combo gets the best performance
-FRAME_SIZE = 4096
+WINDOW_SIZE = 4096
 DOWNSAMPLE_FACTOR = 1
 
 FILE_PATH = "audio_files/c_4_arps.wav"
@@ -17,7 +17,7 @@ FILE_PATH = "audio_files/c_4_arps.wav"
 class Benchtest():
     def __init__(self) -> None:
         # Audio Input
-        audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
+        audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
 
         # TODO NEXT create 
         dummy_audio = audio_input.get_frame()
@@ -26,14 +26,14 @@ class Benchtest():
 
         # PyWavelet Object
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
-                               frame_size = FRAME_SIZE,
+                               window_size = WINDOW_SIZE,
                                downsample_factor = DOWNSAMPLE_FACTOR)
 
         py_coefs = py_wavelet.compute_cwt(dummy_audio)
 
         # Shade Wavelet Object
         ants_wavelet = AntsWavelet(sample_rate = sample_rate, 
-                                     frame_size = FRAME_SIZE,
+                                     window_size = WINDOW_SIZE,
                                      downsample_factor = DOWNSAMPLE_FACTOR)
 
         shade_coefs = ants_wavelet.compute_cwt(dummy_audio)

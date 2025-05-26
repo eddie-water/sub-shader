@@ -10,20 +10,20 @@ from plotter import Plotter
 
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
-FRAME_SIZE = 4096
+WINDOW_SIZE = 4096
 DOWNSAMPLE_FACTOR = 2
 
 FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
 # Audio Input, Audio Characteristics 
-audio_input = AudioInput(path = FILE_PATH, frame_size = FRAME_SIZE)
+audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
 
 sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
 # Wavelet Object
 wavelet = PyWavelet(sample_rate = sample_rate, 
-                  frame_size = FRAME_SIZE,
-                  downsample_factor = DOWNSAMPLE_FACTOR)
+                    window_size = WINDOW_SIZE,
+                    downsample_factor = DOWNSAMPLE_FACTOR)
 
 # Plotter Object
 plotter = Plotter(file_path = FILE_PATH)
