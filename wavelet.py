@@ -169,14 +169,14 @@ class AntsWavelet(Wavelet):
         self.half_kern_n = self.kern_n // 2
 
         # Full-Width Half Maximum - try out some different values
-        self.fwhm = 0.3
+        fwhm = 0.3
 
-        # Create a frequency-domain wavelet filter bank
+        # Build a filter bank of frequency-domain wavelets
         self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
 
         for i, f in enumerate(self.freqs):
             # TODO SOON Determine the significance of the parameters of the guassian envelope - why -4?
-            cmw_k = np.exp(1j*2*pi*self.freqs[i]*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / self.fwhm**2)
+            cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
             cmw_x = fft(cmw_k, self.conv_n)
             cmw_x = cmw_x / max(cmw_x)
             self.wavelet_kernels[i,:] = cmw_x 
