@@ -119,7 +119,7 @@ class Wavelet(ABC):
     Returns:
         coefs: normalized CWT coefficients
     """
-    # TODO SOON commonize this for all wavelet subclasses, right it's only tied to PyWavelet
+    # TODO LATER commonize this for all wavelet subclasses, right it's only tied to PyWavelet
     def normalize_coefs(self, raw_coefs) -> np.ndarray:
         # Absolute Value 
         coefs_abs = np.abs(raw_coefs)
@@ -135,9 +135,6 @@ class Wavelet(ABC):
         # Downsample TODO LATER remove - downsample shouldn't be needed if cwt is fast enough
         coefs = coefs_norm[::, ::(self.downsample_factor)]
 
-        # Swap Axes
-        # TODO SOON wait why am I transposing this if it's being transposed outside the compute_cwt method?
-        coefs = np.transpose(coefs)
         return coefs
     
 class PyWavelet(Wavelet):
@@ -155,6 +152,8 @@ class PyWavelet(Wavelet):
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate, window_size, downsample_factor):
         super().__init__(sample_rate, window_size, downsample_factor)
+
+        # TODO NOW Create another subclass for ANTS and Shade Wavelets
     
         # Initialize the time-frequency matrix
         self.tf = np.zeros((self.num_freqs, self.window_size))

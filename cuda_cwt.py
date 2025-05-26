@@ -32,18 +32,16 @@ pywavelet = PyWavelet(sample_rate = sample_rate,
                       window_size = WINDOW_SIZE,
                       downsample_factor = DOWNSAMPLE_FACTOR)
 
-# TODO SOON wait why am I transposing this if it's being transposed in the compute_cwt method?
 coefs_pywavelet = pywavelet.compute_cwt(audio_data)
-coefs_pywavelet = np.transpose(coefs_pywavelet)
 
-# Wavelet from ANTS (numpy)
+# ANTS Wavelet (NumPy)
 ants_wavelet = AntsWavelet(sample_rate = sample_rate, 
                            window_size = WINDOW_SIZE,
                            downsample_factor = DOWNSAMPLE_FACTOR)
 
 coefs_ants_wavelet = ants_wavelet.compute_cwt(audio_data)
 
-# ShadeWavelet
+# Shade Wavelet (CuPy)
 shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
                              window_size = WINDOW_SIZE,
                              downsample_factor = DOWNSAMPLE_FACTOR)
@@ -55,7 +53,7 @@ Plotting
 """
 fig, axes = plt.subplots(4, 1, figsize=(10,5))
 
-# TODO NEXT Fix the axes so they display freqs, not scales
+# TODO LATER Fix the axes so they display freqs, not scales
 
 axes[0].set_title("Test Signal Time Series: C4 + C7")
 axes[0].plot(audio_data)
