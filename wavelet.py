@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import cupy as cp
 
 import pywt
 from numpy.fft import fft, ifft
@@ -173,6 +174,7 @@ class AntsWavelet(Wavelet):
 
         # Build a filter bank of frequency-domain wavelets
         self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
+        self.num_wavelets = self.wavelet_kernels.shape[0]
 
         for i, f in enumerate(self.freqs):
             # TODO SOON Determine the significance of the parameters of the guassian envelope - why -4?
@@ -185,70 +187,66 @@ class AntsWavelet(Wavelet):
         # Transform the Data time series into a spectrum
         data_x = fft(data, self.conv_n)
 
-        for i in range(self.num_freqs):
+        # Perform the CWT with each wavelet 
+        for i in range(self.num_wavelets):
             conv = ifft(data_x * self.wavelet_kernels[i,:])
             conv = conv[(self.half_kern_n):(-self.half_kern_n+1)]
-            conv_pow = abs(conv)**2
+            conv_pow = np.abs(conv)**2
             self.tf[i,:] = conv_pow
 
         return self.tf
     
 class ShadeWavelet(Wavelet):
-    def __init__(self, sample_rate, frame_size, downsample_factor):
-        super().__init__(sample_rate, frame_size, downsample_factor)
-    
-    def compute_cwt(self, audio_data) -> np.ndarray:  
-        data = audio_data.astype(np.float64)
-        
+    def __init__(self, sample_rate, window_size, downsample_factor):
+        super().__init__(sample_rate, window_size, downsample_factor)
+        # Initialize the time-frequency matrix
+        self.tf = np.zeros((self.num_freqs, self.window_size))
+        self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
+
         # Create a centered time vector for the CMW
         cmw_t = np.arange(2*self.sample_rate) / self.sample_rate
-        cmw_t = cmw_t - np.mean(cmw_t) 
+        self.cmw_t = cmw_t - np.mean(cmw_t) 
+        self.cmw_gpu_t = cp.asarray(self.cmw_t)
 
-        # N's of convolution, note we're using the size of the reshaped data
-        data_n = len(data)
-        kern_n = len(cmw_t)
-        conv_n = data_n + kern_n - 1
-        half_kern_n = kern_n // 2
+        # N's of convolution
+        self.data_n = self.window_size
+        self.kern_n = len(cmw_t)
+        self.conv_n = self.data_n + self.kern_n - 1
+        self.half_kern_n = self.kern_n // 2
 
-        t = np.arange(len(data)) * self.sample_rate
+        # Full-Width Half Maximum - try out some different values
+        fwhm = 0.3
 
-        # Transform the Data time series into a spectrum on the GPU
-        data_x = cp_fft.fftn(data, conv_n)
+        # Build a filter bank of frequency-domain wavelets
+        self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
+        self.num_wavelets = self.wavelet_kernels.shape[0]
 
-        # TODO NOW! This stuff below here and investigate the error
-        """
-        Okay so, the data needs to be cupy array, which means it needs to be on the GPU.
-        Which takes a bit of time to transfer the data over, but once it's there, it can be processed much faster.
-        So the best way to do this is to put the data on the GPU ahead of time, and then do the FFT on it.
-                # TODO LATER figure out how to do this with cupy
-                # data_x = fft(data, conv_n)
-                # data_x = data_x / max(data_x)
-
-                # TODO LATER figure out how to do this with cupy
-                # cmw_t = np.arange(2*self.sample_rate) / self.sample_rate
-                # cmw_t = cmw_t - np.mean(cmw_t) 
-
-                # TODO LATER figure out how to do this with cupy
-                # cmw_t = cp.asarray(cmw_t)
-        Holy cow, the autocomplete is amazing. I can just type "cmw_t = cp.asarray(cmw_t)" and it will do the rest for me.
-        """
-
-        # Initialize the time-frequency matrix
-        tf = np.zeros((self.num_freqs, len(t)))
-
-        # Full-Width Half Maximum - try different out some different values
-        s = 0.3 
-
-        # TODO NEXT figure out why we create the wavelet on a different time vector
-        for i in range(self.num_freqs):
-            # TODO SOON Determine the significance of the parameters of the guassian envelope
-            cmw_k = np.exp(1j*2*pi*self.freqs[i]*cmw_t) * np.exp(-4*np.log(2)*cmw_t**2 / s**2)
-            cmw_x = fft(cmw_k, conv_n)
+        for i, f in enumerate(self.freqs):
+            # TODO LATER SOON Determine the significance of the parameters of the guassian envelope - why -4?
+            cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
+            # TODO SOON Implement with Cupy to speed things up
+            cmw_x = fft(cmw_k, self.conv_n)
             cmw_x = cmw_x / max(cmw_x)
+            self.wavelet_kernels[i,:] = cmw_x 
 
-            conv = ifft(data_x * cmw_x)
-            conv = conv[(half_kern_n):(-half_kern_n+1)]
-            conv_pow = abs(conv)**2
-            tf[i,:] = conv_pow
+        # Move the wavelet kernels to the GPU
+        self.wavelet_kernels = cp.asarray(self.wavelet_kernels)
 
-        return tf
+    # TODO SOON Investigate writing a custom GPU kernel rather than using CuPy
+    def class_specific_cwt(self, data) -> np.ndarray:
+        # Transform the Data time series into a spectrum on the GPU
+        # TODO NEXT Investigate how to minimize the CPU to GPU transfers
+        data = cp.asarray(data, dtype=cp.complex64)
+        data_x = cp_fft.fftn(data, self.conv_n)
+
+        for i in range(self.num_wavelets):
+            conv = cp_fft.ifft(data_x * self.wavelet_kernels[i,:])
+            conv = conv[(self.half_kern_n):(-self.half_kern_n+1)]
+            conv_pow = cp.abs(conv)**2
+            self.tf_gpu[i,:] = conv_pow
+
+        # Move the result back to the CPU
+        # TODO NEXT Investigate how to minimize the GPU to CPU transfers
+        self.tf = cp.asnumpy(self.tf_gpu)
+
+        return self.tf
