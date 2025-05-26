@@ -248,4 +248,7 @@ class ShadeWavelet(Wavelet):
         # TODO NEXT Investigate how to minimize the GPU to CPU transfers
         self.tf = cp.asnumpy(self.tf_gpu)
 
+        # TODO NEXT Investigate how this really works
+        cp._default_memory_pool.free_all_blocks()
+
         return self.tf
