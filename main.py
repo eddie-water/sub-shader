@@ -3,15 +3,13 @@ from pyqtgraph.Qt import QtCore
 from utils import FrameCounter
 
 from audio_input import AudioInput
-from wavelet import PyWavelet
+from wavelet import ShadeWavelet
 from plotter import Plotter
-
-# goodnight git
 
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
 WINDOW_SIZE = 4096
-DOWNSAMPLE_FACTOR = 2
+DOWNSAMPLE_FACTOR = 1
 
 FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
@@ -21,9 +19,9 @@ audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
 sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
 # Wavelet Object
-wavelet = PyWavelet(sample_rate = sample_rate, 
-                    window_size = WINDOW_SIZE,
-                    downsample_factor = DOWNSAMPLE_FACTOR)
+wavelet = ShadeWavelet(sample_rate = sample_rate, 
+                       window_size = WINDOW_SIZE,
+                       downsample_factor = DOWNSAMPLE_FACTOR)
 
 # Plotter Object
 plotter = Plotter(file_path = FILE_PATH)
