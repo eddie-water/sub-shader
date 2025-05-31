@@ -194,6 +194,10 @@ class AntsWavelet(Wavelet):
         for i, f in enumerate(self.freqs):
             # TODO SOON Determine the significance of the parameters of the guassian envelope - why -4?
             cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
+            
+            # Normalize the wavelet kernel by 1/sqrt(scale) 
+            cmw_k = np.sqrt(f) * cmw_k
+
             # TODO NEXT Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
             cmw_x = fft(cmw_k, self.conv_n)
             cmw_x = cmw_x / max(cmw_x)
@@ -242,7 +246,10 @@ class ShadeWavelet(Wavelet):
         for i, f in enumerate(self.freqs):
             # TODO LATER SOON Determine the significance of the parameters of the guassian envelope - why -4?
             cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
-            # TODO SOON Implement with Cupy to speed things up
+
+            # Normalize the wavelet kernel by 1/sqrt(scale) 
+            cmw_k = np.sqrt(f) * cmw_k
+
             cmw_x = fft(cmw_k, self.conv_n)
             cmw_x = cmw_x / max(cmw_x)
             self.wavelet_kernels[i,:] = cmw_x 
