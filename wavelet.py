@@ -146,6 +146,8 @@ class Wavelet(ABC):
         # Downsample TODO LATER remove - downsample shouldn't be needed if cwt is fast enough
         coefs = coefs_norm[::, ::(self.downsample_factor)]
 
+        # TODO ASAP Stop transposing all the time 
+        # Only do it if the plot needs it (matplotlib vs pyqtgraph vs shader texture)
         coefs = coefs.T  # Transpose the coefs to match the expected shape
 
         return coefs

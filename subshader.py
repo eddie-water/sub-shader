@@ -134,8 +134,9 @@ def main():
             t0 = time.perf_counter()
             cwt_out = shade_wavelet.compute_cwt(chunk)
             t1 = time.perf_counter()
-
-            cwt_np = cp.asnumpy(cwt_out).astype('f4')
+            # TODO ASAP Stop transposing all the time
+            # Only do it if the plot needs it (matplotlib vs pyqtgraph vs shader texture)
+            cwt_np = cp.asnumpy(cwt_out).astype('f4').T
             texture.write(cwt_np.tobytes())
             t2 = time.perf_counter()
 
