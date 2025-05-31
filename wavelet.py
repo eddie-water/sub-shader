@@ -66,12 +66,22 @@ class Wavelet(ABC):
 
     """
     Get the time resolution for the data
+
     Returns:
         Sampling period
     """
     def get_sample_period(self) -> float:
         return self.sampling_period
 
+    """
+    Get the number of frequencies in the used in the CWT
+
+    Returns:
+        Number of frequencies in the CWT
+    """
+    def get_num_freqs(self) -> int:
+        return self.num_freqs
+    
     """
     Performs the Continuous Wavelet Transform on raw audio and normalizes the 
     results
@@ -125,6 +135,7 @@ class Wavelet(ABC):
         coefs_abs = np.abs(raw_coefs)
 
         # Scale-Based Normalization 
+        # TODO LATER use self.s to normalize the power of the scale factor instead PyWavelet's frequency2scale
         coefs_scaled = coefs_abs / np.sqrt(self.scales[:, None])
 
         # Min-Max Normalization 
@@ -134,6 +145,8 @@ class Wavelet(ABC):
 
         # Downsample TODO LATER remove - downsample shouldn't be needed if cwt is fast enough
         coefs = coefs_norm[::, ::(self.downsample_factor)]
+
+        coefs = coefs.T  # Transpose the coefs to match the expected shape
 
         return coefs
     
@@ -153,8 +166,8 @@ class AntsWavelet(Wavelet):
     def __init__(self, sample_rate, window_size, downsample_factor):
         super().__init__(sample_rate, window_size, downsample_factor)
 
-        # TODO NOW Create another subclass for ANTS and Shade Wavelets
-    
+        # TODO NOW Create another subclass for ANTS NumPy and CuPy Wavelets
+
         # Initialize the time-frequency matrix
         self.tf = np.zeros((self.num_freqs, self.window_size))
 
@@ -172,12 +185,14 @@ class AntsWavelet(Wavelet):
         fwhm = 0.3
 
         # Build a filter bank of frequency-domain wavelets
+        # TODO NEXT Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
         self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
         self.num_wavelets = self.wavelet_kernels.shape[0]
 
         for i, f in enumerate(self.freqs):
             # TODO SOON Determine the significance of the parameters of the guassian envelope - why -4?
             cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
+            # TODO NEXT Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
             cmw_x = fft(cmw_k, self.conv_n)
             cmw_x = cmw_x / max(cmw_x)
             self.wavelet_kernels[i,:] = cmw_x 
@@ -192,6 +207,8 @@ class AntsWavelet(Wavelet):
             conv = conv[(self.half_kern_n):(-self.half_kern_n+1)]
             conv_pow = np.abs(conv)**2
             self.tf[i,:] = conv_pow
+
+        # TODO ASP Clean up the boundary effects of the convolution
 
         return self.tf
     
@@ -248,7 +265,4 @@ class ShadeWavelet(Wavelet):
         # TODO NEXT Investigate how to minimize the GPU to CPU transfers
         self.tf = cp.asnumpy(self.tf_gpu)
 
-        # TODO NEXT Investigate how this really works
-        cp._default_memory_pool.free_all_blocks()
-
-        return self.tf
+        return self.normalize_coefs(self.tf)

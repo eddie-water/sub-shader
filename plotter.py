@@ -20,11 +20,11 @@ class Plotter():
         self.win.setWindowTitle('Continuous Wavelet Transform')
 
         self.plot = self.win.addPlot(row = 0, 
-                        col = 0, 
-                        rowspan = 1,
-                        colspan = 1,
-                        title = file_path,
-                        enableMenu = False)
+                                     col = 0, 
+                                     rowspan = 1,
+                                     colspan = 1,
+                                     title = file_path,
+                                     enableMenu = False)
 
         """
         Color Array and Plot
@@ -51,10 +51,10 @@ class Plotter():
 
         # Autoscaling is performed just once, when color data is first supplied
         self.pcolormesh = pg.PColorMeshItem(colorMap = colorMap,
-                                levels = levels,
-                                enableAutoLevels = autoLevels,
-                                edgeColors = edgeColors,
-                                antialiasing = antialiasing)
+                                            levels = levels,
+                                            enableAutoLevels = autoLevels,
+                                            edgeColors = edgeColors,
+                                            antialiasing = antialiasing)
 
         self.plot.addItem(self.pcolormesh)
 

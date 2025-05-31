@@ -6,6 +6,8 @@ import glfw
 import threading
 import time
 
+from wavelet import ShadeWavelet
+
 # === PARAMETERS ===
 SAMPLE_RATE = 44100
 CHUNK_SIZE = 4096
@@ -20,24 +22,13 @@ def morlet_wavelet(freq, scale, n, sample_rate):
     wavelet = cp.exp(2j * cp.pi * freq * t) * cp.exp(-t ** 2 / (2 * s ** 2))
     return wavelet / cp.sqrt(s) 
 
-# === CWT FUNCTION ===
-def cwt_gpu(signal_gpu, freqs, sample_rate):
-    n = signal_gpu.shape[0]
-    output = cp.zeros((len(freqs), n), dtype=cp.complex64)
-    signal_fft = cp.fft.fft(signal_gpu)
-    for i, f in enumerate(freqs):
-        wavelet = morlet_wavelet(f, n, n, sample_rate)
-
-        # TODO NEXT Weird way to do this, fix readability
-        output[i] = cp.fft.ifft(signal_fft * cp.fft.fft(wavelet))
-    return cp.abs(output)
-
 # === AUDIO BUFFER HANDLING ===
 audio_gpu = None
 chunk_queue = []
 queue_lock = threading.Lock()
 
 # === AUDIO STREAM THREAD ===
+# TODO SOON Graacefully handle reaching end of audio file
 def audio_producer():
     global audio_gpu
     i = 0
@@ -55,7 +46,7 @@ def main():
     # Load and normalize audio 
     rate, audio = wavfile.read(AUDIO_PATH)
     if audio.ndim > 1:
-        # Convert stereo to mono
+        # Convert to mono if stereo
         audio = audio.mean(axis=1)
     audio = audio.astype(np.float32)
     audio /= np.max(np.abs(audio))
@@ -65,15 +56,17 @@ def main():
     if not glfw.init():
         raise RuntimeError("Failed to initialize GLFW")
 
+    # Set properties to OpenGL 3.3 core profile (for ModernGL)
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
     glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
-    window = glfw.create_window(800, 600, "CWT Visualizer", None, None)
+    window = glfw.create_window(800, 600, "Sub Shader", None, None)
     if not window:
         glfw.terminate()
         raise RuntimeError("Failed to create window")
 
+    # 
     glfw.make_context_current(window)
     ctx = moderngl.create_context()
 
@@ -100,6 +93,10 @@ def main():
         """,
     )
 
+    shade_wavelet = ShadeWavelet(sample_rate=SAMPLE_RATE,
+                                 window_size=CHUNK_SIZE,
+                                 downsample_factor=1)
+
     # Set up quad vertex buffer and vertex array object 
     quad = np.array([
         -1.0, -1.0,
@@ -111,7 +108,7 @@ def main():
     vao = ctx.simple_vertex_array(prog, vbo, 'position')
 
     # Create 2D texture placeholder for scalogram 
-    texture = ctx.texture((CHUNK_SIZE, len(CWT_FREQS)), 1, dtype='f4')
+    texture = ctx.texture((CHUNK_SIZE, shade_wavelet.get_num_freqs()), 1, dtype='f4')
     texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
     prog['scalogram'] = 0  # texture unit 0
 
@@ -135,7 +132,7 @@ def main():
         # Perform CWT and update texture 
         if chunk is not None:
             t0 = time.perf_counter()
-            cwt_out = cwt_gpu(chunk, CWT_FREQS, SAMPLE_RATE)
+            cwt_out = shade_wavelet.compute_cwt(chunk)
             t1 = time.perf_counter()
 
             cwt_np = cp.asnumpy(cwt_out).astype('f4')
