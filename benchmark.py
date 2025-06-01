@@ -56,7 +56,7 @@ class Benchmark():
         self.func_times = np.zeros(len(self.func_list))
 
     def main(self):
-        print("Timing Analysis")
+        print("Timing Analysis Starting...\n")
 
         for _ in range(NUM_ITERATIONS):
             for i, item in enumerate(self.func_list):
@@ -80,6 +80,9 @@ class Benchmark():
         for i, item in enumerate(self.func_list):
             func = item[0]
             print(f"-> {func.__self__.__class__.__name__}.{func.__name__}()\t{self.avg_func_times[i]:6f} sec")
+
+        print()
+        print(f"Timing Analysis Complete\n")
 
         """
         Static Plots
@@ -110,9 +113,6 @@ class Benchmark():
 
         plt.tight_layout()
         plt.show()
-
-        while(True):
-            pass
 
 if __name__ == '__main__':
     benchmark = Benchmark()
