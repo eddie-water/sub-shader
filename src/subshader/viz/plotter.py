@@ -1,6 +1,4 @@
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore
-from utils import FrameCounter
 
 class Plotter():
     def __init__(self, file_path: str):

@@ -2,9 +2,9 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from audio_input import AudioInput
-from wavelet import PyWavelet, NumpyWavelet, CupyWavelet
-from plotter import Plotter 
+from subshader.audio.audio_input import AudioInput
+from subshader.dsp.wavelet import PyWavelet, NumpyWavelet, CupyWavelet
+from subshader.viz.plotter import Plotter 
 
 NUM_ITERATIONS = 10
 
@@ -12,7 +12,7 @@ NUM_ITERATIONS = 10
 # which combo gets the best performance
 WINDOW_SIZE = 4096
 
-FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
+FILE_PATH = "assets/audio/c4_and_c7_4_arps.wav"
 
 # TODO NOW Consolidate this benchmark code with the cuda_cwt.py
 class Benchmark():
@@ -56,7 +56,8 @@ class Benchmark():
         self.func_times = np.zeros(len(self.func_list))
 
     def main(self):
-        print("Timing Analysis Starting...\n")
+        print()
+        print("Starting Timing Analysis...\n")
 
         for _ in range(NUM_ITERATIONS):
             for i, item in enumerate(self.func_list):
@@ -75,19 +76,20 @@ class Benchmark():
 
         # Average the runtimes
         self.avg_func_times = self.func_times / int(NUM_ITERATIONS)
-        print(f"Function runtimes averaged over {NUM_ITERATIONS} iterations")
+        print(f"Results:")
 
         for i, item in enumerate(self.func_list):
             func = item[0]
             print(f"-> {func.__self__.__class__.__name__}.{func.__name__}()\t{self.avg_func_times[i]:6f} sec")
 
         print()
-        print(f"Timing Analysis Complete\n")
+        print(f"Timing Analysis Complete - every function averaged over {NUM_ITERATIONS} iterations\n")
 
         """
         Static Plots
         """
-        fig, axes = plt.subplots(4, 1, figsize=(10,5))
+        fig, axes = plt.subplots(4, 1, constrained_layout=True)
+        fig.canvas.manager.set_window_title("Benchmarking CWT Implementations")
 
         # TODO LATER Fix the axes so they display freqs, not scales
         axes[0].set_title("Test Signal Time Series: C4 + C7")
@@ -111,7 +113,6 @@ class Benchmark():
         axes[3].set_xlabel("Time")
         axes[3].set_ylabel("Scale")
 
-        plt.tight_layout()
         plt.show()
 
 if __name__ == '__main__':

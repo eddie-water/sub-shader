@@ -1,26 +1,55 @@
-# Create a virtual environment and activate 
-I'm using WSL so I do:  
-$ py -m venv .venv  
-$ source .venv/bin/activate  
+# Sub Shader
+Sub Shader is a real-time audio analysis tool. It takes an audio file and 
+analyzes it with time-frequency analysis techniques and visualizes it in a real
+time plot. 
 
-# Install the dependencies
-$ py install -r requirements.txt
+## Current State
+I just got an implementation of the Continuous Wavelet Transform to work. This
+a Time-Frequency Analysis Technique that is a step further beyond the typical 
+Fourier Transform. The CWT expands upon 
 
-### If PyQt5 says something like:  
-"AttributeError: module 'sipbuild.api' has no attribute 
-'prepare_metadata_for_build_wheel'" 
+# Instructions
+My setup is a Windows machine running WSL2 in VS Code. If you're running on a
+different set up, replicate the instructions for your particular set up.
 
-$ pip install --upgrade pip setuptools wheel
+## Create Virtual Environment
+To avoid cluttering your machine's environment, create a virtual environment
+with:
+`python3 -m venv venv`
 
-# Run 
-$ py main.py
+## Activate the Virtual Environment
+On Windows running WSL run:
+`source venv/bin/activate`
 
-# TODO Hierarchy
-NOW > NEXT > SOON > LATER > EVENTUALLY
+Deactivate when you're done with:
+`deactivate`
 
-# Questions
+## Install Dependencies
+Use pip to install all the necessary libraries and this package itself in 
+editable mode (-e). We do this so the project is importable as a package to 
+avoid reinstalling every time we modify the soruce code.
+`pip install -e .`
 
-DSP Stuff
+## How to Run Main
+Run the code using:
+`py -m subshader` or `python -m subshader` or `python3 -m subshader`
+
+## How to Run Timing Profiler
+To run the benchmarking script, which times each stage of the main loop and 
+compares the different implementations of the CWT, run this:
+`py research/benchmark.py`
+
+# Etcetera
+This section is just extra stuff 
+
+## TODO Hierarchy
+NOW > NEXT > SOON > LATER > ASP = EVENTUALLY
+
+## Questions
+Questions that I would really like to keep in mind or figure out to really 
+understand conceptually the best way to do this project
+
+### DSP 
 Q: Why is it useful or beneficial to perform the CWT with **Complex** Morlet 
 Wavelets? Specifically, what is it about them being complex helps with time
 frequency analysis?
@@ -35,7 +64,9 @@ but I don't really see the how that is useful.
 Q: Why is it important to know the phase of the signal? What information is
 actually usefully gained from it? I've heard of Phase Key Shifting (PSK), which
 is used to encode information in the phase of signals, but I don't see how that
-would play a useful part in this project.
+would play a useful part in this project. That seems more like an RF 
+telecommunications thing. But maybe there are musical characteristics contained
+in the Phase data that contributes to the audio
 
 Q: How does the shape of the Gaussian used in creating the CMW affect the 
 results of the wavelet based time-frequency analysis? How are the results 
@@ -51,14 +82,16 @@ it was sharper at filtering things out (or maybe I have that backwards?).
 Relate this kind of intuition to the Complex Morlet Wavelet, which is a sine 
 wave being manhandled by a Guassian, being used as a kernel during the CWT.
 
-Python Stuff
+### Python
 
-GPU Acceleration Stuff
+### GPU Acceleration / Parallel Programming
 Q: Need to still make sense of the threads per block (TPB), blocks per grid 
 (BPG), and block width (BW). What is an intuitive way of looking at it? Why does the position
 flatten the indeces in that way? Conceptually, how is it analogous to 2D arrays?
 
 Q: How do you decide what the values for the TPB, BPG, and BW are?
+
+Q: VAO vs VBO Graphics Pipeline
 
 Q: Why use Shared Memory? First of all, what exactly is it, and I thought 
 accessing it is really slow and clunky and bottle necks the entire procedure?
