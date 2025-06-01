@@ -11,16 +11,8 @@ from wavelet import ShadeWavelet
 # === PARAMETERS ===
 SAMPLE_RATE = 44100
 CHUNK_SIZE = 4096
-CWT_FREQS = cp.linspace(20, 8000, 128) # TODO NOW Fix frequency range
-AUDIO_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
-# === CWT KERNEL ===
-def morlet_wavelet(freq, scale, n, sample_rate):
-    # TODO NEXT Verify wavelet setup
-    t = cp.linspace(-1, 1, n)
-    s = scale / sample_rate
-    wavelet = cp.exp(2j * cp.pi * freq * t) * cp.exp(-t ** 2 / (2 * s ** 2))
-    return wavelet / cp.sqrt(s) 
+AUDIO_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
 # === AUDIO BUFFER HANDLING ===
 audio_gpu = None
@@ -28,8 +20,8 @@ chunk_queue = []
 queue_lock = threading.Lock()
 
 # === AUDIO STREAM THREAD ===
-# TODO SOON Graacefully handle reaching end of audio file
 def audio_producer():
+    # TODO SOON Graacefully handle reaching end of audio file
     global audio_gpu
     i = 0
     while i + CHUNK_SIZE < len(audio_gpu):
@@ -37,7 +29,7 @@ def audio_producer():
         with queue_lock:
             chunk_queue.append(chunk)
         i += CHUNK_SIZE
-        time.sleep(CHUNK_SIZE / SAMPLE_RATE)
+        time.sleep(CHUNK_SIZE / SAMPLE_RATE)  # TODO Add comment to explain this
 
 # === MAIN LOOP ===
 def main():
@@ -134,9 +126,7 @@ def main():
             t0 = time.perf_counter()
             cwt_out = shade_wavelet.compute_cwt(chunk)
             t1 = time.perf_counter()
-            # TODO ASAP Stop transposing all the time
-            # Only do it if the plot needs it (matplotlib vs pyqtgraph vs shader texture)
-            cwt_np = cp.asnumpy(cwt_out).astype('f4').T
+            cwt_np = cp.asnumpy(cwt_out).astype('f4')
             texture.write(cwt_np.tobytes())
             t2 = time.perf_counter()
 

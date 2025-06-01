@@ -47,14 +47,6 @@ class Wavelet(ABC):
 
         self.result_shape = (self.num_freqs, self.window_size)
 
-        # TODO LATER These belong in the PyWavelet subclass, not here
-        # Wavelet info TODO LATER why 1.5-1.0?
-        self.wavelet_name = "cmor1.5-1.0"
-
-        # Scale array used to specify wavelet dilation amounts during cwt
-        f_norm = (self.freqs / self.sample_rate)
-        self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
-
     """
     Computes the shape of the resultant CWT data
 
@@ -103,8 +95,7 @@ class Wavelet(ABC):
 
         cwt_coefs = self.class_specific_cwt(data)
 
-        # TODO return self.normalize_coefs(cwt_coefs)
-        return cwt_coefs
+        return self.normalize_coefs(cwt_coefs)
     
     """
     Computes the CWT via the specific subclass implementation
@@ -129,26 +120,17 @@ class Wavelet(ABC):
     Returns:
         coefs: normalized CWT coefficients
     """
-    # TODO LATER commonize this for all wavelet subclasses, right it's only tied to PyWavelet
     def normalize_coefs(self, raw_coefs) -> np.ndarray:
         # Absolute Value 
         coefs_abs = np.abs(raw_coefs)
 
-        # Scale-Based Normalization 
-        # TODO LATER use self.s to normalize the power of the scale factor instead PyWavelet's frequency2scale
-        coefs_scaled = coefs_abs / np.sqrt(self.scales[:, None])
-
-        # Min-Max Normalization 
-        coefs_min = np.min(coefs_scaled)
-        coefs_max = np.max(coefs_scaled)
-        coefs_norm = (coefs_scaled - coefs_min) / (coefs_max - coefs_min)
+        # Min-Max Normalization - squeeze data into the [0, 1] range
+        coefs_min = np.min(coefs_abs)
+        coefs_max = np.max(coefs_abs)
+        coefs_norm = (coefs_abs - coefs_min) / (coefs_max - coefs_min)
 
         # Downsample TODO LATER remove - downsample shouldn't be needed if cwt is fast enough
         coefs = coefs_norm[::, ::(self.downsample_factor)]
-
-        # TODO ASAP Stop transposing all the time 
-        # Only do it if the plot needs it (matplotlib vs pyqtgraph vs shader texture)
-        coefs = coefs.T  # Transpose the coefs to match the expected shape
 
         return coefs
     
@@ -156,20 +138,27 @@ class PyWavelet(Wavelet):
     def __init__(self, sample_rate, window_size, downsample_factor):
         super().__init__(sample_rate, window_size, downsample_factor)
 
+        # Wavelet info TODO LATER why 1.5-1.0?
+        self.wavelet_name = "cmor1.5-1.0"
+
+        # Scale array used to specify wavelet dilation amounts during CWT
+        f_norm = (self.freqs / self.sample_rate)
+        self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
+
     def class_specific_cwt(self, data):
         raw_coefs, _ = pywt.cwt(data = data,
                                 scales = self.scales,
                                 wavelet = self.wavelet_name,
                                 sampling_period = self.sampling_period)
+    
+        # Scale-Based Normalization 
+        coefs_scaled = raw_coefs / np.sqrt(self.scales[:, None])
 
-        return self.normalize_coefs(raw_coefs)
+        return self.normalize_coefs(coefs_scaled)
 
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate, window_size, downsample_factor):
         super().__init__(sample_rate, window_size, downsample_factor)
-
-        # TODO NOW Create another subclass for ANTS NumPy and CuPy Wavelets
-
         # Initialize the time-frequency matrix
         self.tf = np.zeros((self.num_freqs, self.window_size))
 
@@ -204,6 +193,13 @@ class AntsWavelet(Wavelet):
             self.wavelet_kernels[i,:] = cmw_x 
 
     def class_specific_cwt(self, data) -> np.ndarray:
+        pass
+
+class NumpyWavelet(AntsWavelet):
+    def __init__(self, sample_rate, window_size, downsample_factor):
+        super().__init__(sample_rate, window_size, downsample_factor)
+
+    def class_specific_cwt(self, data) -> np.ndarray:
         # Transform the Data time series into a spectrum
         data_x = fft(data, self.conv_n)
 
@@ -218,41 +214,10 @@ class AntsWavelet(Wavelet):
 
         return self.tf
     
-class ShadeWavelet(Wavelet):
+class CupyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size, downsample_factor):
         super().__init__(sample_rate, window_size, downsample_factor)
-        # Initialize the time-frequency matrix
-        self.tf = np.zeros((self.num_freqs, self.window_size))
         self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
-
-        # Create a centered time vector for the CMW
-        cmw_t = np.arange(2*self.sample_rate) / self.sample_rate
-        self.cmw_t = cmw_t - np.mean(cmw_t) 
-        self.cmw_gpu_t = cp.asarray(self.cmw_t)
-
-        # N's of convolution
-        self.data_n = self.window_size
-        self.kern_n = len(cmw_t)
-        self.conv_n = self.data_n + self.kern_n - 1
-        self.half_kern_n = self.kern_n // 2
-
-        # Full-Width Half Maximum - try out some different values
-        fwhm = 0.3
-
-        # Build a filter bank of frequency-domain wavelets
-        self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
-        self.num_wavelets = self.wavelet_kernels.shape[0]
-
-        for i, f in enumerate(self.freqs):
-            # TODO LATER SOON Determine the significance of the parameters of the guassian envelope - why -4?
-            cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
-
-            # Normalize the wavelet kernel by 1/sqrt(scale) 
-            cmw_k = np.sqrt(f) * cmw_k
-
-            cmw_x = fft(cmw_k, self.conv_n)
-            cmw_x = cmw_x / max(cmw_x)
-            self.wavelet_kernels[i,:] = cmw_x 
 
         # Move the wavelet kernels to the GPU
         self.wavelet_kernels = cp.asarray(self.wavelet_kernels)
@@ -274,4 +239,7 @@ class ShadeWavelet(Wavelet):
         # TODO NEXT Investigate how to minimize the GPU to CPU transfers
         self.tf = cp.asnumpy(self.tf_gpu)
 
-        return self.normalize_coefs(self.tf)
+        return self.tf
+    
+class ShadeWavelet(CupyWavelet):
+    pass

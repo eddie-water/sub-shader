@@ -4,9 +4,7 @@ import scipy.datasets
 import matplotlib.pyplot as plt
 
 from audio_input import AudioInput
-from wavelet import PyWavelet
-from wavelet import AntsWavelet
-from wavelet import ShadeWavelet
+from wavelet import PyWavelet, NumpyWavelet, CupyWavelet
 
 """
 Configurations
@@ -28,25 +26,25 @@ sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 Wavelet Objects
 """
 # PyWavelet
-pywavelet = PyWavelet(sample_rate = sample_rate, 
+py_wavelet = PyWavelet(sample_rate = sample_rate, 
                       window_size = WINDOW_SIZE,
                       downsample_factor = DOWNSAMPLE_FACTOR)
 
-coefs_pywavelet = pywavelet.compute_cwt(audio_data)
+coefs_py_wavelet = py_wavelet.compute_cwt(audio_data)
 
-# ANTS Wavelet (NumPy)
-ants_wavelet = AntsWavelet(sample_rate = sample_rate, 
-                           window_size = WINDOW_SIZE,
-                           downsample_factor = DOWNSAMPLE_FACTOR)
+# NumPy ANTS Wavelet
+np_wavelet = NumpyWavelet(sample_rate = sample_rate, 
+                          window_size = WINDOW_SIZE,
+                          downsample_factor = DOWNSAMPLE_FACTOR)
 
-coefs_ants_wavelet = ants_wavelet.compute_cwt(audio_data)
+coefs_np_wavelet = np_wavelet.compute_cwt(audio_data)
 
-# Shade Wavelet (CuPy)
-shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
+# Shade Wavelet 
+cp_wavelet = CupyWavelet(sample_rate = sample_rate, 
                              window_size = WINDOW_SIZE,
                              downsample_factor = DOWNSAMPLE_FACTOR)
 
-coefs_shade_wavelet = shade_wavelet.compute_cwt(audio_data)
+coefs_cp_wavelet = cp_wavelet.compute_cwt(audio_data)
 
 """
 Plotting
@@ -62,17 +60,17 @@ axes[0].set_ylabel("Amplitude")
 axes[0].margins(x=0, y=0)
 
 axes[1].set_title("PyWavelet CWT")
-axes[1].imshow(coefs_pywavelet, cmap = "magma", aspect = "auto")
+axes[1].imshow(coefs_py_wavelet, cmap = "magma", aspect = "auto")
 axes[1].set_xlabel("Time")
 axes[1].set_ylabel("Scale")
 
-axes[2].set_title("ANTS Wavelet (NumPy) CWT")
-axes[2].imshow(coefs_ants_wavelet, cmap = "magma", aspect = "auto")
+axes[2].set_title("NumPy CWT")
+axes[2].imshow(coefs_np_wavelet, cmap = "magma", aspect = "auto")
 axes[2].set_xlabel("Time")
 axes[2].set_ylabel("Scale")
 
-axes[3].set_title("Shade Wavelet (CuPy) CWT")
-axes[3].imshow(coefs_shade_wavelet, cmap = "magma", aspect = "auto")
+axes[3].set_title("CuPy CWT")
+axes[3].imshow(coefs_cp_wavelet, cmap = "magma", aspect = "auto")
 axes[3].set_xlabel("Time")
 axes[3].set_ylabel("Scale")
 

@@ -89,6 +89,8 @@ class Plotter():
             coefs: coefficients to update the pcolormesh with
     """
     def update_plot(self, coefs):
+        # TODO Plotter Improvements fix axes so we don't have to transpose 
+        coefs = coefs.T
         self.pcolormesh.setData(coefs)
 
     """
