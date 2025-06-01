@@ -2,8 +2,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-# TODO LATER move this in to the plotting utilities
-
+# TODO ISSUE-12 move this in to the plotting utilities
 def plot_time_domain_conv(input_signal, kernel, y_min, y_max, delay):
     try:
         # Delay must be > 0 or else the interactive plot silently breaks by 
@@ -16,9 +15,6 @@ def plot_time_domain_conv(input_signal, kernel, y_min, y_max, delay):
         # Get signal params for configuring buffer lengths, normalizaiton, and stuff
         signal_len = len(input_signal)
         kernel_len = len(kernel)
-        # TODO LATER what happens when the kernel happens to be even? How would that
-        # affect the padding and loop indeces. Try and see if it breaks and if it 
-        # does, fix it or just try to avoid that.
         half_kern_len = int(np.floor(kernel_len / 2))
         result_len = signal_len
 

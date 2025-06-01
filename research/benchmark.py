@@ -6,15 +6,12 @@ from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumpyWavelet, CupyWavelet
 from subshader.viz.plotter import Plotter 
 
-NUM_ITERATIONS = 10
+NUM_ITERATIONS = 100
 
-# TODO SOON make a list of frame sizes and downsample factors to see
-# which combo gets the best performance
 WINDOW_SIZE = 4096
 
 FILE_PATH = "assets/audio/c4_and_c7_4_arps.wav"
 
-# TODO NOW Consolidate this benchmark code with the cuda_cwt.py
 class Benchmark():
     def __init__(self) -> None:
         # Audio Input
@@ -91,7 +88,7 @@ class Benchmark():
         fig, axes = plt.subplots(4, 1, constrained_layout=True)
         fig.canvas.manager.set_window_title("Benchmarking CWT Implementations")
 
-        # TODO LATER Fix the axes so they display freqs, not scales
+        # TODO ISSUE-33 Fix the axes so they display freqs, not scales
         axes[0].set_title("Test Signal Time Series: C4 + C7")
         axes[0].plot(self.audio_data)
         axes[0].set_xlabel("Time")

@@ -71,12 +71,12 @@ original data shape. Extract the power of the filtered signal. Average the
 power of all the trials and store it in a matrix to easily plot the '3D' result.
 '''
 
-# TODO SOON Figure out the significance of this parameter
+# TODO ISSUE-36 Figure out the significance of this parameter
 s = 0.3
 
-# TODO NEXT figure out why we create the wavelet on a different time vector
+# TODO ISSUE-36 NEXT figure out why we create the wavelet on a different time vector
 for i in range(num_freq):
-    # TODO SOON Determine the significance of the parameters of the guassian envelope
+    # TODO ISSUE-36 Determine the significance of the parameters of the guassian envelope
     cmw_k = np.exp(1j*2*pi*freqs[i]*cmw_t) * np.exp(-4*np.log(2)*cmw_t**2 / s**2)
     cmw_x = fft(cmw_k, conv_n)
     cmw_x = cmw_x / max(cmw_x)

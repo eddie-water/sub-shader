@@ -43,7 +43,7 @@ compares the different implementations of the CWT, run this:
 This section is just extra stuff 
 
 ## TODO Hierarchy
-NOW > NEXT > SOON > LATER > ASP = EVENTUALLY
+NOW > NEXT > SOON > LATER > SOMEDAY
 
 ## Questions
 Questions that I would really like to keep in mind or figure out to really 

@@ -134,7 +134,7 @@ class PyWavelet(Wavelet):
     def __init__(self, sample_rate, window_size):
         super().__init__(sample_rate, window_size)
 
-        # Wavelet info TODO LATER why 1.5-1.0?
+        # Wavelet info TODO ISSUE-36 why 1.5-1.0?
         self.wavelet_name = "cmor1.5-1.0"
 
         # Scale array used to specify wavelet dilation amounts during CWT
@@ -168,22 +168,22 @@ class AntsWavelet(Wavelet):
         self.conv_n = self.data_n + self.kern_n - 1
         self.half_kern_n = self.kern_n // 2
 
-        # Full-Width Half Maximum - try out some different values
+        # TODO ISSUE-36 Full-Width Half Maximum - try out some different values
         fwhm = 0.3
 
         # Build a filter bank of frequency-domain wavelets
-        # TODO NEXT Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
+        # TODO ISSUE-36 Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
         self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
         self.num_wavelets = self.wavelet_kernels.shape[0]
 
         for i, f in enumerate(self.freqs):
-            # TODO SOON Determine the significance of the parameters of the guassian envelope - why -4?
+            # TODO ISSUE-36 Determine the significance of the parameters of the guassian envelope - why -4?
             cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
             
             # Normalize the wavelet kernel by 1/sqrt(scale) 
             cmw_k = np.sqrt(f) * cmw_k
 
-            # TODO NEXT Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
+            # TODO ISSUE-36 Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
             cmw_x = fft(cmw_k, self.conv_n)
             cmw_x = cmw_x / max(cmw_x)
             self.wavelet_kernels[i,:] = cmw_x 
@@ -206,7 +206,7 @@ class NumpyWavelet(AntsWavelet):
             conv_pow = np.abs(conv)**2
             self.tf[i,:] = conv_pow
 
-        # TODO ASP Clean up the boundary effects of the convolution
+        # TODO ISSUE-36 Clean up the boundary effects of the convolution
 
         return self.tf
     
@@ -218,10 +218,10 @@ class CupyWavelet(AntsWavelet):
         # Move the wavelet kernels to the GPU
         self.wavelet_kernels = cp.asarray(self.wavelet_kernels)
 
-    # TODO SOON Investigate writing a custom GPU kernel rather than using CuPy
+    # TODO ISSUE-36 Investigate writing a custom GPU kernel rather than using CuPy
     def class_specific_cwt(self, data) -> np.ndarray:
         # Transform the Data time series into a spectrum on the GPU
-        # TODO NEXT Investigate how to minimize the CPU to GPU transfers
+        # TODO ISSUE-33 Investigate how to minimize the CPU to GPU transfers
         data = cp.asarray(data, dtype=cp.complex64)
         data_x = cp_fft.fftn(data, self.conv_n)
 
@@ -232,7 +232,7 @@ class CupyWavelet(AntsWavelet):
             self.tf_gpu[i,:] = conv_pow
 
         # Move the result back to the CPU
-        # TODO NEXT Investigate how to minimize the GPU to CPU transfers
+        # TODO ISSUE-33 Investigate how to minimize the GPU to CPU transfers
         self.tf = cp.asnumpy(self.tf_gpu)
 
         return self.tf
