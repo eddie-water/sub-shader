@@ -18,7 +18,7 @@ ROOT_NOTE_A0 = 27.5
 pi = np.pi
 
 class Wavelet(ABC):
-    def __init__(self, sample_rate: int, window_size: int, downsample_factor: int):
+    def __init__(self, sample_rate: int, window_size: int):
         if sample_rate != TYPICAL_SAMPLING_FREQ:
             raise ValueError(f"Sampling Rate: {sample_rate},", 
                              f"is not {TYPICAL_SAMPLING_FREQ} Hz.",
@@ -33,7 +33,6 @@ class Wavelet(ABC):
         self.nyquist_freq = (sample_rate / 2.0)
         self.sampling_period = (1.0 / self.sample_rate)
         self.window_size = window_size
-        self.downsample_factor = downsample_factor
 
         # Frequency Axis that replicates the exponential step size of the musical scale
         self.scale_factor = 2**(1/NOTES_PER_OCTAVE)
@@ -129,14 +128,11 @@ class Wavelet(ABC):
         coefs_max = np.max(coefs_abs)
         coefs_norm = (coefs_abs - coefs_min) / (coefs_max - coefs_min)
 
-        # Downsample TODO LATER remove - downsample shouldn't be needed if cwt is fast enough
-        coefs = coefs_norm[::, ::(self.downsample_factor)]
-
-        return coefs
+        return coefs_norm
     
 class PyWavelet(Wavelet):
-    def __init__(self, sample_rate, window_size, downsample_factor):
-        super().__init__(sample_rate, window_size, downsample_factor)
+    def __init__(self, sample_rate, window_size):
+        super().__init__(sample_rate, window_size)
 
         # Wavelet info TODO LATER why 1.5-1.0?
         self.wavelet_name = "cmor1.5-1.0"
@@ -157,8 +153,8 @@ class PyWavelet(Wavelet):
         return self.normalize_coefs(coefs_scaled)
 
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate, window_size, downsample_factor):
-        super().__init__(sample_rate, window_size, downsample_factor)
+    def __init__(self, sample_rate, window_size):
+        super().__init__(sample_rate, window_size)
         # Initialize the time-frequency matrix
         self.tf = np.zeros((self.num_freqs, self.window_size))
 
@@ -196,8 +192,8 @@ class AntsWavelet(Wavelet):
         pass
 
 class NumpyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size, downsample_factor):
-        super().__init__(sample_rate, window_size, downsample_factor)
+    def __init__(self, sample_rate, window_size):
+        super().__init__(sample_rate, window_size)
 
     def class_specific_cwt(self, data) -> np.ndarray:
         # Transform the Data time series into a spectrum
@@ -215,8 +211,8 @@ class NumpyWavelet(AntsWavelet):
         return self.tf
     
 class CupyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size, downsample_factor):
-        super().__init__(sample_rate, window_size, downsample_factor)
+    def __init__(self, sample_rate, window_size):
+        super().__init__(sample_rate, window_size)
         self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
 
         # Move the wavelet kernels to the GPU

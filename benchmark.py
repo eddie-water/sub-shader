@@ -10,10 +10,10 @@ NUM_ITERATIONS = 10
 # TODO SOON make a list of frame sizes and downsample factors to see
 # which combo gets the best performance
 WINDOW_SIZE = 4096
-DOWNSAMPLE_FACTOR = 1
 
 FILE_PATH = "audio_files/c_4_arps.wav"
 
+# TODO NOW Consolidate this benchmark code with the cuda_cwt.py
 class Benchtest():
     def __init__(self) -> None:
         # Audio Input
@@ -26,22 +26,19 @@ class Benchtest():
 
         # PyWavelet Object
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
-                               window_size = WINDOW_SIZE,
-                               downsample_factor = DOWNSAMPLE_FACTOR)
+                               window_size = WINDOW_SIZE)
 
         dummy_coefs = py_wavelet.compute_cwt(dummy_audio)
 
         # ANTS Wavelet (NumPy) Object
         ants_wavelet = AntsWavelet(sample_rate = sample_rate, 
-                                     window_size = WINDOW_SIZE,
-                                     downsample_factor = DOWNSAMPLE_FACTOR)
+                                   window_size = WINDOW_SIZE)
 
         _ = ants_wavelet.compute_cwt(dummy_audio)
 
         # Shade Wavelet (CuPy) Object
         shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
-                                window_size = WINDOW_SIZE,
-                                downsample_factor = DOWNSAMPLE_FACTOR)
+                                     window_size = WINDOW_SIZE)
 
         _ = ants_wavelet.compute_cwt(dummy_audio)
 

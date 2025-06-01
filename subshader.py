@@ -86,8 +86,7 @@ def main():
     )
 
     shade_wavelet = ShadeWavelet(sample_rate=SAMPLE_RATE,
-                                 window_size=CHUNK_SIZE,
-                                 downsample_factor=1)
+                                 window_size=CHUNK_SIZE)
 
     # Set up quad vertex buffer and vertex array object 
     quad = np.array([

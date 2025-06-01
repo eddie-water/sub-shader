@@ -12,9 +12,6 @@ Configurations
 # Size of audio sample block processed by CWT
 WINDOW_SIZE = 4096
 
-# Number of samples to skip when plotting (inceasing this speeds up plotting)
-DOWNSAMPLE_FACTOR = 1
-
 FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
 # Audio Input, Audio Characteristics 
@@ -27,22 +24,19 @@ Wavelet Objects
 """
 # PyWavelet
 py_wavelet = PyWavelet(sample_rate = sample_rate, 
-                      window_size = WINDOW_SIZE,
-                      downsample_factor = DOWNSAMPLE_FACTOR)
+                       window_size = WINDOW_SIZE)
 
 coefs_py_wavelet = py_wavelet.compute_cwt(audio_data)
 
 # NumPy ANTS Wavelet
 np_wavelet = NumpyWavelet(sample_rate = sample_rate, 
-                          window_size = WINDOW_SIZE,
-                          downsample_factor = DOWNSAMPLE_FACTOR)
+                          window_size = WINDOW_SIZE)
 
 coefs_np_wavelet = np_wavelet.compute_cwt(audio_data)
 
 # Shade Wavelet 
 cp_wavelet = CupyWavelet(sample_rate = sample_rate, 
-                             window_size = WINDOW_SIZE,
-                             downsample_factor = DOWNSAMPLE_FACTOR)
+                         window_size = WINDOW_SIZE)
 
 coefs_cp_wavelet = cp_wavelet.compute_cwt(audio_data)
 
@@ -52,7 +46,6 @@ Plotting
 fig, axes = plt.subplots(4, 1, figsize=(10,5))
 
 # TODO LATER Fix the axes so they display freqs, not scales
-
 axes[0].set_title("Test Signal Time Series: C4 + C7")
 axes[0].plot(audio_data)
 axes[0].set_xlabel("Time")

@@ -9,7 +9,6 @@ from plotter import Plotter
 # Constants: 
 #   Ideally have the biggest frame size and the smallest downsample factor 
 WINDOW_SIZE = 4096
-DOWNSAMPLE_FACTOR = 1
 
 FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
@@ -20,8 +19,7 @@ sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
 # Wavelet Object
 wavelet = ShadeWavelet(sample_rate = sample_rate, 
-                       window_size = WINDOW_SIZE,
-                       downsample_factor = DOWNSAMPLE_FACTOR)
+                       window_size = WINDOW_SIZE)
 
 # Plotter Object
 plotter = Plotter(file_path = FILE_PATH)
