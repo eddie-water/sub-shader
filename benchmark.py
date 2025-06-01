@@ -1,8 +1,9 @@
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 
 from audio_input import AudioInput
-from wavelet import PyWavelet, AntsWavelet, ShadeWavelet
+from wavelet import PyWavelet, NumpyWavelet, CupyWavelet
 from plotter import Plotter 
 
 NUM_ITERATIONS = 10
@@ -11,36 +12,33 @@ NUM_ITERATIONS = 10
 # which combo gets the best performance
 WINDOW_SIZE = 4096
 
-FILE_PATH = "audio_files/c_4_arps.wav"
+FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
 # TODO NOW Consolidate this benchmark code with the cuda_cwt.py
-class Benchtest():
+class Benchmark():
     def __init__(self) -> None:
         # Audio Input
         audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
-
-        # TODO NEXT create 
-        dummy_audio = audio_input.get_frame()
-
+        self.audio_data = audio_input.get_frame()
         sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
-        # PyWavelet Object
+        # PyWavelet 
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
                                window_size = WINDOW_SIZE)
 
-        dummy_coefs = py_wavelet.compute_cwt(dummy_audio)
+        self.coefs_py_wavelet = py_wavelet.compute_cwt(self.audio_data)
 
-        # ANTS Wavelet (NumPy) Object
-        ants_wavelet = AntsWavelet(sample_rate = sample_rate, 
-                                   window_size = WINDOW_SIZE)
+        # NumPy ANTS Wavelet
+        np_wavelet = NumpyWavelet(sample_rate = sample_rate, 
+                                  window_size = WINDOW_SIZE)
 
-        _ = ants_wavelet.compute_cwt(dummy_audio)
+        self.coefs_np_wavelet = np_wavelet.compute_cwt(self.audio_data)
 
-        # Shade Wavelet (CuPy) Object
-        shade_wavelet = ShadeWavelet(sample_rate = sample_rate, 
-                                     window_size = WINDOW_SIZE)
+        # CuPy ANTS Wavelet 
+        cp_wavelet = CupyWavelet(sample_rate = sample_rate, 
+                                 window_size = WINDOW_SIZE)
 
-        _ = ants_wavelet.compute_cwt(dummy_audio)
+        self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
 
         # Plotter Object
         plotter = Plotter(file_path = FILE_PATH)
@@ -48,10 +46,10 @@ class Benchtest():
         # Function List and Dummy Arguments (note special python ',' syntax)
         self.func_list = [
             (audio_input.get_frame,         ()),
-            (py_wavelet.compute_cwt,        (dummy_audio,)),
-            (ants_wavelet.compute_cwt,      (dummy_audio,)),
-            (shade_wavelet.compute_cwt,     (dummy_audio,)),
-            (plotter.update_plot,           (dummy_coefs,))
+            (py_wavelet.compute_cwt,        (self.audio_data,)),
+            (np_wavelet.compute_cwt,        (self.audio_data,)),
+            (cp_wavelet.compute_cwt,        (self.audio_data,)),
+            (plotter.update_plot,           (self.coefs_py_wavelet,))
         ]
 
         # Tracks the run time of each function
@@ -83,6 +81,39 @@ class Benchtest():
             func = item[0]
             print(f"-> {func.__self__.__class__.__name__}.{func.__name__}()\t{self.avg_func_times[i]:6f} sec")
 
+        """
+        Static Plots
+        """
+        fig, axes = plt.subplots(4, 1, figsize=(10,5))
+
+        # TODO LATER Fix the axes so they display freqs, not scales
+        axes[0].set_title("Test Signal Time Series: C4 + C7")
+        axes[0].plot(self.audio_data)
+        axes[0].set_xlabel("Time")
+        axes[0].set_ylabel("Amplitude")
+        axes[0].margins(x=0, y=0)
+
+        axes[1].set_title("PyWavelet CWT")
+        axes[1].imshow(self.coefs_py_wavelet, cmap = "magma", aspect = "auto")
+        axes[1].set_xlabel("Time")
+        axes[1].set_ylabel("Scale")
+
+        axes[2].set_title("NumPy CWT")
+        axes[2].imshow(self.coefs_np_wavelet, cmap = "magma", aspect = "auto")
+        axes[2].set_xlabel("Time")
+        axes[2].set_ylabel("Scale")
+
+        axes[3].set_title("CuPy CWT")
+        axes[3].imshow(self.coefs_cp_wavelet, cmap = "magma", aspect = "auto")
+        axes[3].set_xlabel("Time")
+        axes[3].set_ylabel("Scale")
+
+        plt.tight_layout()
+        plt.show()
+
+        while(True):
+            pass
+
 if __name__ == '__main__':
-    benchtest = Benchtest()
-    benchtest.main()
+    benchmark = Benchmark()
+    benchmark.main()
