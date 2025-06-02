@@ -1,8 +1,12 @@
-# VS Code Debug Files
+# IDE Artifacts
 .vscode/*
 
 # Virtual Environment
-.venv/*
+venv/*
 
 # Compiled Python
+__pycache__/
 *.pyc
+
+# Package Artifacts
+*.egg-info/
