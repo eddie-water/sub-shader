@@ -4,9 +4,10 @@ analyzes it with time-frequency analysis techniques and visualizes it in a real
 time plot. 
 
 ## Current State
-I just got an implementation of the Continuous Wavelet Transform to work. This
-a Time-Frequency Analysis Technique that is a step further beyond the typical 
-Fourier Transform. The CWT expands upon 
+I just got an implementation of the Continuous Wavelet Transform to work, a
+time-frequency analysis technique. It's a step further beyond the typical 
+Fourier Transform. TODO SOMEDAY Explain why it's being used and how we use the
+GPU to speed things up.
 
 # Instructions
 My setup is a Windows machine running WSL2 in VS Code. If you're running on a
@@ -17,12 +18,9 @@ To avoid cluttering your machine's environment, create a virtual environment
 with:
 `python3 -m venv venv`
 
-## Activate the Virtual Environment
+## Activate Virtual Environment
 On Windows running WSL run:
 `source venv/bin/activate`
-
-Deactivate when you're done with:
-`deactivate`
 
 ## Install Dependencies
 Use pip to install all the necessary libraries and this package itself in 
@@ -30,17 +28,18 @@ editable mode (-e). We do this so the project is importable as a package to
 avoid reinstalling every time we modify the soruce code.
 `pip install -e .`
 
-## How to Run Main
+## Run Main
 Run the code using:
 `py -m subshader` or `python -m subshader` or `python3 -m subshader`
 
-## How to Run Timing Profiler
+## Run Benchmark
 To run the benchmarking script, which times each stage of the main loop and 
 compares the different implementations of the CWT, run this:
 `py research/benchmark.py`
 
-# Etcetera
-This section is just extra stuff 
+## Deactivate Virtual Environment
+Deactivate when you're done with:
+`deactivate`
 
 ## TODO Hierarchy
 NOW > NEXT > SOON > LATER > SOMEDAY

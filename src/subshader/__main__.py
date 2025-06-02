@@ -8,10 +8,7 @@ from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import ShadeWavelet
 from subshader.viz.plotter import Plotter
 
-# Constants: 
-#   Ideally have the biggest frame size and the smallest downsample factor 
 WINDOW_SIZE = 4096
-
 FILE_PATH = "assets/audio/c4_and_c7_4_arps.wav"
 
 # Audio Input, Audio Characteristics 

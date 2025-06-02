@@ -29,7 +29,7 @@ csd = file_data["csd"]
 data = np.squeeze(csd[5,:,:])
 data = data.astype(np.float64) # double precision
 
-# Reshape the data - TODO NEXT Why do we need to reshape it?
+# Reshape the data 
 data_r = np.reshape(data, -1, order='F')
 
 sample_rate = 762.9395
