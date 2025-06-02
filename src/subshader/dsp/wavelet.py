@@ -107,8 +107,6 @@ class Wavelet(ABC):
     Cleans up the coef data for plotting
     - Takes the absolute values of the raw coefs to get the magnitude of the 
       resultant coefs
-    - Normalizes the coefs against the scale to compensate for energy 
-      accumulation bias in the CWT with higher scales (low frequencies)
     - Normalizes the coefs so the min and max map to 0 and 1
     - Downsamples the coefs to reduce plotting time
     - Transposes the coefs because the CWT swaps the axes for some reason
@@ -180,7 +178,8 @@ class AntsWavelet(Wavelet):
             # TODO ISSUE-36 Determine the significance of the parameters of the guassian envelope - why -4?
             cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
             
-            # Normalize the wavelet kernel by 1/sqrt(scale) 
+            # TODO ISSUE-36 Figure out why the second band looks weaker than the first
+            # Scale-Based Normalization: sqrt(f) = 1/sqrt(scale) 
             cmw_k = np.sqrt(f) * cmw_k
 
             # TODO ISSUE-36 Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?

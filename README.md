@@ -9,6 +9,10 @@ time-frequency analysis technique. It's a step further beyond the typical
 Fourier Transform. TODO SOMEDAY Explain why it's being used and how we use the
 GPU to speed things up.
 
+![Current Plots](assets/images/Plots_PyWavelet_NumPy_CuPy_CWT.png)
+
+![Current Benchmark](assets/images/Benchmark_PyWavelet_NumPy_CuPy_CWT.png)
+
 # Instructions
 My setup is a Windows machine running WSL2 in VS Code. If you're running on a
 different set up, replicate the instructions for your particular set up.
@@ -44,7 +48,7 @@ Deactivate when you're done with:
 ## TODO Hierarchy
 NOW > NEXT > SOON > LATER > SOMEDAY
 
-## Questions
+# Questions
 Questions that I would really like to keep in mind or figure out to really 
 understand conceptually the best way to do this project
 
