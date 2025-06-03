@@ -26,6 +26,10 @@ class Plotter(ABC):
     def update_fps(self, fps: int):
         pass
 
+    @abstractmethod
+    def should_window_close(self):
+        pass
+
 class PyQtGrapher(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int]):
         super().__init__(file_path, shape)
@@ -126,6 +130,9 @@ class PyQtGrapher(Plotter):
     def update_fps(self, fps: int):
         self.textBox.setText((f'{fps:.1f} fps'))
 
+    def should_window_close(self):
+        raise NotImplementedError("PyQtGraph-based window-check not implemented yet.")
+
 class Shader(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int]):
         super().__init__(file_path, shape)
@@ -139,17 +146,17 @@ class Shader(Plotter):
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
-        window = glfw.create_window(800, 600, "Sub Shader", None, None)
-        if not window:
+        self.window = glfw.create_window(800, 600, "Sub Shader", None, None)
+        if not self.window:
             glfw.terminate()
             raise RuntimeError("Failed to create window")
 
         # TODO ISSUE-33 NEXT Understand how using this context affects the rest of the code
-        glfw.make_context_current(window)
-        ctx = moderngl.create_context()
+        glfw.make_context_current(self.window)
+        self.ctx = moderngl.create_context()
 
         # Compile shaders and set up program 
-        prog = ctx.program(
+        prog = self.ctx.program(
             vertex_shader="""
             #version 330
             in vec2 position;
@@ -178,17 +185,27 @@ class Shader(Plotter):
             -1.0,  1.0,
             1.0,  1.0,
         ], dtype='f4')
-        vbo = ctx.buffer(quad.tobytes())
-        vao = ctx.simple_vertex_array(prog, vbo, 'position')
+        self.vbo = self.ctx.buffer(quad.tobytes())
+        self.vao = self.ctx.simple_vertex_array(prog, self.vbo, 'position')
 
         # Create 2D texture placeholder for scalogram 
-        texture = ctx.texture((self.x_n, self.y_n), 1, dtype='f4')
-        texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        self.texture = self.ctx.texture((self.x_n, self.y_n), 1, dtype='f4')
+        self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         prog['scalogram'] = 0  # texture unit 0
     
     def update_plot(self, values):
-        # TODO ISSUE-33 NOW Implement shader-based plotting
-        raise NotImplementedError("Shader-based plotting not yet implemented.")
+        if values.shape != (self.x_n, self.y_n):
+            raise ValueError(f"Expected shape {(self.x_n, self.y_n)}, got {values.shape}")
+
+        self.texture.write(values.astype('f4').tobytes())
+
+        self.texture.use(location=0)
+        self.ctx.clear(0.2, 0.2, 0.2)
+        self.vao.render(moderngl.TRIANGLE_STRIP)
+        glfw.swap_buffers(self.window)
 
     def update_fps(self, fps: int):
         raise NotImplementedError("Shader-based plotting not yet implemented.")
+    
+    def should_window_close(self):
+        return glfw.window_should_close(self.window)
