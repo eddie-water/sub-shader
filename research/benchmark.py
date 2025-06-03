@@ -14,15 +14,18 @@ FILE_PATH = "assets/audio/c4_and_c7_4_arps.wav"
 
 class Benchmark():
     def __init__(self) -> None:
-        # Audio Input
+        
+        ### Audio Input
         audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
         self.audio_data = audio_input.get_frame()
         sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
+        ### Wavelet Implementations
+
         # PyWavelet 
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
                                window_size = WINDOW_SIZE)
-
+        
         self.coefs_py_wavelet = py_wavelet.compute_cwt(self.audio_data)
 
         # NumPy ANTS Wavelet
@@ -37,11 +40,18 @@ class Benchmark():
 
         self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
 
+        ### Plotter Implementations
+
+        # Get plot shape to init the Plotters
+        self.plot_shape = py_wavelet.get_shape()
+
         # PyQtGraph Plotter
-        pyqtg = PyQtGrapher(file_path = FILE_PATH)
+        pyqtg = PyQtGrapher(file_path = FILE_PATH,
+                            shape = self.plot_shape)
 
         # Shader Plotter
-        shader = Shader(file_path = FILE_PATH)
+        shader = Shader(file_path = FILE_PATH,
+                        shape = self.plot_shape)
 
         # Function List and Dummy Arguments (note special python ',' syntax)
         self.func_list = [

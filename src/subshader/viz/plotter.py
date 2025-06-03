@@ -1,12 +1,25 @@
 from abc import ABC, abstractmethod
+import numpy as np
+
 import pyqtgraph as pg
 
+import moderngl
+import glfw
+
 class Plotter(ABC):
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, shape: tuple[int:int]):
+        # TODO ISSUE-33 check if file_path is a valid path
         self.file_path = file_path
 
+        if len(shape) != 2:
+            raise ValueError(f"Expected 2D array, got {len(shape)}D with shape {shape}")        
+        if shape[0] <= 0 or shape[1] <= 0:
+            raise ValueError(f"2D array cannot have shape: {shape}")
+        self.shape = shape
+        self.x_n, self.y_n = self.shape
+
     @abstractmethod
-    def update_plot(self, coefs):
+    def update_plot(self, values):
         pass
 
     @abstractmethod
@@ -14,8 +27,8 @@ class Plotter(ABC):
         pass
 
 class PyQtGrapher(Plotter):
-    def __init__(self, file_path: str):
-        super().__init__(file_path)
+    def __init__(self, file_path: str, shape: tuple[int, int]):
+        super().__init__(file_path, shape)
         """
         Global Backend Config Options
             useOpenGL           - enables OpenGL (seems to make things ~2x 
@@ -98,12 +111,12 @@ class PyQtGrapher(Plotter):
     """
     Update Plot
         Args:
-            coefs: coefficients to update the pcolormesh with
+            values: coefficients to update the pcolormesh with
     """
-    def update_plot(self, coefs):
+    def update_plot(self, values):
         # TODO ISSUE-33 Plotter Improvements fix axes so we don't have to transpose 
-        coefs = coefs.T
-        self.pcolormesh.setData(coefs)
+        values = values.T
+        self.pcolormesh.setData(values)
 
     """
     Update FPS
@@ -114,14 +127,67 @@ class PyQtGrapher(Plotter):
         self.textBox.setText((f'{fps:.1f} fps'))
 
 class Shader(Plotter):
-    def __init__(self, file_path: str):
-        super().__init__(file_path)
+    def __init__(self, file_path: str, shape: tuple[int, int]):
+        super().__init__(file_path, shape)
 
-        # Implement OpenGL shader-based plotting here
-        raise NotImplementedError("Shader-based plotting not yet implemented.")
-        # This would involve creating OpenGL shaders and rendering the CWT
+        # Initialize GLFW window and OpenGL context 
+        if not glfw.init():
+            raise RuntimeError("Failed to initialize GLFW")
+
+        # Set properties to OpenGL 3.3 core profile (for ModernGL)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+
+        window = glfw.create_window(800, 600, "Sub Shader", None, None)
+        if not window:
+            glfw.terminate()
+            raise RuntimeError("Failed to create window")
+
+        # TODO ISSUE-33 NEXT Understand how using this context affects the rest of the code
+        glfw.make_context_current(window)
+        ctx = moderngl.create_context()
+
+        # Compile shaders and set up program 
+        prog = ctx.program(
+            vertex_shader="""
+            #version 330
+            in vec2 position;
+            out vec2 texCoord;
+            void main() {
+                texCoord = (position + 1.0) / 2.0;
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+            """,
+            fragment_shader="""
+            #version 330
+            in vec2 texCoord;
+            out vec4 fragColor;
+            uniform sampler2D scalogram;
+            void main() {
+                float value = texture(scalogram, texCoord).r;
+                fragColor = vec4(value, value, value, 1.0);
+            }
+            """,
+        )
+
+        # Set up quad vertex buffer and vertex array object 
+        quad = np.array([
+            -1.0, -1.0,
+            1.0, -1.0,
+            -1.0,  1.0,
+            1.0,  1.0,
+        ], dtype='f4')
+        vbo = ctx.buffer(quad.tobytes())
+        vao = ctx.simple_vertex_array(prog, vbo, 'position')
+
+        # Create 2D texture placeholder for scalogram 
+        texture = ctx.texture((self.x_n, self.y_n), 1, dtype='f4')
+        texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        prog['scalogram'] = 0  # texture unit 0
     
-    def update_plot(self, coefs):
+    def update_plot(self, values):
+        # TODO ISSUE-33 NOW Implement shader-based plotting
         raise NotImplementedError("Shader-based plotting not yet implemented.")
 
     def update_fps(self, fps: int):
