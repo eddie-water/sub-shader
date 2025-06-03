@@ -178,7 +178,7 @@ class Shader(Plotter):
             """,
         )
 
-        # Set up quad vertex buffer and vertex array object 
+        # Set up quad vertex buffer object and vertex array object 
         quad = np.array([
             -1.0, -1.0,
             1.0, -1.0,
@@ -197,11 +197,17 @@ class Shader(Plotter):
         if values.shape != (self.x_n, self.y_n):
             raise ValueError(f"Expected shape {(self.x_n, self.y_n)}, got {values.shape}")
 
+        # Update the texture with new values
         self.texture.write(values.astype('f4').tobytes())
 
+        # Render the updated texture
         self.texture.use(location=0)
+
+        # Clear the context and render the quad with the texture
         self.ctx.clear(0.2, 0.2, 0.2)
         self.vao.render(moderngl.TRIANGLE_STRIP)
+
+        # Swap buffers to display the rendered frame
         glfw.swap_buffers(self.window)
 
     def update_fps(self, fps: int):

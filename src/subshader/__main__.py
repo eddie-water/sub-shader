@@ -1,4 +1,5 @@
 # src/subshader/__main__.py
+import time
 
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import ShadeWavelet
@@ -21,8 +22,16 @@ plot_shape = wavelet.get_shape()
 plotter = Shader(file_path = FILE_PATH,
                  shape = plot_shape)
 
+fps_timer = time.perf_counter()
+frame_times = []
+
 def main_loop():
+    global fps_timer
+
     while plotter.window and not plotter.should_window_close():
+
+        frame_start = time.perf_counter()
+
         # Grab a frame of audio
         audio_data = audio_input.get_frame()
 
@@ -31,8 +40,16 @@ def main_loop():
 
         # Update plot
         plotter.update_plot(coefs)
-        
-        # TODO ISSUE-33 Reinstate FPS tracker logic - just pass it in the update_plot no?
+
+        # TODO ISSUE-33 Put this in the plotter class
+        frame_end = time.perf_counter()
+        frame_times.append(frame_end - frame_start)
+
+        if time.time() - fps_timer > 1.0 and len(frame_times) > 0:
+            avg_frame = sum(frame_times) / len(frame_times)
+            print(f"FPS: {1.0 / avg_frame:.2f}")
+            frame_times.clear()
+            fps_timer = time.time()
 
 # Main entry point
 if __name__ == '__main__':
