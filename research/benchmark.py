@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumpyWavelet, CupyWavelet
-from subshader.viz.plotter import Plotter 
+from subshader.viz.plotter import PyQtGrapher, Shader
 
 NUM_ITERATIONS = 100
 
@@ -37,8 +37,11 @@ class Benchmark():
 
         self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
 
-        # Plotter Object
-        plotter = Plotter(file_path = FILE_PATH)
+        # PyQtGraph Plotter
+        pyqtg = PyQtGrapher(file_path = FILE_PATH)
+
+        # Shader Plotter
+        shader = Shader(file_path = FILE_PATH)
 
         # Function List and Dummy Arguments (note special python ',' syntax)
         self.func_list = [
@@ -46,7 +49,8 @@ class Benchmark():
             (py_wavelet.compute_cwt,        (self.audio_data,)),
             (np_wavelet.compute_cwt,        (self.audio_data,)),
             (cp_wavelet.compute_cwt,        (self.audio_data,)),
-            (plotter.update_plot,           (self.coefs_py_wavelet,))
+            (pyqtg.update_plot,             (self.coefs_py_wavelet,)),
+            (shader.update_plot,            (self.coefs_py_wavelet,))
         ]
 
         # Tracks the run time of each function

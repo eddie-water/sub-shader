@@ -1,7 +1,21 @@
+from abc import ABC, abstractmethod
 import pyqtgraph as pg
 
-class Plotter():
+class Plotter(ABC):
     def __init__(self, file_path: str):
+        self.file_path = file_path
+
+    @abstractmethod
+    def update_plot(self, coefs):
+        pass
+
+    @abstractmethod
+    def update_fps(self, fps: int):
+        pass
+
+class PyQtGrapher(Plotter):
+    def __init__(self, file_path: str):
+        super().__init__(file_path)
         """
         Global Backend Config Options
             useOpenGL           - enables OpenGL (seems to make things ~2x 
@@ -98,3 +112,17 @@ class Plotter():
     """
     def update_fps(self, fps: int):
         self.textBox.setText((f'{fps:.1f} fps'))
+
+class Shader(Plotter):
+    def __init__(self, file_path: str):
+        super().__init__(file_path)
+
+        # Implement OpenGL shader-based plotting here
+        raise NotImplementedError("Shader-based plotting not yet implemented.")
+        # This would involve creating OpenGL shaders and rendering the CWT
+    
+    def update_plot(self, coefs):
+        raise NotImplementedError("Shader-based plotting not yet implemented.")
+
+    def update_fps(self, fps: int):
+        raise NotImplementedError("Shader-based plotting not yet implemented.")
