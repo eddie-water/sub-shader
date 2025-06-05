@@ -9,7 +9,7 @@ from matplotlib import cm
 
 class Plotter(ABC):
     def __init__(self, file_path: str, shape: tuple[int:int]):
-        # TODO ISSUE-33 check if file_path is a valid path
+        # TODO ISSUE-33 LATER: Check if file_path is a valid path
         self.file_path = file_path
 
         if len(shape) != 2:
@@ -141,20 +141,6 @@ class Shader(Plotter):
 
         # Initi GLFW and OpenGL context
         self._init_graphics()
-
-    def _create_magma_texture(self, resolution = 256):
-        """Create a 1D texture with magma colormap"""
-        # Generate magma colormap data
-        magma_cmap = cm.get_cmap('magma')
-        x = np.linspace(0, 1, resolution)
-        colors = magma_cmap(x)[:, :3]  # RGB only, no alpha
-        
-        # Create 1D texture
-        colormap_texture = self.ctx.texture((resolution, 1), 3, dtype='f4')
-        colormap_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
-        colormap_texture.write(colors.astype('f4').tobytes())
-        
-        return colormap_texture
 
     def _init_graphics(self):
         # Initialize GLFW window and OpenGL context 
@@ -295,7 +281,21 @@ class Shader(Plotter):
         # Choose the shader option based on your preference
         # return fragment_shader_hardcoded
         return fragment_shader_lookup
-    
+
+    def _create_magma_texture(self, resolution = 256):
+        """Create a 1D texture with magma colormap"""
+        # Generate magma colormap data
+        magma_cmap = cm.get_cmap('magma')
+        x = np.linspace(0, 1, resolution)
+        colors = magma_cmap(x)[:, :3]  # RGB only, no alpha
+        
+        # Create 1D texture
+        colormap_texture = self.ctx.texture((resolution, 1), 3, dtype='f4')
+        colormap_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        colormap_texture.write(colors.astype('f4').tobytes())
+        
+        return colormap_texture
+
     def update_plot(self, values):
         if values.shape != (self.x_n, self.y_n):
             raise ValueError(f"Expected shape {(self.x_n, self.y_n)}, got {values.shape}")
