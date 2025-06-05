@@ -134,17 +134,52 @@ class PyQtGrapher(Plotter):
     def should_window_close(self):
         raise NotImplementedError("PyQtGraph-based window-check not implemented yet.")
 
+# TODO ISSUE-33 LATER: Exit gracefully when the window is closed / ctrl + c
 class Shader(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int]):
         super().__init__(file_path, shape)
 
-        # Initialize GLFW and OpenGL context
-        self.init_graphics()
+        # Initi GLFW and OpenGL context
+        self._init_graphics()
 
-        self.vertex_shader = self.init_vertex_shader()
+    def _create_magma_texture(self, resolution = 256):
+        """Create a 1D texture with magma colormap"""
+        # Generate magma colormap data
+        magma_cmap = cm.get_cmap('magma')
+        x = np.linspace(0, 1, resolution)
+        colors = magma_cmap(x)[:, :3]  # RGB only, no alpha
+        
+        # Create 1D texture
+        colormap_texture = self.ctx.texture((resolution, 1), 3, dtype='f4')
+        colormap_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        colormap_texture.write(colors.astype('f4').tobytes())
+        
+        return colormap_texture
 
-        # Initialize fragment shaders
-        self.fragment_shader = self.init_fragment_shaders()
+    def _init_graphics(self):
+        # Initialize GLFW window and OpenGL context 
+        if not glfw.init():
+            raise RuntimeError("Failed to initialize GLFW")
+
+        # Set properties to OpenGL 3.3 core profile (for ModernGL)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+
+        self.window = glfw.create_window(800, 600, "Sub Shader", None, None)
+        if not self.window:
+            glfw.terminate()
+            raise RuntimeError("Failed to create window")
+
+        # TODO ISSUE-33 SOON Understand how using this context affects the rest of the code
+        glfw.make_context_current(self.window)
+        self.ctx = moderngl.create_context()
+
+        # Init vertex shader (specifies where all the points are in the quad)
+        self.vertex_shader = self._init_vertex_shader()
+
+        # Init fragment shader (specifies how to color in between the points)
+        self.fragment_shader = self._init_fragment_shaders()
 
         # Compile and links the vertex and fragment shaders into a program
         prog = self.ctx.program(
@@ -180,40 +215,7 @@ class Shader(Plotter):
         self.value_min = 0.0
         self.value_max = 1.0
 
-    def _create_magma_texture(self, resolution=256):
-        """Create a 1D texture with magma colormap"""
-        # Generate magma colormap data
-        magma_cmap = cm.get_cmap('magma')
-        x = np.linspace(0, 1, resolution)
-        colors = magma_cmap(x)[:, :3]  # RGB only, no alpha
-        
-        # Create 1D texture
-        colormap_texture = self.ctx.texture((resolution, 1), 3, dtype='f4')
-        colormap_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
-        colormap_texture.write(colors.astype('f4').tobytes())
-        
-        return colormap_texture
-
-    def init_graphics(self):
-        # Initialize GLFW window and OpenGL context 
-        if not glfw.init():
-            raise RuntimeError("Failed to initialize GLFW")
-
-        # Set properties to OpenGL 3.3 core profile (for ModernGL)
-        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-
-        self.window = glfw.create_window(800, 600, "Sub Shader", None, None)
-        if not self.window:
-            glfw.terminate()
-            raise RuntimeError("Failed to create window")
-
-        # TODO ISSUE-33 NEXT Understand how using this context affects the rest of the code
-        glfw.make_context_current(self.window)
-        self.ctx = moderngl.create_context()
-
-    def init_vertex_shader(self):
+    def _init_vertex_shader(self):
         # Vertex shader for rendering a quad
         vertex_shader = """
             #version 330
@@ -226,7 +228,7 @@ class Shader(Plotter):
             """
         return vertex_shader
 
-    def init_fragment_shaders(self):
+    def _init_fragment_shaders(self):
         # Option 1: Fragment shader with 1D texture lookup
         fragment_shader_lookup = """
             #version 330
@@ -302,6 +304,7 @@ class Shader(Plotter):
         self.value_min = float(np.percentile(values, 1))  # 1st percentile
         self.value_max = float(np.percentile(values, 99)) # 99th percentile
         
+        # TODO ISSUE-33 NEXT: What's the point of these?
         # Update uniforms
         self.value_min_uniform.value = self.value_min
         self.value_max_uniform.value = self.value_max
@@ -311,6 +314,7 @@ class Shader(Plotter):
 
         # Bind textures
         self.texture.use(location=0)
+        # TODO ISSUE-33 SOON: Use a conditional to switch use this or not
         # self.colormap_texture.use(location=1)  # Only for lookup approach
 
         # Clear the context and render the quad with the texture
