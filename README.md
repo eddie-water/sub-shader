@@ -4,14 +4,44 @@ analyzes it with time-frequency analysis techniques and visualizes it in a real
 time plot. 
 
 ## Current State
-I just got an implementation of the Continuous Wavelet Transform to work, a
-time-frequency analysis technique. It's a step further beyond the typical 
-Fourier Transform. TODO SOMEDAY Explain why it's being used and how we use the
+I just got an implementation of the Continuous Wavelet Transform, which is a
+modern a time-frequency analysis technique. It's a step further beyond the 
+typical Fourier Transform, because the analyzing function in the CWT has been
+localized in the time domain. 
+
+I got a particular implementation written to run 
+the parallelizable portions of the CWT on the GPU to speed things up. See
+benchmark and static plot results below:
+
+TODO SOMEDAY Explain why more, how and why it's being used and how I use the 
 GPU to speed things up.
 
+## Benchmark and Plots
 ![Current Plots](assets/images/Plots_PyWavelet_NumPy_CuPy_CWT.png)
 
 ![Current Benchmark](assets/images/Benchmark_PyWavelet_NumPy_CuPy_CWT.png)
+
+### Discussion
+Here we can see three different implementations of the CWT have been 
+benchmarked. PyWavelet (probably the most popular Wavelet python package), and
+then two implementations of the CWT from Analyzing Neural Time Series (by Mike
+X Cohen) - one using NumPy (CPU) and one using CuPy (GPU). All three of them 
+are analyzing the same signal which is equal magnitude C4 and C7 being played 
+simultaneously.
+
+### Accuracy
+PyWavelets makes a nice plot, even though there is spectral leakage, it looks
+cool and is pretty accurate. NumPy and CuPy make an identical plot (which is
+expected) but it seems like one of the components is way stronger than the
+other one, when they should be just about the same. I think there is a scale-
+based normalization issue in both of their implementations. 
+
+### Performace
+CuPy is clearly the fastest. The biggest bottleneck when using the GPU is 
+transferring data over the PCIe (CPU -> GPU and GPU -> CPU). I got some ideas
+on how minimize that. Minimize the total number of transfers and reduce 
+transfer sizes by downsampling and sending results straight to a shader which
+is already on the GPU side anyways.
 
 # Instructions
 My setup is a Windows machine running WSL2 in VS Code. If you're running on a
