@@ -18,21 +18,27 @@ ROOT_NOTE_A0 = 27.5
 pi = np.pi
 
 class Wavelet(ABC):
-    def __init__(self, sample_rate: int, window_size: int):
+    def __init__(self, sample_rate: int, window_size: int, ds_stride: int):
         if sample_rate != TYPICAL_SAMPLING_FREQ:
             raise ValueError(f"Sampling Rate: {sample_rate},", 
                              f"is not {TYPICAL_SAMPLING_FREQ} Hz.",
                              f"The CWT may not work as expected.")
+        self.sample_rate = sample_rate
 
         if window_size <= 0:
             raise ValueError(f"Window Size: {window_size},",
                              f"must be greater than 0.")
+        self.window_size = window_size
+
+        if ds_stride <= 0:
+            raise ValueError(f"Downsample stride: {ds_stride},",
+                             f"must be greater than 0.")
+        self.ds_stride = ds_stride
 
         # Sampling Parameters
         self.sample_rate = sample_rate
         self.nyquist_freq = (sample_rate / 2.0)
         self.sampling_period = (1.0 / self.sample_rate)
-        self.window_size = window_size
 
         # Frequency Axis that replicates the exponential step size of the musical scale
         self.scale_factor = 2**(1/NOTES_PER_OCTAVE)
@@ -44,7 +50,8 @@ class Wavelet(ABC):
         self.freqs = self.freqs[self.freqs < self.nyquist_freq]
         self.num_freqs = len(self.freqs)
 
-        self.result_shape = (self.num_freqs, self.window_size)
+        # Resultant Shape of the CWT Data with Downsampling
+        self.result_shape = (self.num_freqs, self.window_size // self.ds_stride)
 
     """
     Computes the shape of the resultant CWT data
@@ -129,8 +136,8 @@ class Wavelet(ABC):
         return coefs_norm
     
 class PyWavelet(Wavelet):
-    def __init__(self, sample_rate, window_size):
-        super().__init__(sample_rate, window_size)
+    def __init__(self, sample_rate, window_size, ds_stride):
+        super().__init__(sample_rate, window_size, ds_stride)
 
         # Wavelet info TODO ISSUE-36 why 1.5-1.0?
         self.wavelet_name = "cmor1.5-1.0"
@@ -151,8 +158,8 @@ class PyWavelet(Wavelet):
         return self.normalize_coefs(coefs_scaled)
 
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate, window_size):
-        super().__init__(sample_rate, window_size)
+    def __init__(self, sample_rate, window_size, ds_stride):
+        super().__init__(sample_rate, window_size, ds_stride)
         # Initialize the time-frequency matrix
         self.tf = np.zeros((self.num_freqs, self.window_size))
 
@@ -191,8 +198,8 @@ class AntsWavelet(Wavelet):
         pass
 
 class NumpyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size):
-        super().__init__(sample_rate, window_size)
+    def __init__(self, sample_rate, window_size, ds_stride):
+        super().__init__(sample_rate, window_size, ds_stride)
 
     def class_specific_cwt(self, data) -> np.ndarray:
         # Transform the Data time series into a spectrum
@@ -210,8 +217,8 @@ class NumpyWavelet(AntsWavelet):
         return self.tf
     
 class CupyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size):
-        super().__init__(sample_rate, window_size)
+    def __init__(self, sample_rate, window_size, ds_stride):
+        super().__init__(sample_rate, window_size, ds_stride)
         self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
 
         # Move the wavelet kernels to the GPU
@@ -230,11 +237,13 @@ class CupyWavelet(AntsWavelet):
             conv_pow = cp.abs(conv)**2
             self.tf_gpu[i,:] = conv_pow
 
-        # Move the result back to the CPU
-        # TODO ISSUE-33 Investigate how to minimize the GPU to CPU transfers
-        self.tf = cp.asnumpy(self.tf_gpu)
+        # Downsample the result to reduce the size of the output
+        self.tf_downsampled = self.tf_gpu[:, ::self.ds_stride]
 
-        return self.tf
+        # TODO ISSUE-33 Investigate how to minimize the GPU to CPU transfers
+
+        # Move the result back to the CPU
+        return cp.asnumpy(self.tf_downsampled)
     
 class ShadeWavelet(CupyWavelet):
     pass

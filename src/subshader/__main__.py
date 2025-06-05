@@ -6,6 +6,7 @@ from subshader.dsp.wavelet import ShadeWavelet
 from subshader.viz.plotter import Shader
 
 WINDOW_SIZE = 4096
+DOWNSAMLPLE_STRIDE = 4
 FILE_PATH = "assets/audio/c4_and_c7_4_arps.wav"
 
 # Audio Input, Audio Characteristics 
@@ -15,7 +16,8 @@ sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
 # Wavelet Object
 wavelet = ShadeWavelet(sample_rate = sample_rate, 
-                       window_size = WINDOW_SIZE)
+                       window_size = WINDOW_SIZE,
+                       ds_stride = DOWNSAMLPLE_STRIDE)
 
 # Plotter Object
 plot_shape = wavelet.get_shape()
@@ -45,6 +47,7 @@ def main_loop():
         frame_end = time.perf_counter()
         frame_times.append(frame_end - frame_start)
 
+        # TODO ISSUE-33 Is this a weird way to measure FPS?
         if time.time() - fps_timer > 1.0 and len(frame_times) > 0:
             avg_frame = sum(frame_times) / len(frame_times)
             print(f"FPS: {1.0 / avg_frame:.2f}")
