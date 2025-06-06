@@ -139,10 +139,10 @@ class Shader(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int]):
         super().__init__(file_path, shape)
 
-        # Init circular buffer for plot data
+        # Init circular buffer for plot data 
         self.num_frames = 32
-        self.write_i = 0
-        self.buffer = np.zeros((self.x_n, self.y_n, self.num_frames), dtype = np.float32)
+        self.frames = np.zeros((self.x_n, self.y_n, self.num_frames), dtype = np.float32)
+        self.frame_i = 0
 
         # Initi GLFW and OpenGL context
         self._init_graphics()
@@ -189,21 +189,21 @@ class Shader(Plotter):
         self.vao = self.ctx.simple_vertex_array(prog, self.vbo, 'position')
 
         # Create magma colormap texture (only needed for lookup approach)
-        self.colormap_texture = self._create_magma_texture()
-        
+        self.colormap_texture = self._create_magma_texture('inferno')
+
         # Create 2D texture placeholder for scalogram
         texture_x_n = self.x_n * self.num_frames 
         texture_y_n = self.y_n
         self.texture = self.ctx.texture((texture_x_n, texture_y_n), 1, dtype='f4')
         self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
-        
+
         # Set up uniforms
         prog['scalogram'] = 0  # texture unit 0
         prog['colormap'] = 1   # Only needed for lookup approach
         self.colormap_texture.use(location=1)  # Bind colormap texture to unit 1
         self.value_min_uniform = prog['valueMin']
         self.value_max_uniform = prog['valueMax']
-        
+
         # Initialize value range
         self.value_min = 0.0
         self.value_max = 1.0
@@ -289,10 +289,17 @@ class Shader(Plotter):
         # return fragment_shader_hardcoded
         return fragment_shader_lookup
 
-    def _create_magma_texture(self, resolution = 256):
-        """Create a 1D texture with magma colormap"""
+    def _create_magma_texture(self, cmap_name='plasma', resolution = 4096):
+        """
+        Create a 1D texture with magma colormap
+        Args:
+            cmap_name: Name of the colormap to use (default: 'plasma')
+            resolution: Number of colors in the colormap texture (default: 256)
+        Returns:
+            A ModernGL texture object containing the colormap data
+        """
         # Generate magma colormap data
-        magma_cmap = cm.get_cmap('magma')
+        magma_cmap = cm.get_cmap(cmap_name)
         x = np.linspace(0, 1, resolution)
         colors = magma_cmap(x)[:, :3]  # RGB only, no alpha
         
@@ -307,17 +314,17 @@ class Shader(Plotter):
         if values.shape != (self.x_n, self.y_n):
             raise ValueError(f"Expected shape {(self.x_n, self.y_n)}, got {values.shape}")
 
-        # Write into circular buffer
-        self.buffer[:, :, self.write_i] = values  # shape: (freq, time)
-        self.write_i = (self.write_i + 1) % self.num_frames
+        # Write into circular buffer, each frame has shape: (freq, time)
+        self.frames[:, :, self.frame_i] = values 
+        self.frame_i = (self.frame_i + 1) % self.num_frames 
 
         # Roll axes so that frames appear in correct order
-        rolled = np.roll(self.buffer, -self.write_i, axis=2)  # shape: (freq, time, frame)
-        flat_buffer = rolled.reshape(self.y_n, -1)        # flatten along time axis
+        rolled = np.roll(self.frames, -self.frame_i, axis=2)    # shape: (freq, time, frame)
+        flat_buffer = rolled.reshape(self.y_n, -1)              # flatten along time axis
 
         # Update value range for better contrast
-        self.value_min = float(np.percentile(values, 1))  # 1st percentile
-        self.value_max = float(np.percentile(values, 99)) # 99th percentile
+        self.value_min = float(np.percentile(flat_buffer, 1))  # 1st percentile
+        self.value_max = float(np.percentile(flat_buffer, 99)) # 99th percentile
         self.value_min_uniform.value = self.value_min
         self.value_max_uniform.value = self.value_max
 
@@ -326,8 +333,7 @@ class Shader(Plotter):
 
         # Bind textures
         self.texture.use(location=0)
-        # TODO ISSUE-33 SOON: Use a conditional to switch use this or not
-        # self.colormap_texture.use(location=1)  # Only for lookup approach
+        self.colormap_texture.use(location=1)  # Only for lookup approach
 
         # Clear the context and render the quad with the texture
         self.ctx.clear(0.05, 0.05, 0.05)  # Dark background
