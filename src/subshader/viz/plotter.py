@@ -139,6 +139,11 @@ class Shader(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int]):
         super().__init__(file_path, shape)
 
+        # Init circular buffer for plot data
+        self.num_frames = 32
+        self.write_i = 0
+        self.buffer = np.zeros((self.x_n, self.y_n, self.num_frames), dtype = np.float32)
+
         # Initi GLFW and OpenGL context
         self._init_graphics()
 
@@ -186,8 +191,10 @@ class Shader(Plotter):
         # Create magma colormap texture (only needed for lookup approach)
         self.colormap_texture = self._create_magma_texture()
         
-        # Create 2D texture placeholder for scalogram 
-        self.texture = self.ctx.texture((self.x_n, self.y_n), 1, dtype='f4')
+        # Create 2D texture placeholder for scalogram
+        texture_x_n = self.x_n * self.num_frames 
+        texture_y_n = self.y_n
+        self.texture = self.ctx.texture((texture_x_n, texture_y_n), 1, dtype='f4')
         self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         
         # Set up uniforms
@@ -300,17 +307,22 @@ class Shader(Plotter):
         if values.shape != (self.x_n, self.y_n):
             raise ValueError(f"Expected shape {(self.x_n, self.y_n)}, got {values.shape}")
 
+        # Write into circular buffer
+        self.buffer[:, :, self.write_i] = values  # shape: (freq, time)
+        self.write_i = (self.write_i + 1) % self.num_frames
+
+        # Roll axes so that frames appear in correct order
+        rolled = np.roll(self.buffer, -self.write_i, axis=2)  # shape: (freq, time, frame)
+        flat_buffer = rolled.reshape(self.y_n, -1)        # flatten along time axis
+
         # Update value range for better contrast
         self.value_min = float(np.percentile(values, 1))  # 1st percentile
         self.value_max = float(np.percentile(values, 99)) # 99th percentile
-        
-        # TODO ISSUE-33 NEXT: What's the point of these?
-        # Update uniforms
         self.value_min_uniform.value = self.value_min
         self.value_max_uniform.value = self.value_max
 
         # Update the texture with new values
-        self.texture.write(values.astype('f4').tobytes())
+        self.texture.write(flat_buffer.astype('f4').tobytes())
 
         # Bind textures
         self.texture.use(location=0)
