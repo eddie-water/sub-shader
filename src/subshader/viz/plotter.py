@@ -17,7 +17,7 @@ class Plotter(ABC):
         if shape[0] <= 0 or shape[1] <= 0:
             raise ValueError(f"2D array cannot have shape: {shape}")
         self.shape = shape
-        self.x_n, self.y_n = self.shape
+        self.y_n, self.x_n = self.shape
 
     @abstractmethod
     def update_plot(self, values):
@@ -140,8 +140,9 @@ class Shader(Plotter):
         super().__init__(file_path, shape)
 
         # Init circular buffer for plot data 
-        self.num_frames = 32
-        self.frames = np.zeros((self.x_n, self.y_n, self.num_frames), dtype = np.float32)
+        # TODO ISSUE-33 NOW: Figure out how to get num frames = 32 (~12 seconds of time)
+        self.num_frames = 4
+        self.frames = np.zeros((self.y_n, self.x_n, self.num_frames), dtype = np.float32)
         self.frame_i = 0
 
         # Initi GLFW and OpenGL context
@@ -162,7 +163,7 @@ class Shader(Plotter):
             glfw.terminate()
             raise RuntimeError("Failed to create window")
 
-        # TODO ISSUE-33 SOON Understand how using this context affects the rest of the code
+        # TODO ISSUE-33 SOON: Understand how using this context affects the rest of the code
         glfw.make_context_current(self.window)
         self.ctx = moderngl.create_context()
 
@@ -289,12 +290,12 @@ class Shader(Plotter):
         # return fragment_shader_hardcoded
         return fragment_shader_lookup
 
-    def _create_magma_texture(self, cmap_name='plasma', resolution = 4096):
+    def _create_magma_texture(self, cmap_name='plasma', resolution = 256):
         """
         Create a 1D texture with magma colormap
         Args:
             cmap_name: Name of the colormap to use (default: 'plasma')
-            resolution: Number of colors in the colormap texture (default: 256)
+            resolution: Number of colors in the colormap texture (default: 4096)
         Returns:
             A ModernGL texture object containing the colormap data
         """
@@ -311,17 +312,21 @@ class Shader(Plotter):
         return colormap_texture
 
     def update_plot(self, values):
-        if values.shape != (self.x_n, self.y_n):
+        if values.shape != (self.y_n, self.x_n):
             raise ValueError(f"Expected shape {(self.x_n, self.y_n)}, got {values.shape}")
 
         # Write into circular buffer, each frame has shape: (freq, time)
         self.frames[:, :, self.frame_i] = values 
         self.frame_i = (self.frame_i + 1) % self.num_frames 
-
+        
+        # TODO ISSUE-33 NOW: Why is the graph so repetitive?
         # Roll axes so that frames appear in correct order
-        rolled = np.roll(self.frames, -self.frame_i, axis=2)    # shape: (freq, time, frame)
-        flat_buffer = rolled.reshape(self.y_n, -1)              # flatten along time axis
 
+        # TODO ISSUE-33 NOW: Why are we shifting by -frame_i every time, why not just -1?
+        rolled = np.roll(self.frames, -self.frame_i, axis = 2)      # shape: (freq, time, frame)
+        flat_buffer = rolled.reshape(self.y_n, -1)                  # flatten along time axis
+
+        # TODO ISSUE-33 NEXT: What's the point of these?
         # Update value range for better contrast
         self.value_min = float(np.percentile(flat_buffer, 1))  # 1st percentile
         self.value_max = float(np.percentile(flat_buffer, 99)) # 99th percentile
@@ -333,6 +338,7 @@ class Shader(Plotter):
 
         # Bind textures
         self.texture.use(location=0)
+        # TODO ISSUE-33 SOON: Use a conditional to switch use this or not
         self.colormap_texture.use(location=1)  # Only for lookup approach
 
         # Clear the context and render the quad with the texture
