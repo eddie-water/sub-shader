@@ -19,6 +19,15 @@ pi = np.pi
 
 class Wavelet(ABC):
     def __init__(self, sample_rate: int, window_size: int):
+        """
+        Wavelet base class that all other wavelet classes are derived from.
+        Uses a list of frequencies that follows the chromatic scale starting at
+        A0 to specify which frequencies to look for in the audio data.
+
+        Args:
+            sample_rate (int): The rate the data was sampled in Hz
+            window_size (int): The length of the data
+        """
         if sample_rate != TYPICAL_SAMPLING_FREQ:
             raise ValueError(f"Sampling Rate: {sample_rate},", 
                              f"is not {TYPICAL_SAMPLING_FREQ} Hz.",
@@ -46,80 +55,89 @@ class Wavelet(ABC):
 
         self.result_shape = (self.num_freqs, self.window_size)
 
-    """
-    Computes the shape of the resultant CWT data
-
-    Returns:
-        Shape of the computed CWT data
-    """
     def get_shape(self) -> np.ndarray.shape:
+        """
+        Computes the shape of the resultant CWT data.
+
+        Returns:
+            np.ndarray.shape: Shape of the computed CWT data
+        """
         return self.result_shape
 
-    """
-    Get the time resolution for the data
-
-    Returns:
-        Sampling period
-    """
+    # TODO ISSUE-12 Remove this bc nothing uses it
     def get_sample_period(self) -> float:
+        """
+        Gets the time resolution for the data aka the distance in time between
+        each sample.
+
+        Returns:
+            float: Sampling period
+        """
         return self.sampling_period
 
-    """
-    Get the number of frequencies in the used in the CWT
-
-    Returns:
-        Number of frequencies in the CWT
-    """
     def get_num_freqs(self) -> int:
+        """
+        Get the number of frequencies in the used in the CWT
+
+        Returns:
+            int: Number of frequencies in the CWT
+        """
         return self.num_freqs
     
-    """
-    Performs the Continuous Wavelet Transform on raw audio and normalizes the 
-    results
+    def compute_cwt(self, audio_data: np.ndarray) -> np.ndarray:
+        """
+        Performs the Continuous Wavelet Transform (CWT) on raw audio data and 
+        then normalizes the results
 
-    Args:
-        audio_data: raw audio signal data
+        Args:
+            audio_data (np.ndarray): raw audio signal data
 
-    Returns:
-        normalized CWT coefficients in the time-frequency domain
-
-    """
-    def compute_cwt(self, audio_data) -> np.ndarray:
+        Returns:
+            np.ndarray: The normalized CWT coefficients in the time-frequency 
+                domain
+        """
         # Verify the audio data is valid 
         if len(audio_data) != self.window_size:
             raise ValueError(f"Audio data length {len(audio_data)}",
                              f"does not match window size {self.window_size}")
+
         # Increase precision
         data = audio_data.astype(np.float64)
 
         cwt_coefs = self.class_specific_cwt(data)
 
         return self.normalize_coefs(cwt_coefs)
-    
-    """
-    Computes the CWT via the specific subclass implementation
-    """
+
     @abstractmethod
-    def class_specific_cwt(self, data) -> np.ndarray:
+    def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
+        """
+        Computes the subclass-specific implementation of the CWT
+
+        Args:
+            data (np.ndarray): The data to perform the CWT on
+
+        Returns:
+            np.ndarray: The CWT coefficients 
+        """
         pass
 
-    """
-    Cleans up the coef data for plotting
-    - Takes the absolute values of the raw coefs to get the magnitude of the 
-      resultant coefs
-    - Normalizes the coefs so the min and max map to 0 and 1
-    - Downsamples the coefs to reduce plotting time
-    - Transposes the coefs because the CWT swaps the axes for some reason
+    def normalize_coefs(self, raw_coefs: np.ndarray) -> np.ndarray:
+        """
+        Cleans up the raw CWT coefficients for plotting
+          - Takes the absolute values of the raw coefs to get the magnitude of
+          the resultant coefs
+          - Normalizes the coefs so the min and max map to 0 and 1
 
-    Args:
-        raw_coefs: raw CWT coefficients 
+        Args:
+            raw_coefs (np.ndarray): raw CWT coefficients 
 
-    Returns:
-        coefs: normalized CWT coefficients
-    """
-    def normalize_coefs(self, raw_coefs) -> np.ndarray:
+        Returns:
+            np.ndarray: Normalized CWT coefficients
+        """
         # Absolute Value 
         coefs_abs = np.abs(raw_coefs)
+
+        # TODO ISSUE-36 See if we should do scale-based normalization for all the wavelet subclasses
 
         # Min-Max Normalization - squeeze data into the [0, 1] range
         coefs_min = np.min(coefs_abs)
@@ -130,6 +148,13 @@ class Wavelet(ABC):
     
 class PyWavelet(Wavelet):
     def __init__(self, sample_rate, window_size):
+        """
+        The PyWavelet implementation of the CWT
+
+        Args:
+            sample_rate (int): The rate the data was sampled in Hz
+            window_size (int): The length of the data
+        """
         super().__init__(sample_rate, window_size)
 
         # Wavelet info TODO ISSUE-36 why 1.5-1.0?
@@ -139,19 +164,44 @@ class PyWavelet(Wavelet):
         f_norm = (self.freqs / self.sample_rate)
         self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
 
-    def class_specific_cwt(self, data):
-        raw_coefs, _ = pywt.cwt(data = data,
+    def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
+        """
+        Uses the PyWavelt CWT function to perform the CWT. Then applies scale-
+        based normalization to account for the energy bias that occures at 
+        higher scales. That's a fancy way of saying that higher scales seems to 
+        have more energy contributions becuase the lower scales flatten the 
+        wavelets when they get stretched out. The scale-based normalization 
+        makes the results for each scale comparable. Not sure why PyWavelets 
+        doesn't do this under the hood.
+
+        Args:
+            data (np.ndarray): The data to perform the CWT on
+
+        Returns:
+            np.ndarray: The scale-based normalized CWT coefficients 
+        """
+        coefs_raw, _ = pywt.cwt(data = data,
                                 scales = self.scales,
                                 wavelet = self.wavelet_name,
                                 sampling_period = self.sampling_period)
     
         # Scale-Based Normalization 
-        coefs_scaled = raw_coefs / np.sqrt(self.scales[:, None])
+        coefs_scaled = coefs_raw / np.sqrt(self.scales[:, None])
 
-        return self.normalize_coefs(coefs_scaled)
+        return coefs_scaled
 
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate, window_size):
+    def __init__(self, sample_rate: int, window_size: int):
+        """
+        This is a CWT implementation I got from Analyzing Neural Time Series 
+        (ANTS) by Mike X Cohen. Manually creates a bank of wavelet filters 
+        specified by the list of frequencies and then manually performs the CWT 
+        on audio data.
+
+        Args:
+            sample_rate (int): The rate the data was sampled in Hz
+            window_size (int): The length of the data
+        """
         super().__init__(sample_rate, window_size)
         # Initialize the time-frequency matrix
         self.tf = np.zeros((self.num_freqs, self.window_size))
@@ -192,9 +242,25 @@ class AntsWavelet(Wavelet):
 
 class NumpyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size):
+        """
+        This implements the ANTS CWT using NumPy.
+
+        Args:
+            sample_rate (int): The rate the data was sampled in Hz
+            window_size (int): The length of the data
+        """
         super().__init__(sample_rate, window_size)
 
     def class_specific_cwt(self, data) -> np.ndarray:
+        """
+        This implements the ANTS CWT using NumPy.
+
+        Args:
+            data (np.ndarray): The data to perform the CWT on
+
+        Returns:
+            np.ndarray: The scale-based normalized CWT coefficients 
+        """
         # Transform the Data time series into a spectrum
         data_x = fft(data, self.conv_n)
 
@@ -211,6 +277,15 @@ class NumpyWavelet(AntsWavelet):
     
 class CupyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size):
+        """
+        This implements the ANTS CWT using CuPy to exploit the parallelizable
+        aspects of the CWT by running on a GPU. Note - this won't work without
+        an Nvidia GPU and bunch of CUDA dependencies.
+
+        Args:
+            sample_rate (int): The rate the data was sampled in Hz
+            window_size (int): The length of the data
+        """
         super().__init__(sample_rate, window_size)
         self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
 
@@ -219,6 +294,15 @@ class CupyWavelet(AntsWavelet):
 
     # TODO ISSUE-36 Investigate writing a custom GPU kernel rather than using CuPy
     def class_specific_cwt(self, data) -> np.ndarray:
+        """
+        This implements the ANTS CWT using CuPy.
+
+        Args:
+            data (np.ndarray): The data to perform the CWT on
+
+        Returns:
+            np.ndarray: The scale-based normalized CWT coefficients 
+        """
         # Transform the Data time series into a spectrum on the GPU
         # TODO ISSUE-33 Investigate how to minimize the CPU to GPU transfers
         data = cp.asarray(data, dtype=cp.complex64)
@@ -235,6 +319,9 @@ class CupyWavelet(AntsWavelet):
         self.tf = cp.asnumpy(self.tf_gpu)
 
         return self.tf
-    
+
 class ShadeWavelet(CupyWavelet):
+    """
+    This just kind of renames the class becuase it sounds ~cool~
+    """
     pass
