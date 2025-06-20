@@ -9,8 +9,16 @@ class SignalGenerator():
 
     def create_mixed_signal(time: np.ndarray, sinusoid_list) -> np.ndarray:
         """
-        Keyword Argument:
-            time: the 
+        Creates a mixed signal from a list of sinusoidal components by adding
+        them together over specified time intervals.
+
+        Args:
+            time (np.darray): The time array over which the signal is generated.
+            sinusoid_list (list): A list of signals specified by freq
+
+        Returns:
+            np.ndarray : The generated mixed signal as a numpy array.
+
         """
         num_samples = time.size
 
