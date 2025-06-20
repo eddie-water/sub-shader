@@ -93,7 +93,8 @@ class Wavelet(ABC):
             audio_data (np.ndarray): raw audio signal data
 
         Returns:
-            np.ndarray: The normalized CWT coefficients in the time-frequency 
+            np.ndarray: The normalized CWT coefficients in the scale-time
+
                 domain
         """
         # Verify the audio data is valid 
