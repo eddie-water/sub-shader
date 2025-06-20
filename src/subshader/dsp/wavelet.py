@@ -139,6 +139,7 @@ class Wavelet(ABC):
         coefs_abs = np.abs(raw_coefs)
 
         # TODO ISSUE-36 See if we should do scale-based normalization for all the wavelet subclasses
+instead of only in the PyWavelet subclass
 
         # Min-Max Normalization - squeeze data into the [0, 1] range
         coefs_min = np.min(coefs_abs)
