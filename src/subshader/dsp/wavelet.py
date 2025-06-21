@@ -82,7 +82,8 @@ class Wavelet(ABC):
             audio_data (np.ndarray): raw audio signal data
 
         Returns:
-            np.ndarray: The normalized CWT coefficients in the time-frequency 
+            np.ndarray: The normalized CWT coefficients in the scale-time
+
                 domain
         """
         # Verify the audio data is valid 
@@ -127,6 +128,9 @@ class Wavelet(ABC):
         coefs_abs = np.abs(raw_coefs)
 
         # TODO ISSUE-36 See if we should do scale-based normalization for all the wavelet subclasses
+        # instead of only in the PyWavelet subclass
+
+
 
         # Min-Max Normalization - squeeze data into the [0, 1] range
         coefs_min = np.min(coefs_abs)
@@ -305,7 +309,7 @@ class CupyWavelet(AntsWavelet):
             data (np.ndarray): The data to perform the CWT on
 
         Returns:
-            np.ndarray: The scale-based normalized CWT coefficients 
+            np.ndarray: The CWT coefficients
         """
         # Transform the Data time series into a spectrum on the GPU
         # TODO ISSUE-33 Investigate how to minimize the CPU to GPU transfers
@@ -320,7 +324,9 @@ class CupyWavelet(AntsWavelet):
 
         # Move the result back to the CPU
         # TODO ISSUE-33 Investigate how to minimize the GPU to CPU transfers
+        # TODO ISSUE-36 change this to return cp.asnumpy(...). What's the point of setting it to a temp variable unless to debug it?
         self.tf = cp.asnumpy(self.tf_gpu)
+
 
         return self.tf
 
