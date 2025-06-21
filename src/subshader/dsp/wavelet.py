@@ -64,17 +64,6 @@ class Wavelet(ABC):
         """
         return self.result_shape
 
-    # TODO ISSUE-12 Remove this bc nothing uses it
-    def get_sample_period(self) -> float:
-        """
-        Gets the time resolution for the data aka the distance in time between
-        each sample.
-
-        Returns:
-            float: Sampling period
-        """
-        return self.sampling_period
-
     def get_num_freqs(self) -> int:
         """
         Get the number of frequencies in the used in the CWT
@@ -166,13 +155,7 @@ class PyWavelet(Wavelet):
 
     def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
         """
-        Uses the PyWavelt CWT function to perform the CWT. Then applies scale-
-        based normalization to account for the energy bias that occures at 
-        higher scales. That's a fancy way of saying that higher scales seems to 
-        have more energy contributions becuase the lower scales flatten the 
-        wavelets when they get stretched out. The scale-based normalization 
-        makes the results for each scale comparable. Not sure why PyWavelets 
-        doesn't do this under the hood.
+        Produces the normalized CWT coefficients using PyWavelets. 
 
         Args:
             data (np.ndarray): The data to perform the CWT on
@@ -185,7 +168,28 @@ class PyWavelet(Wavelet):
                                 wavelet = self.wavelet_name,
                                 sampling_period = self.sampling_period)
     
-        # Scale-Based Normalization 
+        """
+        Scale-Based Normalization 
+        
+        This account for the energy bias that occurs at higher scales which 
+        PyWavelets does not do internally it seems. The wavelet equation is 
+        this: 
+        
+            Psi_s(t) = 1/sqrt(s) * Psi(t-T/s)
+        
+        Where Psi is the wavelet at a scale s, and localized in time by T. We 
+        need the '1/sqrt(s)' term to account for the energy bias that occurs at
+        higher scales for 'Psi(t-T/s)'. The 's' term, since it's in the 
+        denominator, stretches the wavelet horizontally when 's' is large, and 
+        compresses it horizontally when 's' is small. Higher-scale wavelets 
+        will have more area under their curves, and will seem to contribute 
+        more energy to the inner product that is going on inside the CWT. To 
+        account for this, we normalize the coefficients by dividing it by
+        the square root of the scale. Not sure why PyWavelets doesn't just do
+        this under the hood.
+        """
+        # TODO ISSUE-36 Why aren't I doing this to all the wavelet subclasses
+        # in the parent class?
         coefs_scaled = coefs_raw / np.sqrt(self.scales[:, None])
 
         return coefs_scaled
@@ -194,9 +198,9 @@ class AntsWavelet(Wavelet):
     def __init__(self, sample_rate: int, window_size: int):
         """
         This is a CWT implementation I got from Analyzing Neural Time Series 
-        (ANTS) by Mike X Cohen. Manually creates a bank of wavelet filters 
-        specified by the list of frequencies and then manually performs the CWT 
-        on audio data.
+        (ANTS) by Mike X Cohen. I had to translate it from Matlab. It manually 
+        creates a bank of wavelet filters specified by the list of frequencies 
+        and then manually performs the CWT on audio data.
 
         Args:
             sample_rate (int): The rate the data was sampled in Hz
