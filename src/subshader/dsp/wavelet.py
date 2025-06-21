@@ -320,7 +320,9 @@ class CupyWavelet(AntsWavelet):
 
         # Move the result back to the CPU
         # TODO ISSUE-33 Investigate how to minimize the GPU to CPU transfers
+        # TODO ISSUE-36 change this to return cp.asnumpy(...). What's the point of setting it to a temp variable unless to debug it?
         self.tf = cp.asnumpy(self.tf_gpu)
+
 
         return self.tf
 
