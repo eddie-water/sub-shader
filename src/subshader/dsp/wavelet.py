@@ -305,7 +305,7 @@ class CupyWavelet(AntsWavelet):
             data (np.ndarray): The data to perform the CWT on
 
         Returns:
-            np.ndarray: The scale-based normalized CWT coefficients 
+            np.ndarray: The CWT coefficients
         """
         # Transform the Data time series into a spectrum on the GPU
         # TODO ISSUE-33 Investigate how to minimize the CPU to GPU transfers
