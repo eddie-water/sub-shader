@@ -1,3 +1,4 @@
+import numpy as np
 import pyqtgraph as pg
 
 class Plotter():
@@ -81,20 +82,22 @@ class Plotter():
         self.textBox.setPos(1, 1)
         self.plot.addItem(self.textBox)
 
-    """
-    Update Plot
+    def update_plot(self, coefs: np.ndarray):
+        """
+        Updates the plot with new coefficients values.
+
         Args:
-            coefs: coefficients to update the pcolormesh with
-    """
-    def update_plot(self, coefs):
+            coefs (np.ndarray): The coefficients to update the pcolormesh with.
+        """
         # TODO ISSUE-33 Plotter Improvements fix axes so we don't have to transpose 
         coefs = coefs.T
         self.pcolormesh.setData(coefs)
 
-    """
-    Update FPS
-        Args:
-            fps: the value to update the FPS Textbox to
-    """
     def update_fps(self, fps: int):
+        """
+        Update the text box with the current frames per second (FPS).
+
+        Args:
+            fps (int): The FPS value to display.
+        """
         self.textBox.setText((f'{fps:.1f} fps'))
