@@ -7,6 +7,9 @@ import moderngl
 import glfw
 from matplotlib import cm
 
+# TODO ISSUE-33 LATER: Don't merge this
+from subshader.utils.quick_plot import QuickMultiPlot
+
 class Plotter(ABC):
     def __init__(self, file_path: str, shape: tuple[int:int]):
         # TODO ISSUE-33 LATER: Check if file_path is a valid path
@@ -141,14 +144,15 @@ class Shader(Plotter):
 
         # Init circular buffer for plot data 
         # TODO ISSUE-33 NOW: Figure out how to get num frames = 32 (~12 seconds of time)
-        self.num_frames = 4
-        self.frames = np.zeros((self.y_n, self.x_n, self.num_frames), dtype = np.float32)
+        self.num_frames = 8
+        self.frames = np.zeros((self.num_frames, self.y_n, self.x_n), dtype = np.float32)
         self.frame_i = 0
 
         # Initi GLFW and OpenGL context
         self._init_graphics()
 
     def _init_graphics(self):
+        # TODO ISSUE-33 LATER: Add Doscstrings for all these fuckers
         # Initialize GLFW window and OpenGL context 
         if not glfw.init():
             raise RuntimeError("Failed to initialize GLFW")
@@ -202,8 +206,6 @@ class Shader(Plotter):
         prog['scalogram'] = 0  # texture unit 0
         prog['colormap'] = 1   # Only needed for lookup approach
         self.colormap_texture.use(location=1)  # Bind colormap texture to unit 1
-        self.value_min_uniform = prog['valueMin']
-        self.value_max_uniform = prog['valueMax']
 
         # Initialize value range
         self.value_min = 0.0
@@ -234,10 +236,11 @@ class Shader(Plotter):
             uniform float valueMax;
             
             void main() {
-                float value = texture(scalogram, texCoord).r;
-                
+                vec2 flipped = vec2(texCoord.x, 1.0 - texCoord.y);
+                float value = texture(scalogram, flipped).r;
+
                 // Normalize value to [0, 1] range
-                float normalized = clamp((value - valueMin) / (valueMax - valueMin), 0.0, 1.0);
+                float normalized = clamp(value, 0.0, 1.0);
                 
                 // Apply gamma correction for better perception
                 normalized = pow(normalized, 0.8);
@@ -313,25 +316,27 @@ class Shader(Plotter):
 
     def update_plot(self, values):
         if values.shape != (self.y_n, self.x_n):
-            raise ValueError(f"Expected shape {(self.x_n, self.y_n)}, got {values.shape}")
+            raise ValueError(f"Expected shape {(self.y_n, self.x_n)}, got {values.shape}")
 
         # Write into circular buffer, each frame has shape: (freq, time)
-        self.frames[:, :, self.frame_i] = values 
+        self.frames[self.frame_i, :, :] = values 
         self.frame_i = (self.frame_i + 1) % self.num_frames 
+
+        # TODO ISSUE-33 LATER: Don't merge this
+        QuickMultiPlot(self.frames)
         
         # TODO ISSUE-33 NOW: Why is the graph so repetitive?
         # Roll axes so that frames appear in correct order
 
-        # TODO ISSUE-33 NOW: Why are we shifting by -frame_i every time, why not just -1?
-        rolled = np.roll(self.frames, -self.frame_i, axis = 2)      # shape: (freq, time, frame)
-        flat_buffer = rolled.reshape(self.y_n, -1)                  # flatten along time axis
+        # Reorder circular buffer to fix logical time order
+        rolled = np.roll(self.frames, -self.frame_i, axis = 0)  # shape: (frame, freq, time)
+
+        flat_buffer = rolled.transpose(1, 0, 2).reshape(self.y_n, self.num_frames * self.x_n)
 
         # TODO ISSUE-33 NEXT: What's the point of these?
         # Update value range for better contrast
         self.value_min = float(np.percentile(flat_buffer, 1))  # 1st percentile
         self.value_max = float(np.percentile(flat_buffer, 99)) # 99th percentile
-        self.value_min_uniform.value = self.value_min
-        self.value_max_uniform.value = self.value_max
 
         # Update the texture with new values
         self.texture.write(flat_buffer.astype('f4').tobytes())
