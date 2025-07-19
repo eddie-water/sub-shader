@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 import moderngl
 import glfw
-from matplotlib import cm
 
 class Plotter(ABC):
     def __init__(self, file_path: str, shape: tuple[int, int]):
@@ -43,11 +42,10 @@ class ShaderSystem:
             #version 330
             in vec2 texCoord;
             out vec4 fragColor;
-            uniform sampler2D scalogram;
             
             void main() {
-                // Test texture coordinates - should show red-green gradient
-                fragColor = vec4(texCoord.x, texCoord.y, 0.0, 1.0);
+                // SOLID RED TEST - SHOULD SHOW BRIGHT RED SCREEN
+                fragColor = vec4(1.0, 0.0, 0.0, 1.0);
             }
         """
     
@@ -56,7 +54,14 @@ class ShaderSystem:
         """Create and return compiled shader program"""
         vertex_shader = cls.create_vertex_shader()
         fragment_shader = cls.create_fragment_shader()
-        return ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
+        
+        print("=== COMPILING NEW SHADERS ===")
+        print(f"Fragment shader first line: {fragment_shader.split('main()')[1][:50]}...")
+        
+        program = ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
+        print("Shader compilation successful!")
+        
+        return program
 
 class GLContext:
     """Handles GLFW window and OpenGL context setup"""
@@ -84,12 +89,26 @@ class GLContext:
         
         glfw.make_context_current(self.window)
         self.ctx = moderngl.create_context()
+        
+        # Debug OpenGL state
+        print(f"OpenGL Version: {self.ctx.info['GL_VERSION']}")
+        print(f"Viewport: {self.ctx.viewport}")
+        print(f"Context size: {self.width}x{self.height}")
+        
+        # Ensure viewport is set correctly
+        self.ctx.viewport = (0, 0, self.width, self.height)
+        print(f"Set viewport to: {self.ctx.viewport}")
+        
+        # Disable depth testing (shouldn't be needed for 2D)
+        self.ctx.disable(moderngl.DEPTH_TEST)
+        self.ctx.disable(moderngl.CULL_FACE)
     
     def should_close(self):
         return glfw.window_should_close(self.window)
     
     def swap_buffers(self):
         glfw.swap_buffers(self.window)
+        glfw.poll_events()  # Process window events
     
     def clear(self, r=0.05, g=0.05, b=0.05):
         self.ctx.clear(r, g, b)
@@ -101,7 +120,8 @@ class RenderTarget:
         self.ctx = ctx
         self.program = program
         self._setup_quad()
-        self._setup_texture(texture_width, texture_height)
+        # Skip texture setup for now since we're testing basic rendering
+        print("RenderTarget initialized - skipping texture for red test")
     
     def _setup_quad(self):
         """Create fullscreen quad"""
@@ -114,27 +134,32 @@ class RenderTarget:
         
         self.vbo = self.ctx.buffer(quad_vertices.tobytes())
         self.vao = self.ctx.simple_vertex_array(self.program, self.vbo, 'position')
-    
-    def _setup_texture(self, width, height):
-        """Create 2D texture for scalogram data"""
-        self.texture = self.ctx.texture((width, height), 1, dtype='f4')
-        self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
-        
-        # Only set up texture unit if the uniform exists in the shader
-        try:
-            self.program['scalogram'] = 0
-        except KeyError:
-            print("Warning: 'scalogram' uniform not found in shader")
-            pass
+        print("Quad setup complete")
     
     def update_texture(self, data):
-        """Update texture with new data"""
-        self.texture.write(data.astype('f4').tobytes())
-        self.texture.use(location=0)
+        """Skip texture update for red test"""
+        print(f"Skipping texture update for red test")
     
     def render(self):
         """Render the quad"""
-        self.vao.render(moderngl.TRIANGLE_STRIP)
+        print("=== RENDER CALL ===")
+        print(f"VAO: {self.vao}")
+        print(f"Program: {self.program}")
+        print(f"GL Context valid: {self.ctx}")
+        
+        # Try to render
+        try:
+            self.vao.render(moderngl.TRIANGLE_STRIP)
+            print("Render call completed successfully")
+        except Exception as e:
+            print(f"Render failed: {e}")
+        
+        # Check for OpenGL errors
+        error = self.ctx.error
+        if error != 'GL_NO_ERROR':
+            print(f"OpenGL Error: {error}")
+        else:
+            print("No OpenGL errors")
 
 class ScrollingBuffer:
     """Handles circular buffer for scrolling visualization"""
@@ -156,9 +181,7 @@ class ScrollingBuffer:
     
     def get_flattened_buffer(self):
         """Get time-ordered flattened buffer for texture"""
-        # Reorder to fix time sequence
         rolled = np.roll(self.frames, -self.frame_index, axis=0)
-        # Reshape: (height, num_frames * width) for horizontal scrolling
         return rolled.transpose(1, 0, 2).reshape(self.height, self.num_frames * self.width)
 
 class AdaptiveScaling:
@@ -176,15 +199,12 @@ class AdaptiveScaling:
         current_max = np.max(data)
         
         if current_max > self.global_max:
-            # Fast adaptation upward
             self.global_max = (self.adaptation_rate * current_max + 
                              (1 - self.adaptation_rate) * self.global_max)
         else:
-            # Slow decay downward
             self.global_max = (self.decay_rate * self.global_max + 
                              (1 - self.decay_rate) * current_max)
         
-        # Ensure minimum range
         self.global_max = max(self.global_max, 0.001)
         
         return self.global_min, self.global_max * self.headroom
@@ -195,11 +215,10 @@ class Shader(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int], num_frames=8):
         super().__init__(file_path, shape)
         
-        # Initialize all subsystems
+        print("=== INITIALIZING SHADER SYSTEM ===")
         self.gl_context = GLContext(title=f"Audio Visualizer - {file_path}")
         self.program = ShaderSystem.create_program(self.gl_context.ctx)
         
-        # Calculate texture dimensions for scrolling
         texture_width = self.x_n * num_frames
         texture_height = self.y_n
         
@@ -208,46 +227,16 @@ class Shader(Plotter):
         )
         self.scrolling_buffer = ScrollingBuffer(num_frames, self.y_n, self.x_n)
         self.scaling = AdaptiveScaling()
+        print("=== SHADER SYSTEM READY ===")
     
     def update_plot(self, values):
         """Main API: Feed in coefficients, get beautiful visualization"""
         
-        # Debug original input
-        print(f"ORIGINAL CWT - Shape: {values.shape}, Min: {values.min():.6f}, Max: {values.max():.6f}")
-        
-        # TEMPORARY TEST: Replace with obvious pattern
-        test_pattern = np.ones(values.shape, dtype=np.float32) * 0.5  # Solid middle value
-        # OR try this for gradient:
-        # test_pattern = np.linspace(0, 2.0, values.size).reshape(values.shape).astype(np.float32)
-        
-        print(f"TEST PATTERN - Shape: {test_pattern.shape}, Min: {test_pattern.min():.6f}, Max: {test_pattern.max():.6f}")
-        
-        # Use test pattern instead of real data
-        values = test_pattern
-        
-        print(f"AFTER REPLACEMENT - Shape: {values.shape}, Min: {values.min():.6f}, Max: {values.max():.6f}")
-        
-        # Add to scrolling buffer
         self.scrolling_buffer.add_frame(values)
-        
-        # Get flattened data for texture
         buffer_data = self.scrolling_buffer.get_flattened_buffer()
-        print(f"Buffer data - Shape: {buffer_data.shape}, Min: {buffer_data.min():.6f}, Max: {buffer_data.max():.6f}")
         
-        # Update scaling range
         value_min, value_max = self.scaling.update_range(buffer_data)
-        print(f"Scaling range: {value_min:.6f} to {value_max:.6f}")
-        print("---")
         
-        # Update GPU uniforms (only if they exist)
-        try:
-            self.program['valueMin'].value = value_min
-            self.program['valueMax'].value = value_max
-        except KeyError as e:
-            print(f"Warning: Uniform {e} not found in shader (probably optimized out)")
-            pass
-        
-        # Update texture and render
         self.render_target.update_texture(buffer_data)
         self.gl_context.clear()
         self.render_target.render()
@@ -260,16 +249,3 @@ class Shader(Plotter):
     def cleanup(self):
         """Clean shutdown"""
         glfw.terminate()
-
-# Clean PyQtGrapher remains the same but simplified
-class PyQtGrapher(Plotter):
-    def __init__(self, file_path: str, shape: tuple[int, int]):
-        super().__init__(file_path, shape)
-        # ... existing PyQtGrapher code stays the same ...
-    
-    def update_plot(self, values):
-        values = values.T
-        self.pcolormesh.setData(values)
-    
-    def should_window_close(self):
-        raise NotImplementedError("PyQtGraph-based window-check not implemented yet.")
