@@ -57,16 +57,9 @@ class ShaderSystem:
             uniform sampler2D scalogram;
             
             void main() {
-                // Test: Try to sample texture, fallback to red if it fails
+                // Sample the audio texture and show as grayscale
                 float value = texture(scalogram, texCoord).r;
-                
-                // If value is 0, show red (likely means texture sampling failed)
-                // If value > 0, show as grayscale (texture sampling worked)
-                if (value < 0.01) {
-                    fragColor = vec4(1.0, 0.0, 0.0, 1.0);  // Red = texture problem
-                } else {
-                    fragColor = vec4(value, value, value, 1.0);  // Gray = texture works
-                }
+                fragColor = vec4(value, value, value, 1.0);
             }
         """
     
@@ -143,27 +136,24 @@ class RenderTarget:
     
     def _setup_texture(self, width, height):
         """Create 2D texture for scalogram data"""
-        logger.info(f"Setting up texture: {width}x{height}")
+        # Use a much smaller texture size to avoid WSL/OpenGL issues
+        # We'll downscample the audio data to fit
+        small_width = min(width, 1024)  # Max 1024 pixels wide
+        small_height = min(height, 256)  # Max 256 pixels tall
         
-        # Create a much simpler test texture - 4x4 with known pattern
-        self.texture = self.ctx.texture((4, 4), 1, dtype='f4')
-        self.texture.filter = (moderngl.NEAREST, moderngl.NEAREST)  # No interpolation
+        logger.info(f"Creating smaller texture: {small_width}x{small_height} (original: {width}x{height})")
         
-        # Create simple test pattern: checkerboard
-        test_pattern = np.array([
-            [1.0, 0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0, 1.0],
-            [1.0, 0.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0, 1.0]
-        ], dtype=np.float32)
+        self.texture = self.ctx.texture((small_width, small_height), 1, dtype='f4')
+        self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         
-        # Upload test pattern immediately
-        self.texture.write(test_pattern.tobytes())
+        # Store original and actual sizes
+        self.original_size = (width, height)
+        self.actual_size = (small_width, small_height)
         
-        # Set the uniform immediately during setup
+        # Set the uniform during setup
         self.program['scalogram'] = 0
         
-        logger.info(f"Test texture created and uploaded: {test_pattern.shape}")
+        logger.info(f"Audio texture created: {small_width}x{small_height}")
     
     def _setup_quad(self):
         """Create fullscreen quad"""
@@ -179,12 +169,38 @@ class RenderTarget:
         print("Quad setup complete")
     
     def update_texture(self, data):
-        """Update texture with new data - skip for now, use fixed test pattern"""
-        # For testing, don't update texture - use the fixed checkerboard pattern
-        # Just bind it
+        """Update texture with new data"""
+        height, width = data.shape
+        target_width, target_height = self.actual_size
+        
+        # Downsample the data to fit the smaller texture
+        if height != target_height or width != target_width:
+            # Simple downsampling by taking every Nth sample
+            h_step = max(1, height // target_height)
+            w_step = max(1, width // target_width)
+            
+            downsampled = data[::h_step, ::w_step]
+            
+            # Crop or pad to exact size
+            if downsampled.shape[0] > target_height:
+                downsampled = downsampled[:target_height, :]
+            if downsampled.shape[1] > target_width:
+                downsampled = downsampled[:, :target_width]
+                
+            # Pad if needed
+            if downsampled.shape != (target_height, target_width):
+                padded = np.zeros((target_height, target_width), dtype=np.float32)
+                h, w = downsampled.shape
+                padded[:h, :w] = downsampled
+                downsampled = padded
+            
+            data = downsampled
+        
+        # Upload data and bind
+        self.texture.write(data.astype('f4').tobytes())
         self.texture.use(location=0)
         
-        logger.debug("Using fixed checkerboard test texture")
+        logger.debug(f"Downsampled texture updated: {data.shape}, range {data.min():.3f}-{data.max():.3f}")
     
     def render(self):
         """Render the quad"""
