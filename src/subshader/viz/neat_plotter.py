@@ -2,6 +2,18 @@ from abc import ABC, abstractmethod
 import numpy as np
 import moderngl
 import glfw
+import logging
+
+# Set up clean logging - file only, no console spam
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('shader_debug.log', mode='w')  # Overwrite log each run
+    ]
+)
+
+logger = logging.getLogger('ShaderPlotter')
 
 class Plotter(ABC):
     def __init__(self, file_path: str, shape: tuple[int, int]):
@@ -42,10 +54,19 @@ class ShaderSystem:
             #version 330
             in vec2 texCoord;
             out vec4 fragColor;
+            uniform sampler2D scalogram;
             
             void main() {
-                // SOLID RED TEST - SHOULD SHOW BRIGHT RED SCREEN
-                fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                // Test: Try to sample texture, fallback to red if it fails
+                float value = texture(scalogram, texCoord).r;
+                
+                // If value is 0, show red (likely means texture sampling failed)
+                // If value > 0, show as grayscale (texture sampling worked)
+                if (value < 0.01) {
+                    fragColor = vec4(1.0, 0.0, 0.0, 1.0);  // Red = texture problem
+                } else {
+                    fragColor = vec4(value, value, value, 1.0);  // Gray = texture works
+                }
             }
         """
     
@@ -55,11 +76,11 @@ class ShaderSystem:
         vertex_shader = cls.create_vertex_shader()
         fragment_shader = cls.create_fragment_shader()
         
-        print("=== COMPILING NEW SHADERS ===")
-        print(f"Fragment shader first line: {fragment_shader.split('main()')[1][:50]}...")
+        logger.info("Compiling shaders...")
+        logger.debug(f"Fragment shader preview: {fragment_shader[:100]}...")
         
         program = ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
-        print("Shader compilation successful!")
+        logger.info("Shader compilation successful!")
         
         return program
 
@@ -90,18 +111,16 @@ class GLContext:
         glfw.make_context_current(self.window)
         self.ctx = moderngl.create_context()
         
-        # Debug OpenGL state
-        print(f"OpenGL Version: {self.ctx.info['GL_VERSION']}")
-        print(f"Viewport: {self.ctx.viewport}")
-        print(f"Context size: {self.width}x{self.height}")
+        # Log OpenGL info
+        logger.info(f"OpenGL Version: {self.ctx.info['GL_VERSION']}")
+        logger.debug(f"Viewport: {self.ctx.viewport}")
         
-        # Ensure viewport is set correctly
+        # Setup viewport and disable unnecessary features
         self.ctx.viewport = (0, 0, self.width, self.height)
-        print(f"Set viewport to: {self.ctx.viewport}")
-        
-        # Disable depth testing (shouldn't be needed for 2D)
         self.ctx.disable(moderngl.DEPTH_TEST)
         self.ctx.disable(moderngl.CULL_FACE)
+        
+        logger.info("Graphics context initialized successfully")
     
     def should_close(self):
         return glfw.window_should_close(self.window)
@@ -120,8 +139,31 @@ class RenderTarget:
         self.ctx = ctx
         self.program = program
         self._setup_quad()
-        # Skip texture setup for now since we're testing basic rendering
-        print("RenderTarget initialized - skipping texture for red test")
+        self._setup_texture(texture_width, texture_height)  # Restore texture setup
+    
+    def _setup_texture(self, width, height):
+        """Create 2D texture for scalogram data"""
+        logger.info(f"Setting up texture: {width}x{height}")
+        
+        # Create a much simpler test texture - 4x4 with known pattern
+        self.texture = self.ctx.texture((4, 4), 1, dtype='f4')
+        self.texture.filter = (moderngl.NEAREST, moderngl.NEAREST)  # No interpolation
+        
+        # Create simple test pattern: checkerboard
+        test_pattern = np.array([
+            [1.0, 0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0, 1.0]
+        ], dtype=np.float32)
+        
+        # Upload test pattern immediately
+        self.texture.write(test_pattern.tobytes())
+        
+        # Set the uniform immediately during setup
+        self.program['scalogram'] = 0
+        
+        logger.info(f"Test texture created and uploaded: {test_pattern.shape}")
     
     def _setup_quad(self):
         """Create fullscreen quad"""
@@ -137,29 +179,25 @@ class RenderTarget:
         print("Quad setup complete")
     
     def update_texture(self, data):
-        """Skip texture update for red test"""
-        print(f"Skipping texture update for red test")
+        """Update texture with new data - skip for now, use fixed test pattern"""
+        # For testing, don't update texture - use the fixed checkerboard pattern
+        # Just bind it
+        self.texture.use(location=0)
+        
+        logger.debug("Using fixed checkerboard test texture")
     
     def render(self):
         """Render the quad"""
-        print("=== RENDER CALL ===")
-        print(f"VAO: {self.vao}")
-        print(f"Program: {self.program}")
-        print(f"GL Context valid: {self.ctx}")
-        
-        # Try to render
         try:
             self.vao.render(moderngl.TRIANGLE_STRIP)
-            print("Render call completed successfully")
+            
+            # Check for OpenGL errors
+            error = self.ctx.error
+            if error != 'GL_NO_ERROR':
+                logger.error(f"Render error: {error}")
+            
         except Exception as e:
-            print(f"Render failed: {e}")
-        
-        # Check for OpenGL errors
-        error = self.ctx.error
-        if error != 'GL_NO_ERROR':
-            print(f"OpenGL Error: {error}")
-        else:
-            print("No OpenGL errors")
+            logger.error(f"Render exception: {e}")
 
 class ScrollingBuffer:
     """Handles circular buffer for scrolling visualization"""
@@ -215,7 +253,7 @@ class Shader(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int], num_frames=8):
         super().__init__(file_path, shape)
         
-        print("=== INITIALIZING SHADER SYSTEM ===")
+        logger.info(f"Initializing Shader for {file_path}")
         self.gl_context = GLContext(title=f"Audio Visualizer - {file_path}")
         self.program = ShaderSystem.create_program(self.gl_context.ctx)
         
@@ -227,7 +265,9 @@ class Shader(Plotter):
         )
         self.scrolling_buffer = ScrollingBuffer(num_frames, self.y_n, self.x_n)
         self.scaling = AdaptiveScaling()
-        print("=== SHADER SYSTEM READY ===")
+        
+        logger.info("Shader system ready")
+        print("🎵 Visualizer started - logs in 'shader_debug.log'")
     
     def update_plot(self, values):
         """Main API: Feed in coefficients, get beautiful visualization"""
@@ -237,7 +277,10 @@ class Shader(Plotter):
         
         value_min, value_max = self.scaling.update_range(buffer_data)
         
+        # Update texture (just binds the fixed test pattern)
         self.render_target.update_texture(buffer_data)
+        
+        # Clear and render
         self.gl_context.clear()
         self.render_target.render()
         self.gl_context.swap_buffers()
