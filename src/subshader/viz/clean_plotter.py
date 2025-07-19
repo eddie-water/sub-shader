@@ -44,29 +44,10 @@ class ShaderSystem:
             in vec2 texCoord;
             out vec4 fragColor;
             uniform sampler2D scalogram;
-            uniform float valueMin;
-            uniform float valueMax;
-            
-            vec3 inferno(float t) {
-                t = clamp(t, 0.0, 1.0);
-                vec3 c0 = vec3(0.001462, 0.000466, 0.013866);
-                vec3 c1 = vec3(0.166383, 0.009605, 0.620465);
-                vec3 c2 = vec3(0.109303, 0.718710, 0.040311);
-                vec3 c3 = vec3(2.108782, -1.531415, -0.273740);
-                vec3 c4 = vec3(-2.490635, 2.051947, 1.073524);
-                vec3 c5 = vec3(1.313448, -1.214297, -0.472305);
-                return c0 + t * (c1 + t * (c2 + t * (c3 + t * (c4 + t * c5))));
-            }
             
             void main() {
-                vec2 flipped = vec2(texCoord.x, 1.0 - texCoord.y);
-                float value = texture(scalogram, flipped).r;
-                
-                float normalized = clamp((value - valueMin) / (valueMax - valueMin), 0.0, 1.0);
-                normalized = pow(normalized, 0.7);
-                
-                vec3 color = inferno(normalized);
-                fragColor = vec4(color, 1.0);
+                // Test texture coordinates - should show red-green gradient
+                fragColor = vec4(texCoord.x, texCoord.y, 0.0, 1.0);
             }
         """
     
@@ -136,15 +117,19 @@ class RenderTarget:
     
     def _setup_texture(self, width, height):
         """Create 2D texture for scalogram data"""
-        self.texture = self.ctx.texture((width, height), 1, dtype=np.float32)
+        self.texture = self.ctx.texture((width, height), 1, dtype='f4')
         self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         
-        # Set up texture unit
-        self.program['scalogram'] = 0
+        # Only set up texture unit if the uniform exists in the shader
+        try:
+            self.program['scalogram'] = 0
+        except KeyError:
+            print("Warning: 'scalogram' uniform not found in shader")
+            pass
     
     def update_texture(self, data):
         """Update texture with new data"""
-        self.texture.write(data.astype(np.float32).tobytes())
+        self.texture.write(data.astype('f4').tobytes())
         self.texture.use(location=0)
     
     def render(self):
@@ -204,7 +189,7 @@ class AdaptiveScaling:
         
         return self.global_min, self.global_max * self.headroom
 
-class CleanShader(Plotter):
+class Shader(Plotter):
     """Clean, high-level audio visualization using GPU shaders"""
     
     def __init__(self, file_path: str, shape: tuple[int, int], num_frames=8):
@@ -226,18 +211,41 @@ class CleanShader(Plotter):
     
     def update_plot(self, values):
         """Main API: Feed in coefficients, get beautiful visualization"""
+        
+        # Debug original input
+        print(f"ORIGINAL CWT - Shape: {values.shape}, Min: {values.min():.6f}, Max: {values.max():.6f}")
+        
+        # TEMPORARY TEST: Replace with obvious pattern
+        test_pattern = np.ones(values.shape, dtype=np.float32) * 0.5  # Solid middle value
+        # OR try this for gradient:
+        # test_pattern = np.linspace(0, 2.0, values.size).reshape(values.shape).astype(np.float32)
+        
+        print(f"TEST PATTERN - Shape: {test_pattern.shape}, Min: {test_pattern.min():.6f}, Max: {test_pattern.max():.6f}")
+        
+        # Use test pattern instead of real data
+        values = test_pattern
+        
+        print(f"AFTER REPLACEMENT - Shape: {values.shape}, Min: {values.min():.6f}, Max: {values.max():.6f}")
+        
         # Add to scrolling buffer
         self.scrolling_buffer.add_frame(values)
         
         # Get flattened data for texture
         buffer_data = self.scrolling_buffer.get_flattened_buffer()
+        print(f"Buffer data - Shape: {buffer_data.shape}, Min: {buffer_data.min():.6f}, Max: {buffer_data.max():.6f}")
         
         # Update scaling range
         value_min, value_max = self.scaling.update_range(buffer_data)
+        print(f"Scaling range: {value_min:.6f} to {value_max:.6f}")
+        print("---")
         
-        # Update GPU uniforms
-        self.program['valueMin'].value = value_min
-        self.program['valueMax'].value = value_max
+        # Update GPU uniforms (only if they exist)
+        try:
+            self.program['valueMin'].value = value_min
+            self.program['valueMax'].value = value_max
+        except KeyError as e:
+            print(f"Warning: Uniform {e} not found in shader (probably optimized out)")
+            pass
         
         # Update texture and render
         self.render_target.update_texture(buffer_data)
