@@ -306,7 +306,7 @@ class Shader(Plotter):
         self.scaling = AdaptiveScaling()
         
         logger.info("Shader system ready")
-        print("Visualizer started - logs in 'shader_debug.log'")
+        print("🎵 Visualizer started - logs in 'shader_debug.log'")
     
     def update_plot(self, values):
         """Main API: Feed in coefficients, get beautiful visualization"""
@@ -343,3 +343,56 @@ class Shader(Plotter):
     def cleanup(self):
         """Clean shutdown"""
         glfw.terminate()
+
+
+class PyQtGrapher(Plotter):
+    """Traditional PyQtGraph-based audio visualizer"""
+    
+    def __init__(self, file_path: str, shape: tuple[int, int]):
+        super().__init__(file_path, shape)
+        
+        # PyQtGraph configuration
+        pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
+
+        self.app = pg.mkQApp("Sub Shader")
+        self.win = pg.GraphicsLayoutWidget()
+        self.win.show()  
+        self.win.setWindowTitle('Continuous Wavelet Transform')
+
+        self.plot = self.win.addPlot(row=0, col=0, rowspan=1, colspan=1,
+                                   title=file_path, enableMenu=False)
+
+        # Setup colormap and plot item
+        colorMap = pg.colormap.get('inferno')
+        self.pcolormesh = pg.PColorMeshItem(colorMap=colorMap,
+                                          levels=(-1, 1),
+                                          enableAutoLevels=False,
+                                          edgeColors=None,
+                                          antialiasing=False)
+        self.plot.addItem(self.pcolormesh)
+
+        # Add colorbar
+        self.bar = pg.ColorBarItem(label="Magnitude",
+                                 interactive=False,
+                                 limits=(0, 1),
+                                 rounding=0.1)
+        self.bar.setImageItem([self.pcolormesh])
+        self.win.addItem(self.bar, 0, 1, 1, 1)
+
+        # Add FPS text
+        self.textBox = pg.TextItem(anchor=(0, 1), fill='black')
+        self.textBox.setPos(1, 1)
+        self.plot.addItem(self.textBox)
+
+    def update_plot(self, values):
+        """Update plot with new CWT coefficients"""
+        values = values.T  # Transpose for correct orientation
+        self.pcolormesh.setData(values)
+
+    def update_fps(self, fps: int):
+        """Update FPS display"""
+        self.textBox.setText(f'{fps:.1f} fps')
+
+    def should_window_close(self):
+        """PyQtGraph handles its own event loop"""
+        raise NotImplementedError("PyQtGraph-based window-check not implemented yet.")
