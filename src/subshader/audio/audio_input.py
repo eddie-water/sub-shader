@@ -1,35 +1,40 @@
 import numpy as np
 import soundfile as sf
 
-# Percentage of frame overlap
+# Frane overlap 
 OVERLAP = 50.0
 
 class AudioInput:
     def __init__(self, path: str, window_size: int) -> None:
-        # File attributes
         self.file_path = path
-        self.pos = 0
-
-        # Sliding frame attributes
         self.window_size = window_size
         self.overlap = OVERLAP / 100.0
         self.slide_amount = int(self.window_size * self.overlap)
+        
+        # Keep file handle open to avoid reopening it every time
+        self.file_handle = sf.SoundFile(self.file_path, 'r')
+        self.sample_rate = self.file_handle.samplerate
+        self.total_frames = self.file_handle.frames
+        self.pos = 0
 
     """
     Get Frame
         Returns: a block of audio whose size is specified by the window size
     """
     def get_frame(self) -> np.ndarray:
-        with sf.SoundFile(self.file_path, 'r') as f:
-            # Read one frame's worth of audio sample
-            f.seek(self.pos)
-            self.data = f.read(self.window_size)
-            self.data = self.data[:, 0]
-
-            # Slide the frame 
-            self.pos = f.tell() - self.slide_amount
-
-        return self.data
+        if self.pos + self.window_size > self.total_frames:
+            return None  # Signal EOF
+        
+        # Seek and read (file stays open)
+        self.file_handle.seek(self.pos)
+        frame = self.file_handle.read(self.window_size)
+        
+        # Convert stereo to mono if needed
+        if len(frame.shape) > 1:
+            frame = frame[:, 0]
+            
+        self.pos += self.slide_amount
+        return frame
 
     """
     Get Entire Audio
@@ -49,9 +54,20 @@ class AudioInput:
         Returns: the sample rate of the file
     """
     def get_sample_rate(self) -> int:
-        with sf.SoundFile(self.file_path, 'r') as f:
-            return f.samplerate
+        return self.sample_rate
 
+    """
+    Audio File Cleanup
+        Closes the file handle if it exists
+    """
+    def cleanup(self):
+        if hasattr(self, 'file_handle'):
+            self.file_handle.close()
+
+    """
+    Display File Information
+        Prints information about the audio file
+    """
     def _display_file_info(self) -> None:
         with sf.SoundFile(self.file_path, 'r') as f:
             print("Information about the file:", self.file_path)
