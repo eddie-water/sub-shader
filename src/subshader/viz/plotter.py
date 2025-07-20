@@ -289,7 +289,7 @@ class AdaptiveScaling:
 class Shader(Plotter):
     """Clean, high-level audio visualization using GPU shaders"""
     
-    def __init__(self, file_path: str, shape: tuple[int, int], num_frames=8):
+    def __init__(self, file_path: str, shape: tuple[int, int], num_frames=64):
         super().__init__(file_path, shape)
         
         logger.info(f"Initializing Shader for {file_path}")
