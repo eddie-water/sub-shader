@@ -30,7 +30,7 @@ frame_times = []
 def main_loop():
     global fps_timer
 
-    while plotter.window and not plotter.should_window_close():
+    while not plotter.should_window_close():
 
         frame_start = time.perf_counter()
 
@@ -43,16 +43,18 @@ def main_loop():
         # Update plot
         plotter.update_plot(coefs)
 
-        # TODO ISSUE-33 Put this in the plotter class
         frame_end = time.perf_counter()
         frame_times.append(frame_end - frame_start)
 
-        # TODO ISSUE-33 Is this a weird way to measure FPS?
+        # FPS calculation
         if time.time() - fps_timer > 1.0 and len(frame_times) > 0:
             avg_frame = sum(frame_times) / len(frame_times)
             print(f"FPS: {1.0 / avg_frame:.2f}")
             frame_times.clear()
             fps_timer = time.time()
+
+    # Clean shutdown
+    plotter.cleanup()
 
 # Main entry point
 if __name__ == '__main__':
