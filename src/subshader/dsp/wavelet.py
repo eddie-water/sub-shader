@@ -128,11 +128,16 @@ class Wavelet(ABC):
         # Absolute Value 
         coefs_abs = np.abs(raw_coefs)
 
-        # Min-Max Normalization - squeeze data into the [0, 1] range
+        # Min-Max Normalization
         coefs_min = np.min(coefs_abs)
         coefs_max = np.max(coefs_abs)
-        coefs_norm = (coefs_abs - coefs_min) / (coefs_max - coefs_min)
-
+        
+        epsilon = 1e-10 # Prevents division by zero
+        coefs_norm = (coefs_abs - coefs_min) / (coefs_max - coefs_min + epsilon)
+        
+        # Ensure output is in [0, 1] range
+        coefs_norm = np.clip(coefs_norm, 0.0, 1.0)
+        
         return coefs_norm
     
 class PyWavelet(Wavelet):
