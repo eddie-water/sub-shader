@@ -17,11 +17,13 @@ class AudioInput:
         self.total_frames = self.file_handle.frames
         self.pos = 0
 
-    """
-    Get Frame
-        Returns: a block of audio whose size is specified by the window size
-    """
     def get_frame(self) -> np.ndarray:
+        """
+        Gets a frame of audio the size of the window.
+
+        Returns:
+            np.ndarray: The next frame of audio data from the file.
+        """
         if self.pos + self.window_size > self.total_frames:
             return None  # Signal EOF
         
@@ -36,39 +38,28 @@ class AudioInput:
         self.pos += self.slide_amount
         return frame
 
-    """
-    Get Entire Audio
-        Returns: the entire audio file
-    """
-    def get_entire_audio(self) -> np.ndarray:
-        with sf.SoundFile(self.file_path, 'r') as f:
-            self.entire_file_size = f.frames
-
-            f.seek(0)
-            self.data = f.read(self.entire_file_size)
-            self.data = self.data[:,0]
-            return self.data        
-
-    """
-    Get Sample Rate
-        Returns: the sample rate of the file
-    """
     def get_sample_rate(self) -> int:
+        """
+        Gets the sample rate of the audio file.
+
+        Returns:
+            int: Sample rate
+        """
         return self.sample_rate
 
-    """
-    Audio File Cleanup
-        Closes the file handle if it exists
-    """
     def cleanup(self):
+        """
+        Audio File Cleanup
+            Closes the file handle if it exists
+        """
         if hasattr(self, 'file_handle'):
             self.file_handle.close()
 
-    """
-    Display File Information
-        Prints information about the audio file
-    """
     def _display_file_info(self) -> None:
+        """
+        Display File Information
+            Prints information about the audio file
+        """
         with sf.SoundFile(self.file_path, 'r') as f:
             print("Information about the file:", self.file_path)
             print("mode", f.mode)

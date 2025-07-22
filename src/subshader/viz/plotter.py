@@ -385,12 +385,22 @@ class PyQtGrapher(Plotter):
         self.plot.addItem(self.textBox)
 
     def update_plot(self, values):
-        """Update plot with new CWT coefficients"""
+        """
+        Updates the plot with new coefficients values.
+
+        Args:
+            coefs (np.ndarray): The coefficients to update the pcolormesh with.
+        """
         values = values.T  # Transpose for correct orientation
         self.pcolormesh.setData(values)
 
     def update_fps(self, fps: int):
-        """Update FPS display"""
+        """
+        Update the text box with the current frames per second (FPS).
+
+        Args:
+            fps (int): The FPS value to display.
+        """        
         self.textBox.setText(f'{fps:.1f} fps')
 
     def should_window_close(self):
