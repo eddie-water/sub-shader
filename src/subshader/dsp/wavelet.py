@@ -165,8 +165,9 @@ class PyWavelet(Wavelet):
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate, window_size, ds_stride):
         super().__init__(sample_rate, window_size, ds_stride)
-        # Initialize the time-frequency matrix
-        self.tf = np.zeros((self.num_freqs, self.window_size))
+
+        # TODO ISSUE-36 Use class inheritance effectively to avoid code 
+        # duplication
 
         # Create a centered time vector for the CMW
         cmw_t = np.arange(2*self.sample_rate) / self.sample_rate
@@ -205,6 +206,9 @@ class AntsWavelet(Wavelet):
 class NumpyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size, ds_stride):
         super().__init__(sample_rate, window_size, ds_stride)
+
+        # Initialize the time-frequency matrix
+        self.tf = np.zeros((self.num_freqs, self.window_size))
 
     def class_specific_cwt(self, data) -> np.ndarray:
         # Transform the Data time series into a spectrum

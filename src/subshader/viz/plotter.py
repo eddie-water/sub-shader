@@ -306,7 +306,7 @@ class Shader(Plotter):
         self.scaling = AdaptiveScaling()
         
         logger.info("Shader system ready")
-        print("🎵 Visualizer started - logs in 'shader_debug.log'")
+        print("Visualizer started - logs in 'shader_debug.log'")
     
     def update_plot(self, values):
         """Main API: Feed in coefficients, get beautiful visualization"""
