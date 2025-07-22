@@ -23,9 +23,9 @@ class QuickPlot:
         self.ax.set_ylabel("Amplitude")
 
     def _plot_2d(self, data):
-        # TODO do I want to flip the data?
-        flipped = np.flipud(data)  # Optional: flip vertically so low freqs are at bottom
-        mesh = self.ax.pcolormesh(flipped, cmap="inferno", shading="auto", vmin=0.0, vmax=1.0)
+        # Flip the data if plotting CWT coefs before it gets flipped internally
+        # data = np.flipud(data)
+        mesh = self.ax.pcolormesh(data, cmap="inferno", shading="auto", vmin=0.0, vmax=1.0)
         self.ax.set_xlabel("Time Bins")
         self.ax.set_ylabel("Frequency Bins")
         self.fig.colorbar(mesh, ax=self.ax, label="Magnitude")
