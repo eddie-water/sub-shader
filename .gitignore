@@ -1,4 +1,4 @@
-# IDE Artifacts
+# Vs Code Settings
 .vscode/*
 
 # Virtual Environment
@@ -10,3 +10,9 @@ __pycache__/
 
 # Package Artifacts
 *.egg-info/
+
+# Logs
+logs/*.log
+logs/*.txt
+!logs/.gitkeep 
+!logs/README.md 
