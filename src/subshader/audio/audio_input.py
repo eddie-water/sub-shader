@@ -1,7 +1,7 @@
 import numpy as np
 import soundfile as sf
 
-# Frane overlap 
+# Frame overlap 
 OVERLAP = 50.0
 
 class AudioInput:

@@ -55,7 +55,6 @@ def main_loop():
         # FPS 
         frame_end = time.perf_counter()
         frame_times.append(frame_end - frame_start)
-
         if time.time() - fps_timer > 1.0 and len(frame_times) > 0:
             avg_frame = sum(frame_times) / len(frame_times)
             print(f"FPS: {1.0 / avg_frame:.2f}")
