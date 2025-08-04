@@ -7,11 +7,8 @@ from subshader.viz.plotter import Shader
 
 WINDOW_SIZE = 2 << 11 # 4k
 DOWNSAMLPLE_STRIDE = 1
-# # DO NOT MERGE
+
 FILE_PATH = "assets/audio/daw/chirp_beat.wav"
-# FILE_PATH = "assets/audio/songs/beltran_soundcloud.wav"
-# FILE_PATH = "assets/audio/songs/zionsville.wav"
-# FILE_PATH = "assets/audio/daw/c4_and_c7_4_arps.wav"
 
 # Audio Input, Audio Characteristics 
 audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)

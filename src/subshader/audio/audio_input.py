@@ -6,6 +6,13 @@ OVERLAP = 50.0
 
 class AudioInput:
     def __init__(self, path: str, window_size: int) -> None:
+        """
+        Audio Input Initialization
+
+        Args:
+            path (str): Path to the audio file.
+            window_size (int): Size of the audio frame in samples.
+        """
         self.file_path = path
         self.window_size = window_size
         self.overlap = OVERLAP / 100.0
