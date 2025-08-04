@@ -20,23 +20,23 @@ logging.basicConfig(
 logger = logging.getLogger('ShaderPlotter')
 
 class Plotter(ABC):
-    def __init__(self, file_path: str, shape: tuple[int, int]):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int]):
         """
         Abstract base class for all plotters.
 
         Args:
             file_path (str): The path to the file to plot.
-            shape (tuple[int, int]): The shape of the data to plot.
+            frame_shape (tuple[int, int]): The shape of each data frame to plot.
         """
         self.file_path = file_path
 
-        if len(shape) != 2:
-            raise ValueError(f"Expected 2D array, got {len(shape)}D with shape {shape}")        
-        if shape[0] <= 0 or shape[1] <= 0:
-            raise ValueError(f"2D array cannot have shape: {shape}")
+        if len(frame_shape) != 2:
+            raise ValueError(f"Expected 2D array, got {len(frame_shape)}D with shape {frame_shape}")        
+        if frame_shape[0] <= 0 or frame_shape[1] <= 0:
+            raise ValueError(f"2D array cannot have shape: {frame_shape}")
 
-        self.shape = shape
-        self.y_n, self.x_n = self.shape
+        self.frame_shape = frame_shape
+        self.y_n, self.x_n = self.frame_shape
 
     @abstractmethod
     def update_plot(self, values):
@@ -54,16 +54,22 @@ class Plotter(ABC):
         pass
 
 class Shader(Plotter):
-    def __init__(self, file_path: str, shape: tuple[int, int], num_frames=64):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64):
         """
         Clean, high-level audio visualization using GPU shaders
+
+        Args:
+            file_path (str): The path to the file to plot.
+            frame_shape (tuple[int, int]): The shape of each data frame to plot.
+            num_frames (int): The number of frames to use for the visualization.
         """
-        super().__init__(file_path, shape)
+        super().__init__(file_path, frame_shape)
 
         # Create GL Context and Shader Renderer       
         logger.info(f"Initializing Shader for {file_path}")
         self.gl_context = GLContext(title=f"Audio Visualizer - {file_path}")
-        
+
+        # TODO NOW look at how we pass in the texture width and height into the ShaderRenderer but then the same data goes into the scrolling buffer - tuck it in? maybye
         texture_width = self.x_n * num_frames
         texture_height = self.y_n
         
@@ -214,8 +220,8 @@ class ShaderRenderer:
 
     def __init__(self, ctx, texture_width, texture_height):
         """
-        Main GPU rendering component that handles shader compilation, 
-        texture management, and rendering
+        Main GPU rendering component that handles shader compilation, texture 
+        management, and rendering
 
         Args:
             ctx (moderngl.Context): The ModernGL context to use for shader 
@@ -225,15 +231,20 @@ class ShaderRenderer:
         """
         self.ctx = ctx
         
-        # Compile shaders from files
+        # Compile and link shaders
         self.shader_program = self._compile_shaders()
         
-        # Setup rendering components
-        self._setup_quad()
+        # Bind the graphics geometry to the shader program
+        self._setup_rendering_geometry()
+
+        # Setup texture 
         self._setup_texture(texture_width, texture_height)
     
     def _compile_shaders(self):
-        """Compile vertex and fragment shaders from files"""
+        """
+        Compile and link vertex (geometry) and fragment (color) shaders into 
+        a GPU-executable program
+        """
         vertex_shader = get_vertex_shader_source()
         fragment_shader = get_fragment_shader_source()
         
@@ -244,11 +255,11 @@ class ShaderRenderer:
         logger.info("Shader compilation successful!")
         
         return program
-    
-    def _setup_quad(self):
+
+    def _setup_rendering_geometry(self):
         """
-        The Quad is a rectangle that covers the entire window. It is the 
-        geometry needed to display the texture on the screen.
+        Create quad geometry (rectangle) that covers the GLFW window, store in 
+        OpenGL context/memory via VBO, and bind to the shader program via VAO.
         """
         quad_vertices = np.array([
             -1.0, -1.0,  # Bottom-left
@@ -261,7 +272,8 @@ class ShaderRenderer:
         # removes NumPy stuff that GPU doesn't need)
         self.vbo = self.ctx.buffer(quad_vertices.tobytes()) 
 
-        # Vertex Array Object binds the VBO to the shader program
+        # Vertex Array Object tells the shader program how to use the data
+        # stored in the VBO (position, color, etc.)
         self.vao = self.ctx.simple_vertex_array(self.shader_program, self.vbo, 'position')
 
     def _setup_texture(self, width, height):
@@ -415,11 +427,11 @@ class AdaptiveScaling:
 # =============================================================================
 
 class PyQtGrapher(Plotter):
-    def __init__(self, file_path: str, shape: tuple[int, int]):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int]):
         """
         Traditional PyQtGraph-based audio visualizer
         """
-        super().__init__(file_path, shape)
+        super().__init__(file_path, frame_shape)
         
         # PyQtGraph configuration
         pg.setConfigOptions(useOpenGL=True, enableExperimental=True)

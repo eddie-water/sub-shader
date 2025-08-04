@@ -23,7 +23,7 @@ wavelet = ShadeWavelet(sample_rate = sample_rate,
 # Plotter Object
 plot_shape = wavelet.get_shape()
 plotter = Shader(file_path = FILE_PATH,
-                 shape = plot_shape,
+                 frame_shape = plot_shape,
                  num_frames = 128)
 
 fps_timer = time.perf_counter()
