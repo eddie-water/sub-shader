@@ -53,26 +53,76 @@ class Plotter(ABC):
         """Check if the window should close based on user input."""
         pass
 
-class ShaderSystem:
-    @classmethod
-    def create_program(cls, ctx):
+class Shader(Plotter):
+    def __init__(self, file_path: str, shape: tuple[int, int], num_frames=64):
         """
-        Create and return compiled shader program
+        Clean, high-level audio visualization using GPU shaders
+        """
+        super().__init__(file_path, shape)
+
+        # Create GL Context and Shader Renderer       
+        logger.info(f"Initializing Shader for {file_path}")
+        self.gl_context = GLContext(title=f"Audio Visualizer - {file_path}")
         
+        texture_width = self.x_n * num_frames
+        texture_height = self.y_n
+        
+        # Main GPU rendering component - handles shader compilation, 
+        # texture management, and rendering
+        self.shader_renderer = ShaderRenderer(
+            self.gl_context.ctx, texture_width, texture_height
+        )
+        self.scrolling_buffer = ScrollingBuffer(num_frames, self.y_n, self.x_n)
+        self.scaling = AdaptiveScaling()
+        
+        logger.info("Shader system ready")
+        print("Visualizer started - logs in 'shader_debug.log'")
+    
+    def update_plot(self, values: np.ndarray):
+        """
+        Updates the scrolling plot with new data.
+
         Args:
-            ctx (moderngl.Context): The ModernGL context to use for shader 
-                compilation.
+            values (np.ndarray): The new data to plot.
         """
-        vertex_shader = get_vertex_shader_source()
-        fragment_shader = get_fragment_shader_source()
+        self.scrolling_buffer.add_frame(values)
+        buffer_data = self.scrolling_buffer.get_flattened_buffer()
         
-        logger.info("Compiling shaders...")
-        logger.debug(f"Fragment shader preview: {fragment_shader[:100]}...")
+        # Update adaptive scaling
+        value_min, value_max = self.scaling.update_range(buffer_data)
         
-        program = ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
-        logger.info("Shader compilation successful!")
+        # Update scaling uniforms for colormap
+        try:
+            self.shader_renderer.shader_program['valueMin'] = value_min
+            self.shader_renderer.shader_program['valueMax'] = value_max
+        except KeyError:
+            pass  # Uniforms might be optimized out
         
-        return program
+        # Update texture
+        self.shader_renderer.update_texture(buffer_data)
+        
+        # Clear and render
+        self.gl_context.clear()
+        self.shader_renderer.render()
+        self.gl_context.swap_buffers()
+    
+    def update_fps(self, fps: int):
+        """
+        GPU visualizer doesn't have FPS display
+        """
+        raise NotImplementedError("FPS display not implemented for GPU visualizer")
+    
+    def should_window_close(self):
+        """
+        Check if user wants to close the window
+        """  
+        return self.gl_context.should_close()
+    
+    def cleanup(self):
+        """
+        Clean shutdown
+        """
+        glfw.terminate()
 
 class GLContext:
     def __init__(self, width=800, height=600, title="Audio Visualizer"):
@@ -158,19 +208,62 @@ class GLContext:
         """
         self.ctx.clear(r, g, b)
 
-class RenderTarget:
+class ShaderRenderer:
 
     SCALOGRAM_TEXTURE_UNIT = 0
 
-    def __init__(self, ctx, program, texture_width, texture_height):
+    def __init__(self, ctx, texture_width, texture_height):
         """
-        Handles quad geometry and texture setup
+        Main GPU rendering component that handles shader compilation, 
+        texture management, and rendering
+
+        Args:
+            ctx (moderngl.Context): The ModernGL context to use for shader 
+                compilation.
+            texture_width (int): The width of the texture.
+            texture_height (int): The height of the texture.
         """
         self.ctx = ctx
-        self.program = program
+        
+        # Compile shaders from files
+        self.shader_program = self._compile_shaders()
+        
+        # Setup rendering components
         self._setup_quad()
-        self._setup_texture(texture_width, texture_height)  # Restore texture setup
+        self._setup_texture(texture_width, texture_height)
     
+    def _compile_shaders(self):
+        """Compile vertex and fragment shaders from files"""
+        vertex_shader = get_vertex_shader_source()
+        fragment_shader = get_fragment_shader_source()
+        
+        logger.info("Compiling shaders...")
+        logger.debug(f"Fragment shader preview: {fragment_shader[:100]}...")
+        
+        program = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
+        logger.info("Shader compilation successful!")
+        
+        return program
+    
+    def _setup_quad(self):
+        """
+        The Quad is a rectangle that covers the entire window. It is the 
+        geometry needed to display the texture on the screen.
+        """
+        quad_vertices = np.array([
+            -1.0, -1.0,  # Bottom-left
+             1.0, -1.0,  # Bottom-right
+            -1.0,  1.0,  # Top-left
+             1.0,  1.0,  # Top-right
+        ], dtype=np.float32)
+        
+        # Vertex Buffer Object stores the quad vertices in GPU memory (tobytes()
+        # removes NumPy stuff that GPU doesn't need)
+        self.vbo = self.ctx.buffer(quad_vertices.tobytes()) 
+
+        # Vertex Array Object binds the VBO to the shader program
+        self.vao = self.ctx.simple_vertex_array(self.shader_program, self.vbo, 'position')
+
     def _setup_texture(self, width, height):
         """
         Create 2D texture for scalogram data
@@ -197,33 +290,14 @@ class RenderTarget:
         self.actual_size = (small_width, small_height)
         
         # Set up uniforms for colormap
-        self.program['scalogram'] = self.SCALOGRAM_TEXTURE_UNIT
+        self.shader_program['scalogram'] = self.SCALOGRAM_TEXTURE_UNIT
         try:
-            self.program['valueMin'] = 0.0
-            self.program['valueMax'] = 1.0
+            self.shader_program['valueMin'] = 0.0
+            self.shader_program['valueMax'] = 1.0
         except KeyError:
             logger.warning("Scaling uniforms not found")
         
         logger.info(f"Audio texture created: {small_width}x{small_height}")
-    
-    def _setup_quad(self):
-        """
-        The Quad is a rectangle that covers the entire window. It is the 
-        geometry needed to display the texture on the screen.
-        """
-        quad_vertices = np.array([
-            -1.0, -1.0,  # Bottom-left
-             1.0, -1.0,  # Bottom-right
-            -1.0,  1.0,  # Top-left
-             1.0,  1.0,  # Top-right
-        ], dtype=np.float32)
-        
-        # Vertex Buffer Object stores the quad vertices in GPU memory (tobytes()
-        # removes NumPy stuff that GPU doesn't need)
-        self.vbo = self.ctx.buffer(quad_vertices.tobytes()) 
-
-        # Vertex Array Object binds the VBO to the shader program
-        self.vao = self.ctx.simple_vertex_array(self.program, self.vbo, 'position')
     
     def update_texture(self, data):
         """
@@ -331,75 +405,14 @@ class AdaptiveScaling:
         
         return self.global_min, self.global_max * self.headroom
 
-class Shader(Plotter):
-    def __init__(self, file_path: str, shape: tuple[int, int], num_frames=64):
-        """
-        Clean, high-level audio visualization using GPU shaders
-        """
-        super().__init__(file_path, shape)
-        
-        logger.info(f"Initializing Shader for {file_path}")
-        self.gl_context = GLContext(title=f"Audio Visualizer - {file_path}")
-        self.program = ShaderSystem.create_program(self.gl_context.ctx)
-        
-        texture_width = self.x_n * num_frames
-        texture_height = self.y_n
-        
-        self.render_target = RenderTarget(
-            self.gl_context.ctx, self.program, texture_width, texture_height
-        )
-        self.scrolling_buffer = ScrollingBuffer(num_frames, self.y_n, self.x_n)
-        self.scaling = AdaptiveScaling()
-        
-        logger.info("Shader system ready")
-        print("Visualizer started - logs in 'shader_debug.log'")
-    
-    def update_plot(self, values: np.ndarray):
-        """
-        Updates the scrolling plot with new data.
 
-        Args:
-            values (np.ndarray): The new data to plot.
-        """
-        self.scrolling_buffer.add_frame(values)
-        buffer_data = self.scrolling_buffer.get_flattened_buffer()
-        
-        # Update adaptive scaling
-        value_min, value_max = self.scaling.update_range(buffer_data)
-        
-        # Update scaling uniforms for colormap
-        try:
-            self.program['valueMin'] = value_min
-            self.program['valueMax'] = value_max
-        except KeyError:
-            pass  # Uniforms might be optimized out
-        
-        # Update texture
-        self.render_target.update_texture(buffer_data)
-        
-        # Clear and render
-        self.gl_context.clear()
-        self.render_target.render()
-        self.gl_context.swap_buffers()
-    
-    def update_fps(self, fps: int):
-        """
-        GPU visualizer doesn't have FPS display
-        """
-        raise NotImplementedError("FPS display not implemented for GPU visualizer")
-    
-    def should_window_close(self):
-        """
-        Check if user wants to close the window
-        """  
-        return self.gl_context.should_close()
-    
-    def cleanup(self):
-        """
-        Clean shutdown
-        """
-        glfw.terminate()
-
+# =============================================================================
+# ALTERNATIVE IMPLEMENTATION: PyQtGraph-based visualizer
+# =============================================================================
+# This is a separate implementation that uses PyQtGraph instead of GPU shaders.
+# It's kept at the bottom to clearly separate it from the main shader-based
+# implementation above.
+# =============================================================================
 
 class PyQtGrapher(Plotter):
     def __init__(self, file_path: str, shape: tuple[int, int]):
@@ -419,49 +432,50 @@ class PyQtGrapher(Plotter):
         self.plot = self.win.addPlot(row=0, col=0, rowspan=1, colspan=1,
                                    title=file_path, enableMenu=False)
 
-        # Setup colormap and plot item
-        colorMap = pg.colormap.get('inferno')
-        self.pcolormesh = pg.PColorMeshItem(colorMap=colorMap,
-                                          levels=(-1, 1),
-                                          enableAutoLevels=False,
-                                          edgeColors=None,
-                                          antialiasing=False)
-        self.plot.addItem(self.pcolormesh)
-
-        # Add colorbar
-        self.bar = pg.ColorBarItem(label="Magnitude",
-                                 interactive=False,
-                                 limits=(0, 1),
-                                 rounding=0.1)
-        self.bar.setImageItem([self.pcolormesh])
-        self.win.addItem(self.bar, 0, 1, 1, 1)
-
-        # Add FPS text
-        self.textBox = pg.TextItem(anchor=(0, 1), fill='black')
-        self.textBox.setPos(1, 1)
-        self.plot.addItem(self.textBox)
-
+        # Configure plot appearance
+        self.plot.setLabel('left', 'Frequency (Hz)')
+        self.plot.setLabel('bottom', 'Time')
+        self.plot.showGrid(x=True, y=True, alpha=0.3)
+        
+        # Set up color map for better visualization
+        self.plot.setColorMap(pg.colormap.get('inferno'))
+        
+        # Initialize empty image item
+        self.img_item = pg.ImageItem()
+        self.plot.addItem(self.img_item)
+        
+        # Set up timer for updates
+        self.timer = pg.QtCore.QTimer()
+        self.timer.timeout.connect(self._update_display)
+        self.timer.start(16)  # ~60 FPS
+        
+        self.latest_data = None
+    
     def update_plot(self, values):
         """
-        Updates the plot with new coefficients values.
+        Updates the plot with new data.
 
         Args:
-            coefs (np.ndarray): The coefficients to update the pcolormesh with.
+            values (np.ndarray): The new data to plot.
         """
-        values = values.T  # Transpose for correct orientation
-        self.pcolormesh.setData(values)
-
+        self.latest_data = values
+    
+    def _update_display(self):
+        """Update the display with latest data"""
+        if self.latest_data is not None:
+            self.img_item.setImage(self.latest_data)
+    
     def update_fps(self, fps: int):
         """
-        Update the text box with the current frames per second (FPS).
+        Updates the FPS display.
 
         Args:
-            fps (int): The FPS value to display.
-        """        
-        self.textBox.setText(f'{fps:.1f} fps')
-
+            fps (int): The current FPS.
+        """
+        self.win.setWindowTitle(f'Continuous Wavelet Transform - {fps} FPS')
+    
     def should_window_close(self):
         """
-        PyQtGraph handles its own event loop
+        Check if user wants to close the window
         """
-        raise NotImplementedError("PyQtGraph-based window-check not implemented yet.")
+        return self.win.isHidden()
