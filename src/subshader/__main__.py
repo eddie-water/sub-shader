@@ -35,8 +35,7 @@ sample_rate = audio_input.get_sample_rate()  # 44.1 kHz
 # GPU version is much faster than CPU version (12 FPS vs 2.6 FPS)
 wavelet = ShadeWavelet(
     sample_rate=sample_rate,
-    window_size=WINDOW_SIZE,
-    ds_stride=1  # No downsampling
+    window_size=WINDOW_SIZE
 )
 
 # Plotter Object - GPU-accelerated shader plot
@@ -56,7 +55,7 @@ fps = FpsUtility()
 
 def main_loop():
     """
-    Main application loop.
+    Main application loop. Loops until audio ends or window is closed.
     
     Processes audio frames through the pipeline:
     1. Extract audio frame
@@ -64,7 +63,6 @@ def main_loop():
     3. Updates shader plot
     4. Monitors FPS 
     
-    Loops until audio ends or window is closed.
     """
     while not plotter.should_window_close():
         # Start frame timing

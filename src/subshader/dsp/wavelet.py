@@ -18,7 +18,7 @@ ROOT_NOTE_A0 = 27.5
 pi = np.pi
 
 class Wavelet(ABC):
-    def __init__(self, sample_rate: int, window_size: int, ds_stride: int = 1):
+    def __init__(self, sample_rate: int, window_size: int):
         """
         Wavelet base class that all other wavelet classes are derived from.
         Uses a list of frequencies that follows the chromatic scale starting at
@@ -39,11 +39,6 @@ class Wavelet(ABC):
                              f"must be greater than 0.")
         self.window_size = window_size
 
-        if ds_stride <= 0:
-            raise ValueError(f"Downsample stride: {ds_stride},",
-                             f"must be greater than 0.")
-        self.ds_stride = ds_stride
-
         # Sampling Parameters
         self.sample_rate = sample_rate
         self.nyquist_freq = (sample_rate / 2.0)
@@ -59,8 +54,8 @@ class Wavelet(ABC):
         self.freqs = self.freqs[self.freqs < self.nyquist_freq]
         self.num_freqs = len(self.freqs)
 
-        # Resultant Shape of the CWT Data with Downsampling
-        self.result_shape = (self.num_freqs, self.window_size // self.ds_stride)
+        # Resultant Shape of the CWT Data 
+        self.result_shape = (self.num_freqs, self.window_size)
 
     def get_shape(self) -> np.ndarray.shape:
         """
@@ -209,7 +204,7 @@ class PyWavelet(Wavelet):
         return coefs_scaled
 
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate: int, window_size: int, ds_stride: int = 1):
+    def __init__(self, sample_rate: int, window_size: int):
         """
         This is a CWT implementation I got from Analyzing Neural Time Series 
         (ANTS) by Mike X Cohen. I had to translate it from Matlab. It manually 
@@ -262,7 +257,7 @@ class AntsWavelet(Wavelet):
         pass
 
 class NumpyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size, ds_stride):
+    def __init__(self, sample_rate, window_size):
         """
         This implements the ANTS CWT using NumPy.
 
@@ -300,7 +295,7 @@ class NumpyWavelet(AntsWavelet):
         return self.tf
     
 class CupyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size, ds_stride):
+    def __init__(self, sample_rate, window_size):
         """
         This implements the ANTS CWT using CuPy to exploit the parallelizable
         aspects of the CWT by running on a GPU. Note - this won't work without
@@ -310,7 +305,7 @@ class CupyWavelet(AntsWavelet):
             sample_rate (int): The rate the data was sampled in Hz
             window_size (int): The length of the data
         """
-        super().__init__(sample_rate, window_size, ds_stride)
+        super().__init__(sample_rate, window_size)
         self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
 
         # Move the wavelet kernels to the GPU
