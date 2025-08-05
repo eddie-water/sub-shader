@@ -21,7 +21,7 @@ from subshader.utils.fps_utility import FpsUtility
 # =============================================================================
 
 WINDOW_SIZE = 2 << 11  # 4k samples per frame
-FILE_PATH = "assets/audio/daw/chirp_beat.wav"
+FILE_PATH = "assets/audio/songs/beltran_soundcloud.wav"
 
 # =============================================================================
 # INITIALIZATION
@@ -44,7 +44,7 @@ plot_shape = wavelet.get_shape()
 plotter = Shader(
     file_path=FILE_PATH,
     frame_shape=plot_shape,
-    num_frames=128
+    num_frames=512
 )
 
 # FPS utility - performance monitoring
@@ -61,7 +61,7 @@ def main_loop():
     Processes audio frames through the pipeline:
     1. Extract audio frame
     2. Compute CWT coefficients
-    3. Update GPU visualization
+    3. Updates shader plot
     4. Monitors FPS 
     
     Loops until audio ends or window is closed.
