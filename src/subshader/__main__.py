@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-Main entry point for the SubShader audio visualization application.
+Main entry point for SubShader, a real-time audio visualizer.
 
 This module orchestrates the audio processing pipeline:
 1. Audio input from file
 2. Time-Frequency Analysis by the Continuous Wavelet Transform (CWT)
 3. GPU-accelerated visualization using OpenGL shaders
 
-Real-time audio visualization with GPU acceleration
 """
 
 import time
@@ -15,7 +14,7 @@ import time
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import ShadeWavelet
 from subshader.viz.plotter import Shader
-from subshader.utils.fps_utility import FPSUtility
+from subshader.utils.fps_utility import FpsUtility
 
 # =============================================================================
 # CONSTANTS
@@ -29,18 +28,18 @@ FILE_PATH = "assets/audio/daw/chirp_beat.wav"
 # INITIALIZATION
 # =============================================================================
 
-# Audio Input - handles file reading and frame extraction
+# Audio Input - handles file reading and audio frame getter 
 audio_input = AudioInput(path=FILE_PATH, window_size=WINDOW_SIZE)
 sample_rate = audio_input.get_sample_rate()  # 44.1 kHz
 
-# Wavelet Object - performs Continuous Wavelet Transform
+# Wavelet Object - performs Continuous Wavelet Transform (CWT)
 wavelet = ShadeWavelet(
     sample_rate=sample_rate,
     window_size=WINDOW_SIZE,
     ds_stride=DOWNSAMLPLE_STRIDE
 )
 
-# Plotter Object - GPU-accelerated visualization
+# Plotter Object - GPU-accelerated shader plot
 plot_shape = wavelet.get_shape()
 plotter = Shader(
     file_path=FILE_PATH,
@@ -49,7 +48,7 @@ plotter = Shader(
 )
 
 # FPS utility - performance monitoring
-fps = FPSUtility()
+fps = FpsUtility()
 
 # =============================================================================
 # MAIN LOOP

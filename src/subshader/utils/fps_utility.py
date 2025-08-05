@@ -2,7 +2,7 @@ import time
 from typing import List
 
 
-class FPSUtility:
+class FpsUtility:
     """
     Utility class for handling FPS timing and calculation.
     """
