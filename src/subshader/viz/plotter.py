@@ -237,7 +237,7 @@ class ShaderRenderer:
         # Bind the graphics geometry to the shader program
         self._setup_rendering_geometry()
 
-        # Setup texture 
+        # Setup texture TODO ISSUE-33 NOW Clean comment and clean up setup texture and update texture
         self._setup_texture(texture_width, texture_height)
     
     def _compile_shaders(self):
@@ -284,6 +284,7 @@ class ShaderRenderer:
             width (int): Width of the texture.
             height (int): Height of the texture.
         """
+        # TODO ISSUE-33 NOW Clean comment and clean up setup texture and update texture
         # Use a much smaller texture size to avoid WSL/OpenGL issues
         small_width = min(width, 1024)  # Max 1024 pixels wide
         small_height = min(height, 256)  # Max 256 pixels tall
@@ -318,6 +319,7 @@ class ShaderRenderer:
         Args:
             data (np.ndarray): 2D array of scalogram data to upload to texture.
         """
+        # TODO ISSUE-33 NOW Clean comment and clean up setup texture and update texture
         height, width = data.shape
         target_width, target_height = self.actual_size
         
@@ -375,6 +377,10 @@ class ScrollingBuffer:
         self.width = width
         self.frames = np.zeros((num_frames, height, width), dtype=np.float32)
         self.frame_index = 0
+        
+        # Pre-allocate flattened buffer to avoid expensive reshape/roll operations
+        self.flattened_buffer = np.zeros((height, num_frames * width), dtype=np.float32)
+        self._update_flattened_buffer()
     
     def add_frame(self, frame_data):
         """Add new frame to circular buffer"""
@@ -383,16 +389,39 @@ class ScrollingBuffer:
         
         self.frames[self.frame_index] = frame_data
         self.frame_index = (self.frame_index + 1) % self.num_frames
+        
+        # Update flattened buffer incrementally
+        self._update_flattened_buffer()
+    
+    def _update_flattened_buffer(self):
+        """Update flattened buffer without expensive roll/reshape operations"""
+        # Calculate the correct order of frames
+        frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
+        
+        # Copy frames in correct order directly to flattened buffer
+        for i, frame_i in enumerate(frame_order):
+            start_col = i * self.width
+            end_col = start_col + self.width
+            self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
     
     def get_flattened_buffer(self):
-        """Get time-ordered flattened buffer for texture"""
-        rolled = np.roll(self.frames, -self.frame_index, axis=0)
-        return rolled.transpose(1, 0, 2).reshape(self.height, self.num_frames * self.width)
+        """
+        Get time-ordered flattened buffer for texture
+        
+        Returns:
+            np.ndarray: Time-ordered flattened buffer.
+        """
+        return self.flattened_buffer
 
 class AdaptiveScaling:
     def __init__(self, adaptation_rate=0.05, decay_rate=0.999, headroom=1.2):
         """
         Handles dynamic range scaling for audio visualization
+        
+        Args:
+            adaptation_rate (float): Rate at which the global maximum is updated.
+            decay_rate (float): Rate at which the global maximum decays when 
+                no new peaks are detected.
         """
         self.adaptation_rate = adaptation_rate
         self.decay_rate = decay_rate
@@ -401,9 +430,7 @@ class AdaptiveScaling:
         self.global_min = 0.0
     
     def update_range(self, data):
-        """
-        Update scaling range based on current data
-        """
+        """Update scaling range based on current data"""
         current_max = np.max(data)
         
         if current_max > self.global_max:
