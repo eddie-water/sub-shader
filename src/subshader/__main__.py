@@ -1,40 +1,75 @@
-# src/subshader/__main__.py
+#!/usr/bin/env python3
+"""
+Main entry point for the SubShader audio visualization application.
+
+This module orchestrates the audio processing pipeline:
+1. Audio input from file
+2. Time-Frequency Analysis by the Continuous Wavelet Transform (CWT)
+3. GPU-accelerated visualization using OpenGL shaders
+
+Real-time audio visualization with GPU acceleration
+"""
+
 import time
 
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import ShadeWavelet
 from subshader.viz.plotter import Shader
+from subshader.utils.fps_utility import FPSUtility
 
-WINDOW_SIZE = 2 << 11 # 4k
-DOWNSAMLPLE_STRIDE = 1
+# =============================================================================
+# CONSTANTS
+# =============================================================================
 
+WINDOW_SIZE = 2 << 11  # 4k samples per frame
+DOWNSAMLPLE_STRIDE = 1  # No downsampling
 FILE_PATH = "assets/audio/daw/chirp_beat.wav"
 
-# Audio Input, Audio Characteristics 
-audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
+# =============================================================================
+# INITIALIZATION
+# =============================================================================
 
-sample_rate = audio_input.get_sample_rate() # 44.1 kHz
+# Audio Input - handles file reading and frame extraction
+audio_input = AudioInput(path=FILE_PATH, window_size=WINDOW_SIZE)
+sample_rate = audio_input.get_sample_rate()  # 44.1 kHz
 
-# Wavelet Object
-wavelet = ShadeWavelet(sample_rate = sample_rate, 
-                       window_size = WINDOW_SIZE,
-                       ds_stride = DOWNSAMLPLE_STRIDE)
+# Wavelet Object - performs Continuous Wavelet Transform
+wavelet = ShadeWavelet(
+    sample_rate=sample_rate,
+    window_size=WINDOW_SIZE,
+    ds_stride=DOWNSAMLPLE_STRIDE
+)
 
-# Plotter Object
+# Plotter Object - GPU-accelerated visualization
 plot_shape = wavelet.get_shape()
-plotter = Shader(file_path = FILE_PATH,
-                 frame_shape = plot_shape,
-                 num_frames = 128)
+plotter = Shader(
+    file_path=FILE_PATH,
+    frame_shape=plot_shape,
+    num_frames=128
+)
 
-fps_timer = time.perf_counter()
-frame_times = []
+# FPS utility - performance monitoring
+fps = FPSUtility()
+
+# =============================================================================
+# MAIN LOOP
+# =============================================================================
 
 def main_loop():
-    global fps_timer
-
+    """
+    Main application loop.
+    
+    Processes audio frames through the pipeline:
+    1. Extract audio frame
+    2. Compute CWT coefficients
+    3. Update GPU visualization
+    4. Monitors FPS 
+    
+    Loops until audio ends or window is closed.
+    """
     while not plotter.should_window_close():
-        # FPS
-        frame_start = time.perf_counter()
+        # Start frame timing
+        frame_start = fps.start_frame()
 
         # Grab a frame of audio
         audio_data = audio_input.get_frame()
@@ -49,18 +84,16 @@ def main_loop():
         # Update plot
         plotter.update_plot(coefs)
 
-        # FPS 
-        frame_end = time.perf_counter()
-        frame_times.append(frame_end - frame_start)
-        if time.time() - fps_timer > 1.0 and len(frame_times) > 0:
-            avg_frame = sum(frame_times) / len(frame_times)
-            print(f"FPS: {1.0 / avg_frame:.2f}")
-            frame_times.clear()
-            fps_timer = time.time()
+        # End frame timing and report FPS if needed
+        fps.end_frame_and_report(frame_start)
 
     # Clean shutdown
     plotter.cleanup()
 
-# Main entry point
+
+# =============================================================================
+# ENTRY POINT
+# =============================================================================
+
 if __name__ == '__main__':
     main_loop()
