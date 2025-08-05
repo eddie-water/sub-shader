@@ -29,19 +29,28 @@ vec3 custom_colormap(float t) {
     // Similar to professional DAW spectrum analyzers
     t = clamp(t, 0.0, 1.0);
     
-    if (t < 0.3) {
-        // Dark blue to purple for quiet parts
-        return mix(vec3(0.0, 0.0, 0.3), vec3(0.3, 0.0, 0.5), t / 0.3);
-    } else if (t < 0.6) {
-        // Purple to red for medium intensity
-        return mix(vec3(0.3, 0.0, 0.5), vec3(1.0, 0.0, 0.0), (t - 0.3) / 0.3);
-    } else if (t < 0.8) {
-        // Red to orange for high intensity
-        return mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.5, 0.0), (t - 0.6) / 0.2);
-    } else {
-        // Orange to white for maximum intensity
-        return mix(vec3(1.0, 0.5, 0.0), vec3(1.0, 1.0, 1.0), (t - 0.8) / 0.2);
-    }
+    // Define color stops with their positions
+    vec3 color1 = vec3(0.0, 0.0, 0.3);   // Dark blue at 0.0
+    vec3 color2 = vec3(0.3, 0.0, 0.5);   // Purple at 0.3
+    vec3 color3 = vec3(1.0, 0.0, 0.0);   // Red at 0.6
+    vec3 color4 = vec3(1.0, 0.5, 0.0);   // Orange at 0.8
+    vec3 color5 = vec3(1.0, 1.0, 1.0);   // White at 1.0
+    
+    // Use smoothstep to create smooth transitions between segments
+    float segment1 = smoothstep(0.0, 0.3, t) * (1.0 - smoothstep(0.3, 0.6, t));
+    float segment2 = smoothstep(0.3, 0.6, t) * (1.0 - smoothstep(0.6, 0.8, t));
+    float segment3 = smoothstep(0.6, 0.8, t) * (1.0 - smoothstep(0.8, 1.0, t));
+    float segment4 = smoothstep(0.8, 1.0, t);
+    
+    // Calculate interpolated colors for each segment
+    vec3 segment_color1 = mix(color1, color2, smoothstep(0.0, 0.3, t));
+    vec3 segment_color2 = mix(color2, color3, smoothstep(0.3, 0.6, t));
+    vec3 segment_color3 = mix(color3, color4, smoothstep(0.6, 0.8, t));
+    vec3 segment_color4 = mix(color4, color5, smoothstep(0.8, 1.0, t));
+    
+    // Combine segments using smoothstep weights
+    return segment_color1 * segment1 + segment_color2 * segment2 + 
+           segment_color3 * segment3 + segment_color4 * segment4;
 }
 
 void main() {

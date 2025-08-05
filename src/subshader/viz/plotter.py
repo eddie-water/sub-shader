@@ -94,8 +94,15 @@ class Shader(Plotter):
         self.scrolling_buffer.add_frame(values)
         buffer_data = self.scrolling_buffer.get_flattened_buffer()
         
+        # Debug: Log the actual data range
+        data_min, data_max = np.min(buffer_data), np.max(buffer_data)
+        logger.info(f"Data range: {data_min:.6f} to {data_max:.6f}")
+        
         # Update adaptive scaling
         value_min, value_max = self.scaling.update_range(buffer_data)
+        
+        # Debug: Log the scaling range
+        logger.info(f"Scaling range: {value_min:.6f} to {value_max:.6f}")
         
         # Update scaling uniforms for colormap
         try:
@@ -414,7 +421,7 @@ class ScrollingBuffer:
         return self.flattened_buffer
 
 class AdaptiveScaling:
-    def __init__(self, adaptation_rate=0.05, decay_rate=0.999, headroom=1.2):
+    def __init__(self, adaptation_rate=0.5, decay_rate=0.7, headroom=1.0):
         """
         Handles dynamic range scaling for audio visualization
         
@@ -422,6 +429,7 @@ class AdaptiveScaling:
             adaptation_rate (float): Rate at which the global maximum is updated.
             decay_rate (float): Rate at which the global maximum decays when 
                 no new peaks are detected.
+            headroom (float): Multiplier for the maximum value to provide visual headroom.
         """
         self.adaptation_rate = adaptation_rate
         self.decay_rate = decay_rate
@@ -434,14 +442,17 @@ class AdaptiveScaling:
         current_max = np.max(data)
         
         if current_max > self.global_max:
+            # Extremely aggressive adaptation
             self.global_max = (self.adaptation_rate * current_max + 
                              (1 - self.adaptation_rate) * self.global_max)
         else:
+            # Very fast decay to show quiet details
             self.global_max = (self.decay_rate * self.global_max + 
                              (1 - self.decay_rate) * current_max)
         
         self.global_max = max(self.global_max, 0.001)
         
+        # No headroom - let brightest parts reach maximum colors
         return self.global_min, self.global_max * self.headroom
 
 
