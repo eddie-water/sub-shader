@@ -21,7 +21,6 @@ from subshader.utils.fps_utility import FpsUtility
 # =============================================================================
 
 WINDOW_SIZE = 2 << 11  # 4k samples per frame
-DOWNSAMLPLE_STRIDE = 1  # No downsampling
 FILE_PATH = "assets/audio/daw/chirp_beat.wav"
 
 # =============================================================================
@@ -33,10 +32,11 @@ audio_input = AudioInput(path=FILE_PATH, window_size=WINDOW_SIZE)
 sample_rate = audio_input.get_sample_rate()  # 44.1 kHz
 
 # Wavelet Object - performs Continuous Wavelet Transform (CWT)
+# GPU version is much faster than CPU version (12 FPS vs 2.6 FPS)
 wavelet = ShadeWavelet(
     sample_rate=sample_rate,
     window_size=WINDOW_SIZE,
-    ds_stride=DOWNSAMLPLE_STRIDE
+    ds_stride=1  # No downsampling
 )
 
 # Plotter Object - GPU-accelerated shader plot

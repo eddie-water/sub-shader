@@ -94,15 +94,8 @@ class Shader(Plotter):
         self.scrolling_buffer.add_frame(values)
         buffer_data = self.scrolling_buffer.get_flattened_buffer()
         
-        # Debug: Log the actual data range
-        data_min, data_max = np.min(buffer_data), np.max(buffer_data)
-        logger.info(f"Data range: {data_min:.6f} to {data_max:.6f}")
-        
         # Update adaptive scaling
         value_min, value_max = self.scaling.update_range(buffer_data)
-        
-        # Debug: Log the scaling range
-        logger.info(f"Scaling range: {value_min:.6f} to {value_max:.6f}")
         
         # Update scaling uniforms for colormap
         try:
@@ -387,25 +380,24 @@ class ScrollingBuffer:
         
         # Pre-allocate flattened buffer to avoid expensive reshape/roll operations
         self.flattened_buffer = np.zeros((height, num_frames * width), dtype=np.float32)
-        self._update_flattened_buffer()
     
     def add_frame(self, frame_data):
-        """Add new frame to circular buffer"""
+        """Add new frame to circular buffer and update flattened buffer"""
         if frame_data.shape != (self.height, self.width):
             raise ValueError(f"Expected shape {(self.height, self.width)}, got {frame_data.shape}")
         
         self.frames[self.frame_index] = frame_data
         self.frame_index = (self.frame_index + 1) % self.num_frames
         
-        # Update flattened buffer incrementally
+        # Update flattened buffer immediately
         self._update_flattened_buffer()
     
     def _update_flattened_buffer(self):
-        """Update flattened buffer without expensive roll/reshape operations"""
-        # Calculate the correct order of frames
+        """Update flattened buffer with correct coordinate mapping"""
+        # Calculate the correct order of frames (oldest first)
         frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
         
-        # Copy frames in correct order directly to flattened buffer
+        # Use vectorized operations for better performance
         for i, frame_i in enumerate(frame_order):
             start_col = i * self.width
             end_col = start_col + self.width

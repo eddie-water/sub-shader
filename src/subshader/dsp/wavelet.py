@@ -338,12 +338,8 @@ class CupyWavelet(AntsWavelet):
             conv_pow = cp.abs(conv)**2
             self.tf_gpu[i,:] = conv_pow
 
-        # Downsample the result to reduce the size of the output
-        # TODO ISSUE-36 Why am I downsampling here but not in NumPy Class?
-        self.tf_downsampled = self.tf_gpu[:, ::self.ds_stride]
-
-        # Move the result back to the CPU
-        return cp.asnumpy(self.tf_downsampled)
+        # Move the result back to the CPU (no downsampling)
+        return cp.asnumpy(self.tf_gpu)
     
 class ShadeWavelet(CupyWavelet):
     """
