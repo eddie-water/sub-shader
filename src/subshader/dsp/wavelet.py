@@ -336,7 +336,7 @@ class CupyWavelet(AntsWavelet):
         # Move the result back to the CPU (no downsampling)
         return cp.asnumpy(self.tf_gpu)
     
-class ShadeWavelet(CupyWavelet):
+class CuWavelet(CupyWavelet):
     """
     This just kind of renames the class becuase it sounds ~cool~
     """

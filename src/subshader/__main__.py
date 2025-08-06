@@ -10,7 +10,7 @@ This module orchestrates the audio processing pipeline:
 """
 
 from subshader.audio.audio_input import AudioInput
-from subshader.dsp.wavelet import ShadeWavelet
+from subshader.dsp.wavelet import CuWavelet
 from subshader.viz.plotter import Shader
 from subshader.utils.fps_utility import FpsUtility
 
@@ -38,20 +38,12 @@ class EndOfAudioException(Exception):
 audio_input = AudioInput(path=FILE_PATH, window_size=WINDOW_SIZE)
 sample_rate = audio_input.get_sample_rate()  # 44.1 kHz
 
-# Wavelet Object - performs Continuous Wavelet Transform (CWT)
-# GPU version is much faster than CPU version (12 FPS vs 2.6 FPS)
-wavelet = ShadeWavelet(
-    sample_rate=sample_rate,
-    window_size=WINDOW_SIZE
-)
+# Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
+wavelet = CuWavelet(sample_rate=sample_rate, window_size=WINDOW_SIZE)
 
 # Plotter Object - GPU-accelerated shader plot
 plot_shape = wavelet.get_shape()
-plotter = Shader(
-    file_path=FILE_PATH,
-    frame_shape=plot_shape,
-    num_frames=NUM_FRAMES
-)
+plotter = Shader(file_path=FILE_PATH, frame_shape=plot_shape, num_frames=NUM_FRAMES)
 
 # FPS utility - performance monitoring
 fps = FpsUtility()
