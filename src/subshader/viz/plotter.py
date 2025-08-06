@@ -79,7 +79,6 @@ class Shader(Plotter):
             self.gl_context.ctx, texture_width, texture_height
         )
         self.scrolling_buffer = ScrollingBuffer(num_frames, self.y_n, self.x_n)
-        self.scaling = AdaptiveScaling()
         
         logger.info("Shader system ready")
         print("Visualizer started - logs in 'shader_debug.log'")
@@ -93,16 +92,6 @@ class Shader(Plotter):
         """
         self.scrolling_buffer.add_frame(values)
         buffer_data = self.scrolling_buffer.get_flattened_buffer()
-        
-        # Update adaptive scaling
-        value_min, value_max = self.scaling.update_range(buffer_data)
-        
-        # Update scaling uniforms for colormap
-        try:
-            self.shader_renderer.shader_program['valueMin'] = value_min
-            self.shader_renderer.shader_program['valueMax'] = value_max
-        except KeyError:
-            pass  # Uniforms might be optimized out
         
         # Update texture
         self.shader_renderer.update_texture(buffer_data)
@@ -237,7 +226,7 @@ class ShaderRenderer:
         # Bind the graphics geometry to the shader program
         self._setup_rendering_geometry()
 
-        # Setup texture TODO ISSUE-33 NOW Clean comment and clean up setup texture and update texture
+        # Prepare the texture 
         self._setup_texture(texture_width, texture_height)
     
     def _compile_shaders(self):
@@ -284,10 +273,12 @@ class ShaderRenderer:
             width (int): Width of the texture.
             height (int): Height of the texture.
         """
-        # TODO ISSUE-33 NOW Clean comment and clean up setup texture and update texture
-        # Use a much smaller texture size to avoid WSL/OpenGL issues
-        small_width = min(width, 1024)  # Max 1024 pixels wide
-        small_height = min(height, 256)  # Max 256 pixels tall
+        # Texture limits for 16 GiB VRAM (using max 4 GiB = 1/4 of VRAM)
+        # 4 GiB = 4,194,304 KiB = 4,294,967,296 bytes
+        # For float32: 4,294,967,296 ÷ 4 = 1,073,741,824 pixels max
+        # Conservative limit: 8192 x 8192 = 67,108,864 pixels = ~256 MiB
+        small_width = min(width, 8192)   # Max 8192 pixels wide
+        small_height = min(height, 8192)  # Max 8192 pixels tall
         
         logger.info(f"Creating smaller texture: {small_width}x{small_height} (original: {width}x{height})")
         
@@ -311,7 +302,47 @@ class ShaderRenderer:
             logger.warning("Scaling uniforms not found")
         
         logger.info(f"Audio texture created: {small_width}x{small_height}")
-    
+
+    def _downsample_for_texture(self, data):
+        """
+        Downsample data to fit GPU texture constraints while preserving 
+        visualization quality. 
+
+        Args:
+            data (np.ndarray): 2D array of scalogram data
+
+        Returns:
+            np.ndarray: Downsampled data that fits the texture size
+        """
+        height, width = data.shape
+        target_width, target_height = self.actual_size
+
+        # If data already fits texture size, return as-is
+        if height == target_height and width == target_width:
+            return data
+        
+        # Simple downsampling by taking every Nth sample
+        h_step = max(1, height // target_height)
+        w_step = max(1, width // target_width)
+        
+        downsampled = data[::h_step, ::w_step]
+        
+        # Crop or pad to exact size
+        if downsampled.shape[0] > target_height:
+            downsampled = downsampled[:target_height, :]
+        if downsampled.shape[1] > target_width:
+            downsampled = downsampled[:, :target_width]
+            
+        # Pad if needed
+        if downsampled.shape != (target_height, target_width):
+            padded = np.zeros((target_height, target_width), dtype=np.float32)
+            h, w = downsampled.shape
+            padded[:h, :w] = downsampled
+            downsampled = padded
+        
+        logger.debug(f"Downsampled {data.shape} -> {downsampled.shape}")
+        return downsampled
+
     def update_texture(self, data):
         """
         Update texture with new data
@@ -319,38 +350,14 @@ class ShaderRenderer:
         Args:
             data (np.ndarray): 2D array of scalogram data to upload to texture.
         """
-        # TODO ISSUE-33 NOW Clean comment and clean up setup texture and update texture
-        height, width = data.shape
-        target_width, target_height = self.actual_size
+        # Downsample data for visualization while preserving CWT accuracy
+        downsampled_data = self._downsample_for_texture(data)
         
-        # Downsample the data to fit the smaller texture
-        if height != target_height or width != target_width:
-            # Simple downsampling by taking every Nth sample
-            h_step = max(1, height // target_height)
-            w_step = max(1, width // target_width)
-            
-            downsampled = data[::h_step, ::w_step]
-            
-            # Crop or pad to exact size
-            if downsampled.shape[0] > target_height:
-                downsampled = downsampled[:target_height, :]
-            if downsampled.shape[1] > target_width:
-                downsampled = downsampled[:, :target_width]
-                
-            # Pad if needed
-            if downsampled.shape != (target_height, target_width):
-                padded = np.zeros((target_height, target_width), dtype=np.float32)
-                h, w = downsampled.shape
-                padded[:h, :w] = downsampled
-                downsampled = padded
-            
-            data = downsampled
+        # Send data to GPU
+        self.texture.write(downsampled_data.astype('f4').tobytes())
+        self.texture.use(location=self.SCALOGRAM_TEXTURE_UNIT)
         
-        # Send data to GPU connect the ??? texture to the shader ?? 
-        self.texture.write(data.astype('f4').tobytes())
-        self.texture.use(location = self.SCALOGRAM_TEXTURE_UNIT)
-        
-        logger.debug(f"Downsampled texture updated: {data.shape}, range {data.min():.3f}-{data.max():.3f}")
+        logger.debug(f"Texture updated: {downsampled_data.shape}, range {downsampled_data.min():.3f}-{downsampled_data.max():.3f}")
     
     def render(self):
         """
@@ -411,41 +418,6 @@ class ScrollingBuffer:
             np.ndarray: Time-ordered flattened buffer.
         """
         return self.flattened_buffer
-
-class AdaptiveScaling:
-    def __init__(self, adaptation_rate=0.5, decay_rate=0.7, headroom=1.0):
-        """
-        Handles dynamic range scaling for audio visualization
-        
-        Args:
-            adaptation_rate (float): Rate at which the global maximum is updated.
-            decay_rate (float): Rate at which the global maximum decays when 
-                no new peaks are detected.
-            headroom (float): Multiplier for the maximum value to provide visual headroom.
-        """
-        self.adaptation_rate = adaptation_rate
-        self.decay_rate = decay_rate
-        self.headroom = headroom
-        self.global_max = 0.01
-        self.global_min = 0.0
-    
-    def update_range(self, data):
-        """Update scaling range based on current data"""
-        current_max = np.max(data)
-        
-        if current_max > self.global_max:
-            # Extremely aggressive adaptation
-            self.global_max = (self.adaptation_rate * current_max + 
-                             (1 - self.adaptation_rate) * self.global_max)
-        else:
-            # Very fast decay to show quiet details
-            self.global_max = (self.decay_rate * self.global_max + 
-                             (1 - self.decay_rate) * current_max)
-        
-        self.global_max = max(self.global_max, 0.001)
-        
-        # No headroom - let brightest parts reach maximum colors
-        return self.global_min, self.global_max * self.headroom
 
 
 # =============================================================================

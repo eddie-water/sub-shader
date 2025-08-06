@@ -20,8 +20,9 @@ from subshader.utils.fps_utility import FpsUtility
 # CONSTANTS
 # =============================================================================
 
-WINDOW_SIZE = 2 << 11  # 4k samples per frame
+WINDOW_SIZE = 2 << 12  # 4k samples per frame
 FILE_PATH = "assets/audio/songs/beltran_soundcloud.wav"
+NUM_FRAMES = 128
 
 # =============================================================================
 # INITIALIZATION
@@ -43,7 +44,7 @@ plot_shape = wavelet.get_shape()
 plotter = Shader(
     file_path=FILE_PATH,
     frame_shape=plot_shape,
-    num_frames=512
+    num_frames=NUM_FRAMES
 )
 
 # FPS utility - performance monitoring
@@ -93,4 +94,9 @@ def main_loop():
 # =============================================================================
 
 if __name__ == '__main__':
-    main_loop()
+    try:
+        main_loop()
+    except KeyboardInterrupt:
+        print()
+        print("Keyboard Interrupt received. Shutting down gracefully...")
+        plotter.cleanup()
