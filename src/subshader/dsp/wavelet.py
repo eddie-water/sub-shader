@@ -74,7 +74,7 @@ class Wavelet(ABC):
             int: Number of frequencies in the CWT
         """
         return self.num_freqs
-    
+  
     def compute_cwt(self, audio_data: np.ndarray) -> np.ndarray:
         """
         Performs the Continuous Wavelet Transform (CWT) on raw audio data and 
@@ -144,6 +144,16 @@ class Wavelet(ABC):
         
         return coefs_norm
     
+    @abstractmethod
+    def cleanup(self):
+        """
+        Clean up any resources used by the wavelet implementation.
+        
+        This method should be overridden by subclasses that allocate
+        significant resources (especially GPU memory).
+        """
+        pass
+
 class PyWavelet(Wavelet):
     def __init__(self, sample_rate, window_size):
         """
@@ -202,6 +212,14 @@ class PyWavelet(Wavelet):
         coefs_scaled = coefs_raw / np.sqrt(self.scales[:, None])
 
         return coefs_scaled
+    
+    def cleanup(self):
+        """
+        Clean up any resources used by PyWavelet.
+        
+        PyWavelet doesn't allocate significant resources, so this is a no-op.
+        """
+        pass
 
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate: int, window_size: int):
@@ -294,6 +312,14 @@ class NumpyWavelet(AntsWavelet):
 
         return self.tf
     
+    def cleanup(self):
+        """
+        Clean up any resources used by NumpyWavelet.
+        
+        NumpyWavelet doesn't allocate significant resources, so this is a no-op.
+        """
+        pass
+    
 class CupyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size):
         """
@@ -310,6 +336,9 @@ class CupyWavelet(AntsWavelet):
 
         # Move the wavelet kernels to the GPU
         self.wavelet_kernels = cp.asarray(self.wavelet_kernels)
+        
+        # Track GPU memory allocations for cleanup
+        self._gpu_allocations = []
 
     # TODO ISSUE-36 Investigate writing a custom GPU kernel rather than using CuPy
     def class_specific_cwt(self, data) -> np.ndarray:
@@ -335,6 +364,37 @@ class CupyWavelet(AntsWavelet):
 
         # Move the result back to the CPU (no downsampling)
         return cp.asnumpy(self.tf_gpu)
+    
+    def cleanup(self):
+        """
+        Clean up GPU memory allocations.
+        
+        This function explicitly frees GPU memory to prevent memory leaks
+        and ensure proper resource management.
+        """
+        try:
+            # Free GPU arrays
+            if hasattr(self, 'tf_gpu'):
+                del self.tf_gpu
+                self.tf_gpu = None
+            
+            if hasattr(self, 'wavelet_kernels'):
+                del self.wavelet_kernels
+                self.wavelet_kernels = None
+            
+            # Clear any cached GPU memory
+            cp.get_default_memory_pool().free_all_blocks()
+            cp.get_default_pinned_memory_pool().free_all_blocks()
+
+        except Exception as e:
+            print(f"Warning: Error during GPU cleanup: {e}")
+    
+    def __del__(self):
+        """Destructor to ensure GPU memory is freed when object is garbage collected."""
+        try:
+            self.cleanup()
+        except:
+            pass
     
 class CuWavelet(CupyWavelet):
     """

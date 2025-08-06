@@ -133,6 +133,13 @@ class GLContext:
         if not glfw.init():
             raise RuntimeError("Failed to initialize GLFW")
         
+        # Set up GLFW error callback to redirect messages to log
+        self._setup_glfw_error_callback()
+        
+        # WSL-specific GLFW hints to reduce escape sequence issues
+        glfw.window_hint(glfw.CLIENT_API, glfw.OPENGL_API)
+        glfw.window_hint(glfw.CONTEXT_CREATION_API, glfw.NATIVE_CONTEXT_API)
+        
         # Set OpenGL context version hints before creating window
         # Request OpenGL 3.3 Core Profile for modern shader support
         # Core profile (no deprecated features)
@@ -173,6 +180,34 @@ class GLContext:
         self.ctx.disable(moderngl.CULL_FACE)
         
         logger.info("Graphics context initialized successfully")
+    
+    def _setup_glfw_error_callback(self):
+        """
+        Set up GLFW error callback to redirect messages to log instead of terminal.
+        """
+        def glfw_error_callback(error_code, description):
+            """
+            GLFW error callback that redirects messages to log.
+            
+            Args:
+                error_code: GLFW error code
+                description: Error description string
+            """
+            # Log WSL-specific escape sequence messages at debug level
+            if any(msg in description for msg in [
+                "Dropped Escape call",
+                "ulEscapeCode", 
+                "Invalid escape sequence",
+                "Unknown escape sequence"
+            ]):
+                logger.debug(f"GLFW WSL escape sequence: {description}")
+                return
+            
+            # Log other GLFW errors at warning level
+            logger.warning(f"GLFW Error {error_code}: {description}")
+        
+        glfw.set_error_callback(glfw_error_callback)
+        logger.debug("GLFW error callback configured")
     
     def should_close(self):
         """

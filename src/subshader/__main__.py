@@ -9,6 +9,7 @@ This module orchestrates the audio processing pipeline:
 
 """
 
+from subshader.utils.os_env_setup import setup_all_environments
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import CuWavelet
 from subshader.viz.plotter import Shader
@@ -23,7 +24,7 @@ FILE_PATH = "assets/audio/songs/beltran_soundcloud.wav"
 NUM_FRAMES = 128
 
 # =============================================================================
-# CUSTOM EXCEPTIONS
+# EXCEPTIONS
 # =============================================================================
 
 class EndOfAudioException(Exception):
@@ -33,6 +34,13 @@ class EndOfAudioException(Exception):
 class WindowCloseException(Exception):
     """Raised when the window is closed."""
     pass
+
+# Gracefully exit on these exceptions
+GRACEFUL_EXIT_EXCEPTIONS = (
+    KeyboardInterrupt,
+    EndOfAudioException, 
+    WindowCloseException
+)
 
 # =============================================================================
 # INITIALIZATION
@@ -58,14 +66,14 @@ fps = FpsUtility()
 
 def main_loop():
     """
-    Main application loop. Loops until audio ends or window is closed.
-    
+    Main loop. Loops until audio ends or window is closed.
+
     Processes audio frames through the pipeline:
-    1. Extract audio frame
-    2. Compute CWT coefficients
-    3. Updates shader plot
-    4. Monitors FPS 
-    
+    - Gets frame of audio data
+    - Compute CWT coefficients on the audio
+    - Updates the plot with normalized CWT coefficients
+    - Monitors FPS 
+
     """
     while not plotter.should_window_close():
         # Start frame timing
@@ -92,7 +100,9 @@ def main_loop():
 
 def everybody_cleanup():
     """Clean up all resources in the correct order."""
+    print("Cleaning up resources and shutting down gracefully...")
     audio_input.cleanup()  # Close audio file
+    wavelet.cleanup()      # Clean up GPU memory
     plotter.cleanup()      # Terminate GLFW and OpenGL
 
 # =============================================================================
@@ -100,13 +110,13 @@ def everybody_cleanup():
 # =============================================================================
 
 if __name__ == '__main__':
+    setup_all_environments()
     try:
         main_loop()
-    except (KeyboardInterrupt, EndOfAudioException, WindowCloseException) as e:
+    except GRACEFUL_EXIT_EXCEPTIONS as e:
         print()
         if isinstance(e, KeyboardInterrupt):
             print("Keyboard Interrupt received.")
         else:
             print(f"{e} received.")
-    print("Cleaning up resources and shutting down gracefully...")
     everybody_cleanup()
