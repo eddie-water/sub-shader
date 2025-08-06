@@ -9,8 +9,6 @@ This module orchestrates the audio processing pipeline:
 
 """
 
-import time
-
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import ShadeWavelet
 from subshader.viz.plotter import Shader
@@ -23,6 +21,14 @@ from subshader.utils.fps_utility import FpsUtility
 WINDOW_SIZE = 2 << 12  # 4k samples per frame
 FILE_PATH = "assets/audio/songs/beltran_soundcloud.wav"
 NUM_FRAMES = 128
+
+# =============================================================================
+# CUSTOM EXCEPTIONS
+# =============================================================================
+
+class EndOfAudioException(Exception):
+    """Raised when the audio file has been completely processed."""
+    pass
 
 # =============================================================================
 # INITIALIZATION
@@ -69,12 +75,9 @@ def main_loop():
         # Start frame timing
         frame_start = fps.start_frame()
 
-        # Grab a frame of audio
-        audio_data = audio_input.get_frame()
-
-        if audio_data is None:
-            print("End of audio reached")
-            break
+        # Grab a frame of audio and check for end of file
+        if (audio_data := audio_input.get_frame()) is None:
+           raise EndOfAudioException("Audio file processing complete")
 
         # Compute CWT on that frame
         coefs = wavelet.compute_cwt(audio_data)
@@ -85,9 +88,14 @@ def main_loop():
         # End frame timing and report FPS if needed
         fps.end_frame_and_report(frame_start)
 
-    # Clean shutdown
-    plotter.cleanup()
+# =============================================================================
+# CLEANUP FUNCTION
+# =============================================================================
 
+def everybody_cleanup():
+    """Clean up all resources in the correct order."""
+    audio_input.cleanup()  # Close audio file
+    plotter.cleanup()      # Terminate GLFW and OpenGL
 
 # =============================================================================
 # ENTRY POINT
@@ -96,7 +104,11 @@ def main_loop():
 if __name__ == '__main__':
     try:
         main_loop()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EndOfAudioException) as e:
         print()
-        print("Keyboard Interrupt received. Shutting down gracefully...")
-        plotter.cleanup()
+        if isinstance(e, KeyboardInterrupt):
+            print("Keyboard Interrupt received.")
+        else:
+            print(f"{e} received.")
+        print("Cleaning up resources and shutting down gracefully...")
+        everybody_cleanup()
