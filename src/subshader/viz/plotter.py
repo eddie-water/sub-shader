@@ -56,7 +56,7 @@ class Plotter(ABC):
 class Shader(Plotter):
     def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64):
         """
-        Clean, high-level audio visualization using GPU shaders
+        2D data visualization using shaders
 
         Args:
             file_path (str): The path to the file to plot.
@@ -65,24 +65,17 @@ class Shader(Plotter):
         """
         super().__init__(file_path, frame_shape)
 
+        # Handles circular buffer for scrolling visualization
+        self.scrolling_frame_buffer = ScrollingFrameBuffer(num_frames, self.y_n, self.x_n)
+
         # Create GL Context and Shader Renderer       
-        logger.info(f"Initializing Shader for {file_path}")
         self.gl_context = GLContext(title=f"Audio Visualizer - {file_path}")
 
-        # TODO NOW look at how we pass in the texture width and height into the ShaderRenderer but then the same data goes into the scrolling buffer - tuck it in? maybye
-        texture_width = self.x_n * num_frames
-        texture_height = self.y_n
-        
         # Main GPU rendering component - handles shader compilation, 
         # texture management, and rendering
-        self.shader_renderer = ShaderRenderer(
-            self.gl_context.ctx, texture_width, texture_height
-        )
-        self.scrolling_buffer = ScrollingBuffer(num_frames, self.y_n, self.x_n)
-        
-        logger.info("Shader system ready")
-        print("Visualizer started - logs in 'shader_debug.log'")
-    
+        texture_height, texture_width = self.scrolling_frame_buffer.get_flattened_buffer_shape()
+        self.shader_renderer = ShaderRenderer(self.gl_context.ctx, texture_width, texture_height)
+
     def update_plot(self, values: np.ndarray):
         """
         Updates the scrolling plot with new data.
@@ -90,8 +83,8 @@ class Shader(Plotter):
         Args:
             values (np.ndarray): The new data to plot.
         """
-        self.scrolling_buffer.add_frame(values)
-        buffer_data = self.scrolling_buffer.get_flattened_buffer()
+        self.scrolling_frame_buffer.add_frame(values)
+        buffer_data = self.scrolling_frame_buffer.get_flattened_buffer()
         
         # Update texture
         self.shader_renderer.update_texture(buffer_data)
@@ -374,18 +367,25 @@ class ShaderRenderer:
         except Exception as e:
             logger.error(f"Render exception: {e}")
 
-class ScrollingBuffer:
+class ScrollingFrameBuffer:
     def __init__(self, num_frames, height, width):
         """
         Handles circular buffer for scrolling visualization
+        
+        Args:
+            num_frames (int): Number of frames to store
+            height (int): Height of each frame (frequency bins)
+            width (int): Width of each frame (time samples)
         """
         self.num_frames = num_frames
         self.height = height
         self.width = width
+        
+        # Store full frames (no overlap)
         self.frames = np.zeros((num_frames, height, width), dtype=np.float32)
         self.frame_index = 0
         
-        # Pre-allocate flattened buffer to avoid expensive reshape/roll operations
+        # Pre-allocate flattened buffer
         self.flattened_buffer = np.zeros((height, num_frames * width), dtype=np.float32)
     
     def add_frame(self, frame_data):
@@ -409,6 +409,15 @@ class ScrollingBuffer:
             start_col = i * self.width
             end_col = start_col + self.width
             self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
+    
+    def get_flattened_buffer_shape(self):
+        """
+        Get the shape of the flattened buffer
+
+        Returns:
+            tuple: Shape of the flattened buffer.
+        """
+        return self.flattened_buffer.shape
     
     def get_flattened_buffer(self):
         """

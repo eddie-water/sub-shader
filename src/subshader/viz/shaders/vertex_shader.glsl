@@ -13,8 +13,8 @@
  * right coordinate system (-1,1 to 1,1). The main transformation here is
  * mapping the quad's corner positions to texture coordinates (0,0 to 1,1)
  * so the fragment shader can sample the source data texture correctly.
- * Vertex shaders typically compute texture coordinates by transforming vertex 
- * positions into the texture's coordinate system.
+ * Vertex shaders typically transform vertex positions into the texture's 
+ * coordinate system.
  * 
  * Inputs:
  *   position (vec2): Vertex position in normalized device coordinates (-1 to 1)

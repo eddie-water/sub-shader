@@ -30,6 +30,10 @@ class EndOfAudioException(Exception):
     """Raised when the audio file has been completely processed."""
     pass
 
+class WindowCloseException(Exception):
+    """Raised when the window is closed."""
+    pass
+
 # =============================================================================
 # INITIALIZATION
 # =============================================================================
@@ -79,6 +83,8 @@ def main_loop():
 
         # End frame timing and report FPS if needed
         fps.end_frame_and_report(frame_start)
+    
+    raise WindowCloseException("Window Closed")
 
 # =============================================================================
 # CLEANUP FUNCTION
@@ -96,11 +102,11 @@ def everybody_cleanup():
 if __name__ == '__main__':
     try:
         main_loop()
-    except (KeyboardInterrupt, EndOfAudioException) as e:
+    except (KeyboardInterrupt, EndOfAudioException, WindowCloseException) as e:
         print()
         if isinstance(e, KeyboardInterrupt):
             print("Keyboard Interrupt received.")
         else:
             print(f"{e} received.")
-        print("Cleaning up resources and shutting down gracefully...")
-        everybody_cleanup()
+    print("Cleaning up resources and shutting down gracefully...")
+    everybody_cleanup()

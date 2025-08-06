@@ -15,8 +15,6 @@ class AudioInput:
         """
         self.file_path = path
         self.window_size = window_size
-        self.overlap = OVERLAP / 100.0
-        self.slide_amount = int(self.window_size * self.overlap)
         
         # Keep file handle open to avoid reopening it every time
         self.file_handle = sf.SoundFile(self.file_path, 'r')
@@ -42,7 +40,7 @@ class AudioInput:
         if len(frame.shape) > 1:
             frame = frame[:, 0]
             
-        self.pos += self.slide_amount
+        self.pos += self.window_size
         return frame
 
     def get_sample_rate(self) -> int:
