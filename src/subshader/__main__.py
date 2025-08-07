@@ -121,7 +121,6 @@ class SubShader:
 
             # Grab a frame of audio and check for end of file
             if (audio_data := self.audio_input.get_frame()) is None:
-               log.warning("End of audio file reached")
                raise EndOfAudioException("Audio file processing complete")
 
             # Compute CWT on that frame
