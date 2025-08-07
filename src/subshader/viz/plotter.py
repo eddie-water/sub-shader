@@ -21,8 +21,10 @@ class Plotter(ABC):
         self.file_path = file_path
 
         if len(frame_shape) != 2:
+            log.error(f"Invalid frame shape: expected 2D array, got {len(frame_shape)}D with shape {frame_shape}")
             raise ValueError(f"Expected 2D array, got {len(frame_shape)}D with shape {frame_shape}")        
         if frame_shape[0] <= 0 or frame_shape[1] <= 0:
+            log.error(f"Invalid frame dimensions: {frame_shape} (must be > 0)")
             raise ValueError(f"2D array cannot have shape: {frame_shape}")
 
         self.frame_shape = frame_shape
@@ -120,49 +122,16 @@ class GLContext:
         contexts and handling input. It's the way OpenGL displays the graphics
         onto the screen.
         """
-        # Temporarily redirect stderr to suppress GLFW messages during initialization
-        import sys
-        import io
+        # Set up GLFW error callback to redirect messages to log
+        self._setup_glfw_error_callback()
         
-        original_stderr = sys.stderr
-        filtered_stderr = io.StringIO()
+        if not glfw.init():
+            log.error("GLFW initialization failed")
+            raise RuntimeError("Failed to initialize GLFW")
         
-        try:
-            # Redirect stderr to capture GLFW messages
-            sys.stderr = filtered_stderr
-            
-            if not glfw.init():
-                raise RuntimeError("Failed to initialize GLFW")
-            
-            # Set up GLFW error callback to redirect messages to log
-            self._setup_glfw_error_callback()
-            
-            # WSL-specific GLFW hints to reduce escape sequence issues
-            glfw.window_hint(glfw.CLIENT_API, glfw.OPENGL_API)
-            glfw.window_hint(glfw.CONTEXT_CREATION_API, glfw.NATIVE_CONTEXT_API)
-            
-        finally:
-            # Restore stderr
-            sys.stderr = original_stderr
-            
-            # Check if we captured any GLFW messages to suppress
-            captured_output = filtered_stderr.getvalue()
-            if captured_output:
-                # Filter out WSL escape sequence messages
-                lines = captured_output.split('\n')
-                for line in lines:
-                    if line.strip() and not any(msg in line for msg in [
-                        "Dropped Escape call",
-                        "ulEscapeCode"
-                    ]):
-                        # Print non-GLFW messages normally
-                        print(line, file=original_stderr)
-                    elif any(msg in line for msg in [
-                        "Dropped Escape call",
-                        "ulEscapeCode"
-                    ]):
-                        # Log suppressed messages
-                        log.debug(f"Suppressed GLFW message: {line.strip()}")
+        # WSL-specific GLFW hints to reduce escape sequence issues
+        glfw.window_hint(glfw.CLIENT_API, glfw.OPENGL_API)
+        glfw.window_hint(glfw.CONTEXT_CREATION_API, glfw.NATIVE_CONTEXT_API)
         
         # Set OpenGL context version hints before creating window
         # Request OpenGL 3.3 Core Profile for modern shader support
@@ -176,6 +145,7 @@ class GLContext:
         if not self.window:
             # Clean up GLFW before failing
             glfw.terminate()
+            log.error("GLFW window creation failed")
             raise RuntimeError("Failed to create window")
 
         # Make OpenGL context current for this thread before any OpenGL calls
@@ -450,6 +420,7 @@ class ScrollingFrameBuffer:
     def add_frame(self, frame_data):
         """Add new frame to circular buffer and update flattened buffer"""
         if frame_data.shape != (self.height, self.width):
+            log.error(f"Frame data shape mismatch: expected {(self.height, self.width)}, got {frame_data.shape}")
             raise ValueError(f"Expected shape {(self.height, self.width)}, got {frame_data.shape}")
         
         self.frames[self.frame_index] = frame_data

@@ -5,6 +5,9 @@ import cupy as cp
 import pywt
 from numpy.fft import fft, ifft
 from cupyx.scipy import fft as cp_fft
+from subshader.utils.logging import get_logger
+
+log = get_logger(__name__)
 
 # Audio is typically sampled at 44.1 kHz
 TYPICAL_SAMPLING_FREQ = 44100
@@ -29,12 +32,14 @@ class Wavelet(ABC):
             window_size (int): The length of the data
         """
         if sample_rate != TYPICAL_SAMPLING_FREQ:
+            log.error(f"Invalid sample rate: {sample_rate} Hz (expected {TYPICAL_SAMPLING_FREQ} Hz)")
             raise ValueError(f"Sampling Rate: {sample_rate},", 
                              f"is not {TYPICAL_SAMPLING_FREQ} Hz.",
                              f"The CWT may not work as expected.")
         self.sample_rate = sample_rate
 
         if window_size <= 0:
+            log.error(f"Invalid window size: {window_size} (must be > 0)")
             raise ValueError(f"Window Size: {window_size},",
                              f"must be greater than 0.")
         self.window_size = window_size
@@ -90,6 +95,7 @@ class Wavelet(ABC):
         """
         # Verify the audio data is valid 
         if len(audio_data) != self.window_size:
+            log.error(f"Audio data length mismatch: {len(audio_data)} != {self.window_size}")
             raise ValueError(f"Audio data length {len(audio_data)}",
                              f"does not match window size {self.window_size}")
 

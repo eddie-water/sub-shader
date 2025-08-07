@@ -1,5 +1,8 @@
 import numpy as np
 import soundfile as sf
+from subshader.utils.logging import get_logger
+
+log = get_logger(__name__)
 
 # Frame overlap 
 OVERLAP = 50.0
@@ -17,10 +20,15 @@ class AudioInput:
         self.window_size = window_size
         
         # Keep file handle open to avoid reopening it every time
-        self.file_handle = sf.SoundFile(self.file_path, 'r')
-        self.sample_rate = self.file_handle.samplerate
-        self.total_frames = self.file_handle.frames
-        self.pos = 0
+        try:
+            self.file_handle = sf.SoundFile(self.file_path, 'r')
+            self.sample_rate = self.file_handle.samplerate
+            self.total_frames = self.file_handle.frames
+            self.pos = 0
+            log.info(f"Audio file loaded: {self.file_path} ({self.total_frames} frames, {self.sample_rate} Hz)")
+        except Exception as e:
+            log.error(f"Failed to load audio file {self.file_path}: {e}")
+            raise
 
     def get_frame(self) -> np.ndarray:
         """
@@ -63,16 +71,16 @@ class AudioInput:
     def _display_file_info(self) -> None:
         """
         Display File Information
-            Prints information about the audio file
+            Logs information about the audio file
         """
         with sf.SoundFile(self.file_path, 'r') as f:
-            print("Information about the file:", self.file_path)
-            print("mode", f.mode)
-            print("samplerate", f.samplerate)
-            print("frames", f.frames)
-            print("channels", f.channels)
-            print("format", f.format)
-            print("subtype", f.subtype)
-            print("format info", f.format_info)
-            print("extra info", f.extra_info)
-            print("seekable()", f.seekable())
+            log.info(f"Audio file: {self.file_path}")
+            log.debug(f"Mode: {f.mode}")
+            log.debug(f"Sample rate: {f.samplerate} Hz")
+            log.debug(f"Frames: {f.frames}")
+            log.debug(f"Channels: {f.channels}")
+            log.debug(f"Format: {f.format}")
+            log.debug(f"Subtype: {f.subtype}")
+            log.debug(f"Format info: {f.format_info}")
+            log.debug(f"Extra info: {f.extra_info}")
+            log.debug(f"Seekable: {f.seekable()}")

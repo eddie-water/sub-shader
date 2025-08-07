@@ -83,7 +83,7 @@ class SubShader:
         - GPU visualization
         - FPS monitor
         """
-        log.info("Initializing SubShader components...")
+        log.info("Initializing components...")
         
         # Audio Input - handles file reading and audio frame getter 
         self.audio_input = AudioInput(path=FILE_PATH, window_size=WINDOW_SIZE)
@@ -100,7 +100,7 @@ class SubShader:
         self.fps = FpsUtility()
         
         self._initialized = True
-        log.info("SubShader init complete")
+        log.info("Initialization complete")
 
     def main_loop(self):
         """
@@ -152,7 +152,7 @@ class SubShader:
             self.plotter.cleanup()      # Terminate GLFW and OpenGL
 
         self._initialized = False
-        log.info("SubShader cleanup complete")
+        log.info("Cleanup complete")
 
 # =============================================================================
 # ENTRY POINT
@@ -176,7 +176,7 @@ def main():
     finally:
         subshader.cleanup()
         
-    log.info("Exiting SubShader")
+    log.info("Application shutdown complete")
 
 if __name__ == '__main__':
     main()

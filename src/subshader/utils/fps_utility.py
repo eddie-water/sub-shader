@@ -1,5 +1,8 @@
 import time
 from typing import List
+from subshader.utils.logging import get_logger
+
+log = get_logger(__name__)
 
 
 class FpsUtility:
@@ -44,7 +47,7 @@ class FpsUtility:
         # Check if it's time to report FPS
         if time.time() - self.fps_timer > self.update_interval and len(self.frame_times) > 0:
             fps = self.get_fps()
-            print(f"FPS: {fps:.2f}")
+            log.info(f"FPS: {fps:.2f}")
             self.frame_times.clear()
             self.fps_timer = time.time()
         
