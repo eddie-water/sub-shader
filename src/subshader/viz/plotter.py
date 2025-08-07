@@ -43,7 +43,7 @@ class Plotter(ABC):
         """Check if the window should close based on user input."""
         pass
 
-class Shader(Plotter):
+class ShaderPlot(Plotter):
     def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64):
         """
         2D data visualization using shaders
