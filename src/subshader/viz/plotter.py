@@ -4,20 +4,10 @@ import numpy as np
 import moderngl
 import glfw
 import pyqtgraph as pg
-import logging
 from .shaders import get_vertex_shader_source, get_fragment_shader_source
+from ..utils.logging import get_logger
 
-# TODO ISSUE-41 Move this to main
-# Set up clean logging - file only, no console spam
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('shader_debug.log', mode='w')  # Overwrite log each run
-    ]
-)
-
-logger = logging.getLogger('ShaderPlotter')
+log = get_logger(__name__)
 
 class Plotter(ABC):
     def __init__(self, file_path: str, frame_shape: tuple[int, int]):
@@ -130,15 +120,49 @@ class GLContext:
         contexts and handling input. It's the way OpenGL displays the graphics
         onto the screen.
         """
-        if not glfw.init():
-            raise RuntimeError("Failed to initialize GLFW")
+        # Temporarily redirect stderr to suppress GLFW messages during initialization
+        import sys
+        import io
         
-        # Set up GLFW error callback to redirect messages to log
-        self._setup_glfw_error_callback()
+        original_stderr = sys.stderr
+        filtered_stderr = io.StringIO()
         
-        # WSL-specific GLFW hints to reduce escape sequence issues
-        glfw.window_hint(glfw.CLIENT_API, glfw.OPENGL_API)
-        glfw.window_hint(glfw.CONTEXT_CREATION_API, glfw.NATIVE_CONTEXT_API)
+        try:
+            # Redirect stderr to capture GLFW messages
+            sys.stderr = filtered_stderr
+            
+            if not glfw.init():
+                raise RuntimeError("Failed to initialize GLFW")
+            
+            # Set up GLFW error callback to redirect messages to log
+            self._setup_glfw_error_callback()
+            
+            # WSL-specific GLFW hints to reduce escape sequence issues
+            glfw.window_hint(glfw.CLIENT_API, glfw.OPENGL_API)
+            glfw.window_hint(glfw.CONTEXT_CREATION_API, glfw.NATIVE_CONTEXT_API)
+            
+        finally:
+            # Restore stderr
+            sys.stderr = original_stderr
+            
+            # Check if we captured any GLFW messages to suppress
+            captured_output = filtered_stderr.getvalue()
+            if captured_output:
+                # Filter out WSL escape sequence messages
+                lines = captured_output.split('\n')
+                for line in lines:
+                    if line.strip() and not any(msg in line for msg in [
+                        "Dropped Escape call",
+                        "ulEscapeCode"
+                    ]):
+                        # Print non-GLFW messages normally
+                        print(line, file=original_stderr)
+                    elif any(msg in line for msg in [
+                        "Dropped Escape call",
+                        "ulEscapeCode"
+                    ]):
+                        # Log suppressed messages
+                        log.debug(f"Suppressed GLFW message: {line.strip()}")
         
         # Set OpenGL context version hints before creating window
         # Request OpenGL 3.3 Core Profile for modern shader support
@@ -166,8 +190,8 @@ class GLContext:
         self.ctx = moderngl.create_context()
         
         # Log OpenGL info for debugging
-        logger.info(f"OpenGL Version: {self.ctx.info['GL_VERSION']}")
-        logger.debug(f"Viewport: {self.ctx.viewport}")
+        log.info(f"OpenGL Version: {self.ctx.info['GL_VERSION']}")
+        log.debug(f"Viewport: {self.ctx.viewport}")
 
         # Setup viewport (area of window where OpenGL renders) to match window 
         self.ctx.viewport = (0, 0, self.width, self.height)
@@ -179,7 +203,7 @@ class GLContext:
         # Face culling normally hides back-facing triangles for performance
         self.ctx.disable(moderngl.CULL_FACE)
         
-        logger.info("Graphics context initialized successfully")
+        log.info("Graphics context initialized successfully")
     
     def _setup_glfw_error_callback(self):
         """
@@ -200,14 +224,14 @@ class GLContext:
                 "Invalid escape sequence",
                 "Unknown escape sequence"
             ]):
-                logger.debug(f"GLFW WSL escape sequence: {description}")
+                log.debug(f"GLFW WSL escape sequence: {description}")
                 return
             
             # Log other GLFW errors at warning level
-            logger.warning(f"GLFW Error {error_code}: {description}")
+            log.warning(f"GLFW Error {error_code}: {description}")
         
         glfw.set_error_callback(glfw_error_callback)
-        logger.debug("GLFW error callback configured")
+        log.debug("GLFW error callback configured")
     
     def should_close(self):
         """
@@ -265,11 +289,11 @@ class ShaderRenderer:
         vertex_shader = get_vertex_shader_source()
         fragment_shader = get_fragment_shader_source()
         
-        logger.info("Compiling shaders...")
-        logger.debug(f"Fragment shader preview: {fragment_shader[:100]}...")
+        log.info("Compiling shaders...")
+        log.debug(f"Fragment shader preview: {fragment_shader[:100]}...")
         
         program = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
-        logger.info("Shader compilation successful!")
+        log.info("Shader compilation successful!")
         
         return program
 
@@ -308,7 +332,7 @@ class ShaderRenderer:
         small_width = min(width, 8192)   # Max 8192 pixels wide
         small_height = min(height, 8192)  # Max 8192 pixels tall
         
-        logger.info(f"Creating smaller texture: {small_width}x{small_height} (original: {width}x{height})")
+        log.info(f"Creating smaller texture: {small_width}x{small_height} (original: {width}x{height})")
         
         # Create texture - 1 = single channel (grayscale), f4 = float32
         # This allocates GPU memory for the texture
@@ -327,9 +351,9 @@ class ShaderRenderer:
             self.shader_program['valueMin'] = 0.0
             self.shader_program['valueMax'] = 1.0
         except KeyError:
-            logger.warning("Scaling uniforms not found")
+            log.warning("Scaling uniforms not found")
         
-        logger.info(f"Audio texture created: {small_width}x{small_height}")
+        log.info(f"Audio texture created: {small_width}x{small_height}")
 
     def _downsample_for_texture(self, data):
         """
@@ -368,7 +392,7 @@ class ShaderRenderer:
             padded[:h, :w] = downsampled
             downsampled = padded
         
-        logger.debug(f"Downsampled {data.shape} -> {downsampled.shape}")
+        log.debug(f"Downsampled {data.shape} -> {downsampled.shape}")
         return downsampled
 
     def update_texture(self, data):
@@ -385,7 +409,7 @@ class ShaderRenderer:
         self.texture.write(downsampled_data.astype('f4').tobytes())
         self.texture.use(location=self.SCALOGRAM_TEXTURE_UNIT)
         
-        logger.debug(f"Texture updated: {downsampled_data.shape}, range {downsampled_data.min():.3f}-{downsampled_data.max():.3f}")
+        log.debug(f"Texture updated: {downsampled_data.shape}, range {downsampled_data.min():.3f}-{downsampled_data.max():.3f}")
     
     def render(self):
         """
@@ -397,10 +421,10 @@ class ShaderRenderer:
             # Check for OpenGL errors
             error = self.ctx.error
             if error != 'GL_NO_ERROR':
-                logger.error(f"Render error: {error}")
+                log.error(f"Render error: {error}")
             
         except Exception as e:
-            logger.error(f"Render exception: {e}")
+            log.error(f"Render exception: {e}")
 
 class ScrollingFrameBuffer:
     def __init__(self, num_frames, height, width):

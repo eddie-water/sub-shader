@@ -387,6 +387,8 @@ class CupyWavelet(AntsWavelet):
             cp.get_default_pinned_memory_pool().free_all_blocks()
 
         except Exception as e:
+            # Note: We can't use log here since this might be called during 
+            # cleanup when logging might not be available
             print(f"Warning: Error during GPU cleanup: {e}")
     
     def __del__(self):

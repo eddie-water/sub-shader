@@ -2,15 +2,18 @@
 Utility modules for SubShader.
 
 This package contains various utility modules for environment setup,
-performance monitoring, and other helper functionality.
+performance monitoring, logging configuration, and other helper functionality.
 """
 
-from .os_env_setup import setup_all_environments, setup_wsl_environment, setup_glfw_environment
+from .os_env_setup import env_init
 from .fps_utility import FpsUtility
+from .logging import logger_init, get_logger, set_log_level, get_module_logger
 
 __all__ = [
-    'setup_all_environments',
-    'setup_wsl_environment',
-    'setup_glfw_environment',
-    'FpsUtility'
+    'env_init',
+    'FpsUtility',
+    'logger_init',
+    'get_logger',
+    'set_log_level',
+    'get_module_logger'
 ] 
