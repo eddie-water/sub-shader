@@ -16,7 +16,7 @@ from subshader.utils.fps_utility import FpsUtility
 
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import CuWavelet
-from subshader.viz.plotter import Shader
+from subshader.viz.plotter import ShaderPlot
 
 # Init logging at the module level, not every time a class is instantiated
 logger_init(log_level="INFO", console_output=False, file_output=True)
@@ -27,8 +27,11 @@ log = get_logger(__name__)
 # =============================================================================
 
 WINDOW_SIZE = 2 << 12  # 4k samples per frame
-FILE_PATH = "assets/audio/songs/beltran_soundcloud.wav"
+FILE_PATH = "assets/audio/songs/beltran_sc_rip.wav"
 NUM_FRAMES = 128
+
+# Display settings
+FULLSCREEN = False  # Set to True for fullscreen mode
 
 # =============================================================================
 # EXCEPTIONS
@@ -94,7 +97,7 @@ class SubShader:
 
         # Plotter Object - GPU-accelerated shader plot
         plot_shape = self.wavelet.get_shape()
-        self.plotter = Shader(file_path=FILE_PATH, frame_shape=plot_shape, num_frames=NUM_FRAMES)
+        self.plotter = ShaderPlot(file_path=FILE_PATH, frame_shape=plot_shape, num_frames=NUM_FRAMES, fullscreen=FULLSCREEN)
 
         # FPS utility - performance monitoring
         self.fps = FpsUtility()

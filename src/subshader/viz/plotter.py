@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+import os
 import numpy as np
 import moderngl
 import glfw
@@ -46,7 +46,7 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64, fullscreen: bool = False):
         """
         2D data visualization using shaders
 
@@ -54,6 +54,7 @@ class ShaderPlot(Plotter):
             file_path (str): The path to the file to plot.
             frame_shape (tuple[int, int]): The shape of each data frame to plot.
             num_frames (int): The number of frames to use for the visualization.
+            fullscreen (bool): Whether to display in fullscreen mode.
         """
         super().__init__(file_path, frame_shape)
 
@@ -61,7 +62,8 @@ class ShaderPlot(Plotter):
         self.scrolling_frame_buffer = ScrollingFrameBuffer(num_frames, self.y_n, self.x_n)
 
         # Create GL Context and Shader Renderer       
-        self.gl_context = GLContext(title=f"Audio Visualizer - {file_path}")
+        file_name = os.path.basename(file_path)
+        self.gl_context = GLContext(title=f"SubShader - {file_name}", fullscreen=fullscreen)
 
         # Main GPU rendering component - handles shader compilation, 
         # texture management, and rendering
@@ -105,13 +107,20 @@ class ShaderPlot(Plotter):
         glfw.terminate()
 
 class GLContext:
-    def __init__(self, width=800, height=600, title="Audio Visualizer"):
+    def __init__(self, width=1920, height=1080, title="Audio Visualizer", fullscreen=False):
         """
         Handles GLFW window and OpenGL context setup
+        
+        Args:
+            width (int): Window width (ignored if fullscreen=True)
+            height (int): Window height (ignored if fullscreen=True)
+            title (str): Window title
+            fullscreen (bool): Whether to create a fullscreen window
         """
         self.width = width
         self.height = height
         self.title = title
+        self.fullscreen = fullscreen
         self.window = None
         self.ctx = None
         self._init_graphics()
@@ -141,7 +150,16 @@ class GLContext:
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)  
 
         # Create window - monitor (None = windowed), share context (None = no sharing)
-        self.window = glfw.create_window(self.width, self.height, self.title, None, None)
+        if self.fullscreen:
+            # Get primary monitor and its video mode for fullscreen
+            monitor = glfw.get_primary_monitor()
+            mode = glfw.get_video_mode(monitor)
+            self.width, self.height = mode.size.width, mode.size.height
+            log.info(f"Creating fullscreen window: {self.width}×{self.height}")
+            self.window = glfw.create_window(self.width, self.height, self.title, monitor, None)
+        else:
+            log.info(f"Creating windowed mode: {self.width}×{self.height}")
+            self.window = glfw.create_window(self.width, self.height, self.title, None, None)
         if not self.window:
             # Clean up GLFW before failing
             glfw.terminate()
@@ -374,12 +392,12 @@ class ShaderRenderer:
         """
         # Downsample data for visualization while preserving CWT accuracy
         downsampled_data = self._downsample_for_texture(data)
-        
-        log.debug(f"CPU→GPU: Uploading texture data ({downsampled_data.shape}, f4, {len(data_bytes)} bytes)")
         data_bytes = downsampled_data.astype('f4').tobytes()
+
+        log.debug(f"CPU→GPU: Uploading texture data ({downsampled_data.shape}, f4, {len(data_bytes)} bytes)")
         self.texture.write(data_bytes)
         self.texture.use(location=self.SCALOGRAM_TEXTURE_UNIT)
-        
+
         log.debug(f"Texture updated: {downsampled_data.shape}, range {downsampled_data.min():.3f}-{downsampled_data.max():.3f}")
     
     def render(self):
