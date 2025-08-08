@@ -69,6 +69,18 @@ class Wavelet(ABC):
             np.ndarray.shape: Shape of the computed CWT data
         """
         return self.result_shape
+    
+    def get_downsampled_result_shape(self, target_width: int = 128) -> np.ndarray.shape:
+        """
+        Computes the shape of the downsampled CWT data.
+        
+        Args:
+            target_width (int): Target width for downsampling (default: 128)
+            
+        Returns:
+            np.ndarray.shape: Shape of the downsampled CWT data
+        """
+        return (self.num_freqs, target_width)
 
     def get_num_freqs(self) -> int:
         """
@@ -81,16 +93,15 @@ class Wavelet(ABC):
   
     def compute_cwt(self, audio_data: np.ndarray) -> np.ndarray:
         """
-        Performs the Continuous Wavelet Transform (CWT) on raw audio data and 
-        then normalizes the results
+        Performs the Continuous Wavelet Transform (CWT) on raw audio data, 
+        normalizes the results, and downsamples to reduce the data transfer 
+        size.
 
         Args:
             audio_data (np.ndarray): raw audio signal data
 
         Returns:
-            np.ndarray: The normalized CWT coefficients in the scale-time
-
-                domain
+            np.ndarray: The normalized and downsampled CWT coefficients
         """
         # Verify the audio data is valid 
         if len(audio_data) != self.window_size:
@@ -102,8 +113,12 @@ class Wavelet(ABC):
         data = audio_data.astype(np.float64)
 
         cwt_coefs = self.class_specific_cwt(data)
-
-        return self.normalize_coefs(cwt_coefs)
+        
+        # Downsample the raw CWT coefficients bc there's a lot of data
+        downsampled_coefs = self.downsample(cwt_coefs)
+        
+        # Normalize the results
+        return self.normalize_coefs(downsampled_coefs)
 
     @abstractmethod
     def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
@@ -148,6 +163,40 @@ class Wavelet(ABC):
         coefs_norm = np.clip(coefs_norm, 0.0, 1.0)
         
         return coefs_norm
+    
+    def downsample(self, coefs: np.ndarray, target_width: int = 128) -> np.ndarray:
+        """
+        Downsample CWT coefficients for efficient visualization.
+        
+        This method reduces the time dimension while preserving frequency resolution
+        to make the data suitable for real-time GPU rendering.
+        
+        Args:
+            coefs (np.ndarray): Normalized CWT coefficients (freq_bins, time_samples)
+            target_width (int): Target width for visualization (default: 128)
+            
+        Returns:
+            np.ndarray: Downsampled coefficients suitable for visualization
+        """
+        freq_bins, time_samples = coefs.shape
+        
+        # If already at target size or smaller, return as-is
+        if time_samples <= target_width:
+            return coefs
+        
+        # Calculate downsampling factor
+        downsample_factor = max(1, time_samples // target_width)
+        
+        # Simple downsampling by taking every Nth sample
+        # This preserves the most recent data (right side of the buffer)
+        downsampled = coefs[:, ::downsample_factor]
+        
+        # If still too wide, crop to target size
+        if downsampled.shape[1] > target_width:
+            downsampled = downsampled[:, -target_width:]  # Keep most recent data
+        
+        log.debug(f"Downsampled CWT: {coefs.shape} -> {downsampled.shape} (factor: {downsample_factor})")
+        return downsampled
     
     @abstractmethod
     def cleanup(self):

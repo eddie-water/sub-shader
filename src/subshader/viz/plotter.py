@@ -31,12 +31,12 @@ class Plotter(ABC):
         self.y_n, self.x_n = self.frame_shape
 
     @abstractmethod
-    def update_plot(self, values):
+    def update_plot(self, plot_values):
         """
         Abstract method to update the plot with new data.
 
         Args:
-            values (np.ndarray): The new data to plot.
+            plot_values (np.ndarray): The new data to plot.
         """
         pass
 
@@ -59,7 +59,7 @@ class ShaderPlot(Plotter):
         super().__init__(file_path, frame_shape)
 
         # Handles circular buffer for scrolling visualization
-        self.scrolling_frame_buffer = ScrollingFrameBuffer(num_frames, self.y_n, self.x_n)
+        self.rolling_frame_buffer = RollingFrameBuffer(num_frames, self.y_n, self.x_n)
 
         # Create GL Context and Shader Renderer       
         file_name = os.path.basename(file_path)
@@ -67,25 +67,25 @@ class ShaderPlot(Plotter):
 
         # Main GPU rendering component - handles shader compilation, 
         # texture management, and rendering
-        texture_height, texture_width = self.scrolling_frame_buffer.get_flattened_buffer_shape()
-        self.shader_renderer = ShaderRenderer(self.gl_context.ctx, texture_width, texture_height)
+        texture_height, texture_width = self.rolling_frame_buffer.get_flattened_buffer_shape()
+        self.renderer = ShaderRenderer(self.gl_context.ctx, texture_width, texture_height)
 
-    def update_plot(self, values: np.ndarray):
+    def update_plot(self, plot_values: np.ndarray):
         """
-        Updates the scrolling plot with new data.
+        Updates the rolling plot with new data.
 
         Args:
-            values (np.ndarray): The new data to plot.
+            plot_values (np.ndarray): The new data to plot.
         """
-        self.scrolling_frame_buffer.add_frame(values)
-        buffer_data = self.scrolling_frame_buffer.get_flattened_buffer()
+        # Add a new plot fram to the circular buffer
+        self.rolling_frame_buffer.add_frame(plot_values)
+
+        # Update the texture with the new data
+        self.renderer.update_texture(self.rolling_frame_buffer.get_flattened_buffer())
         
-        # Update texture
-        self.shader_renderer.update_texture(buffer_data)
-        
-        # Clear and render
+        # Clear the
         self.gl_context.clear()
-        self.shader_renderer.render()
+        self.renderer.render()
         self.gl_context.swap_buffers()
     
     def update_fps(self, fps: int):
@@ -278,7 +278,6 @@ class ShaderRenderer:
         fragment_shader = get_fragment_shader_source()
         
         log.info("Compiling shaders...")
-        log.debug(f"Fragment shader preview: {fragment_shader[:100]}...")
         
         shader = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
         log.info("Shader compilation successful!")
@@ -314,24 +313,16 @@ class ShaderRenderer:
             width (int): Width of the texture.
             height (int): Height of the texture.
         """
-        # Texture limits for 16 GiB VRAM (using max 4 GiB = 1/4 of VRAM)
-        # 4 GiB = 4,194,304 KiB = 4,294,967,296 bytes
-        # For float32: 4,294,967,296 ÷ 4 = 1,073,741,824 pixels max
-        # Conservative limit: 8192 x 8192 = 67,108,864 pixels = ~256 MiB
-        small_width = min(width, 8192)   # Max 8192 pixels wide
-        small_height = min(height, 8192)  # Max 8192 pixels tall
-        
-        log.info(f"Creating smaller texture: {small_width}x{small_height} (original: {width}x{height})")
-        ("Creating texture: 1 channel (grayscale), dtype=float32 (f4) - allocating GPU memory")
-        log.info(f"CPU→GPU: Allocating texture buffer ({small_width}×{small_height}, f4, {small_width * small_height * 4} bytes)")
-        self.texture = self.ctx.texture((small_width, small_height), 1, dtype='f4')
+        # Use actual data size - downsampling is handled at the source
+        log.info(f"Creating texture: {width}x{height} (1 channel grayscale, float32)")
+        log.info(f"CPU→GPU: Allocating texture buffer ({width}×{height}, f4, {width * height * 4} bytes)")
+        self.texture = self.ctx.texture((width, height), 1, dtype='f4')
 
         # Linear interpolation for smooth scaling if the texture is resized
         self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         
-        # Store original and actual sizes
-        self.original_size = (width, height)
-        self.actual_size = (small_width, small_height)
+        # Store texture size
+        self.size = (width, height)
         
         # Set up uniforms for colormap
         self.shader['scalogram'] = self.SCALOGRAM_TEXTURE_UNIT
@@ -341,47 +332,9 @@ class ShaderRenderer:
         except KeyError:
             log.warning("Scaling uniforms not found")
         
-        log.info(f"Audio texture created: {small_width}x{small_height}")
+        log.info(f"Audio texture created: {width}x{height}")
 
-    def _downsample_for_texture(self, data):
-        """
-        Downsample data to fit GPU texture constraints while preserving 
-        visualization quality. 
 
-        Args:
-            data (np.ndarray): 2D array of scalogram data
-
-        Returns:
-            np.ndarray: Downsampled data that fits the texture size
-        """
-        height, width = data.shape
-        target_width, target_height = self.actual_size
-
-        # If data already fits texture size, return as-is
-        if height == target_height and width == target_width:
-            return data
-        
-        # Simple downsampling by taking every Nth sample
-        h_step = max(1, height // target_height)
-        w_step = max(1, width // target_width)
-        
-        downsampled = data[::h_step, ::w_step]
-        
-        # Crop or pad to exact size
-        if downsampled.shape[0] > target_height:
-            downsampled = downsampled[:target_height, :]
-        if downsampled.shape[1] > target_width:
-            downsampled = downsampled[:, :target_width]
-            
-        # Pad if needed
-        if downsampled.shape != (target_height, target_width):
-            padded = np.zeros((target_height, target_width), dtype=np.float32)
-            h, w = downsampled.shape
-            padded[:h, :w] = downsampled
-            downsampled = padded
-        
-        log.debug(f"Downsampled {data.shape} -> {downsampled.shape}")
-        return downsampled
 
     def update_texture(self, data):
         """
@@ -390,15 +343,14 @@ class ShaderRenderer:
         Args:
             data (np.ndarray): 2D array of scalogram data to upload to texture.
         """
-        # Downsample data for visualization while preserving CWT accuracy
-        downsampled_data = self._downsample_for_texture(data)
-        data_bytes = downsampled_data.astype('f4').tobytes()
+        # Data is already downsampled from the wavelet class
+        data_bytes = data.astype('f4').tobytes()
 
-        log.debug(f"CPU→GPU: Uploading texture data ({downsampled_data.shape}, f4, {len(data_bytes)} bytes)")
+        log.debug(f"CPU→GPU: Uploading texture data ({data.shape}, f4, {len(data_bytes)} bytes)")
         self.texture.write(data_bytes)
         self.texture.use(location=self.SCALOGRAM_TEXTURE_UNIT)
 
-        log.debug(f"Texture updated: {downsampled_data.shape}, range {downsampled_data.min():.3f}-{downsampled_data.max():.3f}")
+        log.debug(f"Texture updated: {data.shape}, range {data.min():.3f}-{data.max():.3f}")
     
     def render(self):
         """
@@ -415,7 +367,7 @@ class ShaderRenderer:
         except Exception as e:
             log.error(f"Render exception: {e}")
 
-class ScrollingFrameBuffer:
+class RollingFrameBuffer:
     def __init__(self, num_frames, height, width):
         """
         Handles circular buffer for scrolling visualization
@@ -523,14 +475,14 @@ class PyQtGrapher(Plotter):
         
         self.latest_data = None
     
-    def update_plot(self, values):
+    def update_plot(self, plot_values):
         """
         Updates the plot with new data.
 
         Args:
-            values (np.ndarray): The new data to plot.
+            plot_values (np.ndarray): The new data to plot.
         """
-        self.latest_data = values
+        self.latest_data = plot_values
     
     def _update_display(self):
         """Update the display with latest data"""

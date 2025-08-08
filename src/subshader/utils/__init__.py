@@ -6,7 +6,7 @@ performance monitoring, logging configuration, and other helper functionality.
 """
 
 from .os_env_setup import env_init
-from .fps_utility import FpsUtility
+from .loop_timer import LoopTimer
 from .logging import logger_init, get_logger, set_log_level, get_module_logger
 
 __all__ = [

@@ -12,7 +12,7 @@ This module orchestrates the audio processing pipeline:
 
 from subshader.utils.logging import logger_init, get_logger
 from subshader.utils.os_env_setup import env_init
-from subshader.utils.fps_utility import FpsUtility
+from subshader.utils.loop_timer import LoopTimer
 
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import CuWavelet
@@ -73,7 +73,7 @@ class SubShader:
         self.audio_input = None
         self.wavelet = None
         self.plotter = None
-        self.fps = None
+        self.loop_timer = None
         self._initialized = False
     
     def init(self):
@@ -95,15 +95,15 @@ class SubShader:
         # Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
         self.wavelet = CuWavelet(sample_rate=sample_rate, window_size=WINDOW_SIZE)
 
-        # Plotter Object - GPU-accelerated shader plot
-        plot_shape = self.wavelet.get_shape()
-        self.plotter = ShaderPlot(file_path=FILE_PATH, frame_shape=plot_shape, num_frames=NUM_FRAMES, fullscreen=FULLSCREEN)
+        # Plotter Object - GPU-accelerated shader plot of downsampled cwt results
+        result_shape = self.wavelet.get_downsampled_result_shape()
+        self.plotter = ShaderPlot(file_path=FILE_PATH, frame_shape=result_shape, num_frames=NUM_FRAMES, fullscreen=FULLSCREEN)
 
-        # FPS utility - performance monitoring
-        self.fps = FpsUtility()
+        # Loop timer - performance monitoring
+        self.loop_timer = LoopTimer()
         
         self._initialized = True
-        log.info("Initialization complete")
+        log.info("Init complete")
 
     def main_loop(self):
         """
@@ -119,21 +119,21 @@ class SubShader:
         log.info("Starting main loop")
         
         while not self.plotter.should_window_close():
-            # Start frame timing
-            frame_start = self.fps.start_frame()
+            # Start loop timing
+            loop_start = self.loop_timer.start_loop()
 
             # Grab a frame of audio and check for end of file
             if (audio_data := self.audio_input.get_frame()) is None:
                raise EndOfAudioException("Audio file processing complete")
 
-            # Compute CWT on that frame
+            # Compute CWT on audio
             coefs = self.wavelet.compute_cwt(audio_data)
 
-            # Update plot
+            # Update plot with coefficient results
             self.plotter.update_plot(coefs)
 
-            # End frame timing and report FPS if needed
-            self.fps.end_frame_and_report(frame_start)
+            # End loop timing 
+            self.loop_timer.end_loop_and_report(loop_start)
 
         raise WindowCloseException("Window Closed")
 
