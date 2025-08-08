@@ -243,7 +243,7 @@ class ShaderRenderer:
         self.ctx = ctx
         
         # Compile and link shaders
-        self.shader_program = self._compile_shaders()
+        self.shader = self._compile_shaders()
         
         # Bind the graphics geometry to the shader program
         self._setup_rendering_geometry()
@@ -262,10 +262,10 @@ class ShaderRenderer:
         log.info("Compiling shaders...")
         log.debug(f"Fragment shader preview: {fragment_shader[:100]}...")
         
-        program = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
+        shader = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
         log.info("Shader compilation successful!")
-        
-        return program
+
+        return shader
 
     def _setup_rendering_geometry(self):
         """
@@ -281,11 +281,12 @@ class ShaderRenderer:
         
         # Vertex Buffer Object stores the quad vertices in GPU memory (tobytes()
         # removes NumPy stuff that GPU doesn't need)
+        log.info(f"CPU→GPU: Uploading vertex buffer ({quad_vertices.shape}, {quad_vertices.dtype}, {quad_vertices.nbytes} bytes)")
         self.vbo = self.ctx.buffer(quad_vertices.tobytes()) 
 
         # Vertex Array Object tells the shader program how to use the data
         # stored in the VBO (position, color, etc.)
-        self.vao = self.ctx.simple_vertex_array(self.shader_program, self.vbo, 'position')
+        self.vao = self.ctx.simple_vertex_array(self.shader, self.vbo, 'position')
 
     def _setup_texture(self, width, height):
         """
@@ -303,9 +304,8 @@ class ShaderRenderer:
         small_height = min(height, 8192)  # Max 8192 pixels tall
         
         log.info(f"Creating smaller texture: {small_width}x{small_height} (original: {width}x{height})")
-        
-        # Create texture - 1 = single channel (grayscale), f4 = float32
-        # This allocates GPU memory for the texture
+        ("Creating texture: 1 channel (grayscale), dtype=float32 (f4) - allocating GPU memory")
+        log.info(f"CPU→GPU: Allocating texture buffer ({small_width}×{small_height}, f4, {small_width * small_height * 4} bytes)")
         self.texture = self.ctx.texture((small_width, small_height), 1, dtype='f4')
 
         # Linear interpolation for smooth scaling if the texture is resized
@@ -316,10 +316,10 @@ class ShaderRenderer:
         self.actual_size = (small_width, small_height)
         
         # Set up uniforms for colormap
-        self.shader_program['scalogram'] = self.SCALOGRAM_TEXTURE_UNIT
+        self.shader['scalogram'] = self.SCALOGRAM_TEXTURE_UNIT
         try:
-            self.shader_program['valueMin'] = 0.0
-            self.shader_program['valueMax'] = 1.0
+            self.shader['valueMin'] = 0.0
+            self.shader['valueMax'] = 1.0
         except KeyError:
             log.warning("Scaling uniforms not found")
         
@@ -375,8 +375,9 @@ class ShaderRenderer:
         # Downsample data for visualization while preserving CWT accuracy
         downsampled_data = self._downsample_for_texture(data)
         
-        # Send data to GPU
-        self.texture.write(downsampled_data.astype('f4').tobytes())
+        log.debug(f"CPU→GPU: Uploading texture data ({downsampled_data.shape}, f4, {len(data_bytes)} bytes)")
+        data_bytes = downsampled_data.astype('f4').tobytes()
+        self.texture.write(data_bytes)
         self.texture.use(location=self.SCALOGRAM_TEXTURE_UNIT)
         
         log.debug(f"Texture updated: {downsampled_data.shape}, range {downsampled_data.min():.3f}-{downsampled_data.max():.3f}")

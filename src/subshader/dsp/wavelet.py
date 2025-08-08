@@ -340,6 +340,7 @@ class CupyWavelet(AntsWavelet):
         self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
 
         # Move the wavelet kernels to the GPU
+        log.info(f"CPU→GPU: Uploading wavelet kernels ({self.wavelet_kernels.shape}, {self.wavelet_kernels.dtype})")
         self.wavelet_kernels = cp.asarray(self.wavelet_kernels)
         
         # Track GPU memory allocations for cleanup
@@ -358,6 +359,7 @@ class CupyWavelet(AntsWavelet):
         """
         # Transform the Data time series into a spectrum on the GPU
         # TODO ISSUE-33 Investigate how to minimize the CPU to GPU transfers
+        log.debug(f"CPU→GPU: Uploading audio frame ({data.shape}, {data.dtype})")
         data = cp.asarray(data, dtype=cp.complex64)
         data_x = cp_fft.fftn(data, self.conv_n)
 
@@ -368,8 +370,9 @@ class CupyWavelet(AntsWavelet):
             self.tf_gpu[i,:] = conv_pow
 
         # Move the result back to the CPU (no downsampling)
+        log.debug(f"GPU→CPU: Downloading CWT results ({self.tf_gpu.shape}, {self.tf_gpu.dtype})")
         return cp.asnumpy(self.tf_gpu)
-    
+
     def cleanup(self):
         """
         Clean up GPU memory allocations.
