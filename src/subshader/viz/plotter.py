@@ -68,7 +68,7 @@ class ShaderPlot(Plotter):
         # Main GPU rendering component - handles shader compilation, 
         # texture management, and rendering
         texture_height, texture_width = self.rolling_frame_buffer.get_flattened_buffer_shape()
-        self.renderer = ShaderRenderer(self.gl_context.ctx, texture_width, texture_height)
+        self.renderer = Renderer(self.gl_context.ctx, texture_width, texture_height)
 
     def update_plot(self, plot_values: np.ndarray):
         """
@@ -82,11 +82,11 @@ class ShaderPlot(Plotter):
 
         # Update the texture with the new data
         self.renderer.update_texture(self.rolling_frame_buffer.get_flattened_buffer())
-        
-        # Clear the
-        self.gl_context.clear()
-        self.renderer.render()
-        self.gl_context.swap_buffers()
+
+        # Clear the old graphic and render the new one
+        self.gl_context.clear_graphic()
+        self.renderer.render_graphic()
+        self.gl_context.display_graphic()
     
     def update_fps(self, fps: int):
         """
@@ -230,20 +230,20 @@ class GLContext:
         """
         return glfw.window_should_close(self.window)
     
-    def swap_buffers(self):
+    def display_graphic(self):
         """
-        Swap the front and back buffers to display the rendered content.
+        Display the rendered content (swap front/back buffers).
         """
         glfw.swap_buffers(self.window)
         glfw.poll_events()  # Process window events
     
-    def clear(self, r=0.05, g=0.05, b=0.05):
+    def clear_graphic(self, r=0.05, g=0.05, b=0.05):
         """
         Clear the OpenGL context with a specified color.
         """
         self.ctx.clear(r, g, b)
 
-class ShaderRenderer:
+class Renderer:
 
     SCALOGRAM_TEXTURE_UNIT = 0
 
@@ -352,7 +352,7 @@ class ShaderRenderer:
 
         log.debug(f"Texture updated: {data.shape}, range {data.min():.3f}-{data.max():.3f}")
     
-    def render(self):
+    def render_graphic(self):
         """
         Render the quad
         """

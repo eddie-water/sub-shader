@@ -11,7 +11,7 @@ from .logging import logger_init, get_logger, set_log_level, get_module_logger
 
 __all__ = [
     'env_init',
-    'FpsUtility',
+    'LoopTimer',
     'logger_init',
     'get_logger',
     'set_log_level',
