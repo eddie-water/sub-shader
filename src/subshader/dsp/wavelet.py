@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 import numpy as np
-import cupy as cp
-
-import pywt
 from numpy.fft import fft, ifft
+import cupy as cp
 from cupyx.scipy import fft as cp_fft
+import pywt
+from subshader.utils.logging import get_logger
+
+log = get_logger(__name__)
 
 # Audio is typically sampled at 44.1 kHz
 TYPICAL_SAMPLING_FREQ = 44100
@@ -29,19 +31,22 @@ class Wavelet(ABC):
             window_size (int): The length of the data
         """
         if sample_rate != TYPICAL_SAMPLING_FREQ:
+            log.error(f"Invalid sample rate: {sample_rate} Hz (expected {TYPICAL_SAMPLING_FREQ} Hz)")
             raise ValueError(f"Sampling Rate: {sample_rate},", 
                              f"is not {TYPICAL_SAMPLING_FREQ} Hz.",
                              f"The CWT may not work as expected.")
+        self.sample_rate = sample_rate
 
         if window_size <= 0:
+            log.error(f"Invalid window size: {window_size} (must be > 0)")
             raise ValueError(f"Window Size: {window_size},",
                              f"must be greater than 0.")
+        self.window_size = window_size
 
         # Sampling Parameters
         self.sample_rate = sample_rate
         self.nyquist_freq = (sample_rate / 2.0)
         self.sampling_period = (1.0 / self.sample_rate)
-        self.window_size = window_size
 
         # Frequency Axis that replicates the exponential step size of the musical scale
         self.scale_factor = 2**(1/NOTES_PER_OCTAVE)
@@ -53,6 +58,7 @@ class Wavelet(ABC):
         self.freqs = self.freqs[self.freqs < self.nyquist_freq]
         self.num_freqs = len(self.freqs)
 
+        # Resultant Shape of the CWT Data 
         self.result_shape = (self.num_freqs, self.window_size)
 
     def get_shape(self) -> np.ndarray.shape:
@@ -63,6 +69,18 @@ class Wavelet(ABC):
             np.ndarray.shape: Shape of the computed CWT data
         """
         return self.result_shape
+    
+    def get_downsampled_result_shape(self, target_width: int = 128) -> np.ndarray.shape:
+        """
+        Computes the shape of the downsampled CWT data.
+        
+        Args:
+            target_width (int): Target width for downsampling (default: 128)
+            
+        Returns:
+            np.ndarray.shape: Shape of the downsampled CWT data
+        """
+        return (self.num_freqs, target_width)
 
     def get_num_freqs(self) -> int:
         """
@@ -72,22 +90,22 @@ class Wavelet(ABC):
             int: Number of frequencies in the CWT
         """
         return self.num_freqs
-    
+  
     def compute_cwt(self, audio_data: np.ndarray) -> np.ndarray:
         """
-        Performs the Continuous Wavelet Transform (CWT) on raw audio data and 
-        then normalizes the results
+        Performs the Continuous Wavelet Transform (CWT) on raw audio data, 
+        normalizes the results, and downsamples to reduce the data transfer 
+        size.
 
         Args:
             audio_data (np.ndarray): raw audio signal data
 
         Returns:
-            np.ndarray: The normalized CWT coefficients in the scale-time
-
-                domain
+            np.ndarray: The normalized and downsampled CWT coefficients
         """
         # Verify the audio data is valid 
         if len(audio_data) != self.window_size:
+            log.error(f"Audio data length mismatch: {len(audio_data)} != {self.window_size}")
             raise ValueError(f"Audio data length {len(audio_data)}",
                              f"does not match window size {self.window_size}")
 
@@ -95,8 +113,12 @@ class Wavelet(ABC):
         data = audio_data.astype(np.float64)
 
         cwt_coefs = self.class_specific_cwt(data)
-
-        return self.normalize_coefs(cwt_coefs)
+        
+        # Downsample the raw CWT coefficients bc there's a lot of data
+        downsampled_coefs = self.downsample(cwt_coefs)
+        
+        # Normalize the results
+        return self.normalize_coefs(downsampled_coefs)
 
     @abstractmethod
     def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
@@ -127,18 +149,65 @@ class Wavelet(ABC):
         # Absolute Value 
         coefs_abs = np.abs(raw_coefs)
 
-        # TODO ISSUE-36 See if we should do scale-based normalization for all the wavelet subclasses
-        # instead of only in the PyWavelet subclass
-
-
+        # TODO ISSUE-36 See if we should do scale-based normalization for all 
+        # the wavelet subclasses instead of only in the PyWavelet subclass
 
         # Min-Max Normalization - squeeze data into the [0, 1] range
         coefs_min = np.min(coefs_abs)
         coefs_max = np.max(coefs_abs)
-        coefs_norm = (coefs_abs - coefs_min) / (coefs_max - coefs_min)
-
+        
+        epsilon = 1e-10 # Prevents division by zero
+        coefs_norm = (coefs_abs - coefs_min) / (coefs_max - coefs_min + epsilon)
+        
+        # Ensure output is in [0, 1] range
+        coefs_norm = np.clip(coefs_norm, 0.0, 1.0)
+        
         return coefs_norm
     
+    def downsample(self, coefs: np.ndarray, target_width: int = 128) -> np.ndarray:
+        """
+        Downsample CWT coefficients for efficient visualization.
+        
+        This method reduces the time dimension while preserving frequency resolution
+        to make the data suitable for real-time GPU rendering.
+        
+        Args:
+            coefs (np.ndarray): Normalized CWT coefficients (freq_bins, time_samples)
+            target_width (int): Target width for visualization (default: 128)
+            
+        Returns:
+            np.ndarray: Downsampled coefficients suitable for visualization
+        """
+        freq_bins, time_samples = coefs.shape
+        
+        # If already at target size or smaller, return as-is
+        if time_samples <= target_width:
+            return coefs
+        
+        # Calculate downsampling factor
+        downsample_factor = max(1, time_samples // target_width)
+        
+        # Simple downsampling by taking every Nth sample
+        # This preserves the most recent data (right side of the buffer)
+        downsampled = coefs[:, ::downsample_factor]
+        
+        # If still too wide, crop to target size
+        if downsampled.shape[1] > target_width:
+            downsampled = downsampled[:, -target_width:]  # Keep most recent data
+        
+        log.debug(f"Downsampled CWT: {coefs.shape} -> {downsampled.shape} (factor: {downsample_factor})")
+        return downsampled
+    
+    @abstractmethod
+    def cleanup(self):
+        """
+        Clean up any resources used by the wavelet implementation.
+        
+        This method should be overridden by subclasses that allocate
+        significant resources (especially GPU memory).
+        """
+        pass
+
 class PyWavelet(Wavelet):
     def __init__(self, sample_rate, window_size):
         """
@@ -197,6 +266,14 @@ class PyWavelet(Wavelet):
         coefs_scaled = coefs_raw / np.sqrt(self.scales[:, None])
 
         return coefs_scaled
+    
+    def cleanup(self):
+        """
+        Clean up any resources used by PyWavelet.
+        
+        PyWavelet doesn't allocate significant resources, so this is a no-op.
+        """
+        pass
 
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate: int, window_size: int):
@@ -210,7 +287,10 @@ class AntsWavelet(Wavelet):
             sample_rate (int): The rate the data was sampled in Hz
             window_size (int): The length of the data
         """
+        # TODO ISSUE-36 Use class inheritance effectively to avoid code 
+        # duplication
         super().__init__(sample_rate, window_size)
+
         # Initialize the time-frequency matrix
         self.tf = np.zeros((self.num_freqs, self.window_size))
 
@@ -259,6 +339,9 @@ class NumpyWavelet(AntsWavelet):
         """
         super().__init__(sample_rate, window_size)
 
+        # Initialize the time-frequency matrix
+        self.tf = np.zeros((self.num_freqs, self.window_size))
+
     def class_specific_cwt(self, data) -> np.ndarray:
         """
         This implements the ANTS CWT using NumPy.
@@ -283,6 +366,14 @@ class NumpyWavelet(AntsWavelet):
 
         return self.tf
     
+    def cleanup(self):
+        """
+        Clean up any resources used by NumpyWavelet.
+        
+        NumpyWavelet doesn't allocate significant resources, so this is a no-op.
+        """
+        pass
+    
 class CupyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size):
         """
@@ -298,7 +389,11 @@ class CupyWavelet(AntsWavelet):
         self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
 
         # Move the wavelet kernels to the GPU
+        log.info(f"CPU→GPU: Uploading wavelet kernels ({self.wavelet_kernels.shape}, {self.wavelet_kernels.dtype})")
         self.wavelet_kernels = cp.asarray(self.wavelet_kernels)
+        
+        # Track GPU memory allocations for cleanup
+        self._gpu_allocations = []
 
     # TODO ISSUE-36 Investigate writing a custom GPU kernel rather than using CuPy
     def class_specific_cwt(self, data) -> np.ndarray:
@@ -313,6 +408,7 @@ class CupyWavelet(AntsWavelet):
         """
         # Transform the Data time series into a spectrum on the GPU
         # TODO ISSUE-33 Investigate how to minimize the CPU to GPU transfers
+        log.debug(f"CPU→GPU: Uploading audio frame ({data.shape}, {data.dtype})")
         data = cp.asarray(data, dtype=cp.complex64)
         data_x = cp_fft.fftn(data, self.conv_n)
 
@@ -322,15 +418,46 @@ class CupyWavelet(AntsWavelet):
             conv_pow = cp.abs(conv)**2
             self.tf_gpu[i,:] = conv_pow
 
-        # Move the result back to the CPU
-        # TODO ISSUE-33 Investigate how to minimize the GPU to CPU transfers
-        # TODO ISSUE-36 change this to return cp.asnumpy(...). What's the point of setting it to a temp variable unless to debug it?
-        self.tf = cp.asnumpy(self.tf_gpu)
+        # Move the result back to the CPU (no downsampling)
+        log.debug(f"GPU→CPU: Downloading CWT results ({self.tf_gpu.shape}, {self.tf_gpu.dtype})")
+        
+        # TODO ISSUE-36 Figure out how to do this without the CPU->GPU->CPU transfer
+        return cp.asnumpy(self.tf_gpu)
 
+    def cleanup(self):
+        """
+        Clean up GPU memory allocations.
+        
+        This function explicitly frees GPU memory to prevent memory leaks
+        and ensure proper resource management.
+        """
+        try:
+            # Free GPU arrays
+            if hasattr(self, 'tf_gpu'):
+                del self.tf_gpu
+                self.tf_gpu = None
+            
+            if hasattr(self, 'wavelet_kernels'):
+                del self.wavelet_kernels
+                self.wavelet_kernels = None
+            
+            # Clear any cached GPU memory
+            cp.get_default_memory_pool().free_all_blocks()
+            cp.get_default_pinned_memory_pool().free_all_blocks()
 
-        return self.tf
-
-class ShadeWavelet(CupyWavelet):
+        except Exception as e:
+            # Note: We can't use log here since this might be called during 
+            # cleanup when logging might not be available
+            print(f"Warning: Error during GPU cleanup: {e}")
+    
+    def __del__(self):
+        """Destructor to ensure GPU memory is freed when object is garbage collected."""
+        try:
+            self.cleanup()
+        except:
+            pass
+    
+class CuWavelet(CupyWavelet):
     """
     This just kind of renames the class becuase it sounds ~cool~
     """

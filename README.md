@@ -1,105 +1,140 @@
-# Sub Shader
-Sub Shader is a real-time audio analysis tool. It takes an audio file and 
-analyzes it with time-frequency analysis techniques and visualizes it in a real
-time plot. 
+# SubShader
 
-## Current State
-I just got an implementation of the Continuous Wavelet Transform to work, a
-time-frequency analysis technique. It's a step further beyond the typical 
-Fourier Transform. TODO SOMEDAY Explain why it's being used and how we use the
-GPU to speed things up.
+SubShader is a real-time audio analysis tool that uses GPU-accelerated time-frequency analysis to visualize audio data. It takes in an audio file, performs Continuous Wavelet Transform (CWT) analysis, and renders the results using OpenGL shaders for high-performance visualization.
 
-![Current Plots](assets/images/Plots_PyWavelet_NumPy_CuPy_CWT.png)
+## Currently
 
-![Current Benchmark](assets/images/Benchmark_PyWavelet_NumPy_CuPy_CWT.png)
+### Shader Plot Output at ~40 FPS
+![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
 
-# Instructions
-My setup is a Windows machine running WSL2 in VS Code. If you're running on a
-different set up, replicate the instructions for your particular set up.
+**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(8:22 - 8:31)
 
-## Create Virtual Environment
-To avoid cluttering your machine's environment, create a virtual environment
-with:
-`python3 -m venv venv`
+![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
 
-## Activate Virtual Environment
-On Windows running WSL run:
-`source venv/bin/activate`
+**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
 
-## Install Dependencies
-Use pip to install all the necessary libraries and this package itself in 
-editable mode (-e). We do this so the project is importable as a package to 
-avoid reinstalling every time we modify the soruce code.
-`pip install -e .`
+### Thoughts
+- I feel like 40 FPS is okay, but how do crazy video games get like 100 FPS? Like what do I gotta do?
+- The normalization of the CWT results is pretty arbitrary. Clearly that affects visual response.
+- The parameters used in the Gauss used to make the wavelets are also pretty arbitrary. Feel like the steeper or weaker the roll off will affect the frequency resolution
+- Next thing to look into is how to minimize total CPU -> GPU -> CPU transfers. If the CWT results are already on the GPU, then why send it back to 
+the CPU? What if I could just send the CWT results to the texture directly? Lightbulb emoji!
 
-## Run Main
-Run the code using:
-`py -m subshader` or `python -m subshader` or `python3 -m subshader`
+##  Performance Update
 
-## Run Benchmark
-To run the benchmarking script, which times each stage of the main loop and 
-compares the different implementations of the CWT, run this:
-`py research/benchmark.py`
+### Performance
+- **Current FPS**: ~40 FPS
+- **Optimization**: Moved downsampling to wavelet class, reducing CPU→GPU data transfer
 
-## Deactivate Virtual Environment
-Deactivate when you're done with:
-`deactivate`
 
-## TODO Hierarchy
-NOW > NEXT > SOON > LATER > SOMEDAY
+### Summary ofChanges
 
-# Questions
-Questions that I would really like to keep in mind or figure out to really 
-understand conceptually the best way to do this project
+#### **App Structure**
+- **SubShader Module**: Now handles main loop, timing, central logging, and graceful shutdown
+- **Modular Design**: Separated audio processing, rendering, and display components
 
-### DSP 
-Q: Why is it useful or beneficial to perform the CWT with **Complex** Morlet 
-Wavelets? Specifically, what is it about them being complex helps with time
-frequency analysis?
+#### **Shader Implementation** 
+- **Graphics Context**: ModernGL/GLFW setup with fullscreen/windowed modes
+- **Geometry**: VBO/VAO fullscreen quad for rendering
+- **Texture Pipeline**: Direct texture upload with shader rendering
 
-Q: What about complex signals in general? What's so good about them in the 
-context of time-frequency analysis? My initial hunch is that it is related to 
-Euler's formula, the one that looks like this: cos(blah) = 0.5(e^blah + e^-blah)
-and how every signal has complex component, it's just usually ones you measure
-have that part 0'd out. Also there I see how you can retrieve phase information
-but I don't really see the how that is useful.
+#### **Graphics Pipeline**
+```
+Audio Data → update_plot() → Circular Frame Buffer → Flattened Texture → 
+Clear Back Buffer → Render → Swap Buffers → Display
+```
 
-Q: Why is it important to know the phase of the signal? What information is
-actually usefully gained from it? I've heard of Phase Key Shifting (PSK), which
-is used to encode information in the phase of signals, but I don't see how that
-would play a useful part in this project. That seems more like an RF 
-telecommunications thing. But maybe there are musical characteristics contained
-in the Phase data that contributes to the audio
+#### **Logging System**
+- **Replaced print statements**: Now using structured logging (info, debug, warning, error)
+- **GPU Transfer Tracking**: Logs all CPU↔GPU transfers and error paths
+- **Better debugging**: Clear visibility into performance and errors
 
-Q: How does the shape of the Gaussian used in creating the CMW affect the 
-results of the wavelet based time-frequency analysis? How are the results 
-affected if the Guassian rolls off steeper or shallower? 
+#### **Code Improvements**
+- **Naming**: Better function and class names (CuWavelet, LoopTimer)
+- **Error Handling**: Division-by-zero and EOF handling
+- **Documentation**: Improved docstrings and code organization
 
-Q: What is the significance of the Full-Width Half-Maximum and how does it 
-relate to the previous question? In one of the ANTS lessons, there was an 
-example where modifying it affected the steepness of the guassian and how 
-'blurred' the results became, because the wider it was in the time domain, the 
-more of an 'averaging' affect it had on the signal. But oppositely, the thinner 
-it was in the time domain, the more energy it had in the frequency domain, so 
-it was sharper at filtering things out (or maybe I have that backwards?). 
-Relate this kind of intuition to the Complex Morlet Wavelet, which is a sine 
-wave being manhandled by a Guassian, being used as a kernel during the CWT.
+### Performance Display
+![FPS Metrics](https://github.com/user-attachments/assets/51bf7c04-2cc2-45dd-808f-6ba320e7a0b2)
 
-### Python
+## Installation
 
-### GPU Acceleration / Parallel Programming
-Q: Need to still make sense of the threads per block (TPB), blocks per grid 
-(BPG), and block width (BW). What is an intuitive way of looking at it? Why does the position
-flatten the indeces in that way? Conceptually, how is it analogous to 2D arrays?
+### Create Virtual Environment
+Create a virtual environment to avoid cluttering your system:
+```bash
+python3 -m venv venv
+```
 
-Q: How do you decide what the values for the TPB, BPG, and BW are?
+### Activate Virtual Environment
+On Linux/WSL:
+```bash
+source venv/bin/activate
+```
 
-Q: VAO vs VBO Graphics Pipeline
+On Windows:
+```bash
+venv\Scripts\activate
+```
 
-Q: Why use Shared Memory? First of all, what exactly is it, and I thought 
-accessing it is really slow and clunky and bottle necks the entire procedure?
-Maybe we can access it up front and its not a big deal. 
-"For objects created in shared memory, each thread will have access to the 
-objects because each thread will receive a reference to this memory. Normally, 
-kernel code gets replicated multiple times, however, using cuda.shared.array()
-only the reference will be created, not instantiated." Hmm okay
+### Install Dependencies
+Install the package and all dependencies in editable mode:
+```bash
+pip install -e .
+```
+
+This installs the project as an importable package, so you don't need to reinstall after code changes.
+
+## Usage
+
+### Run Main Application
+```bash
+python -m subshader
+```
+
+### Deactivate Virtual Environment
+When finished:
+```bash
+deactivate
+```
+
+## Development
+
+### Performance Benchmark
+**Note**: The benchmark script may not work with the current codebase due to recent refactoring. It was designed for earlier versions of the project.
+
+```bash
+# WARNING: This script may be outdated and not work with current implementation
+python research/benchmark.py
+```
+
+### Development Progress
+
+#### **Completed**
+- ✅ Audio input with EOF handling
+- ✅ Dynamic scrolling plot
+- ✅ Modular architecture
+- ✅ Debug utilities (QuickPlot/MultiQuickPlot)
+- ✅ Code cleanup (removed unused files)
+
+## Technical Details
+
+### Continuous Wavelet Transform
+The project implements GPU-accelerated Continuous Wavelet Transform (CWT) using Complex Morlet Wavelets. This provides better time-frequency localization compared to traditional Fourier Transform methods.
+
+### GPU Acceleration
+- Uses CuPy for GPU-accelerated wavelet computations
+- Minimizes CPU↔GPU data transfers through strategic downsampling
+- Direct texture upload to OpenGL for rendering
+
+### Real-time Visualization
+- OpenGL shader-based rendering for high performance
+- Circular buffer for scrolling visualization
+- Fullscreen and windowed display modes
+
+## Requirements
+
+- Python 3.8+
+- CUDA-capable GPU (I have a 4060 ti)
+- OpenGL 3.3+ support
+
+See `pyproject.toml` for complete dependency list.

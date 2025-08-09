@@ -26,7 +26,7 @@ The sample rate needed to be defined explicitly here because in the video
 lesson, it is automatically defined when loading the .mat file in Matlab
 """
 # Grab channel 5, all the time samples (1527), and trial #100
-file_data = loadmat("./udemy/section7/ANTS_matlab/v1_laminar.mat")
+file_data = loadmat("research/ants/section_7/matlab_files/v1_laminar.mat")
 csd = file_data["csd"]
 data = np.squeeze(csd[5,:,100])
 data = data.astype(np.float64) # double precision

@@ -11,7 +11,7 @@ import scipy.datasets
 from audio_input import AudioInput
 from wavelet import PyWavelet
 from wavelet import AntsWavelet
-from wavelet import ShadeWavelet
+from wavelet import CuWavelet
 
 import numpy as np
 import matplotlib.pyplot as plt

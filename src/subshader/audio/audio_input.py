@@ -1,19 +1,34 @@
 import numpy as np
 import soundfile as sf
+from subshader.utils.logging import get_logger
 
-# Percentage of frame overlap
+log = get_logger(__name__)
+
+# Frame overlap 
 OVERLAP = 50.0
 
 class AudioInput:
     def __init__(self, path: str, window_size: int) -> None:
-        # File attributes
-        self.file_path = path
-        self.pos = 0
+        """
+        Audio Input Initialization
 
-        # Sliding frame attributes
+        Args:
+            path (str): Path to the audio file.
+            window_size (int): Size of the audio frame in samples.
+        """
+        self.file_path = path
         self.window_size = window_size
-        self.overlap = OVERLAP / 100.0
-        self.slide_amount = int(self.window_size * self.overlap)
+        
+        # Keep file handle open to avoid reopening it every time
+        try:
+            self.file_handle = sf.SoundFile(self.file_path, 'r')
+            self.sample_rate = self.file_handle.samplerate
+            self.total_frames = self.file_handle.frames
+            self.pos = 0
+            log.info(f"Audio file loaded: {self.file_path} ({self.total_frames} frames, {self.sample_rate} Hz)")
+        except Exception as e:
+            log.error(f"Failed to load audio file {self.file_path}: {e}")
+            raise
 
     def get_frame(self) -> np.ndarray:
         """
@@ -22,16 +37,19 @@ class AudioInput:
         Returns:
             np.ndarray: The next frame of audio data from the file.
         """
-        with sf.SoundFile(self.file_path, 'r') as f:
-            # Read one frame's worth of audio sample
-            f.seek(self.pos)
-            self.data = f.read(self.window_size)
-            self.data = self.data[:, 0]
-
-            # Slide the frame 
-            self.pos = f.tell() - self.slide_amount
-
-        return self.data
+        if self.pos + self.window_size > self.total_frames:
+            return None  # Signal EOF
+        
+        # Seek and read (file stays open)
+        self.file_handle.seek(self.pos)
+        frame = self.file_handle.read(self.window_size)
+        
+        # Convert stereo to mono if needed
+        if len(frame.shape) > 1:
+            frame = frame[:, 0]
+            
+        self.pos += self.window_size
+        return frame
 
     def get_sample_rate(self) -> int:
         """
@@ -40,21 +58,29 @@ class AudioInput:
         Returns:
             int: Sample rate
         """
-        with sf.SoundFile(self.file_path, 'r') as f:
-            return f.samplerate
+        return self.sample_rate
+
+    def cleanup(self):
+        """
+        Audio File Cleanup
+            Closes the file handle if it exists
+        """
+        if hasattr(self, 'file_handle'):
+            self.file_handle.close()
 
     def _display_file_info(self) -> None:
         """
-        Prints information about the audio file.
+        Display File Information
+            Logs information about the audio file
         """
         with sf.SoundFile(self.file_path, 'r') as f:
-            print("Information about the file:", self.file_path)
-            print("mode", f.mode)
-            print("samplerate", f.samplerate)
-            print("frames", f.frames)
-            print("channels", f.channels)
-            print("format", f.format)
-            print("subtype", f.subtype)
-            print("format info", f.format_info)
-            print("extra info", f.extra_info)
-            print("seekable()", f.seekable())
+            log.info(f"Audio file: {self.file_path}")
+            log.debug(f"Mode: {f.mode}")
+            log.debug(f"Sample rate: {f.samplerate} Hz")
+            log.debug(f"Frames: {f.frames}")
+            log.debug(f"Channels: {f.channels}")
+            log.debug(f"Format: {f.format}")
+            log.debug(f"Subtype: {f.subtype}")
+            log.debug(f"Format info: {f.format_info}")
+            log.debug(f"Extra info: {f.extra_info}")
+            log.debug(f"Seekable: {f.seekable()}")

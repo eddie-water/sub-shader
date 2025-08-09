@@ -12,7 +12,7 @@ Load the data from a file and prepare for the convolution
 Note: the sample rate needs to be defined explicitly here because in the video
 lesson, it is automatically defined when loading the .mat file in Matlab
 '''
-file_data = loadmat("./udemy/section7/ANTS_matlab/v1_laminar.mat")
+file_data = loadmat("research/ants/section_7/matlab_files/v1_laminar.mat")
 csd = file_data["csd"]
 data = csd[5,:,9] 
 data = data.flatten()
