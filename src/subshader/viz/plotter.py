@@ -291,7 +291,6 @@ class Renderer:
         """
         # Data is already downsampled from the wavelet class
         data_bytes = texture_data.astype('f4').tobytes()
-
         log.debug(f"CPU→GPU: Uploading texture data ({texture_data.shape}, f4, {len(data_bytes)} bytes)")
         self.texture.write(data_bytes)
         self.texture.use(location=self.TEXTURE_SLOT)
