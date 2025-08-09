@@ -38,7 +38,12 @@ Clear Back Buffer → Render → Swap Buffers → Display
 ## Current Results
 
 ### Shader Plot Output
-Source: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (10:20 - 10:27)
+![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
+
+**Source**: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (10:20 - 10:27)
+
+### Performance Display
+![FPS Metrics](https://github.com/user-attachments/assets/51bf7c04-2cc2-45dd-808f-6ba320e7a0b2)
 
 ## Installation
 
