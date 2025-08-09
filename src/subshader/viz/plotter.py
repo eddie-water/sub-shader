@@ -294,7 +294,6 @@ class Renderer:
         log.debug(f"CPU→GPU: Uploading texture data ({texture_data.shape}, f4, {len(data_bytes)} bytes)")
         self.texture.write(data_bytes)
         self.texture.use(location=self.TEXTURE_SLOT)
-
         log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
     
     def render_graphic(self):
