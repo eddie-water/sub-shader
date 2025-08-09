@@ -1,3 +1,17 @@
+"""
+WARNING: This benchmark script may not work with the current codebase.
+
+This script was designed for earlier versions of the project and may have
+compatibility issues with the current implementation due to:
+- Recent refactoring of the SubShader module structure
+- Changes to class names and interfaces (e.g., Shader class changes)
+- Updated import paths and method signatures
+- New modular architecture
+
+Use this script as reference only. It may need significant updates to work
+with the current codebase.
+"""
+
 import time
 import numpy as np
 import matplotlib.pyplot as plt
