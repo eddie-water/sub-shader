@@ -1,14 +1,33 @@
-# Sub Shader
+# SubShader
 
-Sub Shader is a real-time audio analysis tool that uses GPU-accelerated time-frequency analysis to visualize audio data. It takes an audio file, performs Continuous Wavelet Transform (CWT) analysis, and renders the results using OpenGL shaders for high-performance visualization.
+SubShader is a real-time audio analysis tool that uses GPU-accelerated time-frequency analysis to visualize audio data. It takes in an audio file, performs Continuous Wavelet Transform (CWT) analysis, and renders the results using OpenGL shaders for high-performance visualization.
 
-## SubShader Performance Update
+## Currently
+
+### Shader Plot Output at ~40 FPS
+![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
+
+**Source**: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (0:08 - 0:25)
+
+![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
+
+**Source**: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (10:20 - 10:27)
+
+### Thoughts
+- I feel like 40 FPS is okay, but how do crazy video games get like 100 FPS? Like what do I gotta do?
+- The normalization of the CWT results is pretty arbitrary. Clearly that affects visual response.
+- The parameters used in the Gauss used to make the wavelets are also pretty arbitrary. Feel like the steeper or weaker the roll off will affect the frequency resolution
+- Next thing to look into is how to minimize total CPU -> GPU -> CPU transfers. If the CWT results are already on the GPU, then why send it back to 
+the CPU? What if I could just send the CWT results to the texture directly? Lightbulb emoji!
+
+##  Performance Update
 
 ### Performance
 - **Current FPS**: ~40 FPS
 - **Optimization**: Moved downsampling to wavelet class, reducing CPU→GPU data transfer
 
-### Recent Changes
+
+### Summary ofChanges
 
 #### **App Structure**
 - **SubShader Module**: Now handles main loop, timing, central logging, and graceful shutdown
@@ -34,17 +53,6 @@ Clear Back Buffer → Render → Swap Buffers → Display
 - **Naming**: Better function and class names (CuWavelet, LoopTimer)
 - **Error Handling**: Division-by-zero and EOF handling
 - **Documentation**: Improved docstrings and code organization
-
-## Current Results
-
-### Shader Plot Output
-![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
-
-**Source**: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (0:08 - 0:25)
-
-![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
-
-**Source**: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (10:20 - 10:27)
 
 ### Performance Display
 ![FPS Metrics](https://github.com/user-attachments/assets/51bf7c04-2cc2-45dd-808f-6ba320e7a0b2)

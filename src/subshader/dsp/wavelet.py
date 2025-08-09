@@ -420,6 +420,8 @@ class CupyWavelet(AntsWavelet):
 
         # Move the result back to the CPU (no downsampling)
         log.debug(f"GPU→CPU: Downloading CWT results ({self.tf_gpu.shape}, {self.tf_gpu.dtype})")
+        
+        # TODO ISSUE-36 Figure out how to do this without the CPU->GPU->CPU transfer
         return cp.asnumpy(self.tf_gpu)
 
     def cleanup(self):
