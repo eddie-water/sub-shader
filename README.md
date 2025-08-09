@@ -38,6 +38,10 @@ Clear Back Buffer → Render → Swap Buffers → Display
 ## Current Results
 
 ### Shader Plot Output
+![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
+
+**Source**: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (0:08 - 0:25)
+
 ![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
 
 **Source**: [Beltran Coachella Set](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (10:20 - 10:27)
