@@ -7,11 +7,11 @@ SubShader is a real-time audio analysis tool that uses GPU-accelerated time-freq
 ### Shader Plot Output at ~40 FPS
 ![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
 
-**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (0:08 - 0:25)
+**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(8:22 - 8:31)
 
 ![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
 
-**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) (10:20 - 10:27)
+**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
 
 ### Thoughts
 - I feel like 40 FPS is okay, but how do crazy video games get like 100 FPS? Like what do I gotta do?
