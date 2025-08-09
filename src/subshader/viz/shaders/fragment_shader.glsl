@@ -20,7 +20,7 @@
 #version 330
 in vec2 texCoord;
 out vec4 fragColor;
-uniform sampler2D scalogram;
+uniform sampler2D texture_sampler;
 uniform float valueMin;
 uniform float valueMax;
 
@@ -54,8 +54,8 @@ vec3 custom_colormap(float t) {
 }
 
 void main() {
-    // Read the value from the scalogram data at the given texture coordinate
-    float value = texture(scalogram, texCoord).r;
+    // Read the value from the texture data at the given texture coordinate
+    float value = texture(texture_sampler, texCoord).r;
     
     // Since data is already normalized to [0,1], use a more reasonable scaling
     // This should allow the brightest parts to reach orange/white colors

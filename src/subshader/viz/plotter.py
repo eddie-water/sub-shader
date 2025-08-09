@@ -58,30 +58,32 @@ class ShaderPlot(Plotter):
         """
         super().__init__(file_path, frame_shape)
 
-        # Handles circular buffer for scrolling visualization
-        self.rolling_frame_buffer = RollingFrameBuffer(num_frames, self.y_n, self.x_n)
+        # Circular buffer for scrolling plot
+        self.plot_frame_buffer = RollingFrameBuffer(num_frames, self.y_n, self.x_n)
 
-        # Create GL Context and Shader Renderer       
+        # Create GL Context - handles window creation and OpenGL context setup
         file_name = os.path.basename(file_path)
         self.gl_context = GLContext(title=f"SubShader - {file_name}", fullscreen=fullscreen)
 
-        # Main GPU rendering component - handles shader compilation, 
-        # texture management, and rendering
-        texture_height, texture_width = self.rolling_frame_buffer.get_flattened_buffer_shape()
+        # GPU Renderer - handles shader compilation, texture management, and rendering
+        texture_height, texture_width = self.plot_frame_buffer.get_flattened_buffer_shape()
         self.renderer = Renderer(self.gl_context.ctx, texture_width, texture_height)
 
     def update_plot(self, plot_values: np.ndarray):
         """
-        Updates the rolling plot with new data.
+        Updates the rolling plot frame buffer with a new frame of data. Then 
+        sends the entire buffer of frames to the texture. Clears the back buffer
+        and renders the new graphic. Displays the graphic on the screen by
+        swapping the front and back buffers.
 
         Args:
             plot_values (np.ndarray): The new data to plot.
         """
-        # Add a new plot fram to the circular buffer
-        self.rolling_frame_buffer.add_frame(plot_values)
+        # Add a new plot frame to the circular buffer
+        self.plot_frame_buffer.add_frame(plot_values)
 
         # Update the texture with the new data
-        self.renderer.update_texture(self.rolling_frame_buffer.get_flattened_buffer())
+        self.renderer.update_texture(self.plot_frame_buffer.get_flattened_buffer())
 
         # Clear the old graphic and render the new one
         self.gl_context.clear_graphic()
@@ -124,7 +126,37 @@ class GLContext:
         self.window = None
         self.ctx = None
         self._init_graphics()
+
+    # =============================================================================
+    # PUBLIC METHODS - External interface
+    # =============================================================================
+
+    def should_close(self):
+        """
+        Checks if the window should close based on user input.
+        
+        Returns:
+            bool: True if the window should close, False otherwise.
+        """
+        return glfw.window_should_close(self.window)
     
+    def display_graphic(self):
+        """
+        Display the rendered content (swap front/back buffers).
+        """
+        glfw.swap_buffers(self.window)
+        glfw.poll_events()  # Process window events
+    
+    def clear_graphic(self, r=0.05, g=0.05, b=0.05):
+        """
+        Clear the OpenGL context with a specified color.
+        """
+        self.ctx.clear(r, g, b)
+
+    # =============================================================================
+    # PRIVATE METHODS - Internal implementation
+    # =============================================================================
+
     def _init_graphics(self):
         """
         GLFW is a cross-platform library used for creating windows with OpenGL 
@@ -220,37 +252,18 @@ class GLContext:
         
         glfw.set_error_callback(glfw_error_callback)
         log.debug("GLFW error callback configured")
-    
-    def should_close(self):
-        """
-        Checks if the window should close based on user input.
-        
-        Returns:
-            bool: True if the window should close, False otherwise.
-        """
-        return glfw.window_should_close(self.window)
-    
-    def display_graphic(self):
-        """
-        Display the rendered content (swap front/back buffers).
-        """
-        glfw.swap_buffers(self.window)
-        glfw.poll_events()  # Process window events
-    
-    def clear_graphic(self, r=0.05, g=0.05, b=0.05):
-        """
-        Clear the OpenGL context with a specified color.
-        """
-        self.ctx.clear(r, g, b)
 
 class Renderer:
 
-    SCALOGRAM_TEXTURE_UNIT = 0
+    TEXTURE_SLOT = 0  # Texture slot that tells the fragment shader which texture to read from
 
     def __init__(self, ctx, texture_width, texture_height):
         """
-        Main GPU rendering component that handles shader compilation, texture 
-        management, and rendering
+        Main GPU rendering component that 
+            - Compiles the shaders 
+            - Creates the graphic geometry and connects it to the shaders
+            - Creates the texture and connects it to the shaders
+            - Renders the graphic 
 
         Args:
             ctx (moderngl.Context): The ModernGL context to use for shader 
@@ -260,15 +273,51 @@ class Renderer:
         """
         self.ctx = ctx
         
-        # Compile and link shaders
+        # Initialize core rendering components
         self.shader = self._compile_shaders()
-        
-        # Bind the graphics geometry to the shader program
-        self._setup_rendering_geometry()
+        self.vbo, self.vao = self._setup_rendering_geometry(self.shader)
+        self.texture = self._setup_texture(self.shader, texture_width, texture_height)
 
-        # Prepare the texture 
-        self._setup_texture(texture_width, texture_height)
+    # =============================================================================
+    # PUBLIC METHODS - External interface
+    # =============================================================================
+
+    def update_texture(self, texture_data):
+        """
+        Upload new data to texture and activate it in the assigned slot
+        
+        Args:
+            texture_data (np.ndarray): 2D array of data to upload to texture.
+        """
+        # Data is already downsampled from the wavelet class
+        data_bytes = texture_data.astype('f4').tobytes()
+
+        log.debug(f"CPU→GPU: Uploading texture data ({texture_data.shape}, f4, {len(data_bytes)} bytes)")
+        self.texture.write(data_bytes)
+        self.texture.use(location=self.TEXTURE_SLOT)
+
+        log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
     
+    def render_graphic(self):
+        """
+        Render the quad - this one-shots the graphics pipeline from the source
+        data stored in the texture to the back buffer.
+        """
+        try:
+            self.vao.render(moderngl.TRIANGLE_STRIP)
+            
+            # Check for OpenGL errors
+            error = self.ctx.error
+            if error != 'GL_NO_ERROR':
+                log.error(f"Render error: {error}")
+            
+        except Exception as e:
+            log.error(f"Render exception: {e}")
+
+    # =============================================================================
+    # PRIVATE METHODS - Internal implementation
+    # =============================================================================
+
     def _compile_shaders(self):
         """
         Compile and link vertex (geometry) and fragment (color) shaders into 
@@ -278,13 +327,12 @@ class Renderer:
         fragment_shader = get_fragment_shader_source()
         
         log.info("Compiling shaders...")
-        
         shader = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
         log.info("Shader compilation successful!")
 
         return shader
 
-    def _setup_rendering_geometry(self):
+    def _setup_rendering_geometry(self, shader: moderngl.Program):
         """
         Create quad geometry (rectangle) that covers the GLFW window, store in 
         OpenGL context/memory via VBO, and bind to the shader program via VAO.
@@ -299,15 +347,17 @@ class Renderer:
         # Vertex Buffer Object stores the quad vertices in GPU memory (tobytes()
         # removes NumPy stuff that GPU doesn't need)
         log.info(f"CPU→GPU: Uploading vertex buffer ({quad_vertices.shape}, {quad_vertices.dtype}, {quad_vertices.nbytes} bytes)")
-        self.vbo = self.ctx.buffer(quad_vertices.tobytes()) 
+        vbo = self.ctx.buffer(quad_vertices.tobytes()) 
 
         # Vertex Array Object tells the shader program how to use the data
         # stored in the VBO (position, color, etc.)
-        self.vao = self.ctx.simple_vertex_array(self.shader, self.vbo, 'position')
+        vao = self.ctx.simple_vertex_array(shader, vbo, 'position')
 
-    def _setup_texture(self, width, height):
+        return vbo, vao
+
+    def _setup_texture(self, shader: moderngl.Program, width: int, height: int):
         """
-        Create 2D texture for scalogram data
+        Create texture and connect it to shader uniform via texture slot
         
         Args:
             width (int): Width of the texture.
@@ -316,56 +366,19 @@ class Renderer:
         # Use actual data size - downsampling is handled at the source
         log.info(f"Creating texture: {width}x{height} (1 channel grayscale, float32)")
         log.info(f"CPU→GPU: Allocating texture buffer ({width}×{height}, f4, {width * height * 4} bytes)")
-        self.texture = self.ctx.texture((width, height), 1, dtype='f4')
+        texture = self.ctx.texture((width, height), 1, dtype='f4')
 
-        # Linear interpolation for smooth scaling if the texture is resized
-        self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        # Linear interpolation for smoothness between pixels
+        texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
         
         # Store texture size
         self.size = (width, height)
         
-        # Set up uniforms for colormap
-        self.shader['scalogram'] = self.SCALOGRAM_TEXTURE_UNIT
-        try:
-            self.shader['valueMin'] = 0.0
-            self.shader['valueMax'] = 1.0
-        except KeyError:
-            log.warning("Scaling uniforms not found")
-        
-        log.info(f"Audio texture created: {width}x{height}")
+        # Connect texture slot to shader uniform
+        shader['texture_sampler'] = self.TEXTURE_SLOT
+        log.info(f"Assigned texture slot {self.TEXTURE_SLOT} to shader uniform 'texture_sampler'")
 
-
-
-    def update_texture(self, data):
-        """
-        Update texture with new data
-        
-        Args:
-            data (np.ndarray): 2D array of scalogram data to upload to texture.
-        """
-        # Data is already downsampled from the wavelet class
-        data_bytes = data.astype('f4').tobytes()
-
-        log.debug(f"CPU→GPU: Uploading texture data ({data.shape}, f4, {len(data_bytes)} bytes)")
-        self.texture.write(data_bytes)
-        self.texture.use(location=self.SCALOGRAM_TEXTURE_UNIT)
-
-        log.debug(f"Texture updated: {data.shape}, range {data.min():.3f}-{data.max():.3f}")
-    
-    def render_graphic(self):
-        """
-        Render the quad
-        """
-        try:
-            self.vao.render(moderngl.TRIANGLE_STRIP)
-            
-            # Check for OpenGL errors
-            error = self.ctx.error
-            if error != 'GL_NO_ERROR':
-                log.error(f"Render error: {error}")
-            
-        except Exception as e:
-            log.error(f"Render exception: {e}")
+        return texture
 
 class RollingFrameBuffer:
     def __init__(self, num_frames, height, width):
@@ -387,7 +400,11 @@ class RollingFrameBuffer:
         
         # Pre-allocate flattened buffer
         self.flattened_buffer = np.zeros((height, num_frames * width), dtype=np.float32)
-    
+
+    # =============================================================================
+    # PUBLIC METHODS - External interface
+    # =============================================================================
+
     def add_frame(self, frame_data):
         """Add new frame to circular buffer and update flattened buffer"""
         if frame_data.shape != (self.height, self.width):
@@ -399,17 +416,6 @@ class RollingFrameBuffer:
         
         # Update flattened buffer immediately
         self._update_flattened_buffer()
-    
-    def _update_flattened_buffer(self):
-        """Update flattened buffer with correct coordinate mapping"""
-        # Calculate the correct order of frames (oldest first)
-        frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
-        
-        # Use vectorized operations for better performance
-        for i, frame_i in enumerate(frame_order):
-            start_col = i * self.width
-            end_col = start_col + self.width
-            self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
     
     def get_flattened_buffer_shape(self):
         """
@@ -428,6 +434,21 @@ class RollingFrameBuffer:
             np.ndarray: Time-ordered flattened buffer.
         """
         return self.flattened_buffer
+
+    # =============================================================================
+    # PRIVATE METHODS - Internal implementation
+    # =============================================================================
+
+    def _update_flattened_buffer(self):
+        """Update flattened buffer with correct coordinate mapping"""
+        # Calculate the correct order of frames (oldest first)
+        frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
+        
+        # Use vectorized operations for better performance
+        for i, frame_i in enumerate(frame_order):
+            start_col = i * self.width
+            end_col = start_col + self.width
+            self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
 
 
 # =============================================================================
