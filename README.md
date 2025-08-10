@@ -16,16 +16,24 @@ SubShader is a real-time audio visualizer. It reads in an audio file, performs t
 
 **Source**: [Beltran Coachella Soundclou Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
 
-### What is the CWT and why use it?
-
-The Continuous Wavelet Transform (CWT) overcomes the FFT’s fixed time-frequency tradeoff by proportionally adapting the number of samples per transform: less for high frequencies (capturing short-lived high-frequency transients like percussion), more for low frequencies (tracking basslines and sustained tones). This gets us precise timing for fast events and accurate frequency resolution for slow ones. 
-
-Edit: Just did an audit of the code, I realized I'm not doin this ^ totally right so I created [this issue](https://github.com/users/eddie-water/projects/1/views/1?pane=issue&itemId=113509598&issue=eddie-water%7Csub-shader%7C36) to track fixing that. 
-
 ### Software Flow
 - **Audio Input**: Retrieves chunks of audio from file.
 - **CWT**: Performs time-frequency analysis on the audio, accelerated with CuPy.
 - **Real-Time Plotting**: Using a 2D shader to visualize the CWT.
+
+### What is the CWT and why use it?
+
+The Continuous Wavelet Transform (CWT) is really good for analyzing audio for musical content. The Fast Fourier Transform (FFT), which is typically the go-to for DSP / time-frequency analysis, unfortunately has a fixed time-frequency resolution. You can only configure them to have A: good frequency resolution (accurate low frequencies, but blurry timing) or B: good time resolution (accurate timing, but blurry frequencies). 
+
+The CWT overcomes this limitation by adapting the number of samples per transform: 
+- Uses more time samples for lower frequencies, since they tend to last longer in time like basslines and sustained melodic notes, which also gives us fine frequency resolution, which is advantageous because low frequencies are easily differentiable to the ear
+- Uses fewer time samples for higher frequencies, since short transient events like percussion don't last very long in time, which gives us precise timing for quick events, and is advantageous because the ear is bad at differentiating high frequencies
+
+**Note**: After auditing the code, I realized the current implementation doesn't fully implement this adaptive behavior. All wavelets are generated using the same number of time samples, which means the time resolution is fixed and the frequency resolution is also fixed. This means we're not getting the full benefits of true CWT. I've created [this issue](https://github.com/users/eddie-water/projects/1/views/1?pane=issue&itemId=113509598&issue=eddie-water%7Csub-shader%7C36) to track fixing this.
+
+## Performance
+
+Currently achieving around 40 FPS.
 
 ## Installation
 
