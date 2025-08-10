@@ -15,4 +15,7 @@ __pycache__/
 logs/*.log
 logs/*.txt
 !logs/.gitkeep 
-!logs/README.md 
+!logs/README.md
+
+# FPS Record (track personal best)
+!fps_record.txt 
