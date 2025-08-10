@@ -1,10 +1,8 @@
 # SubShader
 
-SubShader is a real-time audio visualizer. It reads in an audio file, performs the Continuous Wavelet Transform using CuPy, and plots the results in real-time with a 2D shader. Currently getting around 40 FPS.
-
 ## Overview
 
-**Audio File → CWT Analysis → GPU Texture → Shader Rendering → Real-time Visualization**
+SubShader is a real-time audio visualizer. It reads in an audio file, performs the Continuous Wavelet Transform using CuPy, and plots the results in real-time with a 2D shader. Currently getting around 40 FPS.
 
 ### Current Status
 
@@ -17,9 +15,12 @@ SubShader is a real-time audio visualizer. It reads in an audio file, performs t
 **Source**: [Beltran Coachella Soundclou Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
 
 ### Software Flow
-- **Audio Input**: Retrieves chunks of audio from file.
-- **CWT**: Performs time-frequency analysis on the audio, accelerated with CuPy.
-- **Real-Time Plotting**: Using a 2D shader to visualize the CWT.
+**Audio Input → Perform CWT → Update Plot**
+- **Audio Input**: Retrieves a chunk of audio from file.
+
+- **Perform CWT**: Run the CWT on the audio, accelerated with CuPy.
+
+- **Update**: Using a 2D shader to visualize the CWT results in a scrolling plot.
 
 ### What is the CWT and why use it?
 
@@ -31,7 +32,7 @@ The CWT overcomes this limitation by adapting the number of samples per transfor
 
 **Note**: After auditing the code, I realized the current implementation doesn't fully implement this adaptive behavior. All wavelets are generated using the same number of time samples, which means the time resolution is fixed and the frequency resolution is also fixed. This means we're not getting the full benefits of true CWT. I've created [this issue](https://github.com/users/eddie-water/projects/1/views/1?pane=issue&itemId=113509598&issue=eddie-water%7Csub-shader%7C36) to track fixing this.
 
-## Performance
+### Performance
 
 Currently achieving around 40 FPS.
 
