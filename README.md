@@ -1,10 +1,11 @@
 # SubShader
 
-SubShader is a real-time audio analysis tool that uses GPU-accelerated time-frequency analysis to visualize audio data. It takes in an audio file, performs Continuous Wavelet Transform (CWT) analysis, and renders the results using OpenGL shaders for high-performance visualization.
+## Overview
 
-## Currently
+SubShader is a real-time audio visualizer. It reads in an audio file, performs the Continuous Wavelet Transform using CuPy, and plots the results in real-time with a 2D shader. Currently getting around 40 FPS.
 
-### Shader Plot Output at ~40 FPS
+### Current Status
+
 ![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
 
 **Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(8:22 - 8:31)
@@ -13,128 +14,53 @@ SubShader is a real-time audio analysis tool that uses GPU-accelerated time-freq
 
 **Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
 
-### Thoughts
-- I feel like 40 FPS is okay, but how do crazy video games get like 100 FPS? Like what do I gotta do?
-- The normalization of the CWT results is pretty arbitrary. Clearly that affects visual response.
-- The parameters used in the Gauss used to make the wavelets are also pretty arbitrary. Feel like the steeper or weaker the roll off will affect the frequency resolution
-- Next thing to look into is how to minimize total CPU -> GPU -> CPU transfers. If the CWT results are already on the GPU, then why send it back to 
-the CPU? What if I could just send the CWT results to the texture directly? Lightbulb emoji!
+### Software Flow
+**Audio Input → Perform CWT → Update Plot**
+- **Audio Input**: Retrieves a chunk of audio from file.
 
-##  Performance Update
+- **Perform CWT**: Run the CWT on the audio, accelerated with CuPy.
+
+- **Update**: Using a 2D shader to visualize the CWT results in a scrolling plot.
 
 ### Performance
-- **Current FPS**: ~40 FPS
-- **Optimization**: Moved downsampling to wavelet class, reducing CPU→GPU data transfer
+
+Currently getting ~40 FPS.
 
 
-### Summary ofChanges
+### What is the CWT and why use it?
 
-#### **App Structure**
-- **SubShader Module**: Now handles main loop, timing, central logging, and graceful shutdown
-- **Modular Design**: Separated audio processing, rendering, and display components
+The Continuous Wavelet Transform (CWT) is a mathematical process that transforms time-domain data into its time-frequency representation. It's an expansion of the Fourier Transform where it uses wavelets  (time-localized sine waves) as its analyzing functions, instead of pure sinusoids. 
 
-#### **Shader Implementation** 
-- **Graphics Context**: ModernGL/GLFW setup with fullscreen/windowed modes
-- **Geometry**: VBO/VAO fullscreen quad for rendering
-- **Texture Pipeline**: Direct texture upload with shader rendering
+The key insight is that the FFT uses infinite sinusoids that are completely delocalized in time to filter their input signals - they have no "beginning" or "end", so they can't convey any timing information. The CWT solves this by multiplying the infinite sinusoids with a Gaussian bell curve, creating finite wavelets that are localized to specific time windows. This allows you to know both what frequencies are present AND when they occurred, making it ideal for musical audio analysis. In music, melodies glide across time and frequency, vocals ramp up and taper off, percussions are loud and quick, and grooves jump around natural frequencies.
 
-#### **Graphics Pipeline**
-```
-Audio Data → update_plot() → Circular Frame Buffer → Flattened Texture → 
-Clear Back Buffer → Render → Swap Buffers → Display
-```
+The Fast Fourier Transform (FFT), which is typically the go-to in DSP, has a fixed time-frequency resolution tradeoff: you can have good frequency resolution (accurate frequencies, blurry timing) or good time resolution (accurate timing, blurry frequencies), but not both. 
 
-#### **Logging System**
-- **Replaced print statements**: Now using structured logging (info, debug, warning, error)
-- **GPU Transfer Tracking**: Logs all CPU↔GPU transfers and error paths
-- **Better debugging**: Clear visibility into performance and errors
+The CWT overcomes this limitation by adapting the number of samples per transform: 
+- Uses more time samples for lower frequencies, since they tend to last longer in time like basslines and sustained melodic notes, which also gives us fine frequency resolution, which is advantageous because low frequencies are easily differentiable to the ear
+- Uses fewer time samples for higher frequencies, since short transient events like percussion don't last very long in time, which gives us precise timing for quick events, and is advantageous because the ear is bad at differentiating high frequencies
 
-#### **Code Improvements**
-- **Naming**: Better function and class names (CuWavelet, LoopTimer)
-- **Error Handling**: Division-by-zero and EOF handling
-- **Documentation**: Improved docstrings and code organization
-
-### Performance Display
-![FPS Metrics](https://github.com/user-attachments/assets/51bf7c04-2cc2-45dd-808f-6ba320e7a0b2)
+**Note**: After auditing the code, I realized the current implementation doesn't fully implement this adaptive behavior. All wavelets are generated using the same number of time samples, which means the time resolution is fixed and the frequency resolution is also fixed. This means we're not getting the full benefits of true CWT. I've created [this issue](https://github.com/users/eddie-water/projects/1/views/1?pane=issue&itemId=113509598&issue=eddie-water%7Csub-shader%7C36) to track fixing this.
 
 ## Installation
 
-### Create Virtual Environment
-Create a virtual environment to avoid cluttering your system:
+### Setup
 ```bash
+# Create virtual environment
 python3 -m venv venv
-```
 
-### Activate Virtual Environment
-On Linux/WSL:
-```bash
+# Activate (Linux/WSL)
 source venv/bin/activate
-```
 
-On Windows:
-```bash
-venv\Scripts\activate
-```
-
-### Install Dependencies
-Install the package and all dependencies in editable mode:
-```bash
+# Install dependencies
 pip install -e .
 ```
 
-This installs the project as an importable package, so you don't need to reinstall after code changes.
-
-## Usage
-
-### Run Main Application
+### Run
 ```bash
 python -m subshader
 ```
 
-### Deactivate Virtual Environment
-When finished:
-```bash
-deactivate
-```
-
-## Development
-
-### Performance Benchmark
-**Note**: The benchmark script may not work with the current codebase due to recent refactoring. It was designed for earlier versions of the project.
-
-```bash
-# WARNING: This script may be outdated and not work with current implementation
-python research/benchmark.py
-```
-
-### Development Progress
-
-#### **Completed**
-- ✅ Audio input with EOF handling
-- ✅ Dynamic scrolling plot
-- ✅ Modular architecture
-- ✅ Debug utilities (QuickPlot/MultiQuickPlot)
-- ✅ Code cleanup (removed unused files)
-
-## Technical Details
-
-### Continuous Wavelet Transform
-The project implements GPU-accelerated Continuous Wavelet Transform (CWT) using Complex Morlet Wavelets. This provides better time-frequency localization compared to traditional Fourier Transform methods.
-
-### GPU Acceleration
-- Uses CuPy for GPU-accelerated wavelet computations
-- Minimizes CPU↔GPU data transfers through strategic downsampling
-- Direct texture upload to OpenGL for rendering
-
-### Real-time Visualization
-- OpenGL shader-based rendering for high performance
-- Circular buffer for scrolling visualization
-- Fullscreen and windowed display modes
-
-## Requirements
-
+### Requirements
 - Python 3.8+
-- CUDA-capable GPU (I have a 4060 ti)
+- CUDA-capable GPU (recommended)
 - OpenGL 3.3+ support
-
-See `pyproject.toml` for complete dependency list.
