@@ -12,7 +12,7 @@ SubShader is a real-time audio visualizer. It reads in an audio file, performs t
 
 ![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
 
-**Source**: [Beltran Coachella Soundclou Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
+**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
 
 ### Software Flow
 **Audio Input → Perform CWT → Update Plot**
@@ -22,19 +22,25 @@ SubShader is a real-time audio visualizer. It reads in an audio file, performs t
 
 - **Update**: Using a 2D shader to visualize the CWT results in a scrolling plot.
 
+### Performance
+
+![SubShader FPS](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/eddie-water/9cce9e3287b90330510db14f63f62678/raw/subshader-fps-badge.json)
+
+*Live FPS badge - shows highest FPS achieved from performance logs*
+
 ### What is the CWT and why use it?
 
-The Continuous Wavelet Transform (CWT) is really good for analyzing audio for musical content. The Fast Fourier Transform (FFT), which is typically the go-to for DSP / time-frequency analysis, unfortunately has a fixed time-frequency resolution. You can only configure them to have A: good frequency resolution (accurate low frequencies, but blurry timing) or B: good time resolution (accurate timing, but blurry frequencies). 
+The Continuous Wavelet Transform (CWT) is a mathematical process that transforms time-domain data into its time-frequency representation. It's an expansion of the Fourier Transform where it uses wavelets  (time-localized sine waves) as its analyzing functions, instead of pure sinusoids. 
+
+The key insight is that the FFT uses infinite sinusoids that are completely delocalized in time to filter their input signals - they have no "beginning" or "end", so they can't convey any timing information. The CWT solves this by multiplying the infinite sinusoids with a Gaussian bell curve, creating finite wavelets that are localized to specific time windows. This allows you to know both what frequencies are present AND when they occurred, making it ideal for musical audio analysis. In music, melodies glide across time and frequency, vocals ramp up and taper off, percussions are loud and quick, and grooves jump around natural frequencies.
+
+The Fast Fourier Transform (FFT), which is typically the go-to in DSP, has a fixed time-frequency resolution tradeoff: you can have good frequency resolution (accurate frequencies, blurry timing) or good time resolution (accurate timing, blurry frequencies), but not both. 
 
 The CWT overcomes this limitation by adapting the number of samples per transform: 
 - Uses more time samples for lower frequencies, since they tend to last longer in time like basslines and sustained melodic notes, which also gives us fine frequency resolution, which is advantageous because low frequencies are easily differentiable to the ear
 - Uses fewer time samples for higher frequencies, since short transient events like percussion don't last very long in time, which gives us precise timing for quick events, and is advantageous because the ear is bad at differentiating high frequencies
 
 **Note**: After auditing the code, I realized the current implementation doesn't fully implement this adaptive behavior. All wavelets are generated using the same number of time samples, which means the time resolution is fixed and the frequency resolution is also fixed. This means we're not getting the full benefits of true CWT. I've created [this issue](https://github.com/users/eddie-water/projects/1/views/1?pane=issue&itemId=113509598&issue=eddie-water%7Csub-shader%7C36) to track fixing this.
-
-### Performance
-
-Currently achieving around 40 FPS.
 
 ## Installation
 
