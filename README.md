@@ -24,7 +24,8 @@ SubShader is a real-time audio visualizer. It reads in an audio file, performs t
 
 ### Performance
 
-Currently achieving around 40 FPS with real-time audio visualization.
+Currently getting ~40 FPS.
+
 
 ### What is the CWT and why use it?
 
