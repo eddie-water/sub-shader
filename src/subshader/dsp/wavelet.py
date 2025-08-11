@@ -312,6 +312,15 @@ class AntsWavelet(Wavelet):
         self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
         self.num_wavelets = self.wavelet_kernels.shape[0]
 
+        # TODO ISSUE-36 NOW - if we use the same t vector for all the wavelets,
+        # then each wavelet has the same time-domain length, meaning it has a
+        # a fixed time resolution. This means that the wavelet will have a 
+        # fixed frequency resolution. The whole point of the CWT is to have a 
+        # fine frequency resolution for low frequencies and a fine time 
+        # resolution for high frequencies. However, if we have different t and
+        # f resolution, all the shapes of each row of coefs will be totally
+        # different, changing the format/representation of the data which I
+        # think is part of the reason why the CWT is so hard to visualize.
         for i, f in enumerate(self.freqs):
             # TODO ISSUE-36 Determine the significance of the parameters of the guassian envelope - why -4?
             cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
