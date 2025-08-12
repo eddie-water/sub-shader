@@ -135,34 +135,34 @@ class Wavelet(ABC):
 
     def normalize_coefs(self, raw_coefs: np.ndarray) -> np.ndarray:
         """
-        Cleans up the raw CWT coefficients for plotting
-          - Takes the absolute values of the raw coefs to get the magnitude of
-          the resultant coefs
-          - Normalizes the coefs so the min and max map to 0 and 1
+        Normalize CWT coefficients for plotting using a fixed dB range.
+        
+        This avoids per-frame min/max scaling (which causes flicker and grain)
+        by mapping magnitudes into a consistent dynamic range.
 
         Args:
-            raw_coefs (np.ndarray): raw CWT coefficients 
+            raw_coefs (np.ndarray): Raw CWT coefficients (complex or real).
 
         Returns:
-            np.ndarray: Normalized CWT coefficients
+            np.ndarray: Normalized magnitudes in [0, 1].
         """
-        # Absolute Value 
-        coefs_abs = np.abs(raw_coefs)
+        # Magnitude
+        mag = np.abs(raw_coefs) + 1e-12  # epsilon to avoid log(0)
 
-        # TODO ISSUE-36 See if we should do scale-based normalization for all 
-        # the wavelet subclasses instead of only in the PyWavelet subclass
+        # Convert to decibels
+        db_vals = 20.0 * np.log10(mag)
 
-        # Min-Max Normalization - squeeze data into the [0, 1] range
-        coefs_min = np.min(coefs_abs)
-        coefs_max = np.max(coefs_abs)
-        
-        epsilon = 1e-10 # Prevents division by zero
-        coefs_norm = (coefs_abs - coefs_min) / (coefs_max - coefs_min + epsilon)
-        
-        # Ensure output is in [0, 1] range
-        coefs_norm = np.clip(coefs_norm, 0.0, 1.0)
-        
-        return coefs_norm
+        # Fixed display range (dB)
+        db_floor = -80.0
+        db_ceil = 0.0
+
+        # Clamp to range
+        db_vals = np.clip(db_vals, db_floor, db_ceil)
+
+        # Map to [0, 1]
+        norm_vals = (db_vals - db_floor) / (db_ceil - db_floor)
+
+        return norm_vals.astype(np.float32)
     
     def downsample(self, coefs: np.ndarray, target_width: int = 128) -> np.ndarray:
         """
@@ -276,195 +276,122 @@ class PyWavelet(Wavelet):
         pass
 
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate: int, window_size: int):
+    def __init__(self, sample_rate: int, window_size: int,
+                 m_cycles: float = 6.0, fwhm_cycles: float = 3.0):
         """
-        This is a CWT implementation I got from Analyzing Neural Time Series 
-        (ANTS) by Mike X Cohen. I had to translate it from Matlab. It manually 
-        creates a bank of wavelet filters specified by the list of frequencies 
-        and then manually performs the CWT on audio data.
+        ANTS-style CWT with true scale-dependent time support.
 
         Args:
-            sample_rate (int): The rate the data was sampled in Hz
-            window_size (int): The length of the data
+            sample_rate (int): audio sample rate in Hz
+            window_size (int): analysis window length in samples
+            m_cycles (float): number of carrier cycles per wavelet
+            fwhm_cycles (float): Gaussian FWHM width in cycles
         """
-        # TODO ISSUE-36 Use class inheritance effectively to avoid code 
-        # duplication
         super().__init__(sample_rate, window_size)
 
-        # Initialize the time-frequency matrix
-        self.tf = np.zeros((self.num_freqs, self.window_size))
-
-        # Create a centered time vector for the CMW
-        cmw_t = np.arange(2*self.sample_rate) / self.sample_rate
-        self.cmw_t = cmw_t - np.mean(cmw_t) 
-
-        # N's of convolution
+        self.m_cycles = m_cycles
+        self.fwhm_cycles = fwhm_cycles
         self.data_n = self.window_size
-        self.kern_n = len(cmw_t)
-        self.conv_n = self.data_n + self.kern_n - 1
-        self.half_kern_n = self.kern_n // 2
 
-        # TODO ISSUE-36 Full-Width Half Maximum - try out some different values
-        fwhm = 0.3
+        # Store per-frequency kernels (variable length)
+        self.wavelet_kernels: list[np.ndarray] = []
+        self.half_kern_ns: list[int] = []
 
-        # Build a filter bank of frequency-domain wavelets
-        # TODO ISSUE-36 Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
-        self.wavelet_kernels = np.zeros((self.num_freqs, self.conv_n), dtype = cp.complex64)
-        self.num_wavelets = self.wavelet_kernels.shape[0]
+        for f in self.freqs:
+            # Duration in seconds for m_cycles cycles at frequency f
+            dur_s = m_cycles / f
+            m_samples = int(np.round(dur_s * self.sample_rate))
 
-        # TODO ISSUE-36 NOW - if we use the same t vector for all the wavelets,
-        # then each wavelet has the same time-domain length, meaning it has a
-        # a fixed time resolution. This means that the wavelet will have a 
-        # fixed frequency resolution. The whole point of the CWT is to have a 
-        # fine frequency resolution for low frequencies and a fine time 
-        # resolution for high frequencies. However, if we have different t and
-        # f resolution, all the shapes of each row of coefs will be totally
-        # different, changing the format/representation of the data which I
-        # think is part of the reason why the CWT is so hard to visualize.
-        for i, f in enumerate(self.freqs):
-            # TODO ISSUE-36 Determine the significance of the parameters of the guassian envelope - why -4?
-            cmw_k = np.exp(1j*2*pi*f*self.cmw_t) * np.exp(-4*np.log(2)*self.cmw_t**2 / fwhm**2)
-            
-            # TODO ISSUE-36 Figure out why the second band looks weaker than the first
-            # Scale-Based Normalization: sqrt(f) = 1/sqrt(scale) 
-            cmw_k = np.sqrt(f) * cmw_k
+            # Time vector centered at 0
+            t = (np.arange(m_samples) / self.sample_rate) - (dur_s / 2)
 
-            # TODO ISSUE-36 Investigate the n = conv_n vs kern_n passed into the FFT - how does this affect the results of the CWT?
-            cmw_x = fft(cmw_k, self.conv_n)
-            cmw_x = cmw_x / max(cmw_x)
-            self.wavelet_kernels[i,:] = cmw_x 
+            # Gaussian FWHM in seconds
+            fwhm_s = fwhm_cycles / f
 
-    def class_specific_cwt(self, data) -> np.ndarray:
-        pass
+            # Complex Morlet wavelet
+            cmw_k = np.exp(1j * 2 * np.pi * f * t) \
+                    * np.exp(-4 * np.log(2) * (t ** 2) / fwhm_s ** 2)
+
+            # Scale normalization
+            cmw_k *= np.sqrt(f)
+
+            kern_n = len(cmw_k)
+            conv_n = self.data_n + kern_n - 1
+            half_kern_n = kern_n // 2
+            self.half_kern_ns.append(half_kern_n)
+
+            # FFT of kernel, normalized
+            cmw_x = fft(cmw_k, conv_n)
+            cmw_x = cmw_x / np.max(np.abs(cmw_x))
+
+            # Store as numpy array (variable length OK)
+            self.wavelet_kernels.append(np.asarray(cmw_x, dtype=np.complex64))
+
+        self.num_wavelets = len(self.wavelet_kernels)
+
 
 class NumpyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size):
-        """
-        This implements the ANTS CWT using NumPy.
-
-        Args:
-            sample_rate (int): The rate the data was sampled in Hz
-            window_size (int): The length of the data
-        """
-        super().__init__(sample_rate, window_size)
-
-        # Initialize the time-frequency matrix
-        self.tf = np.zeros((self.num_freqs, self.window_size))
-
     def class_specific_cwt(self, data) -> np.ndarray:
         """
-        This implements the ANTS CWT using NumPy.
-
-        Args:
-            data (np.ndarray): The data to perform the CWT on
-
-        Returns:
-            np.ndarray: The scale-based normalized CWT coefficients 
+        Perform CWT using variable-length wavelets, CPU version.
+        Returns: (num_freqs, window_size) matrix.
         """
-        # Transform the Data time series into a spectrum
-        data_x = fft(data, self.conv_n)
+        tf = np.zeros((self.num_freqs, self.window_size), dtype=np.float32)
+        for i, cmw_x in enumerate(self.wavelet_kernels):
+            conv_n = cmw_x.shape[0]
+            data_x = fft(data, conv_n)
+            conv = ifft(data_x * cmw_x)
+            conv = np.abs(conv) ** 2
+            half_kern_n = self.half_kern_ns[i]
+            conv_valid = conv[half_kern_n:half_kern_n + self.data_n]
+            tf[i, :] = conv_valid
+        return tf
 
-        # Perform the CWT with each wavelet 
-        for i in range(self.num_wavelets):
-            conv = ifft(data_x * self.wavelet_kernels[i,:])
-            conv = conv[(self.half_kern_n):(-self.half_kern_n+1)]
-            conv_pow = np.abs(conv)**2
-            self.tf[i,:] = conv_pow
-
-        # TODO ISSUE-36 Clean up the boundary effects of the convolution
-
-        return self.tf
-    
     def cleanup(self):
-        """
-        Clean up any resources used by NumpyWavelet.
-        
-        NumpyWavelet doesn't allocate significant resources, so this is a no-op.
-        """
         pass
-    
+
+
 class CupyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, window_size):
-        """
-        This implements the ANTS CWT using CuPy to exploit the parallelizable
-        aspects of the CWT by running on a GPU. Note - this won't work without
-        an Nvidia GPU and bunch of CUDA dependencies.
+    def __init__(self, sample_rate, window_size,
+                 m_cycles=6.0, fwhm_cycles=3.0):
+        super().__init__(sample_rate, window_size, m_cycles, fwhm_cycles)
+        log.info(f"CPU→GPU: Uploading {len(self.wavelet_kernels)} wavelets to GPU")
 
-        Args:
-            sample_rate (int): The rate the data was sampled in Hz
-            window_size (int): The length of the data
-        """
-        super().__init__(sample_rate, window_size)
-        self.tf_gpu = cp.zeros((self.num_freqs, self.window_size))
+        # Convert each kernel individually to CuPy
+        self.wavelet_kernels = [cp.asarray(w) for w in self.wavelet_kernels]
+        self.num_wavelets = len(self.wavelet_kernels)
 
-        # Move the wavelet kernels to the GPU
-        log.info(f"CPU→GPU: Uploading wavelet kernels ({self.wavelet_kernels.shape}, {self.wavelet_kernels.dtype})")
-        self.wavelet_kernels = cp.asarray(self.wavelet_kernels)
-        
-        # Track GPU memory allocations for cleanup
-        self._gpu_allocations = []
+        # Allocate GPU time-frequency matrix
+        self.tf_gpu = cp.zeros((self.num_freqs, self.window_size), dtype=cp.float32)
 
-    # TODO ISSUE-36 Investigate writing a custom GPU kernel rather than using CuPy
     def class_specific_cwt(self, data) -> np.ndarray:
         """
-        This implements the ANTS CWT using CuPy.
-
-        Args:
-            data (np.ndarray): The data to perform the CWT on
-
-        Returns:
-            np.ndarray: The CWT coefficients
+        Perform CWT using variable-length wavelets, GPU version.
+        Returns: (num_freqs, window_size) matrix.
         """
-        # Transform the Data time series into a spectrum on the GPU
-        # TODO ISSUE-33 Investigate how to minimize the CPU to GPU transfers
-        log.debug(f"CPU→GPU: Uploading audio frame ({data.shape}, {data.dtype})")
-        data = cp.asarray(data, dtype=cp.complex64)
-        data_x = cp_fft.fftn(data, self.conv_n)
+        for i, cmw_x in enumerate(self.wavelet_kernels):
+            conv_n = cmw_x.shape[0]
+            data_x = cp_fft.fftn(cp.asarray(data, dtype=cp.complex64), conv_n)
+            conv = cp_fft.ifft(data_x * cmw_x)
+            conv = cp.abs(conv) ** 2
+            half_kern_n = self.half_kern_ns[i]
+            conv_valid = conv[half_kern_n:half_kern_n + self.data_n]
+            self.tf_gpu[i, :] = conv_valid
 
-        for i in range(self.num_wavelets):
-            conv = cp_fft.ifft(data_x * self.wavelet_kernels[i,:])
-            conv = conv[(self.half_kern_n):(-self.half_kern_n+1)]
-            conv_pow = cp.abs(conv)**2
-            self.tf_gpu[i,:] = conv_pow
-
-        # Move the result back to the CPU (no downsampling)
-        log.debug(f"GPU→CPU: Downloading CWT results ({self.tf_gpu.shape}, {self.tf_gpu.dtype})")
-        
-        # TODO ISSUE-36 Figure out how to do this without the CPU->GPU->CPU transfer
         return cp.asnumpy(self.tf_gpu)
 
     def cleanup(self):
-        """
-        Clean up GPU memory allocations.
-        
-        This function explicitly frees GPU memory to prevent memory leaks
-        and ensure proper resource management.
-        """
         try:
-            # Free GPU arrays
             if hasattr(self, 'tf_gpu'):
                 del self.tf_gpu
                 self.tf_gpu = None
-            
             if hasattr(self, 'wavelet_kernels'):
                 del self.wavelet_kernels
                 self.wavelet_kernels = None
-            
-            # Clear any cached GPU memory
             cp.get_default_memory_pool().free_all_blocks()
             cp.get_default_pinned_memory_pool().free_all_blocks()
-
         except Exception as e:
-            # Note: We can't use log here since this might be called during 
-            # cleanup when logging might not be available
             print(f"Warning: Error during GPU cleanup: {e}")
-    
-    def __del__(self):
-        """Destructor to ensure GPU memory is freed when object is garbage collected."""
-        try:
-            self.cleanup()
-        except:
-            pass
     
 class CuWavelet(CupyWavelet):
     """
