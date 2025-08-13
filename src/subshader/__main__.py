@@ -26,9 +26,9 @@ log = get_logger(__name__)
 # CONSTANTS
 # =============================================================================
 
-WINDOW_SIZE = 2 << 12  # 4k samples per frame
+WINDOW_SIZE = 4096  # 4k samples per frame (was incorrectly 2 << 12 = 8192)
 FILE_PATH = "assets/audio/songs/beltran_sc_rip.wav"
-NUM_FRAMES = 128
+NUM_FRAMES = 128  # Increased from 32 for smooth visualization with 75% overlap
 
 # Display settings
 FULLSCREEN = False  # Set to True for fullscreen mode
