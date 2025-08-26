@@ -78,7 +78,7 @@ class Benchmark():
             (np_wavelet.compute_cwt,        (self.audio_data,)),
             (cp_wavelet.compute_cwt,        (self.audio_data,)),
             (pyqtg.update_plot,             (self.coefs_py_wavelet,)),
-            (shader.update_plot,            (self.coefs_py_wavelet,))
+            (shader.update_plot,            (self.coefs_cp_wavelet,))
         ]
 
         # Tracks the run time of each function
