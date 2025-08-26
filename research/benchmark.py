@@ -30,13 +30,16 @@ FILE_PATH = "assets/audio/daw/a2_stuttered_a4_230ms.wav"
 class Benchmark():
     def __init__(self) -> None:
         
-        ### Audio Input
+        '''
+        Audio Input
+        '''
         audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
         self.audio_data = audio_input.get_frame()
         sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
-        ### Wavelet Implementations
-
+        '''
+        Wavelet Implementations
+        '''
         # PyWavelet 
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
                                window_size = WINDOW_SIZE)
@@ -55,8 +58,9 @@ class Benchmark():
 
         self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
 
-        ### Plotter Implementations
-
+        '''
+        Plotter Implementations
+        '''
         # Get plot shapes
         # Full-resolution shape (freqs, time)
         self.plot_shape = py_wavelet.get_shape()
@@ -115,68 +119,9 @@ class Benchmark():
         print()
         print(f"Timing Analysis Complete - every function averaged over {NUM_ITERATIONS} iterations\n")
 
-        """
+        '''
         Static Plots
-        """
-        # Helper to position figures to occupy half the screen
-        def _place_fig_half_screen(fig, side: str = 'left') -> None:
-            try:
-                import matplotlib as mpl
-                mng = fig.canvas.manager
-
-                # Try Qt backends (Qt5Agg/QtAgg)
-                if hasattr(mng, 'window'):
-                    win = mng.window
-                    try:
-                        screen = win.screen() if hasattr(win, 'screen') else None
-                        if screen is None:
-                            # Attempt to get primary screen via Qt if available
-                            try:
-                                from PyQt5 import QtWidgets  # type: ignore
-                                app = QtWidgets.QApplication.instance()
-                                if app is not None:
-                                    screen = app.primaryScreen()
-                            except Exception:
-                                screen = None
-                        if screen is not None:
-                            geom = screen.availableGeometry()
-                            sw, sh = geom.width(), geom.height()
-                            w = sw // 2
-                            h = sh
-                            x = 0 if side == 'left' else w
-                            if hasattr(win, 'setGeometry'):
-                                win.setGeometry(x, 0, w, h)
-                                return
-                    except Exception:
-                        pass
-
-                # Try TkAgg
-                try:
-                    win = mng.window
-                    if hasattr(win, 'winfo_screenwidth'):
-                        sw = win.winfo_screenwidth()
-                        sh = win.winfo_screenheight()
-                        w = sw // 2
-                        h = sh
-                        x = 0 if side == 'left' else w
-                        win.geometry(f"{w}x{h}+{x}+0")
-                        return
-                except Exception:
-                    pass
-
-                # Fallback: approximate using DPI and env or defaults
-                dpi = fig.get_dpi()
-                try:
-                    import os
-                    sw = int(os.environ.get('SCREEN_WIDTH', '1920'))
-                    sh = int(os.environ.get('SCREEN_HEIGHT', '1080'))
-                except Exception:
-                    sw, sh = 1920, 1080
-                fig.set_size_inches((sw // 2) / dpi, sh / dpi, forward=True)
-            except Exception:
-                # If all else fails, do nothing
-                pass
-
+        '''
         # Single window with time series on left, CWTs stacked on right
         fig = plt.figure(constrained_layout=False)  # Disable constrained_layout to use subplots_adjust
         fig.canvas.manager.set_window_title(f"Time Series vs CWT {os.path.basename(FILE_PATH)}")
@@ -208,29 +153,11 @@ class Benchmark():
         ax_cp.set_xlabel("Time")
         ax_cp.set_ylabel("Scale")
 
-        # Make the window full-screen
+        # Maximize the window
         try:
-            import matplotlib as mpl
             mng = fig.canvas.manager
-            if hasattr(mng, 'window'):
-                win = mng.window
-                try:
-                    screen = win.screen() if hasattr(win, 'screen') else None
-                    if screen is None:
-                        try:
-                            from PyQt5 import QtWidgets  # type: ignore
-                            app = QtWidgets.QApplication.instance()
-                            if app is not None:
-                                screen = app.primaryScreen()
-                        except Exception:
-                            screen = None
-                    if screen is not None:
-                        geom = screen.availableGeometry()
-                        sw, sh = geom.width(), geom.height()
-                        if hasattr(win, 'setGeometry'):
-                            win.setGeometry(0, 0, sw, sh)
-                except Exception:
-                    pass
+            if hasattr(mng, 'window') and hasattr(mng.window, 'showMaximized'):
+                mng.window.showMaximized()
         except Exception:
             pass
 
