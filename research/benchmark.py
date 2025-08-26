@@ -18,13 +18,13 @@ import matplotlib.pyplot as plt
 
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumpyWavelet, CupyWavelet
-from subshader.viz.plotter import PyQtGrapher, Shader
+from subshader.viz.plotter import PyQtPlotter, ShaderPlot
 
 NUM_ITERATIONS = 100
 
 WINDOW_SIZE = 4096
 
-FILE_PATH = "assets/audio/c4_and_c7_4_arps.wav"
+FILE_PATH = "assets/audio/daw/a3_stuttered_a4_a5_230ms.wav"
 
 class Benchmark():
     def __init__(self) -> None:
@@ -56,16 +56,19 @@ class Benchmark():
 
         ### Plotter Implementations
 
-        # Get plot shape to init the Plotters
+        # Get plot shapes
+        # Full-resolution shape (freqs, time)
         self.plot_shape = py_wavelet.get_shape()
+        # Downsampled shape to match compute_cwt() output
+        self.plot_shape_downsampled = py_wavelet.get_downsampled_result_shape()
 
         # PyQtGraph Plotter
-        pyqtg = PyQtGrapher(file_path = FILE_PATH,
-                            shape = self.plot_shape)
+        pyqtg = PyQtPlotter(file_path = FILE_PATH,
+                            frame_shape = self.plot_shape_downsampled)
 
         # Shader Plotter
-        shader = Shader(file_path = FILE_PATH,
-                        shape = self.plot_shape)
+        shader = ShaderPlot(file_path = FILE_PATH,
+                            frame_shape = self.plot_shape_downsampled)
 
         # Function List and Dummy Arguments (note special python ',' syntax)
         self.func_list = [
@@ -113,30 +116,94 @@ class Benchmark():
         """
         Static Plots
         """
-        fig, axes = plt.subplots(4, 1, constrained_layout=True)
-        fig.canvas.manager.set_window_title("Benchmarking CWT Implementations")
+        # Helper to position figures to occupy half the screen
+        def _place_fig_half_screen(fig, side: str = 'left') -> None:
+            try:
+                import matplotlib as mpl
+                mng = fig.canvas.manager
 
+                # Try Qt backends (Qt5Agg/QtAgg)
+                if hasattr(mng, 'window'):
+                    win = mng.window
+                    try:
+                        screen = win.screen() if hasattr(win, 'screen') else None
+                        if screen is None:
+                            # Attempt to get primary screen via Qt if available
+                            try:
+                                from PyQt5 import QtWidgets  # type: ignore
+                                app = QtWidgets.QApplication.instance()
+                                if app is not None:
+                                    screen = app.primaryScreen()
+                            except Exception:
+                                screen = None
+                        if screen is not None:
+                            geom = screen.availableGeometry()
+                            sw, sh = geom.width(), geom.height()
+                            w = sw // 2
+                            h = sh
+                            x = 0 if side == 'left' else w
+                            if hasattr(win, 'setGeometry'):
+                                win.setGeometry(x, 0, w, h)
+                                return
+                    except Exception:
+                        pass
+
+                # Try TkAgg
+                try:
+                    win = mng.window
+                    if hasattr(win, 'winfo_screenwidth'):
+                        sw = win.winfo_screenwidth()
+                        sh = win.winfo_screenheight()
+                        w = sw // 2
+                        h = sh
+                        x = 0 if side == 'left' else w
+                        win.geometry(f"{w}x{h}+{x}+0")
+                        return
+                except Exception:
+                    pass
+
+                # Fallback: approximate using DPI and env or defaults
+                dpi = fig.get_dpi()
+                try:
+                    import os
+                    sw = int(os.environ.get('SCREEN_WIDTH', '1920'))
+                    sh = int(os.environ.get('SCREEN_HEIGHT', '1080'))
+                except Exception:
+                    sw, sh = 1920, 1080
+                fig.set_size_inches((sw // 2) / dpi, sh / dpi, forward=True)
+            except Exception:
+                # If all else fails, do nothing
+                pass
+
+        # Time series in its own window
+        fig_ts = plt.figure(constrained_layout=True)
+        fig_ts.canvas.manager.set_window_title("Time Series")
+        ax_ts = fig_ts.add_subplot(1, 1, 1)
         # TODO ISSUE-33 Fix the axes so they display freqs, not scales
-        axes[0].set_title("Test Signal Time Series: C4 + C7")
-        axes[0].plot(self.audio_data)
-        axes[0].set_xlabel("Time")
-        axes[0].set_ylabel("Amplitude")
-        axes[0].margins(x=0, y=0)
+        ax_ts.set_title("Test Signal Time Series: C4 + C7")
+        ax_ts.plot(self.audio_data)
+        ax_ts.set_xlabel("Time")
+        ax_ts.set_ylabel("Amplitude")
+        ax_ts.margins(x=0, y=0)
 
-        axes[1].set_title("PyWavelet CWT")
-        axes[1].imshow(self.coefs_py_wavelet, cmap = "magma", aspect = "auto")
-        axes[1].set_xlabel("Time")
-        axes[1].set_ylabel("Scale")
+        # CWTs in a separate window: left PyWavelet, right CuPy (NumPy omitted from matplotlib)
+        fig_cwt = plt.figure(constrained_layout=True)
+        fig_cwt.canvas.manager.set_window_title("CWT Comparisons")
+        ax_py, ax_cp = fig_cwt.subplots(1, 2)
 
-        axes[2].set_title("NumPy CWT")
-        axes[2].imshow(self.coefs_np_wavelet, cmap = "magma", aspect = "auto")
-        axes[2].set_xlabel("Time")
-        axes[2].set_ylabel("Scale")
+        ax_py.set_title("PyWavelet CWT")
+        ax_py.imshow(self.coefs_py_wavelet, cmap="magma", aspect="auto")
+        ax_py.set_xlabel("Time")
+        ax_py.set_ylabel("Scale")
 
-        axes[3].set_title("CuPy CWT")
-        axes[3].imshow(self.coefs_cp_wavelet, cmap = "magma", aspect = "auto")
-        axes[3].set_xlabel("Time")
-        axes[3].set_ylabel("Scale")
+        ax_cp.set_title("CuPy CWT")
+        ax_cp.imshow(self.coefs_cp_wavelet, cmap="magma", aspect="auto")
+        ax_cp.set_xlabel("Time")
+        ax_cp.set_ylabel("Scale")
+
+        # Position windows side-by-side, each half-screen
+        _place_fig_half_screen(fig_ts, 'left')
+        _place_fig_half_screen(fig_cwt, 'right')
 
         plt.show()
 

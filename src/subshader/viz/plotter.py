@@ -457,7 +457,7 @@ class RollingFrameBuffer:
 # implementation above.
 # =============================================================================
 
-class PyQtGrapher(Plotter):
+class PyQtPlotter(Plotter):
     def __init__(self, file_path: str, frame_shape: tuple[int, int]):
         """
         Traditional PyQtGraph-based audio visualizer
@@ -480,11 +480,30 @@ class PyQtGrapher(Plotter):
         self.plot.setLabel('bottom', 'Time')
         self.plot.showGrid(x=True, y=True, alpha=0.3)
         
-        # Set up color map for better visualization
-        self.plot.setColorMap(pg.colormap.get('inferno'))
+        # Set up color map for better visualization (apply to ImageItem)
+        # PlotItem does not support setColorMap; ImageItem does.
+        cmap = pg.colormap.get('inferno')
+        # setColorMap is available on ImageItem in modern pyqtgraph versions
+        if hasattr(pg.ImageItem, 'setColorMap'):
+            # Will be set after ImageItem is created
+            pass
+        else:
+            # Fallback for very old pyqtgraph: use lookup table
+            lut = cmap.getLookupTable(alpha=False)
+            # Will be applied to ImageItem after creation
+            self._fallback_lut = lut
         
         # Initialize empty image item
         self.img_item = pg.ImageItem()
+        # Apply colormap to the image item
+        try:
+            if hasattr(self.img_item, 'setColorMap'):
+                self.img_item.setColorMap(cmap)
+            elif hasattr(self, '_fallback_lut'):
+                self.img_item.setLookupTable(self._fallback_lut)
+        except Exception:
+            # Non-fatal if colormap application fails
+            pass
         self.plot.addItem(self.img_item)
         
         # Set up timer for updates
