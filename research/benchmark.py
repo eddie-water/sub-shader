@@ -12,6 +12,7 @@ Use this script as reference only. It may need significant updates to work
 with the current codebase.
 """
 
+import os
 import time
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,7 +25,7 @@ NUM_ITERATIONS = 100
 
 WINDOW_SIZE = 4096
 
-FILE_PATH = "assets/audio/daw/a3_stuttered_a4_a5_230ms.wav"
+FILE_PATH = "assets/audio/daw/a2_stuttered_a4_230ms.wav"
 
 class Benchmark():
     def __init__(self) -> None:
@@ -108,7 +109,8 @@ class Benchmark():
 
         for i, item in enumerate(self.func_list):
             func = item[0]
-            print(f"-> {func.__self__.__class__.__name__}.{func.__name__}()\t{self.avg_func_times[i]:6f} sec")
+            time_ms = self.avg_func_times[i] * 1000  # Convert to milliseconds
+            print(f"-> {func.__self__.__class__.__name__}.{func.__name__}()\t{time_ms:7.3f} ms")
 
         print()
         print(f"Timing Analysis Complete - every function averaged over {NUM_ITERATIONS} iterations\n")
@@ -175,35 +177,62 @@ class Benchmark():
                 # If all else fails, do nothing
                 pass
 
-        # Time series in its own window
-        fig_ts = plt.figure(constrained_layout=True)
-        fig_ts.canvas.manager.set_window_title("Time Series")
-        ax_ts = fig_ts.add_subplot(1, 1, 1)
-        # TODO ISSUE-33 Fix the axes so they display freqs, not scales
-        ax_ts.set_title("Test Signal Time Series: C4 + C7")
+        # Single window with time series on left, CWTs stacked on right
+        fig = plt.figure(constrained_layout=False)  # Disable constrained_layout to use subplots_adjust
+        fig.canvas.manager.set_window_title(f"Time Series vs CWT {os.path.basename(FILE_PATH)}")
+        
+        # Create a 2x2 grid and use different subplot positions
+        ax_ts = fig.add_subplot(1, 2, 1)  # Left column, spans full height
+        ax_py = fig.add_subplot(2, 2, 2)  # Right column, top
+        ax_cp = fig.add_subplot(2, 2, 4)  # Right column, bottom
+        
+        # Add padding between the left and right columns
+        plt.subplots_adjust(wspace=0.1, hspace=0.2)
+
+        # Time series on the left
+        ax_ts.set_title("Test Signal Time Series")
         ax_ts.plot(self.audio_data)
         ax_ts.set_xlabel("Time")
         ax_ts.set_ylabel("Amplitude")
         ax_ts.margins(x=0, y=0)
 
-        # CWTs in a separate window: left PyWavelet, right CuPy (NumPy omitted from matplotlib)
-        fig_cwt = plt.figure(constrained_layout=True)
-        fig_cwt.canvas.manager.set_window_title("CWT Comparisons")
-        ax_py, ax_cp = fig_cwt.subplots(1, 2)
-
+        # PyWavelet CWT on top right
         ax_py.set_title("PyWavelet CWT")
-        ax_py.imshow(self.coefs_py_wavelet, cmap="magma", aspect="auto")
+        ax_py.imshow(self.coefs_py_wavelet, cmap="magma", aspect="auto", origin='lower')
         ax_py.set_xlabel("Time")
         ax_py.set_ylabel("Scale")
 
+        # CuPy CWT on bottom right
         ax_cp.set_title("CuPy CWT")
-        ax_cp.imshow(self.coefs_cp_wavelet, cmap="magma", aspect="auto")
+        ax_cp.imshow(self.coefs_cp_wavelet, cmap="magma", aspect="auto", origin='lower')
         ax_cp.set_xlabel("Time")
         ax_cp.set_ylabel("Scale")
 
-        # Position windows side-by-side, each half-screen
-        _place_fig_half_screen(fig_ts, 'left')
-        _place_fig_half_screen(fig_cwt, 'right')
+        # Make the window full-screen
+        try:
+            import matplotlib as mpl
+            mng = fig.canvas.manager
+            if hasattr(mng, 'window'):
+                win = mng.window
+                try:
+                    screen = win.screen() if hasattr(win, 'screen') else None
+                    if screen is None:
+                        try:
+                            from PyQt5 import QtWidgets  # type: ignore
+                            app = QtWidgets.QApplication.instance()
+                            if app is not None:
+                                screen = app.primaryScreen()
+                        except Exception:
+                            screen = None
+                    if screen is not None:
+                        geom = screen.availableGeometry()
+                        sw, sh = geom.width(), geom.height()
+                        if hasattr(win, 'setGeometry'):
+                            win.setGeometry(0, 0, sw, sh)
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
         plt.show()
 
