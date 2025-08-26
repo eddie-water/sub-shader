@@ -21,6 +21,9 @@ from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumpyWavelet, CupyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
 
+'''
+Constants
+'''
 NUM_ITERATIONS = 100
 
 WINDOW_SIZE = 4096
@@ -61,10 +64,8 @@ class Benchmark():
         '''
         Plotter Implementations
         '''
-        # Get plot shapes
-        # Full-resolution shape (freqs, time)
+        # Plot shapes
         self.plot_shape = py_wavelet.get_shape()
-        # Downsampled shape to match compute_cwt() output
         self.plot_shape_downsampled = py_wavelet.get_downsampled_result_shape()
 
         # PyQtGraph Plotter
@@ -75,7 +76,10 @@ class Benchmark():
         shader = ShaderPlot(file_path = FILE_PATH,
                             frame_shape = self.plot_shape_downsampled)
 
-        # Function List and Dummy Arguments (note special python ',' syntax)
+        '''
+        Function List and Dummy Arguments 
+            - note special python ',' syntax
+        '''
         self.func_list = [
             (audio_input.get_frame,         ()),
             (py_wavelet.compute_cwt,        (self.audio_data,)),
@@ -131,8 +135,8 @@ class Benchmark():
         ax_py = fig.add_subplot(2, 2, 2)  # Right column, top
         ax_cp = fig.add_subplot(2, 2, 4)  # Right column, bottom
         
-        # Add padding between the left and right columns
-        plt.subplots_adjust(wspace=0.1, hspace=0.2)
+        # Add padding between the left and right plots, minimize edge padding
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.93, bottom=0.07, wspace=0.1, hspace=0.2)
 
         # Time series on the left
         ax_ts.set_title("Test Signal Time Series")
