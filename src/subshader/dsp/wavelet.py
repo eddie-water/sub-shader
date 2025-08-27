@@ -19,8 +19,11 @@ ROOT_NOTE_A0 = 27.5
 # Math Constants
 pi = np.pi
 
+# Desired width after downsampling
+DS_WIDTH = 512
+
 class Wavelet(ABC):
-    def __init__(self, sample_rate: int, window_size: int):
+    def __init__(self, sample_rate: int, window_size: int, target_width: int = DS_WIDTH):
         """
         Wavelet base class that all other wavelet classes are derived from.
         Uses a list of frequencies that follows the chromatic scale starting at
@@ -29,6 +32,7 @@ class Wavelet(ABC):
         Args:
             sample_rate (int): The rate the data was sampled in Hz
             window_size (int): The length of the data
+            target_width (int): Target width for downsampling (default: DS_WIDTH)
         """
         if sample_rate != TYPICAL_SAMPLING_FREQ:
             log.error(f"Invalid sample rate: {sample_rate} Hz (expected {TYPICAL_SAMPLING_FREQ} Hz)")
@@ -42,6 +46,9 @@ class Wavelet(ABC):
             raise ValueError(f"Window Size: {window_size},",
                              f"must be greater than 0.")
         self.window_size = window_size
+        
+        # Store downsampling target width
+        self.target_width = target_width
 
         # Sampling Parameters
         self.sample_rate = sample_rate
@@ -70,17 +77,14 @@ class Wavelet(ABC):
         """
         return self.result_shape
     
-    def get_downsampled_result_shape(self, target_width: int = 128) -> np.ndarray.shape:
+    def get_downsampled_result_shape(self) -> np.ndarray.shape:
         """
         Computes the shape of the downsampled CWT data.
-        
-        Args:
-            target_width (int): Target width for downsampling (default: 128)
             
         Returns:
             np.ndarray.shape: Shape of the downsampled CWT data
         """
-        return (self.num_freqs, target_width)
+        return (self.num_freqs, self.target_width)
 
     def get_num_freqs(self) -> int:
         """
@@ -115,7 +119,7 @@ class Wavelet(ABC):
         cwt_coefs = self.class_specific_cwt(data)
         
         # Downsample the raw CWT coefficients bc there's a lot of data
-        downsampled_coefs = self.downsample(cwt_coefs)
+        downsampled_coefs = self.downsample(cwt_coefs, self.target_width)
         
         # Normalize the results
         return self.normalize_coefs(downsampled_coefs)
@@ -164,16 +168,16 @@ class Wavelet(ABC):
 
         return norm_vals.astype(np.float32)
     
-    def downsample(self, coefs: np.ndarray, target_width: int = 128) -> np.ndarray:
+    def downsample(self, coefs: np.ndarray, target_width: int = DS_WIDTH) -> np.ndarray:
         """
         Downsample CWT coefficients for efficient visualization.
         
         This method reduces the time dimension while preserving frequency resolution
         to make the data suitable for real-time GPU rendering.
-        
+
         Args:
             coefs (np.ndarray): Normalized CWT coefficients (freq_bins, time_samples)
-            target_width (int): Target width for visualization (default: 128)
+            target_width (int): Target width for visualization (default: DS_WIDTH)
             
         Returns:
             np.ndarray: Downsampled coefficients suitable for visualization
@@ -209,15 +213,16 @@ class Wavelet(ABC):
         pass
 
 class PyWavelet(Wavelet):
-    def __init__(self, sample_rate, window_size):
+    def __init__(self, sample_rate, window_size, target_width: int = DS_WIDTH):
         """
         The PyWavelet implementation of the CWT
 
         Args:
             sample_rate (int): The rate the data was sampled in Hz
             window_size (int): The length of the data
+            target_width (int): Target width for downsampling (default: DS_WIDTH)
         """
-        super().__init__(sample_rate, window_size)
+        super().__init__(sample_rate, window_size, target_width)
 
         # Wavelet info TODO ISSUE-36 why 1.5-1.0?
         self.wavelet_name = "cmor1.5-1.0"
@@ -277,7 +282,7 @@ class PyWavelet(Wavelet):
 
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate: int, window_size: int,
-                 m_cycles: float = 6.0, fwhm_cycles: float = 3.0):
+                 m_cycles: float = 6.0, fwhm_cycles: float = 3.0, target_width: int = DS_WIDTH):
         """
         ANTS-style CWT with true scale-dependent time support.
 
@@ -286,8 +291,9 @@ class AntsWavelet(Wavelet):
             window_size (int): analysis window length in samples
             m_cycles (float): number of carrier cycles per wavelet
             fwhm_cycles (float): Gaussian FWHM width in cycles
+            target_width (int): Target width for downsampling (default: DS_WIDTH)
         """
-        super().__init__(sample_rate, window_size)
+        super().__init__(sample_rate, window_size, target_width)
 
         self.m_cycles = m_cycles
         self.fwhm_cycles = fwhm_cycles
@@ -353,8 +359,8 @@ class NumpyWavelet(AntsWavelet):
 
 class CupyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size,
-                 m_cycles=6.0, fwhm_cycles=3.0):
-        super().__init__(sample_rate, window_size, m_cycles, fwhm_cycles)
+                 m_cycles=6.0, fwhm_cycles=3.0, target_width: int = DS_WIDTH):
+        super().__init__(sample_rate, window_size, m_cycles, fwhm_cycles, target_width)
         log.info(f"CPU→GPU: Uploading {len(self.wavelet_kernels)} wavelets to GPU")
 
         # Convert each kernel individually to CuPy

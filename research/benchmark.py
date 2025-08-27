@@ -24,11 +24,11 @@ from subshader.viz.plotter import PyQtPlotter, ShaderPlot
 '''
 Constants
 '''
-NUM_ITERATIONS = 100
+NUM_ITERATIONS = 500
 
-WINDOW_SIZE = 4096
+WINDOW_SIZE = 1 << 10
 
-FILE_PATH = "assets/audio/daw/a2_stuttered_a4_230ms.wav"
+FILE_PATH = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 
 class Benchmark():
     def __init__(self) -> None:
@@ -43,21 +43,34 @@ class Benchmark():
         '''
         Wavelet Implementations
         '''
+        # With WINDOW_SIZE=1024: each frame = 11.6ms, so 256 frames = ~3 seconds
+        TARGET_WIDTH = 64      # Good time detail per frame
+        NUM_FRAMES_ADJUSTED = 256   # 3 seconds of scrolling history
+        
+        # Verify configuration
+        TEXTURE_WIDTH = NUM_FRAMES_ADJUSTED * TARGET_WIDTH
+        MAX_TEXTURE_SIZE = 16384
+        TIME_HISTORY = NUM_FRAMES_ADJUSTED * 11.6 / 1000  # ms to seconds
+        
+        
         # PyWavelet 
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
-                               window_size = WINDOW_SIZE)
+                               window_size = WINDOW_SIZE,
+                               target_width = TARGET_WIDTH)
         
         self.coefs_py_wavelet = py_wavelet.compute_cwt(self.audio_data)
 
         # NumPy ANTS Wavelet
         np_wavelet = NumpyWavelet(sample_rate = sample_rate, 
-                                  window_size = WINDOW_SIZE)
+                                  window_size = WINDOW_SIZE,
+                                  target_width = TARGET_WIDTH)
 
         self.coefs_np_wavelet = np_wavelet.compute_cwt(self.audio_data)
 
         # CuPy ANTS Wavelet 
         cp_wavelet = CupyWavelet(sample_rate = sample_rate, 
-                                 window_size = WINDOW_SIZE)
+                                 window_size = WINDOW_SIZE,
+                                 target_width = TARGET_WIDTH)
 
         self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
 
@@ -74,7 +87,8 @@ class Benchmark():
 
         # Shader Plotter
         shader = ShaderPlot(file_path = FILE_PATH,
-                            frame_shape = self.plot_shape_downsampled)
+                            frame_shape = self.plot_shape_downsampled,
+                            num_frames = NUM_FRAMES_ADJUSTED)
 
         '''
         Function List and Dummy Arguments 
@@ -97,16 +111,62 @@ class Benchmark():
         print("Starting Timing Analysis...\n")
 
         for _ in range(NUM_ITERATIONS):
+            # Initialize variables to store intermediate results
+            fresh_audio_data = None
+            py_cwt_result = None
+            np_cwt_result = None  
+            cp_cwt_result = None
+            
             for i, item in enumerate(self.func_list):
                 # Grab the function and its arg(s)
                 func = item[0]
-                args = item[1] if len(item) > 1 else ()
+                base_args = item[1] if len(item) > 1 else ()
                 kwargs = item[2] if len(item) > 2 else {}
+
+                # Modify args based on function type and available data
+                if func.__name__ == 'get_frame':
+                    # Audio input - use original args
+                    args = base_args
+                elif func.__name__ == 'compute_cwt':
+                    # CWT functions - use fresh audio data if available
+                    if fresh_audio_data is not None:
+                        args = (fresh_audio_data,)
+                    else:
+                        args = base_args
+                elif func.__name__ == 'update_plot':
+                    # Plotting functions - use fresh CWT results if available
+                    if 'PyQt' in func.__self__.__class__.__name__:
+                        # PyQtPlotter gets PyWavelet results
+                        if py_cwt_result is not None:
+                            args = (py_cwt_result,)
+                        else:
+                            args = base_args
+                    elif 'Shader' in func.__self__.__class__.__name__:
+                        # ShaderPlot gets CupyWavelet results  
+                        if cp_cwt_result is not None:
+                            args = (cp_cwt_result,)
+                        else:
+                            args = base_args
+                    else:
+                        args = base_args
+                else:
+                    args = base_args
 
                 # Time the runtime of the function
                 t_start = time.perf_counter()
-                _ = func(*args, **kwargs)
+                result = func(*args, **kwargs)
                 t_end = time.perf_counter()
+
+                # Store results for next functions in pipeline
+                if func.__name__ == 'get_frame':
+                    fresh_audio_data = result
+                elif func.__name__ == 'compute_cwt':
+                    if 'PyWavelet' in func.__self__.__class__.__name__:
+                        py_cwt_result = result
+                    elif 'NumpyWavelet' in func.__self__.__class__.__name__:
+                        np_cwt_result = result  # Not used in plotting but stored
+                    elif 'CupyWavelet' in func.__self__.__class__.__name__:
+                        cp_cwt_result = result
 
                 t_delta = t_end - t_start
                 self.func_times[i] += t_delta
@@ -149,13 +209,13 @@ class Benchmark():
         ax_py.set_title("PyWavelet CWT")
         ax_py.imshow(self.coefs_py_wavelet, cmap="magma", aspect="auto", origin='lower')
         ax_py.set_xlabel("Time")
-        ax_py.set_ylabel("Scale")
+        ax_py.set_ylabel("Freq Bin")
 
         # CuPy CWT on bottom right
         ax_cp.set_title("CuPy CWT")
         ax_cp.imshow(self.coefs_cp_wavelet, cmap="magma", aspect="auto", origin='lower')
         ax_cp.set_xlabel("Time")
-        ax_cp.set_ylabel("Scale")
+        ax_cp.set_ylabel("Freq Bin")
 
         # Maximize the window
         try:

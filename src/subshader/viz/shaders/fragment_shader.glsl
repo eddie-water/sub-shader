@@ -9,9 +9,7 @@
  * 
  * Inputs:
  *   texCoord (vec2): Which coefficient to read from the texture
- *   scalogram (sampler2D): Texture containing stacked coefficient frames
- *   valueMin (float): Minimum value for normalization
- *   valueMax (float): Maximum value for normalization
+ *   texture_sampler (sampler2D): Texture containing stacked coefficient frames
  * 
  * Outputs:
  *   fragColor (vec4): Final color for this pixel
@@ -21,8 +19,6 @@
 in vec2 texCoord;
 out vec4 fragColor;
 uniform sampler2D texture_sampler;
-uniform float valueMin;
-uniform float valueMax;
 
 vec3 custom_colormap(float t) {
     // Custom colormap that includes orange and white for maximum intensity

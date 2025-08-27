@@ -32,6 +32,7 @@ NUM_FRAMES = 128  # Increased from 32 for smooth visualization with 75% overlap
 
 # Display settings
 FULLSCREEN = False  # Set to True for fullscreen mode
+TARGET_WIDTH = 512  # Configurable downsampling width for visualization
 
 # =============================================================================
 # EXCEPTIONS
@@ -93,7 +94,7 @@ class SubShader:
         sample_rate = self.audio_input.get_sample_rate()  # 44.1 kHz
 
         # Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
-        self.wavelet = CuWavelet(sample_rate=sample_rate, window_size=WINDOW_SIZE)
+        self.wavelet = CuWavelet(sample_rate=sample_rate, window_size=WINDOW_SIZE, target_width=TARGET_WIDTH)
 
         # Plotter Object - GPU-accelerated shader plot of downsampled cwt results
         result_shape = self.wavelet.get_downsampled_result_shape()
