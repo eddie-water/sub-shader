@@ -46,7 +46,7 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64, fullscreen: bool = False):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64):
         """
         2D data visualization using shaders
 
@@ -54,7 +54,6 @@ class ShaderPlot(Plotter):
             file_path (str): The path to the file to plot.
             frame_shape (tuple[int, int]): The shape of each data frame to plot.
             num_frames (int): The number of frames to use for the visualization.
-            fullscreen (bool): Whether to display in fullscreen mode.
         """
         super().__init__(file_path, frame_shape)
 
@@ -63,7 +62,7 @@ class ShaderPlot(Plotter):
 
         # Create GL Context - handles window creation and OpenGL context setup
         file_name = os.path.basename(file_path)
-        self.gl_context = GLContext(title=f"SubShader - {file_name}", fullscreen=fullscreen)
+        self.gl_context = GLContext(title=f"SubShader - {file_name}")
 
         # GPU Renderer - handles shader compilation, texture management, and rendering
         texture_height, texture_width = self.plot_frame_buffer.get_flattened_buffer_shape()
@@ -109,20 +108,18 @@ class ShaderPlot(Plotter):
         glfw.terminate()
 
 class GLContext:
-    def __init__(self, width=1920, height=1080, title="Audio Visualizer", fullscreen=False):
+    def __init__(self, width=1920, height=1080, title="Audio Visualizer"):
         """
         Handles GLFW window and OpenGL context setup
         
         Args:
-            width (int): Window width (ignored if fullscreen=True)
-            height (int): Window height (ignored if fullscreen=True)
+            width (int): Default window width 
+            height (int): Default window height
             title (str): Window title
-            fullscreen (bool): Whether to create a fullscreen window
         """
         self.width = width
         self.height = height
         self.title = title
-        self.fullscreen = fullscreen
         self.window = None
         self.ctx = None
         self._init_graphics()
@@ -181,17 +178,14 @@ class GLContext:
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)  
 
-        # Create window - monitor (None = windowed), share context (None = no sharing)
-        if self.fullscreen:
-            # Get primary monitor and its video mode for fullscreen
-            monitor = glfw.get_primary_monitor()
-            mode = glfw.get_video_mode(monitor)
-            self.width, self.height = mode.size.width, mode.size.height
-            log.info(f"Creating fullscreen window: {self.width}×{self.height}")
-            self.window = glfw.create_window(self.width, self.height, self.title, monitor, None)
-        else:
-            log.info(f"Creating windowed mode: {self.width}×{self.height}")
-            self.window = glfw.create_window(self.width, self.height, self.title, None, None)
+        # Create maximized window with decorations 
+        monitor = glfw.get_primary_monitor()
+        mode = glfw.get_video_mode(monitor)
+        self.width, self.height = mode.size.width, mode.size.height
+        
+        log.info(f"Creating maximized window: {self.width}×{self.height}")
+        self.window = glfw.create_window(self.width, self.height, self.title, None, None)
+        glfw.maximize_window(self.window)
         if not self.window:
             # Clean up GLFW before failing
             glfw.terminate()

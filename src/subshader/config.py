@@ -30,9 +30,6 @@ def _get_system_display_size() -> Tuple[int, int]:
         return 1920, 1080
 
 
-
-
-
 @dataclass
 class WaveletConfig:
     """Configuration for wavelet transform and normalization."""
@@ -43,7 +40,7 @@ class WaveletConfig:
     epsilon: float = 1e-12
     output_dtype: np.dtype = np.float32
 
-    # Downsampling parameters (higher detail for fullscreen)
+    # Downsampling parameters 
     target_width: int = 128
 
     # Musical scale parameters
@@ -59,12 +56,12 @@ class WaveletConfig:
 class VisualizationConfig:
     """Configuration for visualization rendering."""
     
-    # Window parameters (auto-derived from system display - fullscreen)
+    # Window parameters (auto-derived from system display)
     window_width: int = None
     window_height: int = None
-    num_frames: int = 256  # More history for fullscreen
+    num_frames: int = 256 
     
-    # Shader parameters (optimized for fullscreen)
+    # Shader parameters 
     scaling_factor: float = 0.25  # Boost dim audio signals for visibility
     gamma_correction: float = 0.35  # Gamma correction for visual enhancement
     
@@ -86,7 +83,6 @@ class VisualizationConfig:
     def __post_init__(self):
         """Initialize window dimensions from system if not provided."""
         if self.window_width is None or self.window_height is None:
-            # Use fullscreen dimensions by default
             self.window_width, self.window_height = _get_system_display_size()
 
 
@@ -114,5 +110,5 @@ class ProcessingConfig:
 
 # Default configuration
 def get_default_config() -> ProcessingConfig:
-    """Get default fullscreen configuration with system-derived dimensions."""
+    """Get default configuration with system-derived dimensions."""
     return ProcessingConfig()

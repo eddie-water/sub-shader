@@ -31,8 +31,6 @@ WINDOW_SIZE = 1024  # 4k samples per frame (was incorrectly 2 << 12 = 8192)
 FILE_PATH = "assets/audio/songs/beltran_sc_rip.wav"
 NUM_FRAMES = 32  # Reduced to fit within 16k OpenGL texture limit (32*512=16384)
 
-# Display settings
-FULLSCREEN = True  # Set to True for fullscreen mode
 TARGET_WIDTH = 512  # Configurable downsampling width for visualization
 
 # =============================================================================
@@ -99,7 +97,7 @@ class SubShader:
 
         # Plotter Object - GPU-accelerated shader plot of downsampled cwt results
         result_shape = self.wavelet.get_downsampled_result_shape()
-        self.plotter = ShaderPlot(file_path=FILE_PATH, frame_shape=result_shape, num_frames=NUM_FRAMES, fullscreen=FULLSCREEN)
+        self.plotter = ShaderPlot(file_path=FILE_PATH, frame_shape=result_shape, num_frames=NUM_FRAMES)
 
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()
