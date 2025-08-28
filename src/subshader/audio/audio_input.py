@@ -4,6 +4,7 @@ from subshader.utils.logging import get_logger
 
 log = get_logger(__name__)
 
+# TODO ISSUE-36 are we even using this?
 # Frame overlap 
 OVERLAP = 50.0
 
