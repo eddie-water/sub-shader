@@ -4,8 +4,6 @@ from subshader.utils.logging import get_logger
 
 log = get_logger(__name__)
 
-# Frame overlap 
-OVERLAP = 50.0
 
 class AudioInput:
     def __init__(self, path: str, window_size: int) -> None:
@@ -44,7 +42,7 @@ class AudioInput:
         self.file_handle.seek(self.pos)
         frame = self.file_handle.read(self.window_size)
         
-        # Convert stereo to mono if needed
+        # Convert stereo to mono 
         if len(frame.shape) > 1:
             frame = frame[:, 0]
             
