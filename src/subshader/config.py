@@ -4,6 +4,9 @@ Configuration module for SubShader components.
 This module provides centralized configuration classes to make wavelet 
 normalization, plot rendering, and shader visualization agnostic of each other 
 while maintaining sensible defaults and allowing easy customization.
+
+All configuration parameters are validated here. Classes can assume that any
+config objects passed to them contain valid, pre-checked parameters.
 """
 
 from dataclasses import dataclass

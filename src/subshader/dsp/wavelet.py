@@ -29,17 +29,13 @@ class Wavelet(ABC):
             config = WaveletConfig()
         self.config = config
         
+        # Runtime validation - sample rate must match expected frequency
         if sample_rate != self.config.typical_sampling_freq:
             log.error(f"Invalid sample rate: {sample_rate} Hz (expected {self.config.typical_sampling_freq} Hz)")
-            raise ValueError(f"Sampling Rate: {sample_rate},", 
-                             f"is not {self.config.typical_sampling_freq} Hz.",
+            raise ValueError(f"Sampling Rate: {sample_rate} Hz is not {self.config.typical_sampling_freq} Hz. "
                              f"The CWT may not work as expected.")
+        
         self.sample_rate = sample_rate
-
-        if window_size <= 0:
-            log.error(f"Invalid window size: {window_size} (must be > 0)")
-            raise ValueError(f"Window Size: {window_size},",
-                             f"must be greater than 0.")
         self.window_size = window_size
         
         # Store downsampling target width from config

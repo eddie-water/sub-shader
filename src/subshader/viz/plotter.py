@@ -15,18 +15,10 @@ class Plotter(ABC):
         Abstract base class for all plotters.
 
         Args:
-            file_path (str): The path to the file to plot.
-            frame_shape (tuple[int, int]): The shape of each data frame to plot.
+            file_path (str): Path to the file to plot.
+            frame_shape (tuple[int, int]): Shape of each data frame to plot.
         """
         self.file_path = file_path
-
-        if len(frame_shape) != 2:
-            log.error(f"Invalid frame shape: expected 2D array, got {len(frame_shape)}D with shape {frame_shape}")
-            raise ValueError(f"Expected 2D array, got {len(frame_shape)}D with shape {frame_shape}")        
-        if frame_shape[0] <= 0 or frame_shape[1] <= 0:
-            log.error(f"Invalid frame dimensions: {frame_shape} (must be > 0)")
-            raise ValueError(f"2D array cannot have shape: {frame_shape}")
-
         self.frame_shape = frame_shape
         self.y_n, self.x_n = self.frame_shape
 
@@ -51,9 +43,9 @@ class ShaderPlot(Plotter):
         2D data visualization using shaders
 
         Args:
-            file_path (str): The path to the file to plot.
-            frame_shape (tuple[int, int]): The shape of each data frame to plot.
-            num_frames (int): The number of frames to use for the visualization.
+            file_path (str): Path to the file to plot.
+            frame_shape (tuple[int, int]): Shape of each data frame to plot.
+            num_frames (int): Number of frames to use for the visualization.
         """
         super().__init__(file_path, frame_shape)
 
@@ -455,6 +447,10 @@ class PyQtPlotter(Plotter):
     def __init__(self, file_path: str, frame_shape: tuple[int, int]):
         """
         Traditional PyQtGraph-based audio visualizer
+
+        Args:
+            file_path (str): Path to the file to plot.
+            frame_shape (tuple[int, int]): Shape of each data frame to plot.
         """
         super().__init__(file_path, frame_shape)
         
