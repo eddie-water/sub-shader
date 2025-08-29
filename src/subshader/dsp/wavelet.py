@@ -5,25 +5,16 @@ import cupy as cp
 from cupyx.scipy import fft as cp_fft
 import pywt
 from subshader.utils.logging import get_logger
+from typing import Optional
+from ..config import WaveletConfig
 
 log = get_logger(__name__)
-
-# Audio is typically sampled at 44.1 kHz
-TYPICAL_SAMPLING_FREQ = 44100
-
-# Musical Scale parameters 
-NOTES_PER_OCTAVE = 12 
-NUM_OCTAVES = 10
-ROOT_NOTE_A0 = 27.5
 
 # Math Constants
 pi = np.pi
 
-# Desired width after downsampling
-DS_WIDTH = 512
-
 class Wavelet(ABC):
-    def __init__(self, sample_rate: int, window_size: int, target_width: int = DS_WIDTH):
+    def __init__(self, sample_rate: int, window_size: int, config: Optional[WaveletConfig] = None):
         """
         Wavelet base class that all other wavelet classes are derived from.
         Uses a list of frequencies that follows the chromatic scale starting at
@@ -32,12 +23,16 @@ class Wavelet(ABC):
         Args:
             sample_rate (int): The rate the data was sampled in Hz
             window_size (int): The length of the data
-            target_width (int): Target width for downsampling (default: DS_WIDTH)
+            config (WaveletConfig, optional): Configuration object with wavelet parameters
         """
-        if sample_rate != TYPICAL_SAMPLING_FREQ:
-            log.error(f"Invalid sample rate: {sample_rate} Hz (expected {TYPICAL_SAMPLING_FREQ} Hz)")
+        if config is None:
+            config = WaveletConfig()
+        self.config = config
+        
+        if sample_rate != self.config.typical_sampling_freq:
+            log.error(f"Invalid sample rate: {sample_rate} Hz (expected {self.config.typical_sampling_freq} Hz)")
             raise ValueError(f"Sampling Rate: {sample_rate},", 
-                             f"is not {TYPICAL_SAMPLING_FREQ} Hz.",
+                             f"is not {self.config.typical_sampling_freq} Hz.",
                              f"The CWT may not work as expected.")
         self.sample_rate = sample_rate
 
@@ -47,26 +42,45 @@ class Wavelet(ABC):
                              f"must be greater than 0.")
         self.window_size = window_size
         
-        # Store downsampling target width
-        self.target_width = target_width
+        # Store downsampling target width from config
+        self.target_width = self.config.target_width
 
         # Sampling Parameters
         self.sample_rate = sample_rate
         self.nyquist_freq = (sample_rate / 2.0)
         self.sampling_period = (1.0 / self.sample_rate)
 
-        # Frequency Axis that replicates the exponential step size of the musical scale
-        self.scale_factor = 2**(1/NOTES_PER_OCTAVE)
-        i = np.arange(0, NOTES_PER_OCTAVE*NUM_OCTAVES, 1)
-        self.s = self.scale_factor**i
-        self.freqs = ROOT_NOTE_A0*self.s
-
-        # Discard frequencies that are unmeasurable
-        self.freqs = self.freqs[self.freqs < self.nyquist_freq]
+        # Generate list of frequencies in the chromatic scale
+        self.freqs = self._generate_chromatic_scale(
+            self.config.num_octaves,
+            self.config.notes_per_octave,
+            self.config.root_note_a0_hz)
         self.num_freqs = len(self.freqs)
 
         # Resultant Shape of the CWT Data 
         self.result_shape = (self.num_freqs, self.window_size)
+
+    def _generate_chromatic_scale(self, root_note: float, num_octaves: int, 
+                                    notes_per_octave: int = 12) -> list[float]:
+        """
+        Generates a list of frequencies that follow the exponential step size of 
+        the chromatic scale.
+
+        Args:
+            root_note (float): The root note of the chromatic scale
+            num_octaves (int): The number of octaves to generate
+            notes_per_octave (int): The number of notes per octave
+
+        Returns:
+            list[float]: A list of frequencies in the chromatic scale
+        """
+        # Frequencies double every octave
+        scale_factor = 2 ** (1 / notes_per_octave)
+        i = np.arange(0, notes_per_octave * num_octaves, 1)
+        freqs = root_note * (scale_factor ** i)
+
+        # Discard frequencies that are unmeasurable
+        return freqs[freqs < self.nyquist_freq]
 
     def get_shape(self) -> np.ndarray.shape:
         """
@@ -77,7 +91,7 @@ class Wavelet(ABC):
         """
         return self.result_shape
     
-    def get_downsampled_result_shape(self) -> np.ndarray.shape:
+    def get_downsampled_shape(self) -> np.ndarray.shape:
         """
         Computes the shape of the downsampled CWT data.
             
@@ -107,7 +121,6 @@ class Wavelet(ABC):
         Returns:
             np.ndarray: The normalized and downsampled CWT coefficients
         """
-        # Verify the audio data is valid 
         if len(audio_data) != self.window_size:
             log.error(f"Audio data length mismatch: {len(audio_data)} != {self.window_size}")
             raise ValueError(f"Audio data length {len(audio_data)}",
@@ -150,17 +163,17 @@ class Wavelet(ABC):
         Returns:
             np.ndarray: Normalized magnitudes in [0, 1].
         """
-        # Magnitude
-        mag = np.abs(raw_coefs) + 1e-12  # epsilon to avoid log(0)
+        # Magnitude of the CWT coefficients, add epsilon to avoid log(0)
+        mag = np.abs(raw_coefs) + self.config.epsilon
 
         # Convert to decibels
         db_vals = 20.0 * np.log10(mag)
 
         # Fixed display range (dB)
-        db_floor = -80.0
-        db_ceil = 0.0
+        db_floor = self.config.db_floor
+        db_ceil = self.config.db_ceil
 
-        # Clamp to range
+        # Clamp to dB range
         db_vals = np.clip(db_vals, db_floor, db_ceil)
 
         # Map to [0, 1]
@@ -168,7 +181,7 @@ class Wavelet(ABC):
 
         return norm_vals.astype(np.float32)
     
-    def downsample(self, coefs: np.ndarray, target_width: int = DS_WIDTH) -> np.ndarray:
+    def downsample(self, coefs: np.ndarray, target_width: int = None) -> np.ndarray:
         """
         Downsample CWT coefficients for efficient visualization.
         
@@ -177,11 +190,15 @@ class Wavelet(ABC):
 
         Args:
             coefs (np.ndarray): Normalized CWT coefficients (freq_bins, time_samples)
-            target_width (int): Target width for visualization (default: DS_WIDTH)
+            target_width (int): Target width for visualization (uses config if None)
             
         Returns:
             np.ndarray: Downsampled coefficients suitable for visualization
         """
+        # Use config target width if not specified
+        if target_width is None:
+            target_width = self.config.target_width
+            
         freq_bins, time_samples = coefs.shape
         
         # If already at target size or smaller, return as-is
@@ -190,8 +207,8 @@ class Wavelet(ABC):
         
         # Calculate downsampling factor
         downsample_factor = max(1, time_samples // target_width)
-        
-        # Simple downsampling by taking every Nth sample
+
+        # Simple downsampling strategy - take every Nth sample
         # This preserves the most recent data (right side of the buffer)
         downsampled = coefs[:, ::downsample_factor]
         
@@ -213,16 +230,16 @@ class Wavelet(ABC):
         pass
 
 class PyWavelet(Wavelet):
-    def __init__(self, sample_rate, window_size, target_width: int = DS_WIDTH):
+    def __init__(self, sample_rate, window_size, config: Optional[WaveletConfig] = None):
         """
         The PyWavelet implementation of the CWT
 
         Args:
             sample_rate (int): The rate the data was sampled in Hz
             window_size (int): The length of the data
-            target_width (int): Target width for downsampling (default: DS_WIDTH)
+            config (WaveletConfig, optional): Configuration object with wavelet parameters
         """
-        super().__init__(sample_rate, window_size, target_width)
+        super().__init__(sample_rate, window_size, config)
 
         # Wavelet info TODO ISSUE-36 why 1.5-1.0?
         self.wavelet_name = "cmor1.5-1.0"
@@ -282,7 +299,7 @@ class PyWavelet(Wavelet):
 
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate: int, window_size: int,
-                 m_cycles: float = 6.0, fwhm_cycles: float = 3.0, target_width: int = DS_WIDTH):
+                 m_cycles: float = 6.0, fwhm_cycles: float = 3.0, config: Optional[WaveletConfig] = None):
         """
         ANTS-style CWT with true scale-dependent time support.
 
@@ -291,9 +308,9 @@ class AntsWavelet(Wavelet):
             window_size (int): analysis window length in samples
             m_cycles (float): number of carrier cycles per wavelet
             fwhm_cycles (float): Gaussian FWHM width in cycles
-            target_width (int): Target width for downsampling (default: DS_WIDTH)
+            config (WaveletConfig, optional): Configuration object with wavelet parameters
         """
-        super().__init__(sample_rate, window_size, target_width)
+        super().__init__(sample_rate, window_size, config)
 
         self.m_cycles = m_cycles
         self.fwhm_cycles = fwhm_cycles
@@ -359,8 +376,8 @@ class NumpyWavelet(AntsWavelet):
 
 class CupyWavelet(AntsWavelet):
     def __init__(self, sample_rate, window_size,
-                 m_cycles=6.0, fwhm_cycles=3.0, target_width: int = DS_WIDTH):
-        super().__init__(sample_rate, window_size, m_cycles, fwhm_cycles, target_width)
+                 m_cycles=6.0, fwhm_cycles=3.0, config: Optional[WaveletConfig] = None):
+        super().__init__(sample_rate, window_size, m_cycles, fwhm_cycles, config)
         log.info(f"CPU→GPU: Uploading {len(self.wavelet_kernels)} wavelets to GPU")
 
         # Convert each kernel individually to CuPy

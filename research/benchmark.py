@@ -79,7 +79,7 @@ class Benchmark():
         '''
         # Plot shapes
         self.plot_shape = py_wavelet.get_shape()
-        self.plot_shape_downsampled = py_wavelet.get_downsampled_result_shape()
+        self.plot_shape_downsampled = py_wavelet.get_downsampled_shape()
 
         # PyQtGraph Plotter
         pyqtg = PyQtPlotter(file_path = FILE_PATH,

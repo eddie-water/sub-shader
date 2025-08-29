@@ -46,7 +46,7 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 64):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 32):
         """
         2D data visualization using shaders
 
@@ -108,7 +108,7 @@ class ShaderPlot(Plotter):
         glfw.terminate()
 
 class GLContext:
-    def __init__(self, width=1920, height=1080, title="Audio Visualizer"):
+    def __init__(self, width=1920, height=1080, title="SubShader"):
         """
         Handles GLFW window and OpenGL context setup
         
@@ -144,7 +144,7 @@ class GLContext:
         glfw.swap_buffers(self.window)
         glfw.poll_events()  # Process window events
     
-    def clear_graphic(self, r=0.05, g=0.05, b=0.05):
+    def clear_graphic(self, r=0.0, g=0.0, b=0.0):
         """
         Clear the OpenGL context with a specified color.
         """

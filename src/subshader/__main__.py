@@ -17,21 +17,21 @@ from subshader.utils.loop_timer import LoopTimer
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import CuWavelet
 from subshader.viz.plotter import ShaderPlot
+from subshader.config import get_default_config
 
 # Init logging at the module level, not every time a class is instantiated
 logger_init(log_level="INFO", console_output=False, file_output=True)
 log = get_logger(__name__)
 
 # =============================================================================
-# CONSTANTS
+# CONFIGURATION
 # =============================================================================
 
-# TODO ISSUE-36 set these
-WINDOW_SIZE = 1024  # 4k samples per frame (was incorrectly 2 << 12 = 8192)
-FILE_PATH = "assets/audio/songs/beltran_sc_rip.wav"
-NUM_FRAMES = 32  # Reduced to fit within 16k OpenGL texture limit (32*512=16384)
+# Load default configuration
+config = get_default_config()
 
-TARGET_WIDTH = 512  # Configurable downsampling width for visualization
+# Override default configs
+config.file_path = "assets/audio/songs/beltran_sc_rip.wav"
 
 # =============================================================================
 # EXCEPTIONS
@@ -89,15 +89,15 @@ class SubShader:
         log.info("Initializing components...")
         
         # Audio Input - handles file reading and audio frame getter 
-        self.audio_input = AudioInput(path=FILE_PATH, window_size=WINDOW_SIZE)
+        self.audio_input = AudioInput(path=config.file_path, window_size=config.window_size)
         sample_rate = self.audio_input.get_sample_rate()  # 44.1 kHz
 
         # Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
-        self.wavelet = CuWavelet(sample_rate=sample_rate, window_size=WINDOW_SIZE, target_width=TARGET_WIDTH)
+        self.wavelet = CuWavelet(sample_rate=sample_rate, window_size=config.window_size, config=config.wavelet)
 
         # Plotter Object - GPU-accelerated shader plot of downsampled cwt results
-        result_shape = self.wavelet.get_downsampled_result_shape()
-        self.plotter = ShaderPlot(file_path=FILE_PATH, frame_shape=result_shape, num_frames=NUM_FRAMES)
+        result_shape = self.wavelet.get_downsampled_shape()
+        self.plotter = ShaderPlot(file_path=config.file_path, frame_shape=result_shape, num_frames=config.visualization.num_frames)
 
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()
