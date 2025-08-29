@@ -60,8 +60,7 @@ class Wavelet(ABC):
         # Resultant Shape of the CWT Data 
         self.result_shape = (self.num_freqs, self.window_size)
 
-    def _generate_chromatic_scale(self, root_note: float, num_octaves: int, 
-                                    notes_per_octave: int = 12) -> list[float]:
+    def _generate_chromatic_scale(self, root_note: float, num_octaves: int, notes_per_octave: int = 12) -> list[float]:
         """
         Generates a list of frequencies that follow the exponential step size of 
         the chromatic scale.
