@@ -10,15 +10,15 @@ from ..utils.logging import get_logger
 log = get_logger(__name__)
 
 class Plotter(ABC):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int]):
+    def __init__(self, audio_file_path: str, frame_shape: tuple[int, int]):
         """
         Abstract base class for all plotters.
 
         Args:
-            file_path (str): Path to the file to plot.
+            audio_file_path (str): Path to the file to plot.
             frame_shape (tuple[int, int]): Shape of each data frame to plot.
         """
-        self.file_path = file_path
+        self.audio_file_path = audio_file_path
         self.frame_shape = frame_shape
         self.y_n, self.x_n = self.frame_shape
 
@@ -38,22 +38,22 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 32):
+    def __init__(self, audio_file_path: str, frame_shape: tuple[int, int], num_frames: int = 32):
         """
         2D data visualization using shaders
 
         Args:
-            file_path (str): Path to the file to plot.
+            audio_file_path (str): Path to the file to plot.
             frame_shape (tuple[int, int]): Shape of each data frame to plot.
             num_frames (int): Number of frames to use for the visualization.
         """
-        super().__init__(file_path, frame_shape)
+        super().__init__(audio_file_path, frame_shape)
 
         # Circular buffer for scrolling plot
         self.plot_frame_buffer = RollingFrameBuffer(num_frames, self.y_n, self.x_n)
 
         # Create GL Context - handles window creation and OpenGL context setup
-        file_name = os.path.basename(file_path)
+        file_name = os.path.basename(audio_file_path)
         self.gl_context = GLContext(title=f"SubShader - {file_name}")
 
         # GPU Renderer - handles shader compilation, texture management, and rendering
@@ -444,15 +444,15 @@ class RollingFrameBuffer:
 # =============================================================================
 
 class PyQtPlotter(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int]):
+    def __init__(self, audio_file_path: str, frame_shape: tuple[int, int]):
         """
         Traditional PyQtGraph-based audio visualizer
 
         Args:
-            file_path (str): Path to the file to plot.
+            audio_file_path (str): Path to the file to plot.
             frame_shape (tuple[int, int]): Shape of each data frame to plot.
         """
-        super().__init__(file_path, frame_shape)
+        super().__init__(audio_file_path, frame_shape)
         
         # PyQtGraph configuration
         pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
@@ -462,8 +462,8 @@ class PyQtPlotter(Plotter):
         self.win.show()  
         self.win.setWindowTitle('Continuous Wavelet Transform')
 
-        self.plot = self.win.addPlot(row=0, col=0, rowspan=1, colspan=1,
-                                   title=file_path, enableMenu=False)
+        self.plot = self.win.addPlot(
+            row=0, col=0, rowspan=1, colspan=1, title=audio_file_path, enableMenu=False)
 
         # Configure plot appearance
         self.plot.setLabel('left', 'Frequency (Hz)')

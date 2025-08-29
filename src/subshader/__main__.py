@@ -31,7 +31,7 @@ log = get_logger(__name__)
 config = get_default_config()
 
 # Override default configs
-config.file_path = "assets/audio/songs/beltran_sc_rip.wav"
+config.audio.audio_file_path = "assets/audio/songs/beltran_sc_rip.wav"
 
 # =============================================================================
 # EXCEPTIONS
@@ -89,15 +89,15 @@ class SubShader:
         log.info("Initializing components...")
         
         # Audio Input - handles file reading and audio frame getter 
-        self.audio_input = AudioInput(path=config.file_path, window_size=config.window_size)
+        self.audio_input = AudioInput(path=config.audio.audio_file_path, audio_window_size=config.audio.audio_window_size)
         sample_rate = self.audio_input.get_sample_rate()  # 44.1 kHz
 
         # Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
-        self.wavelet = CuWavelet(sample_rate=sample_rate, window_size=config.window_size, config=config.wavelet)
+        self.wavelet = CuWavelet(sample_rate=sample_rate, input_data_size=config.audio.audio_window_size, config=config.wavelet)
 
-        # Plotter Object - GPU-accelerated shader plot of downsampled cwt results
-        result_shape = self.wavelet.get_downsampled_shape()
-        self.plotter = ShaderPlot(file_path=config.file_path, frame_shape=result_shape, num_frames=config.visualization.num_frames)
+        # Plotter Object - GPU-accelerated shader plot of output results
+        result_shape = self.wavelet.get_output_shape()
+        self.plotter = ShaderPlot(audio_file_path=config.audio.audio_file_path, frame_shape=result_shape, num_frames=config.visualization.num_frames)
 
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()

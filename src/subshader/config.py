@@ -148,22 +148,47 @@ class VisualizationConfig:
         return errors
 
 
+@dataclass
+class AudioConfig:
+    """Configuration for audio processing."""
+    
+    # File parameters
+    audio_file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
+    
+    # Processing parameters
+    audio_window_size: int = 1024
+    
+    def validate(self) -> List[str]:
+        """
+        Validate critical audio configuration parameters.
+        
+        Returns:
+            List[str]: List of validation error messages (empty if valid)
+        """
+        errors = []
+        
+        if not os.path.exists(self.audio_file_path):
+            errors.append(f"Audio file not found: {self.audio_file_path}")
+        
+        if self.audio_window_size <= 0:
+            errors.append(f"audio_window_size ({self.audio_window_size}) must be positive")
+        
+        return errors
+
+
 @dataclass  
 class ProcessingConfig:
     """Configuration for audio processing pipeline."""
     
-    # File parameters
-    file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
-    
-    # Processing parameters
-    window_size: int = 1024
-    
     # Component configurations
+    audio: AudioConfig = None
     wavelet: WaveletConfig = None
     visualization: VisualizationConfig = None
     
     def __post_init__(self):
         """Initialize sub-configurations if not provided."""
+        if self.audio is None:
+            self.audio = AudioConfig()
         if self.wavelet is None:
             self.wavelet = WaveletConfig()
         if self.visualization is None:
@@ -181,13 +206,9 @@ class ProcessingConfig:
         """
         errors = []
         
-        if not os.path.exists(self.file_path):
-            errors.append(f"Audio file not found: {self.file_path}")
-        
-        if self.window_size <= 0:
-            errors.append(f"window_size ({self.window_size}) must be positive")
-        
         # Validate sub-configurations
+        if self.audio:
+            errors.extend(self.audio.validate())
         if self.wavelet:
             errors.extend(self.wavelet.validate())
         if self.visualization:
