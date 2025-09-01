@@ -14,9 +14,9 @@ from subshader.utils.logging import logger_init, get_logger
 from subshader.utils.os_env_setup import env_init
 from subshader.utils.loop_timer import LoopTimer
 
-from subshader.audio.audio_input import AudioInput
+from subshader.audio.audio_input import AudioInput, AudioFileNotFoundError, EndOfAudioException
 from subshader.dsp.wavelet import CuWavelet
-from subshader.viz.plotter import ShaderPlot
+from subshader.viz.plotter import ShaderPlot, WindowCloseException
 from subshader.config import get_default_config
 
 # Init logging at the module level, not every time a class is instantiated
@@ -31,26 +31,21 @@ log = get_logger(__name__)
 config = get_default_config()
 
 # Override default configs
-config.audio.audio_file_path = "assets/audio/songs/beltran_sc_rip.wav"
+config.audio.audio_file_path = "assets/audio/songs/beltran_sc_rip_8bar.wav"
 
 # =============================================================================
 # EXCEPTIONS
 # =============================================================================
 
-class EndOfAudioException(Exception):
-    """Raised when the audio file has been completely processed."""
-    pass
 
-class WindowCloseException(Exception):
-    """Raised when the window is closed."""
-    pass
 
 # Gracefully exit on these exceptions
 GRACEFUL_EXIT_EXCEPTIONS = (
     KeyboardInterrupt,
     RuntimeError,
     EndOfAudioException, 
-    WindowCloseException
+    WindowCloseException,
+    AudioFileNotFoundError
 )
 
 # =============================================================================
@@ -93,8 +88,10 @@ class SubShader:
         sample_rate = self.audio_input.get_sample_rate()  # 44.1 kHz
 
         # Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
+        # TODO: audio.audio_window_size -> audio.output_size
         self.wavelet = CuWavelet(sample_rate=sample_rate, input_data_size=config.audio.audio_window_size, config=config.wavelet)
 
+        # TODO: What if wavelet returned just the reliable portion of the CWT result (accounting for cone of influence wich might remove edge effects in the plot)
         # Plotter Object - GPU-accelerated shader plot of output results
         result_shape = self.wavelet.get_output_shape()
         self.plotter = ShaderPlot(audio_file_path=config.audio.audio_file_path, frame_shape=result_shape, num_frames=config.visualization.num_frames)
@@ -169,10 +166,10 @@ def main():
     try:
         subshader.main_loop()
     except GRACEFUL_EXIT_EXCEPTIONS as e:
-        if isinstance(e, KeyboardInterrupt):
+        if hasattr(e, 'log_level') and hasattr(e, 'log_message'):
+            getattr(log, e.log_level)(e.log_message)
+        elif isinstance(e, KeyboardInterrupt):
             log.warning("Keyboard Interrupt received.")
-        elif isinstance(e, (EndOfAudioException, WindowCloseException)):
-            log.warning(f"Graceful exit: {e}")
         else:
             log.error(f"Unexpected error: {e}")
     finally:

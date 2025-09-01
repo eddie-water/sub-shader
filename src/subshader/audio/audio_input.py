@@ -1,8 +1,25 @@
 import numpy as np
 import soundfile as sf
+import os
 from subshader.utils.logging import get_logger
 
 log = get_logger(__name__)
+
+
+class AudioFileNotFoundError(Exception):
+    """Raised when the audio file cannot be found."""
+    def __init__(self, message):
+        super().__init__(message)
+        self.log_level = "error"
+        self.log_message = f"Audio file error: {message}"
+
+
+class EndOfAudioException(Exception):
+    """Raised when the audio file has been completely processed."""
+    def __init__(self, message="Audio file processing complete"):
+        super().__init__(message)
+        self.log_level = "warning"
+        self.log_message = f"Graceful exit: {message}"
 
 
 class AudioInput:
@@ -16,6 +33,11 @@ class AudioInput:
         """
         self.audio_file_path = path
         self.audio_window_size = audio_window_size
+        
+        # Check if file exists before trying to open
+        if not os.path.exists(self.audio_file_path):
+            log.error(f"Audio file not found: {self.audio_file_path}")
+            raise AudioFileNotFoundError(f"Audio file not found: {self.audio_file_path}")
         
         # Keep file handle open to avoid reopening it every time
         try:

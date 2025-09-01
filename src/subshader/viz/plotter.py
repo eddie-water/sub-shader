@@ -9,6 +9,14 @@ from ..utils.logging import get_logger
 
 log = get_logger(__name__)
 
+
+class WindowCloseException(Exception):
+    """Raised when the window is closed."""
+    def __init__(self, message="Window closed"):
+        super().__init__(message)
+        self.log_level = "warning"
+        self.log_message = f"Graceful exit: {message}"
+
 class Plotter(ABC):
     def __init__(self, audio_file_path: str, frame_shape: tuple[int, int]):
         """
