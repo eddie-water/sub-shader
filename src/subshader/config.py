@@ -96,7 +96,7 @@ class VisualizationConfig:
     
     # Shader parameters 
     scaling_factor: float = 0.25  # Boost dim audio signals for visibility
-    gamma_correction: float = 0.35  # Gamma correction for visual enhancement
+    gamma: float = 0.3  # Gamma correction for visual enhancement
 
     # TODO : Consolidate colormap and transition points into a cohesive uniform colorscheme    
     # Colormap configuration (5 RGB color tuples)
@@ -133,8 +133,8 @@ class VisualizationConfig:
         if self.scaling_factor <= 0:
             errors.append(f"scaling_factor ({self.scaling_factor}) must be positive")
             
-        if self.gamma_correction <= 0:
-            errors.append(f"gamma_correction ({self.gamma_correction}) must be positive")
+        if self.gamma <= 0:
+            errors.append(f"gamma ({self.gamma}) must be positive")
         
         # colormap must have valid RGB values
         for i, color in enumerate(self.colormap_colors):

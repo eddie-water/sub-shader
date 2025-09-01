@@ -94,7 +94,12 @@ class SubShader:
         # TODO: What if wavelet returned just the reliable portion of the CWT result (accounting for cone of influence wich might remove edge effects in the plot)
         # Plotter Object - GPU-accelerated shader plot of output results
         result_shape = self.wavelet.get_output_shape()
-        self.plotter = ShaderPlot(audio_file_path=config.audio.audio_file_path, frame_shape=result_shape, num_frames=config.visualization.num_frames)
+        self.plotter = ShaderPlot(
+            audio_file_path=config.audio.audio_file_path, 
+            frame_shape=result_shape, 
+            num_frames=config.visualization.num_frames,
+            gamma=config.visualization.gamma
+        )
 
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()
@@ -151,6 +156,7 @@ class SubShader:
             self.plotter.cleanup()      # Terminate GLFW and OpenGL
 
         self._initialized = False
+
         log.info("Cleanup complete")
 
 # =============================================================================
@@ -159,7 +165,6 @@ class SubShader:
 
 def main():
     """Main entry point for the SubShader application."""
-    env_init()
     subshader = SubShader()
     subshader.init()
 
@@ -178,4 +183,5 @@ def main():
     log.info("Application shutdown complete")
 
 if __name__ == '__main__':
+    env_init()
     main()

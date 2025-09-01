@@ -19,6 +19,7 @@
 in vec2 texCoord;
 out vec4 fragColor;
 uniform sampler2D texture_sampler;
+uniform float gamma;
 
 vec3 inferno_colormap(float t) {
     // Matplotlib inferno colormap - continuous perceptually uniform colormap
@@ -62,10 +63,8 @@ void main() {
     // Read the value from the texture data at the given texture coordinate
     float value = texture(texture_sampler, texCoord).r;
     
-    // Since data is already normalized to [0,1], use a more reasonable scaling
-    // This should allow the brightest parts to reach orange/white colors
-    float normalized = clamp(value / 0.3, 0.0, 1.0);  // More reasonable scaling
-    normalized = pow(normalized, 0.4);  // Less gamma to preserve bright colors
+    float normalized = clamp(value, 0.0, 1.0);
+    normalized = pow(normalized, gamma);
     
     // Grab the color from matplotlib inferno colormap using the normalized value
     vec3 color = inferno_colormap(normalized);

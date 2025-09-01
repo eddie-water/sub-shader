@@ -46,7 +46,7 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, audio_file_path: str, frame_shape: tuple[int, int], num_frames: int = 32):
+    def __init__(self, audio_file_path: str, frame_shape: tuple[int, int], num_frames: int = 32, gamma: float = 0.35):
         """
         2D data visualization using shaders
 
@@ -67,6 +67,10 @@ class ShaderPlot(Plotter):
         # GPU Renderer - handles shader compilation, texture management, and rendering
         texture_height, texture_width = self.plot_frame_buffer.get_flattened_buffer_shape()
         self.renderer = Renderer(self.gl_context.ctx, texture_width, texture_height)
+        
+        # Set gamma correction uniform
+        self.renderer.shader['gamma'] = gamma
+        log.info(f"Set gamma uniform: {gamma}")
 
     def update_plot(self, plot_values: np.ndarray):
         """
@@ -369,6 +373,9 @@ class Renderer:
         # Connect texture slot to shader uniform
         shader['texture_sampler'] = self.TEXTURE_SLOT
         log.info(f"Assigned texture slot {self.TEXTURE_SLOT} to shader uniform 'texture_sampler'")
+        
+        # Store shader reference for updating uniforms
+        self.shader = shader
 
         return texture
 
