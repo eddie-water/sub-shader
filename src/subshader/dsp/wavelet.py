@@ -29,6 +29,9 @@ class Wavelet(ABC):
             config = WaveletConfig()
         self.config = config
         
+        # Cone of influence parameters - extract reliable center region
+        self.coi_edge_percent = 0.15  # Remove 15% from each edge (30% total)
+        
         # Runtime validation - sample rate must match expected frequency
         if sample_rate != self.config.typical_sampling_freq:
             log.error(f"Invalid sample rate: {sample_rate} Hz (expected {self.config.typical_sampling_freq} Hz)")
@@ -45,6 +48,11 @@ class Wavelet(ABC):
         self.sample_rate = sample_rate
         self.nyquist_freq = (sample_rate / 2.0)
         self.sampling_period = (1.0 / self.sample_rate)
+        
+        # Calculate cone of influence boundaries for reliable region extraction
+        self.coi_start_idx = int(self.input_data_size * self.coi_edge_percent)
+        self.coi_end_idx = int(self.input_data_size * (1.0 - self.coi_edge_percent))
+        self.coi_reliable_length = self.coi_end_idx - self.coi_start_idx
 
         # Generate list of frequencies in the chromatic scale
         self.freqs = self._generate_chromatic_scale(
@@ -56,6 +64,9 @@ class Wavelet(ABC):
         # Input and output dimensions
         self.input_shape = (self.num_freqs, self.input_data_size)
         self.output_shape = (self.num_freqs, self.target_width)
+        
+        log.info(f"Cone of influence: removing edges {self.coi_edge_percent:.1%} each side")
+        log.info(f"Reliable region: samples {self.coi_start_idx}-{self.coi_end_idx} ({self.coi_reliable_length}/{self.input_data_size})")
 
     def _generate_chromatic_scale(self, root_note: float, num_octaves: int, notes_per_octave: int = 12) -> list[float]:
         """
@@ -139,8 +150,11 @@ class Wavelet(ABC):
 
         cwt_coefs = self.class_specific_cwt(data)
         
-        # Downsample the raw CWT coefficients to produce output data
-        downsampled_coefs = self.downsample(cwt_coefs, self.target_width)
+        # Extract reliable region (avoid cone of influence edge artifacts)
+        reliable_coefs = self.extract_reliable_region(cwt_coefs)
+        
+        # Downsample the reliable CWT coefficients to produce output data
+        downsampled_coefs = self.downsample(reliable_coefs, self.target_width)
         
         # Normalize the results to produce final output
         return self.normalize_coefs(downsampled_coefs)
@@ -157,6 +171,26 @@ class Wavelet(ABC):
             np.ndarray: The CWT coefficients 
         """
         pass
+
+    def extract_reliable_region(self, cwt_coefs: np.ndarray) -> np.ndarray:
+        """
+        Extract the reliable center region from CWT coefficients to avoid edge artifacts.
+        
+        The cone of influence in wavelet transforms creates unreliable results near
+        the edges where the wavelet doesn't have sufficient data support. This method
+        extracts only the center region where results are reliable.
+        
+        Args:
+            cwt_coefs (np.ndarray): Full CWT coefficients (freq_bins, time_samples)
+            
+        Returns:
+            np.ndarray: Reliable center region (freq_bins, reliable_time_samples)
+        """
+        # Extract the reliable center region
+        reliable_region = cwt_coefs[:, self.coi_start_idx:self.coi_end_idx]
+        
+        log.debug(f"Cone of influence: extracted reliable region {cwt_coefs.shape} -> {reliable_region.shape}")
+        return reliable_region
 
     def normalize_coefs(self, raw_coefs: np.ndarray) -> np.ndarray:
         """

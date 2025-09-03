@@ -23,16 +23,20 @@ class EndOfAudioException(Exception):
 
 
 class AudioInput:
-    def __init__(self, path: str, audio_window_size: int) -> None:
+    def __init__(self, path: str, audio_window_size: int, overlap_factor: float = 0.5) -> None:
         """
         Audio Input Initialization
 
         Args:
             path (str): Path to the audio file.
             audio_window_size (int): Size of the audio frame in samples.
+            overlap_factor (float): Overlap between consecutive windows (0.0 to 1.0).
+                                  0.5 means 50% overlap to reduce edge artifacts.
         """
         self.audio_file_path = path
         self.audio_window_size = audio_window_size
+        self.overlap_factor = max(0.0, min(0.9, overlap_factor))  # Clamp to reasonable range
+        self.hop_size = int(audio_window_size * (1.0 - self.overlap_factor))
         
         # Check if file exists before trying to open
         if not os.path.exists(self.audio_file_path):
@@ -46,16 +50,22 @@ class AudioInput:
             self.total_frames = self.file_handle.frames
             self.pos = 0
             log.info(f"Audio file loaded: {self.audio_file_path} ({self.total_frames} frames, {self.sample_rate} Hz)")
+            log.info(f"Window size: {self.audio_window_size}, Overlap: {self.overlap_factor:.1%}, Hop size: {self.hop_size}")
         except Exception as e:
             log.error(f"Failed to load audio file {self.audio_file_path}: {e}")
             raise
 
     def get_frame(self) -> np.ndarray:
         """
-        Gets a frame of audio the size of the window.
+        Gets an overlapping frame of audio to reduce edge artifacts.
+        
+        Uses overlapping windows where each new frame advances by hop_size
+        instead of the full window_size, providing better continuity for
+        wavelet analysis and reducing cone of influence artifacts.
 
         Returns:
             np.ndarray: The next frame of audio data from the file.
+                       None if EOF reached.
         """
         if self.pos + self.audio_window_size > self.total_frames:
             return None  # Signal EOF
@@ -68,7 +78,8 @@ class AudioInput:
         if len(frame.shape) > 1:
             frame = frame[:, 0]
             
-        self.pos += self.audio_window_size
+        # Advance by hop_size instead of full window_size for overlap
+        self.pos += self.hop_size
         return frame
 
     def get_sample_rate(self) -> int:

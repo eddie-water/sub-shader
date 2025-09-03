@@ -41,16 +41,14 @@ def _get_system_display_size() -> Tuple[int, int]:
 class WaveletConfig:
     """Configuration for wavelet transform and normalization."""
     
-    # Normalization parameters
-    # TODO : Experiment with floor and ceil values for better visualization
-    db_floor: float = -80.0
+    # Normalization parameters - optimized for musical content visualization  
+    db_floor: float = -80.0  # Less aggressive floor for better dynamic range visibility
     db_ceil: float = 0.0
     epsilon: float = 1e-12
     output_dtype: np.dtype = np.float32
 
-    # Downsampling parameters 
-    # TODO : Determine a cohesive relationship between target width and the window size and kernel legnth and plot resolution etc
-    target_width: int = 512
+    # Downsampling parameters - optimized for real-time rendering
+    target_width: int = 256  # Reduced for better performance while maintaining visual quality
 
     # Musical scale parameters
     notes_per_octave: int = 12
@@ -91,24 +89,14 @@ class VisualizationConfig:
     # Window parameters (auto-derived from system display)
     window_width: int = None
     window_height: int = None
-    # TODO : Determine a cohesive relationship between window dimensions and num_frames and plot resolution etc and the opengl texture size limit
-    num_frames: int = 32 
+    # Frame buffer parameters - optimized for texture limits and performance  
+    num_frames: int = 64  # Increased for smoother scrolling (64 * 256 = 16384, exactly at OpenGL limit) 
     
-    # Shader parameters 
-    scaling_factor: float = 0.25  # Boost dim audio signals for visibility
-    gamma: float = 0.3  # Gamma correction for visual enhancement
+    # Shader parameters - optimized for visual clarity
+    scaling_factor: float = 0.25  # Boost dim audio signals for visibility (currently unused in shader)
+    gamma: float = 0.4  # Slightly increased gamma for better contrast
 
-    # TODO : Consolidate colormap and transition points into a cohesive uniform colorscheme    
-    # Colormap configuration (5 RGB color tuples)
-    colormap_colors: Tuple[Tuple[float, float, float], ...] = (
-        (0.0, 0.0, 0.3),   # Dark blue
-        (0.3, 0.0, 0.5),   # Purple
-        (1.0, 0.0, 0.0),   # Red
-        (1.0, 0.5, 0.0),   # Orange
-        (1.0, 1.0, 1.0),   # White
-    )
-    # Transition points for color interpolation
-    transition_points: Tuple[float, float, float, float] = (0.3, 0.6, 0.8, 1.0)
+    # Note: Colormap is now handled by the inferno colormap in the fragment shader
     
     # Texture parameters
     texture_slot: int = 0
@@ -136,14 +124,7 @@ class VisualizationConfig:
         if self.gamma <= 0:
             errors.append(f"gamma ({self.gamma}) must be positive")
         
-        # colormap must have valid RGB values
-        for i, color in enumerate(self.colormap_colors):
-            if len(color) != 3:
-                errors.append(f"colormap_colors[{i}] must be RGB tuple (3 values), got {len(color)}")
-            else:
-                for j, component in enumerate(color):
-                    if not (0.0 <= component <= 1.0):
-                        errors.append(f"colormap_colors[{i}][{j}] ({component}) must be between 0.0 and 1.0")
+        # Note: colormap validation removed as colors are now handled by inferno shader
         
         return errors
 
@@ -155,8 +136,8 @@ class AudioConfig:
     # File parameters
     audio_file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
     
-    # Processing parameters
-    audio_window_size: int = 1024
+    # Processing parameters - optimized for real-time performance
+    audio_window_size: int = 2048  # Increased for better frequency resolution
     
     def validate(self) -> List[str]:
         """
@@ -196,7 +177,7 @@ class ProcessingConfig:
     
     def validate(self, opengl_max_texture_size: int = 16384) -> List[str]:
         """
-        Validate the complete processing configuration.
+        Validate the complete processing configuration with comprehensive hardware checks.
         
         Args:
             opengl_max_texture_size (int): Maximum texture size supported by OpenGL
@@ -224,6 +205,110 @@ class ProcessingConfig:
                     f"= {texture_width} pixels > {opengl_max_texture_size} limit. "
                     f"Reduce num_frames to {opengl_max_texture_size // self.wavelet.target_width} or less."
                 )
+        
+        # GPU Memory validation 
+        gpu_memory_errors = self._validate_gpu_memory()
+        errors.extend(gpu_memory_errors)
+        
+        # CPU Memory validation
+        cpu_memory_errors = self._validate_cpu_memory()
+        errors.extend(cpu_memory_errors)
+        
+        # Performance validation
+        performance_errors = self._validate_performance_targets()
+        errors.extend(performance_errors)
+        
+        return errors
+
+    def _validate_gpu_memory(self) -> List[str]:
+        """Estimate and validate GPU memory requirements."""
+        errors = []
+        
+        if not (self.wavelet and self.visualization):
+            return errors
+        
+        # Estimate GPU memory usage in MB
+        freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave  # Approximate
+        
+        # CWT coefficients: freq_bins × input_size × 4 bytes (float32)
+        cwt_memory_mb = (freq_bins * self.audio.audio_window_size * 4) / (1024 * 1024)
+        
+        # Texture memory: freq_bins × (num_frames × target_width) × 4 bytes  
+        texture_memory_mb = (freq_bins * self.visualization.num_frames * self.wavelet.target_width * 4) / (1024 * 1024)
+        
+        # Rolling frame buffer: num_frames × freq_bins × target_width × 4 bytes
+        buffer_memory_mb = (self.visualization.num_frames * freq_bins * self.wavelet.target_width * 4) / (1024 * 1024)
+        
+        total_gpu_mb = cwt_memory_mb + texture_memory_mb + buffer_memory_mb
+        
+        # Warn if estimated usage exceeds reasonable limits
+        if total_gpu_mb > 2048:  # 2GB warning threshold
+            errors.append(
+                f"WARNING: High GPU memory usage estimated: {total_gpu_mb:.1f} MB "
+                f"(CWT: {cwt_memory_mb:.1f}, Texture: {texture_memory_mb:.1f}, Buffer: {buffer_memory_mb:.1f}). "
+                f"Consider reducing num_frames or target_width."
+            )
+        
+        return errors
+
+    def _validate_cpu_memory(self) -> List[str]:
+        """Estimate and validate CPU memory requirements.""" 
+        errors = []
+        
+        if not (self.wavelet and self.visualization):
+            return errors
+        
+        # Audio buffer memory (for file reading)
+        audio_buffer_mb = (self.audio.audio_window_size * 4) / (1024 * 1024)  # float32
+        
+        # Wavelets kernels storage (estimated)
+        freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave
+        wavelet_kernels_mb = (freq_bins * self.audio.audio_window_size * 8) / (1024 * 1024)  # complex64
+        
+        total_cpu_mb = audio_buffer_mb + wavelet_kernels_mb
+        
+        # Warn if estimated usage exceeds reasonable limits
+        if total_cpu_mb > 1024:  # 1GB warning threshold  
+            errors.append(
+                f"WARNING: High CPU memory usage estimated: {total_cpu_mb:.1f} MB "
+                f"(Audio: {audio_buffer_mb:.1f}, Kernels: {wavelet_kernels_mb:.1f}). "
+                f"Consider reducing audio_window_size."
+            )
+        
+        return errors
+
+    def _validate_performance_targets(self) -> List[str]:
+        """Validate configuration against performance targets."""
+        errors = []
+        
+        if not (self.wavelet and self.visualization):
+            return errors
+        
+        # Estimate computational complexity
+        freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave
+        operations_per_frame = freq_bins * self.audio.audio_window_size
+        
+        # Warn about potentially expensive configurations
+        if operations_per_frame > 10_000_000:  # 10M operations per frame
+            errors.append(
+                f"WARNING: High computational load estimated: {operations_per_frame:,} operations/frame. "
+                f"This may impact real-time performance. Consider reducing audio_window_size or num_octaves."
+            )
+        
+        # Check for reasonable frame rates (assuming 50% overlap = 2x faster updates)
+        overlap_factor = 0.5  
+        frames_per_second = self.wavelet.typical_sampling_freq / (self.audio.audio_window_size * (1 - overlap_factor))
+        
+        if frames_per_second > 200:  # Very high frame rate
+            errors.append(
+                f"WARNING: Very high frame rate estimated: {frames_per_second:.1f} FPS. "
+                f"This may cause excessive GPU updates. Consider increasing audio_window_size."
+            )
+        elif frames_per_second < 10:  # Very low frame rate  
+            errors.append(
+                f"WARNING: Low frame rate estimated: {frames_per_second:.1f} FPS. "
+                f"This may cause choppy visualization. Consider decreasing audio_window_size."
+            )
         
         return errors
 

@@ -84,7 +84,11 @@ class SubShader:
         log.info("Initializing components...")
         
         # Audio Input - handles file reading and audio frame getter 
-        self.audio_input = AudioInput(path=config.audio.audio_file_path, audio_window_size=config.audio.audio_window_size)
+        self.audio_input = AudioInput(
+            path=config.audio.audio_file_path, 
+            audio_window_size=config.audio.audio_window_size,
+            overlap_factor=0.5 
+        )
         sample_rate = self.audio_input.get_sample_rate()  # 44.1 kHz
 
         # Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
