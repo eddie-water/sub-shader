@@ -5,6 +5,7 @@ import cupy as cp
 from cupyx.scipy import fft as cp_fft
 import pywt
 from subshader.utils.logging import get_logger
+from subshader.utils.global_normalizer import GlobalNormalizer
 from typing import Optional
 from ..config import WaveletConfig
 
@@ -43,6 +44,17 @@ class Wavelet(ABC):
         
         # Store downsampling target width from config
         self.target_width = self.config.target_width
+        
+        # Initialize global normalizer if enabled
+        self.global_normalizer = None
+        if self.config.global_norm.enabled:
+            self.global_normalizer = GlobalNormalizer(
+                percentile=self.config.global_norm.percentile,
+                decay_rate=self.config.global_norm.decay_rate,
+                floor_value=self.config.global_norm.floor_value,
+                warmup_frames=self.config.global_norm.warmup_frames,
+                log_mapping=self.config.global_norm.log_mapping
+            )
 
         # Sampling Parameters
         self.sample_rate = sample_rate
@@ -156,8 +168,13 @@ class Wavelet(ABC):
         # Downsample the reliable CWT coefficients to produce output data
         downsampled_coefs = self.downsample(reliable_coefs, self.target_width)
         
-        # Normalize the results to produce final output
-        return self.normalize_coefs(downsampled_coefs)
+        # Apply normalization (global or legacy)
+        if self.global_normalizer is not None:
+            # Use global normalization
+            return self.apply_global_normalization(downsampled_coefs)
+        else:
+            # Use legacy per-frame normalization
+            return self.normalize_coefs(downsampled_coefs)
 
     @abstractmethod
     def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
@@ -222,6 +239,34 @@ class Wavelet(ABC):
         norm_vals = (db_vals - db_floor) / (db_ceil - db_floor)
 
         return norm_vals.astype(np.float32)
+    
+    def apply_global_normalization(self, raw_coefs: np.ndarray) -> np.ndarray:
+        """
+        Apply global normalization using the GlobalNormalizer.
+        
+        This method computes magnitude, updates the global normalization factor,
+        and returns normalized values in [0, 1] range.
+        
+        Args:
+            raw_coefs (np.ndarray): Raw CWT coefficients (complex or real).
+            
+        Returns:
+            np.ndarray: Globally normalized magnitudes in [0, 1].
+        """
+        # Compute magnitude of the CWT coefficients
+        mag = np.abs(raw_coefs)
+        
+        # Create a valid data mask (exclude very small values that might be noise)
+        valid_mask = mag > self.config.epsilon
+        
+        # Update global normalization factor
+        self.global_normalizer.update(mag, mask=valid_mask)
+        
+        # Apply global normalization
+        normalized = self.global_normalizer.normalize(mag)
+        
+        # Ensure output type consistency
+        return normalized.astype(self.config.output_dtype)
     
     def downsample(self, coefs: np.ndarray, target_width: int = None) -> np.ndarray:
         """
@@ -443,6 +488,27 @@ class CupyWavelet(AntsWavelet):
             self.tf_gpu[i, :] = conv_valid
 
         return cp.asnumpy(self.tf_gpu)
+    
+    def apply_global_normalization(self, raw_coefs: np.ndarray) -> np.ndarray:
+        """
+        Apply global normalization for CuPy-based wavelets.
+        
+        This method handles the GPU-to-CPU transfer needed for the GlobalNormalizer
+        while maintaining efficiency.
+        
+        Args:
+            raw_coefs (np.ndarray): Raw CWT coefficients (already converted from GPU).
+            
+        Returns:
+            np.ndarray: Globally normalized magnitudes in [0, 1].
+        """
+        if self.global_normalizer is None:
+            # Fallback to parent implementation
+            return super().apply_global_normalization(raw_coefs)
+        
+        # Since raw_coefs is already numpy (converted in class_specific_cwt),
+        # we can use the parent implementation directly
+        return super().apply_global_normalization(raw_coefs)
 
     def cleanup(self):
         try:

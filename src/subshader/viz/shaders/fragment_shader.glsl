@@ -4,12 +4,13 @@
  * Determines the color of each pixel by reading the values from the source
  * data texture. The texture contains coefficient frames stacked
  * side-by-side in a scrolling buffer. Each pixel samples one coefficient
- * value, normalizes it using adaptive scaling, and maps it to a color
+ * value (already globally normalized to [0,1] range) and maps it to a color
  * using matplotlib's inferno colormap for accurate data representation.
  * 
  * Inputs:
  *   texCoord (vec2): Which coefficient to read from the texture
- *   texture_sampler (sampler2D): Texture containing stacked coefficient frames
+ *   texture_sampler (sampler2D): Texture containing globally normalized coefficient frames
+ *   gamma (float): Gamma correction factor for perceptual enhancement
  * 
  * Outputs:
  *   fragColor (vec4): Final color for this pixel

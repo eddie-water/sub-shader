@@ -38,10 +38,52 @@ def _get_system_display_size() -> Tuple[int, int]:
 
 
 @dataclass
+class GlobalNormalizationConfig:
+    """Configuration for global normalization across frames."""
+    
+    # Enable/disable global normalization
+    enabled: bool = True
+    
+    # Robust statistics parameters
+    percentile: float = 99.0  # Use 99th percentile instead of max for robustness
+    
+    # Adaptation parameters
+    decay_rate: float = 0.001  # Exponential decay rate per frame
+    floor_value: float = 1e-8  # Minimum global factor to prevent division by zero
+    
+    # Warm-up parameters
+    warmup_frames: int = 10  # Frames to process before normalization is "ready"
+    
+    # Enhancement parameters
+    log_mapping: bool = False  # Apply log1p mapping for perceptual detail
+    
+    def validate(self) -> List[str]:
+        """Validate global normalization configuration parameters."""
+        errors = []
+        
+        if not (0.0 < self.percentile <= 100.0):
+            errors.append(f"percentile ({self.percentile}) must be between 0 and 100")
+        
+        if not (0.0 <= self.decay_rate < 1.0):
+            errors.append(f"decay_rate ({self.decay_rate}) must be between 0 and 1")
+        
+        if self.floor_value <= 0:
+            errors.append(f"floor_value ({self.floor_value}) must be positive")
+        
+        if self.warmup_frames < 0:
+            errors.append(f"warmup_frames ({self.warmup_frames}) must be non-negative")
+        
+        return errors
+
+
+@dataclass
 class WaveletConfig:
     """Configuration for wavelet transform and normalization."""
     
-    # Normalization parameters - optimized for musical content visualization  
+    # Global normalization configuration
+    global_norm: GlobalNormalizationConfig = None
+    
+    # Legacy normalization parameters (used when global normalization is disabled)
     db_floor: float = -80.0  # Less aggressive floor for better dynamic range visibility
     db_ceil: float = 0.0
     epsilon: float = 1e-12
@@ -58,6 +100,11 @@ class WaveletConfig:
     # Audio parameters
     typical_sampling_freq: int = 44100
     
+    def __post_init__(self):
+        """Initialize global normalization config if not provided."""
+        if self.global_norm is None:
+            self.global_norm = GlobalNormalizationConfig()
+    
     def validate(self) -> List[str]:
         """
         Validate critical wavelet configuration parameters.
@@ -67,6 +114,11 @@ class WaveletConfig:
         """
         errors = []
         
+        # Validate global normalization config
+        if self.global_norm:
+            errors.extend(self.global_norm.validate())
+        
+        # Legacy normalization validation (still needed for fallback)
         if self.db_floor >= self.db_ceil:
             errors.append(f"db_floor ({self.db_floor}) must be less than db_ceil ({self.db_ceil})")
         
