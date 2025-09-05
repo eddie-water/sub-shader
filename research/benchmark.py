@@ -36,8 +36,8 @@ class Benchmark():
         '''
         Audio Input
         '''
-        audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
-        self.audio_data = audio_input.get_frame()
+        audio_input = AudioInput(path = FILE_PATH, chunk_size = WINDOW_SIZE)
+        self.audio_data = audio_input.get_chunk()
         sample_rate = audio_input.get_sample_rate() # 44.1 kHz
 
         '''
@@ -55,21 +55,21 @@ class Benchmark():
         
         # PyWavelet 
         py_wavelet = PyWavelet(sample_rate = sample_rate, 
-                               window_size = WINDOW_SIZE,
+                               chunk_size = WINDOW_SIZE,
                                target_width = TARGET_WIDTH)
         
         self.coefs_py_wavelet = py_wavelet.compute_cwt(self.audio_data)
 
         # NumPy ANTS Wavelet
         np_wavelet = NumpyWavelet(sample_rate = sample_rate, 
-                                  window_size = WINDOW_SIZE,
+                                  chunk_size = WINDOW_SIZE,
                                   target_width = TARGET_WIDTH)
 
         self.coefs_np_wavelet = np_wavelet.compute_cwt(self.audio_data)
 
         # CuPy ANTS Wavelet 
         cp_wavelet = CupyWavelet(sample_rate = sample_rate, 
-                                 window_size = WINDOW_SIZE,
+                                 chunk_size = WINDOW_SIZE,
                                  target_width = TARGET_WIDTH)
 
         self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
@@ -95,7 +95,7 @@ class Benchmark():
             - note special python ',' syntax
         '''
         self.func_list = [
-            (audio_input.get_frame,         ()),
+            (audio_input.get_chunk,         ()),
             (py_wavelet.compute_cwt,        (self.audio_data,)),
             (np_wavelet.compute_cwt,        (self.audio_data,)),
             (cp_wavelet.compute_cwt,        (self.audio_data,)),
@@ -124,7 +124,7 @@ class Benchmark():
                 kwargs = item[2] if len(item) > 2 else {}
 
                 # Modify args based on function type and available data
-                if func.__name__ == 'get_frame':
+                if func.__name__ == 'get_chunk':
                     # Audio input - use original args
                     args = base_args
                 elif func.__name__ == 'compute_cwt':
@@ -158,7 +158,7 @@ class Benchmark():
                 t_end = time.perf_counter()
 
                 # Store results for next functions in pipeline
-                if func.__name__ == 'get_frame':
+                if func.__name__ == 'get_chunk':
                     fresh_audio_data = result
                 elif func.__name__ == 'compute_cwt':
                     if 'PyWavelet' in func.__self__.__class__.__name__:

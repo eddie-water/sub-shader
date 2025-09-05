@@ -1,10 +1,34 @@
+"""
+Audio Input Module for SubShader.
+
+This module handles audio file processing and frame extraction for real-time
+visualization:
+ - Loads audio files using soundfile with format detection
+ - Implements overlapping window extraction to reduce edge artifacts
+ - Supports configurable chunk sizes and overlap factors
+ - Provides graceful error handling for file operations
+"""
+
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
+import os
+
 import numpy as np
 import soundfile as sf
-import os
+
 from subshader.utils.logging import get_logger
+
+# =============================================================================
+# LOGGING
+# =============================================================================
 
 log = get_logger(__name__)
 
+# =============================================================================
+# EXCEPTIONS
+# =============================================================================
 
 class AudioFileNotFoundError(Exception):
     """Raised when the audio file cannot be found."""
@@ -21,41 +45,44 @@ class EndOfAudioException(Exception):
         self.log_level = "warning"
         self.log_message = f"Graceful exit: {message}"
 
+# =============================================================================
+# AUDIO INPUT CLASS
+# =============================================================================
 
 class AudioInput:
-    def __init__(self, path: str, audio_window_size: int, overlap_factor: float = 0.5) -> None:
+    def __init__(self, path: str, chunk_size: int, overlap_factor: float = 0.5) -> None:
         """
         Audio Input Initialization
 
         Args:
             path (str): Path to the audio file.
-            audio_window_size (int): Size of the audio frame in samples.
-            overlap_factor (float): Overlap between consecutive windows (0.0 to 1.0).
-                                  0.5 means 50% overlap to reduce edge artifacts.
+            chunk_size (int): Size of the audio frame in samples.
+            overlap_factor (float): Overlap between consecutive windows (0.0 to 
+                1.0). 0.5 means 50% overlap to reduce edge artifacts.
         """
-        self.audio_file_path = path
-        self.audio_window_size = audio_window_size
-        self.overlap_factor = max(0.0, min(0.9, overlap_factor))  # Clamp to reasonable range
-        self.hop_size = int(audio_window_size * (1.0 - self.overlap_factor))
+        self.file_path = path
+        self.chunk_size = chunk_size
+        self.overlap_factor = overlap_factor
+        self.hop_size = int(chunk_size * (1.0 - self.overlap_factor))
         
         # Check if file exists before trying to open
-        if not os.path.exists(self.audio_file_path):
-            log.error(f"Audio file not found: {self.audio_file_path}")
-            raise AudioFileNotFoundError(f"Audio file not found: {self.audio_file_path}")
+        if not os.path.exists(self.file_path):
+            log.error(f"Audio file not found: {self.file_path}")
+            raise AudioFileNotFoundError(f"Audio file not found: {self.file_path}")
         
         # Keep file handle open to avoid reopening it every time
         try:
-            self.file_handle = sf.SoundFile(self.audio_file_path, 'r')
+            self.file_handle = sf.SoundFile(self.file_path, 'r')
             self.sample_rate = self.file_handle.samplerate
             self.total_frames = self.file_handle.frames
             self.pos = 0
-            log.info(f"Audio file loaded: {self.audio_file_path} ({self.total_frames} frames, {self.sample_rate} Hz)")
-            log.info(f"Window size: {self.audio_window_size}, Overlap: {self.overlap_factor:.1%}, Hop size: {self.hop_size}")
+            log.info(f"Audio file loaded: {self.file_path} ({self.total_frames} frames, {self.sample_rate} Hz)")
+            log.info(f"Window size: {self.chunk_size}, Overlap: {self.overlap_factor:.1%}, Hop size: {self.hop_size}")
         except Exception as e:
-            log.error(f"Failed to load audio file {self.audio_file_path}: {e}")
+            log.error(f"Failed to load audio file {self.file_path}: {e}")
             raise
 
-    def get_frame(self) -> np.ndarray:
+    def get_chunk(self) -> np.ndarray:
         """
         Gets an overlapping frame of audio to reduce edge artifacts.
         
@@ -67,12 +94,12 @@ class AudioInput:
             np.ndarray: The next frame of audio data from the file.
                        None if EOF reached.
         """
-        if self.pos + self.audio_window_size > self.total_frames:
+        if self.pos + self.chunk_size > self.total_frames:
             return None  # Signal EOF
         
         # Seek and read (file stays open)
         self.file_handle.seek(self.pos)
-        frame = self.file_handle.read(self.audio_window_size)
+        frame = self.file_handle.read(self.chunk_size)
         
         # Convert stereo to mono 
         if len(frame.shape) > 1:
@@ -104,8 +131,8 @@ class AudioInput:
         Display File Information
             Logs information about the audio file
         """
-        with sf.SoundFile(self.audio_file_path, 'r') as f:
-            log.info(f"Audio file: {self.audio_file_path}")
+        with sf.SoundFile(self.file_path, 'r') as f:
+            log.info(f"Audio file: {self.file_path}")
             log.debug(f"Mode: {f.mode}")
             log.debug(f"Sample rate: {f.samplerate} Hz")
             log.debug(f"Frames: {f.frames}")

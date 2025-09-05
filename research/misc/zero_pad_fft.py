@@ -87,8 +87,8 @@ FILE_PATH = "audio_files/c4_and_c7_4_arps.wav"
 
 pi = np.pi
 
-audio_input = AudioInput(path = FILE_PATH, window_size = WINDOW_SIZE)
-audio_data = audio_input.get_frame()
+audio_input = AudioInput(path = FILE_PATH, chunk_size = WINDOW_SIZE)
+audio_data = audio_input.get_chunk()
 sample_rate = audio_input.get_sample_rate() 
 
 

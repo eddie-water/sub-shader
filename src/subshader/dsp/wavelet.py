@@ -1,21 +1,50 @@
+"""
+Wavelet Transform Module for SubShader.
+
+This module provides GPU-accelerated Continuous Wavelet Transform (CWT) 
+implementation for real-time audio analysis:
+ - Computes time-frequency representations using the Morlet wavelet
+ - Utilizes CuPy for GPU acceleration and performance optimization
+ - Supports chromatic scale frequency mapping for musical visualization
+ - Includes global normalization for consistent amplitude scaling
+"""
+
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
 from abc import ABC, abstractmethod
+from typing import Optional
+
 import numpy as np
 from numpy.fft import fft, ifft
 import cupy as cp
 from cupyx.scipy import fft as cp_fft
 import pywt
-from subshader.utils.logging import get_logger
+
 from subshader.utils.global_normalizer import GlobalNormalizer
-from typing import Optional
+from subshader.utils.logging import get_logger
+
 from ..config import WaveletConfig
+
+# =============================================================================
+# LOGGING
+# =============================================================================
 
 log = get_logger(__name__)
 
-# Math Constants
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
 PI = np.pi
 
+# =============================================================================
+# WAVELET CLASSES
+# =============================================================================
+
 class Wavelet(ABC):
-    def __init__(self, sample_rate: int, input_data_size: int, config: Optional[WaveletConfig] = None):
+    def __init__(self, sample_rate: int, input_size: int, config: Optional[WaveletConfig] = None):
         """
         Wavelet base class that all other wavelet classes are derived from.
         Uses a list of frequencies that follows the chromatic scale starting at
@@ -23,13 +52,14 @@ class Wavelet(ABC):
 
         Args:
             sample_rate (int): The rate the input data was sampled in Hz
-            input_data_size (int): The length of the input data
+            input_size (int): The length of the input data
             config (WaveletConfig, optional): Configuration object with wavelet parameters
         """
         if config is None:
             config = WaveletConfig()
         self.config = config
         
+        # TODO: Confirm COI is the reliable portion of the CWT result (accounting for cone of influence wich might remove edge effects in the plot)
         # Cone of influence parameters - extract reliable center region
         self.coi_edge_percent = 0.15  # Remove 15% from each edge (30% total)
         
@@ -40,7 +70,8 @@ class Wavelet(ABC):
                              f"The CWT may not work as expected.")
         
         self.sample_rate = sample_rate
-        self.input_data_size = input_data_size
+        # TODO input_size -> input_size
+        self.input_size = input_size
         
         # Store downsampling target width from config
         self.target_width = self.config.target_width
@@ -62,8 +93,8 @@ class Wavelet(ABC):
         self.sampling_period = (1.0 / self.sample_rate)
         
         # Calculate cone of influence boundaries for reliable region extraction
-        self.coi_start_idx = int(self.input_data_size * self.coi_edge_percent)
-        self.coi_end_idx = int(self.input_data_size * (1.0 - self.coi_edge_percent))
+        self.coi_start_idx = int(self.input_size * self.coi_edge_percent)
+        self.coi_end_idx = int(self.input_size * (1.0 - self.coi_edge_percent))
         self.coi_reliable_length = self.coi_end_idx - self.coi_start_idx
 
         # Generate list of frequencies in the chromatic scale
@@ -74,11 +105,11 @@ class Wavelet(ABC):
         self.num_freqs = len(self.freqs)
 
         # Input and output dimensions
-        self.input_shape = (self.num_freqs, self.input_data_size)
+        self.input_shape = (self.num_freqs, self.input_size)
         self.output_shape = (self.num_freqs, self.target_width)
         
         log.info(f"Cone of influence: removing edges {self.coi_edge_percent:.1%} each side")
-        log.info(f"Reliable region: samples {self.coi_start_idx}-{self.coi_end_idx} ({self.coi_reliable_length}/{self.input_data_size})")
+        log.info(f"Reliable region: samples {self.coi_start_idx}-{self.coi_end_idx} ({self.coi_reliable_length}/{self.input_size})")
 
     def _generate_chromatic_scale(self, root_note: float, num_octaves: int, notes_per_octave: int = 12) -> list[float]:
         """
@@ -152,10 +183,10 @@ class Wavelet(ABC):
         Returns:
             np.ndarray: The normalized and downsampled output coefficients
         """
-        if len(input_data) != self.input_data_size:
-            log.error(f"Input data length mismatch: {len(input_data)} != {self.input_data_size}")
+        if len(input_data) != self.input_size:
+            log.error(f"Input data length mismatch: {len(input_data)} != {self.input_size}")
             raise ValueError(f"Input data length {len(input_data)} "
-                             f"does not match expected input data size {self.input_data_size}")
+                             f"does not match expected input data size {self.input_size}")
 
         # Increase precision
         data = input_data.astype(np.float64)
@@ -317,16 +348,16 @@ class Wavelet(ABC):
         pass
 
 class PyWavelet(Wavelet):
-    def __init__(self, sample_rate, input_data_size, config: Optional[WaveletConfig] = None):
+    def __init__(self, sample_rate, input_size, config: Optional[WaveletConfig] = None):
         """
         The PyWavelet implementation of the CWT
 
         Args:
             sample_rate (int): The rate the input data was sampled in Hz
-            input_data_size (int): The length of the input data
+            input_size (int): The length of the input data
             config (WaveletConfig, optional): Configuration object with wavelet parameters
         """
-        super().__init__(sample_rate, input_data_size, config)
+        super().__init__(sample_rate, input_size, config)
 
         # Wavelet info TODO ISSUE-36 why 1.5-1.0?
         self.wavelet_name = "cmor1.5-1.0"
@@ -385,23 +416,23 @@ class PyWavelet(Wavelet):
         pass
 
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate: int, input_data_size: int,
-                 m_cycles: float = 6.0, fwhm_cycles: float = 3.0, config: Optional[WaveletConfig] = None):
+    def __init__(self, sample_rate: int, input_size: int, m_cycles: float = 6.0,
+        fwhm_cycles: float = 3.0, config: Optional[WaveletConfig] = None):
         """
         ANTS-style CWT with true scale-dependent time support.
 
         Args:
             sample_rate (int): Input audio sample rate in Hz
-            input_data_size (int): Input data length in samples
+            input_size (int): Input data length in samples
             m_cycles (float): number of carrier cycles per wavelet
             fwhm_cycles (float): Gaussian FWHM width in cycles
             config (WaveletConfig, optional): Configuration object with wavelet parameters
         """
-        super().__init__(sample_rate, input_data_size, config)
+        super().__init__(sample_rate, input_size, config)
 
         self.m_cycles = m_cycles
         self.fwhm_cycles = fwhm_cycles
-        self.data_n = self.input_data_size
+        self.data_n = self.input_size
 
         # Store per-frequency kernels (variable length)
         self.wavelet_kernels: list[np.ndarray] = []
@@ -443,9 +474,9 @@ class NumpyWavelet(AntsWavelet):
     def class_specific_cwt(self, data) -> np.ndarray:
         """
         Perform CWT using variable-length wavelets, CPU version.
-        Returns: (num_freqs, input_data_size) matrix.
+        Returns: (num_freqs, input_size) matrix.
         """
-        tf = np.zeros((self.num_freqs, self.input_data_size), dtype=np.float32)
+        tf = np.zeros((self.num_freqs, self.input_size), dtype=np.float32)
         for i, cmw_x in enumerate(self.wavelet_kernels):
             conv_n = cmw_x.shape[0]
             data_x = fft(data, conv_n)
@@ -461,9 +492,9 @@ class NumpyWavelet(AntsWavelet):
 
 
 class CupyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, input_data_size,
+    def __init__(self, sample_rate, input_size,
                  m_cycles=6.0, fwhm_cycles=3.0, config: Optional[WaveletConfig] = None):
-        super().__init__(sample_rate, input_data_size, m_cycles, fwhm_cycles, config)
+        super().__init__(sample_rate, input_size, m_cycles, fwhm_cycles, config)
         log.info(f"CPU→GPU: Uploading {len(self.wavelet_kernels)} wavelets to GPU")
 
         # Convert each kernel individually to CuPy
@@ -471,12 +502,12 @@ class CupyWavelet(AntsWavelet):
         self.num_wavelets = len(self.wavelet_kernels)
 
         # Allocate GPU time-frequency matrix
-        self.tf_gpu = cp.zeros((self.num_freqs, self.input_data_size), dtype=cp.float32)
+        self.tf_gpu = cp.zeros((self.num_freqs, self.input_size), dtype=cp.float32)
 
     def class_specific_cwt(self, data) -> np.ndarray:
         """
         Perform CWT using variable-length wavelets, GPU version.
-        Returns: (num_freqs, input_data_size) matrix.
+        Returns: (num_freqs, input_size) matrix.
         """
         for i, cmw_x in enumerate(self.wavelet_kernels):
             conv_n = cmw_x.shape[0]

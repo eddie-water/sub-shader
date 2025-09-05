@@ -10,7 +10,7 @@ except ImportError:
     cp = None
     CUPY_AVAILABLE = False
 
-
+# TODO 36 Rename this. The result of the CWT is "normalized" this more like a "max tracker" as a reference point for the shader color map
 class GlobalNormalizer:
     """Tracks global normalization factor across frames for stable scaling."""
     
@@ -33,9 +33,21 @@ class GlobalNormalizer:
         self.is_ready = False
     
     def update(self, frame: Union[np.ndarray, 'cp.ndarray'], mask: Optional[Union[np.ndarray, 'cp.ndarray']] = None) -> float:
+        """
+        Update the global factor with a new frame.
+
+        Args:
+            frame (Union[np.ndarray, 'cp.ndarray']): The frame to update the global factor with.
+            mask (Optional[Union[np.ndarray, 'cp.ndarray']]): The mask to apply to the frame.
+
+        Returns:
+            float: The updated global factor.
+        """
+        # TODO 36: What is isinstance even checking here?
         is_cupy = CUPY_AVAILABLE and isinstance(frame, cp.ndarray)
         xp = cp if is_cupy else np
         
+        # TODO 36: I don't understnad why this is asrray vs numpy
         if mask is not None:
             if is_cupy and not isinstance(mask, cp.ndarray):
                 mask = cp.asarray(mask)
@@ -50,6 +62,7 @@ class GlobalNormalizer:
         
         frame_stat = float(xp.percentile(valid_data, self.percentile))
         
+        # TODO 36: Feel like this is a little much
         self.global_factor = (1.0 - self.decay_rate) * self.global_factor
         self.global_factor = max(self.global_factor, self.floor_value)
         self.global_factor = max(self.global_factor, frame_stat)
@@ -61,6 +74,16 @@ class GlobalNormalizer:
         return self.global_factor
     
     def normalize(self, frame: Union[np.ndarray, 'cp.ndarray']) -> Union[np.ndarray, 'cp.ndarray']:
+        """
+        Normalize the frame with the global factor.
+
+        Args:
+            frame (Union[np.ndarray, 'cp.ndarray']): The frame to normalize.
+
+        Returns:
+            Union[np.ndarray, 'cp.ndarray']: The normalized frame.
+        """
+        
         is_cupy = CUPY_AVAILABLE and isinstance(frame, cp.ndarray)
         xp = cp if is_cupy else np
         

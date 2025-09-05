@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
+
 """
 SubShader is a real-time audio visualizer.
 
 This module orchestrates the audio processing pipeline:
  - Retrieves audio data from a local file
  - Performs Time-Frequency Analysis on the audio via the Continuous Wavelet 
-   Transform (CWT) implemented with CuPy
+   Transform implemented with CuPy
  - Visualizes the results using a GPU-accelerated shader plot with OpenGL
-
 """
+
+# =============================================================================
+# IMPORTS
+# =============================================================================
 
 from subshader.utils.logging import logger_init, get_logger
 from subshader.utils.os_env_setup import env_init
 from subshader.utils.loop_timer import LoopTimer
 
+from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput, AudioFileNotFoundError, EndOfAudioException
 from subshader.dsp.wavelet import CuWavelet
 from subshader.viz.plotter import ShaderPlot, WindowCloseException
-from subshader.config import get_default_config
 
-# Init logging at the module level, not every time a class is instantiated
+# =============================================================================
+# LOGGING
+# =============================================================================
+
 logger_init(log_level="INFO", console_output=False, file_output=True)
 log = get_logger(__name__)
 
@@ -31,16 +38,13 @@ log = get_logger(__name__)
 config = get_default_config()
 
 # Override default configs
-config.audio.audio_file_path = "assets/audio/songs/beltran_sc_rip_8bar.wav"
+config.audio.file_path = "assets/audio/songs/beltran_sc_rip_8bar.wav"
 
 # =============================================================================
 # EXCEPTIONS
 # =============================================================================
 
-
-
-# Gracefully exit on these exceptions
-GRACEFUL_EXIT_EXCEPTIONS = (
+GRACEFUL_EXCEPTIONS = (
     KeyboardInterrupt,
     RuntimeError,
     EndOfAudioException, 
@@ -49,77 +53,54 @@ GRACEFUL_EXIT_EXCEPTIONS = (
 )
 
 # =============================================================================
-# MAIN APPLICATION CLASS
+# MAIN APP
 # =============================================================================
 
 class SubShader:
-    """
-    Main application class that orchestrates the audio processing pipeline.
-    
-    Manages the lifecycle of all components:
-    - Audio input processing
-    - Wavelet transform computation
-    - GPU-accelerated visualization
-    - Performance monitoring
-    """
-    
+    """Main class that orchestrates the audio visualization pipeline."""
+
     def __init__(self):
-        """Initialize the SubShader application."""
-        self.audio_input = None
-        self.wavelet = None
-        self.plotter = None
-        self.loop_timer = None
-        self._initialized = False
-    
-    def init(self):
-        """
-        Initialize all high level components.
-        
-        Sets up the audio processing pipeline:
-        - Audio input from file
-        - Wavelet transform processor
-        - GPU visualization
-        - FPS monitor
-        """
-        log.info("Initializing components...")
-        
-        # Audio Input - handles file reading and audio frame getter 
+        """Initialize the SubShader application and all high levelmodules."""
+        log.info("Init modules...")
+
+        # Audio Input - handles file reading and audio getter 
         self.audio_input = AudioInput(
-            path=config.audio.audio_file_path, 
-            audio_window_size=config.audio.audio_window_size,
-            overlap_factor=0.5 
+            path=config.audio.file_path, 
+            chunk_size=config.audio.chunk_size,
+            overlap_factor=config.audio.overlap_factor 
         )
-        sample_rate = self.audio_input.get_sample_rate()  # 44.1 kHz
+        self.sample_rate = self.audio_input.get_sample_rate()
 
-        # Wavelet Object - performs Continuous Wavelet Transform (CWT) using CuPy
-        # TODO: audio.audio_window_size -> audio.output_size
-        self.wavelet = CuWavelet(sample_rate=sample_rate, input_data_size=config.audio.audio_window_size, config=config.wavelet)
+        # Wavelet Object - performs the Continuous Wavelet Transform using CuPy
+        self.wavelet = CuWavelet(
+            sample_rate=self.sample_rate, 
+            input_size=config.audio.chunk_size, 
+            config=config.wavelet)
+        self.result_shape = self.wavelet.get_output_shape()
 
-        # TODO: What if wavelet returned just the reliable portion of the CWT result (accounting for cone of influence wich might remove edge effects in the plot)
         # Plotter Object - GPU-accelerated shader plot of output results
-        result_shape = self.wavelet.get_output_shape()
         self.plotter = ShaderPlot(
-            audio_file_path=config.audio.audio_file_path, 
-            frame_shape=result_shape, 
-            num_frames=config.visualization.num_frames,
-            gamma=config.visualization.gamma
+            file_path=config.audio.file_path, 
+            frame_shape=self.result_shape, 
+            num_frames=config.viz.num_frames,
+            gamma=config.viz.gamma
         )
 
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()
         
-        self._initialized = True
         log.info("Init complete")
-
-    def main_loop(self):
+    
+    def loop(self):
         """
         Main loop. Runs until audio ends or window is closed.
 
         Processes audio frames through the pipeline:
-        - Gets frame of audio data
-        - Compute CWT coefficients on the audio
-        - Updates the plot with normalized CWT coefficients
-        - Monitors FPS 
+        - Retrieves a chunk of audio data with an overlap scheme
+        - Compute CWT on the audio, then normalizes and downsamples the 
+          resulting coefficients
+        - Updates the plot with the results
+        - FPS monitoring
         """
         
         log.info("Starting main loop")
@@ -128,8 +109,8 @@ class SubShader:
             # Start loop timing
             loop_start = self.loop_timer.start_loop()
 
-            # Grab a frame of audio and check for end of file
-            if (audio_data := self.audio_input.get_frame()) is None:
+            # Grab a chunk of audio and check for end of file
+            if (audio_data := self.audio_input.get_chunk()) is None:
                raise EndOfAudioException("Audio file processing complete")
 
             # Compute CWT on audio
@@ -144,22 +125,26 @@ class SubShader:
         raise WindowCloseException("Window Closed")
 
     def cleanup(self):
-        """Clean up all resources in the correct order."""
-        if not self._initialized:
-            return
-
+        """Idempotent cleanup: safe to call any time, even after partial init."""
         log.info("Cleaning up resources")
 
-        if self.audio_input:
-            self.audio_input.cleanup()  # Close audio file
-
-        if self.wavelet:
-            self.wavelet.cleanup()      # Clean up GPU memory
-
         if self.plotter:
-            self.plotter.cleanup()      # Terminate GLFW and OpenGL
+            try:
+                self.plotter.cleanup()
+            finally:
+                self.plotter = None
+        if self.wavelet:
+            try:
+                self.wavelet.cleanup()
+            finally:
+                self.wavelet = None
+        if self.audio_input:
+            try:
+                self.audio_input.cleanup()
+            finally:
+                self.audio_input = None
 
-        self._initialized = False
+        self.loop_timer = None
 
         log.info("Cleanup complete")
 
@@ -170,11 +155,10 @@ class SubShader:
 def main():
     """Main entry point for the SubShader application."""
     subshader = SubShader()
-    subshader.init()
 
     try:
-        subshader.main_loop()
-    except GRACEFUL_EXIT_EXCEPTIONS as e:
+        subshader.loop()
+    except GRACEFUL_EXCEPTIONS as e:
         if hasattr(e, 'log_level') and hasattr(e, 'log_message'):
             getattr(log, e.log_level)(e.log_message)
         elif isinstance(e, KeyboardInterrupt):
@@ -187,5 +171,6 @@ def main():
     log.info("Application shutdown complete")
 
 if __name__ == '__main__':
+    # TODO What is the value of the env_init? Can it be tucked in somewhere else?
     env_init()
     main()

@@ -1,23 +1,34 @@
 """
-Configuration module for SubShader components.
+Configuration Module for SubShader.
 
-This module provides centralized configuration classes to make wavelet 
-normalization, plot rendering, and shader visualization agnostic of each other 
-while maintaining sensible defaults and allowing easy customization.
-
-All configuration parameters are validated here. Classes can assume that any
-config objects passed to them contain valid, pre-checked parameters.
+Centralized configuration management for SubShader module components:
+ - Defines configuration classes for audio, wavelet, and visualization settings
+ - Parameter validation
+ - Sensible defaults while allowing easy customization
 """
 
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
+import os
 from dataclasses import dataclass
-from typing import Tuple, Optional, List
+from typing import Tuple, List
+
 import numpy as np
 import tkinter as tk
-import os
+
 from .utils.logging import get_logger
+
+# =============================================================================
+# LOGGING
+# =============================================================================
 
 log = get_logger(__name__)
 
+# =============================================================================
+# UTILITIES
+# =============================================================================
 
 def _get_system_display_size() -> Tuple[int, int]:
     """
@@ -36,6 +47,9 @@ def _get_system_display_size() -> Tuple[int, int]:
         # Fallback to Full HD if system detection fails
         return 1920, 1080
 
+# =============================================================================
+# CONFIGURATION CLASSES
+# =============================================================================
 
 @dataclass
 class GlobalNormalizationConfig:
@@ -45,7 +59,7 @@ class GlobalNormalizationConfig:
     enabled: bool = True
     
     # Robust statistics parameters
-    percentile: float = 99.0  # Use 99th percentile instead of max for robustness
+    percentile: float = 99.0
     
     # Adaptation parameters
     decay_rate: float = 0.001  # Exponential decay rate per frame
@@ -185,12 +199,11 @@ class VisualizationConfig:
 class AudioConfig:
     """Configuration for audio processing."""
     
-    # File parameters
-    audio_file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
-    
-    # Processing parameters - optimized for real-time performance
-    audio_window_size: int = 2048  # Increased for better frequency resolution
-    
+    # Audio File parameters
+    file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
+    chunk_size: int = 2048
+    overlap_factor: float = 0.5     # As a percentage (0.5 = 50% overlap)
+
     def validate(self) -> List[str]:
         """
         Validate critical audio configuration parameters.
@@ -200,23 +213,26 @@ class AudioConfig:
         """
         errors = []
         
-        if not os.path.exists(self.audio_file_path):
-            errors.append(f"Audio file not found: {self.audio_file_path}")
+        if not os.path.exists(self.file_path):
+            errors.append(f"Audio file not found: {self.file_path}")
         
-        if self.audio_window_size <= 0:
-            errors.append(f"audio_window_size ({self.audio_window_size}) must be positive")
+        if self.chunk_size <= 0:
+            errors.append(f"chunk_size ({self.chunk_size}) must be positive")
         
+        if not (0.0 <= self.overlap_factor <= 0.9):
+            errors.append(f"overlap_factor ({self.overlap_factor}) must be between 0.0 and 0.9")
+
         return errors
 
 
-@dataclass  
+@dataclass  G
 class ProcessingConfig:
     """Configuration for audio processing pipeline."""
     
     # Component configurations
     audio: AudioConfig = None
     wavelet: WaveletConfig = None
-    visualization: VisualizationConfig = None
+    viz: VisualizationConfig = None
     
     def __post_init__(self):
         """Initialize sub-configurations if not provided."""
@@ -224,8 +240,8 @@ class ProcessingConfig:
             self.audio = AudioConfig()
         if self.wavelet is None:
             self.wavelet = WaveletConfig()
-        if self.visualization is None:
-            self.visualization = VisualizationConfig()
+        if self.viz is None:
+            self.viz = VisualizationConfig()
     
     def validate(self, opengl_max_texture_size: int = 16384) -> List[str]:
         """
@@ -244,16 +260,18 @@ class ProcessingConfig:
             errors.extend(self.audio.validate())
         if self.wavelet:
             errors.extend(self.wavelet.validate())
-        if self.visualization:
-            errors.extend(self.visualization.validate())
-        
+        if self.viz:
+            errors.extend(self.viz.validate())
+
+        # TODO: Look through these and see how important they are@q
+
         # CRITICAL: Validate OpenGL texture size limits
-        if self.wavelet and self.visualization:
-            texture_width = self.visualization.num_frames * self.wavelet.target_width
+        if self.wavelet and self.viz:
+            texture_width = self.viz.num_frames * self.wavelet.target_width
             if texture_width > opengl_max_texture_size:
                 errors.append(
                     f"CRITICAL: Texture size exceeds OpenGL limit! "
-                    f"num_frames ({self.visualization.num_frames}) × target_width ({self.wavelet.target_width}) "
+                    f"num_frames ({self.viz.num_frames}) × target_width ({self.wavelet.target_width}) "
                     f"= {texture_width} pixels > {opengl_max_texture_size} limit. "
                     f"Reduce num_frames to {opengl_max_texture_size // self.wavelet.target_width} or less."
                 )
@@ -276,20 +294,20 @@ class ProcessingConfig:
         """Estimate and validate GPU memory requirements."""
         errors = []
         
-        if not (self.wavelet and self.visualization):
+        if not (self.wavelet and self.viz):
             return errors
         
         # Estimate GPU memory usage in MB
         freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave  # Approximate
         
         # CWT coefficients: freq_bins × input_size × 4 bytes (float32)
-        cwt_memory_mb = (freq_bins * self.audio.audio_window_size * 4) / (1024 * 1024)
+        cwt_memory_mb = (freq_bins * self.audio.chunk_size * 4) / (1024 * 1024)
         
         # Texture memory: freq_bins × (num_frames × target_width) × 4 bytes  
-        texture_memory_mb = (freq_bins * self.visualization.num_frames * self.wavelet.target_width * 4) / (1024 * 1024)
+        texture_memory_mb = (freq_bins * self.viz.num_frames * self.wavelet.target_width * 4) / (1024 * 1024)
         
         # Rolling frame buffer: num_frames × freq_bins × target_width × 4 bytes
-        buffer_memory_mb = (self.visualization.num_frames * freq_bins * self.wavelet.target_width * 4) / (1024 * 1024)
+        buffer_memory_mb = (self.viz.num_frames * freq_bins * self.wavelet.target_width * 4) / (1024 * 1024)
         
         total_gpu_mb = cwt_memory_mb + texture_memory_mb + buffer_memory_mb
         
@@ -307,15 +325,15 @@ class ProcessingConfig:
         """Estimate and validate CPU memory requirements.""" 
         errors = []
         
-        if not (self.wavelet and self.visualization):
+        if not (self.wavelet and self.viz):
             return errors
         
         # Audio buffer memory (for file reading)
-        audio_buffer_mb = (self.audio.audio_window_size * 4) / (1024 * 1024)  # float32
+        audio_buffer_mb = (self.audio.chunk_size * 4) / (1024 * 1024)  # float32
         
         # Wavelets kernels storage (estimated)
         freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave
-        wavelet_kernels_mb = (freq_bins * self.audio.audio_window_size * 8) / (1024 * 1024)  # complex64
+        wavelet_kernels_mb = (freq_bins * self.audio.chunk_size * 8) / (1024 * 1024)  # complex64
         
         total_cpu_mb = audio_buffer_mb + wavelet_kernels_mb
         
@@ -324,7 +342,7 @@ class ProcessingConfig:
             errors.append(
                 f"WARNING: High CPU memory usage estimated: {total_cpu_mb:.1f} MB "
                 f"(Audio: {audio_buffer_mb:.1f}, Kernels: {wavelet_kernels_mb:.1f}). "
-                f"Consider reducing audio_window_size."
+                f"Consider reducing chunk_size."
             )
         
         return errors
@@ -333,33 +351,32 @@ class ProcessingConfig:
         """Validate configuration against performance targets."""
         errors = []
         
-        if not (self.wavelet and self.visualization):
+        if not (self.wavelet and self.viz):
             return errors
         
         # Estimate computational complexity
         freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave
-        operations_per_frame = freq_bins * self.audio.audio_window_size
+        operations_per_frame = freq_bins * self.audio.chunk_size
         
         # Warn about potentially expensive configurations
         if operations_per_frame > 10_000_000:  # 10M operations per frame
             errors.append(
                 f"WARNING: High computational load estimated: {operations_per_frame:,} operations/frame. "
-                f"This may impact real-time performance. Consider reducing audio_window_size or num_octaves."
+                f"This may impact real-time performance. Consider reducing chunk_size or num_octaves."
             )
         
-        # Check for reasonable frame rates (assuming 50% overlap = 2x faster updates)
-        overlap_factor = 0.5  
-        frames_per_second = self.wavelet.typical_sampling_freq / (self.audio.audio_window_size * (1 - overlap_factor))
+        # Check for reasonable frame rates
+        frames_per_second = self.wavelet.typical_sampling_freq / (self.audio.chunk_size * (1 - self.audio.overlap_factor))
         
         if frames_per_second > 200:  # Very high frame rate
             errors.append(
                 f"WARNING: Very high frame rate estimated: {frames_per_second:.1f} FPS. "
-                f"This may cause excessive GPU updates. Consider increasing audio_window_size."
+                f"This may cause excessive GPU updates. Consider increasing chunk_size."
             )
         elif frames_per_second < 10:  # Very low frame rate  
             errors.append(
                 f"WARNING: Low frame rate estimated: {frames_per_second:.1f} FPS. "
-                f"This may cause choppy visualization. Consider decreasing audio_window_size."
+                f"This may cause choppy visualization. Consider decreasing chunk_size."
             )
         
         return errors
@@ -412,6 +429,6 @@ def validate_config(config: ProcessingConfig, opengl_max_texture_size: int = 163
         return False
     else:
         log.info("✅ Configuration validation passed")
-        texture_width = config.visualization.num_frames * config.wavelet.target_width
+        texture_width = config.viz.num_frames * config.wavelet.target_width
         log.info(f"  Texture size: {texture_width} pixels (within {opengl_max_texture_size} limit)")
         return True
