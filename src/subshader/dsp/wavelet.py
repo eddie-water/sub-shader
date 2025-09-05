@@ -415,8 +415,13 @@ class PyWavelet(Wavelet):
         """
         pass
 
+# TODO 36 - Use namesapce array namespace pattern 'xp = cp elif np' to 
+# consolidate the code. Maybe if the ANTS wavelet is the parent class that 
+# checks a bool, and if it's true, use cp, else use np and then CuWavelet sets 
+# it true, NumpyWavelet sets its false. Except notice that the fft and ifft 
+# function don't necessarily follow that pattern... 
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate: int, input_size: int, m_cycles: float = 6.0,
+    def __init__(self, sample_rate: int, input_size: int, m_cycles: float = 6.0, 
         fwhm_cycles: float = 3.0, config: Optional[WaveletConfig] = None):
         """
         ANTS-style CWT with true scale-dependent time support.
@@ -438,6 +443,10 @@ class AntsWavelet(Wavelet):
         self.wavelet_kernels: list[np.ndarray] = []
         self.half_kern_ns: list[int] = []
 
+        # TODO 36 - Redo this section - standardize my naming conventions
+        # dur_s vs time_s vs support_t vs time_support_s vs 
+        # cmw_k vs cmw_t vs cmw_kernel_t - I want the _% to indicate the domain where _t is time domain and _f is freq but I also like _x for freq
+        # TODO 36 - create a member variable for the wavelet kernels in the t domain and f domain
         for f in self.freqs:
             # Duration in seconds for m_cycles cycles at frequency f
             dur_s = m_cycles / f
@@ -453,7 +462,8 @@ class AntsWavelet(Wavelet):
             cmw_k = np.exp(1j * 2 * PI * f * t) * np.exp(-4 * np.log(2) * (t ** 2) / fwhm_s ** 2)
 
             # Scale normalization
-            cmw_k *= np.sqrt(f)
+            # TODO 36 - Why do I normalize this here? What about the PyWavelet implenetation that does it in the normalization step?
+            cmw_k *= np.sqrt(f) # f = 1/s? is that true???
 
             kern_n = len(cmw_k)
             conv_n = self.data_n + kern_n - 1
@@ -468,6 +478,15 @@ class AntsWavelet(Wavelet):
             self.wavelet_kernels.append(np.asarray(cmw_x, dtype=np.complex64))
 
         self.num_wavelets = len(self.wavelet_kernels)
+
+    def get_wavelet_kernels(self) -> list[np.ndarray]:
+        """
+        Access the wavelet kernels.
+        """
+        if hasattr(self, 'wavelet_kernels'):
+            return self.wavelet_kernels
+        else:
+            return None
 
 
 class NumpyWavelet(AntsWavelet):

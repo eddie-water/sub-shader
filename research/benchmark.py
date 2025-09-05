@@ -1,99 +1,111 @@
 """
-WARNING: This benchmark script may not work with the current codebase.
+Benchmark Module for SubShader Performance Analysis.
 
-This script was designed for earlier versions of the project and may have
-compatibility issues with the current implementation due to:
-- Recent refactoring of the SubShader module structure
-- Changes to class names and interfaces (e.g., Shader class changes)
-- Updated import paths and method signatures
-- New modular architecture
-
-Use this script as reference only. It may need significant updates to work
-with the current codebase.
+This module provides comprehensive performance benchmarking for all SubShader
+components:
+ - Measures audio input processing performance
+ - Compares different wavelet transform implementations
+ - Benchmarks visualization rendering performance
+ - Generates comparative analysis and visualizations
 """
+
+# =============================================================================
+# IMPORTS
+# =============================================================================
+
+# TODO 36 - Go through every file and make sure the imports go through the pattern of stdlib, third party, first party, sibling, etc
 
 import os
 import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumpyWavelet, CupyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
 
-'''
-Constants
-'''
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+# Load default configuration
+config = get_default_config()
+
+# Override benchmark-specific configs
+config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
+config.audio.chunk_size = 1024  # 1 << 10
+config.viz.num_frames = 256
+
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
 NUM_ITERATIONS = 500
 
-WINDOW_SIZE = 1 << 10
-
-FILE_PATH = "assets/audio/daw/a2a3_a4_minor_scale.wav"
+# =============================================================================
+# BENCHMARK CLASS
+# =============================================================================
 
 class Benchmark():
     def __init__(self) -> None:
         
-        '''
-        Audio Input
-        '''
-        audio_input = AudioInput(path = FILE_PATH, chunk_size = WINDOW_SIZE)
+        # Audio Input
+        audio_input = AudioInput(
+            path=config.audio.file_path, 
+            chunk_size=config.audio.chunk_size,
+            overlap_factor=config.audio.overlap_factor
+        )
         self.audio_data = audio_input.get_chunk()
-        sample_rate = audio_input.get_sample_rate() # 44.1 kHz
+        sample_rate = audio_input.get_sample_rate()
 
-        '''
-        Wavelet Implementations
-        '''
-        # With WINDOW_SIZE=1024: each frame = 11.6ms, so 256 frames = ~3 seconds
-        TARGET_WIDTH = 64      # Good time detail per frame
-        NUM_FRAMES_ADJUSTED = 256   # 3 seconds of scrolling history
-        
-        # Verify configuration
-        TEXTURE_WIDTH = NUM_FRAMES_ADJUSTED * TARGET_WIDTH
-        MAX_TEXTURE_SIZE = 16384
-        TIME_HISTORY = NUM_FRAMES_ADJUSTED * 11.6 / 1000  # ms to seconds
-        
-        
+        # Wavelet Implementations
         # PyWavelet 
-        py_wavelet = PyWavelet(sample_rate = sample_rate, 
-                               chunk_size = WINDOW_SIZE,
-                               target_width = TARGET_WIDTH)
+        py_wavelet = PyWavelet(
+            sample_rate=sample_rate, 
+            input_size=config.audio.chunk_size,
+            config=config.wavelet
+        )
         
         self.coefs_py_wavelet = py_wavelet.compute_cwt(self.audio_data)
 
         # NumPy ANTS Wavelet
-        np_wavelet = NumpyWavelet(sample_rate = sample_rate, 
-                                  chunk_size = WINDOW_SIZE,
-                                  target_width = TARGET_WIDTH)
+        np_wavelet = NumpyWavelet(
+            sample_rate=sample_rate, 
+            input_size=config.audio.chunk_size,
+            config=config.wavelet
+        )
 
         self.coefs_np_wavelet = np_wavelet.compute_cwt(self.audio_data)
 
         # CuPy ANTS Wavelet 
-        cp_wavelet = CupyWavelet(sample_rate = sample_rate, 
-                                 chunk_size = WINDOW_SIZE,
-                                 target_width = TARGET_WIDTH)
+        cp_wavelet = CupyWavelet(
+            sample_rate=sample_rate, 
+            input_size=config.audio.chunk_size,
+            config=config.wavelet
+        )
 
         self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
 
-        '''
-        Plotter Implementations
-        '''
+        # Plotter Implementations
         # Plot shapes
-        self.plot_shape = py_wavelet.get_shape()
-        self.plot_shape_downsampled = py_wavelet.get_downsampled_shape()
+        self.plot_shape = py_wavelet.get_output_shape()
 
         # PyQtGraph Plotter
-        pyqtg = PyQtPlotter(file_path = FILE_PATH,
-                            frame_shape = self.plot_shape_downsampled)
+        pyqtg = PyQtPlotter(
+            file_path=config.audio.file_path,
+            frame_shape=self.plot_shape
+        )
 
         # Shader Plotter
-        shader = ShaderPlot(file_path = FILE_PATH,
-                            frame_shape = self.plot_shape_downsampled,
-                            num_frames = NUM_FRAMES_ADJUSTED)
+        shader = ShaderPlot(
+            file_path=config.audio.file_path,
+            frame_shape=self.plot_shape,
+            num_frames=config.viz.num_frames,
+            gamma=config.viz.gamma
+        )
 
-        '''
-        Function List and Dummy Arguments 
-            - note special python ',' syntax
-        '''
+        # Function List and Dummy Arguments 
         self.func_list = [
             (audio_input.get_chunk,         ()),
             (py_wavelet.compute_cwt,        (self.audio_data,)),
@@ -163,7 +175,7 @@ class Benchmark():
                 elif func.__name__ == 'compute_cwt':
                     if 'PyWavelet' in func.__self__.__class__.__name__:
                         py_cwt_result = result
-                    elif 'NumpyWavelet' in func.__self__.__class__.__name__:
+                    elif 'AntsWavelet' in func.__self__.__class__.__name__:
                         np_cwt_result = result  # Not used in plotting but stored
                     elif 'CupyWavelet' in func.__self__.__class__.__name__:
                         cp_cwt_result = result
@@ -183,12 +195,10 @@ class Benchmark():
         print()
         print(f"Timing Analysis Complete - every function averaged over {NUM_ITERATIONS} iterations\n")
 
-        '''
-        Static Plots
-        '''
+        # Static Plots
         # Single window with time series on left, CWTs stacked on right
         fig = plt.figure(constrained_layout=False)  # Disable constrained_layout to use subplots_adjust
-        fig.canvas.manager.set_window_title(f"Time Series vs CWT {os.path.basename(FILE_PATH)}")
+        fig.canvas.manager.set_window_title(f"Time Series vs CWT {os.path.basename(config.audio.file_path)}")
         
         # Create a 2x2 grid and use different subplot positions
         ax_ts = fig.add_subplot(1, 2, 1)  # Left column, spans full height
