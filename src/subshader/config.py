@@ -225,7 +225,7 @@ class AudioConfig:
         return errors
 
 
-@dataclass  G
+@dataclass
 class ProcessingConfig:
     """Configuration for audio processing pipeline."""
     

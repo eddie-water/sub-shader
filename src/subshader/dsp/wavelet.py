@@ -418,7 +418,7 @@ class PyWavelet(Wavelet):
 # TODO 36 - Use namesapce array namespace pattern 'xp = cp elif np' to 
 # consolidate the code. Maybe if the ANTS wavelet is the parent class that 
 # checks a bool, and if it's true, use cp, else use np and then CuWavelet sets 
-# it true, NumpyWavelet sets its false. Except notice that the fft and ifft 
+# it true, NumPyWavelet sets its false. Except notice that the fft and ifft 
 # function don't necessarily follow that pattern... 
 class AntsWavelet(Wavelet):
     def __init__(self, sample_rate: int, input_size: int, m_cycles: float = 6.0, 
@@ -489,7 +489,7 @@ class AntsWavelet(Wavelet):
             return None
 
 
-class NumpyWavelet(AntsWavelet):
+class NumPyWavelet(AntsWavelet):
     def class_specific_cwt(self, data) -> np.ndarray:
         """
         Perform CWT using variable-length wavelets, CPU version.
@@ -510,7 +510,7 @@ class NumpyWavelet(AntsWavelet):
         pass
 
 
-class CupyWavelet(AntsWavelet):
+class CuPyWavelet(AntsWavelet):
     def __init__(self, sample_rate, input_size,
                  m_cycles=6.0, fwhm_cycles=3.0, config: Optional[WaveletConfig] = None):
         super().__init__(sample_rate, input_size, m_cycles, fwhm_cycles, config)
@@ -573,7 +573,7 @@ class CupyWavelet(AntsWavelet):
         except Exception as e:
             print(f"Warning: Error during GPU cleanup: {e}")
     
-class CuWavelet(CupyWavelet):
+class CuWavelet(CuPyWavelet):
     """
     This just kind of renames the class becuase it sounds ~cool~
     """

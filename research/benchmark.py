@@ -1,4 +1,5 @@
 """
+TODO 36 - Rename this to bench or performance or something funny
 Benchmark Module for SubShader Performance Analysis.
 
 This module provides comprehensive performance benchmarking for all SubShader
@@ -22,7 +23,7 @@ import matplotlib.pyplot as plt
 
 from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput
-from subshader.dsp.wavelet import PyWavelet, NumpyWavelet, CupyWavelet
+from subshader.dsp.wavelet import PyWavelet, NumPyWavelet, CuPyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
 
 # =============================================================================
@@ -50,55 +51,57 @@ NUM_ITERATIONS = 500
 class Benchmark():
     def __init__(self) -> None:
         
-        # Audio Input
-        audio_input = AudioInput(
+        # =====================================================================
+        #  Audio Input
+        # =====================================================================
+        self.audio_input = AudioInput(
             path=config.audio.file_path, 
             chunk_size=config.audio.chunk_size,
             overlap_factor=config.audio.overlap_factor
         )
-        self.audio_data = audio_input.get_chunk()
-        sample_rate = audio_input.get_sample_rate()
 
-        # Wavelet Implementations
-        # PyWavelet 
-        py_wavelet = PyWavelet(
-            sample_rate=sample_rate, 
-            input_size=config.audio.chunk_size,
-            config=config.wavelet
-        )
-        
-        self.coefs_py_wavelet = py_wavelet.compute_cwt(self.audio_data)
+        self.audio_data = self.audio_input.get_chunk()
 
-        # NumPy ANTS Wavelet
-        np_wavelet = NumpyWavelet(
-            sample_rate=sample_rate, 
+        self.sample_rate = self.audio_input.get_sample_rate()
+
+        # =====================================================================
+        #  Wavelet Implementations
+        # =====================================================================
+        self.py_wavelet = PyWavelet(
+            sample_rate=self.sample_rate, 
             input_size=config.audio.chunk_size,
             config=config.wavelet
         )
 
-        self.coefs_np_wavelet = np_wavelet.compute_cwt(self.audio_data)
+        self.coefs_py_wavelet = self.py_wavelet.compute_cwt(self.audio_data)
 
-        # CuPy ANTS Wavelet 
-        cp_wavelet = CupyWavelet(
-            sample_rate=sample_rate, 
+        self.np_wavelet = NumPyWavelet(
+            sample_rate=self.sample_rate, 
             input_size=config.audio.chunk_size,
             config=config.wavelet
         )
 
-        self.coefs_cp_wavelet = cp_wavelet.compute_cwt(self.audio_data)
+        self.coefs_np_wavelet = self.np_wavelet.compute_cwt(self.audio_data)
 
-        # Plotter Implementations
-        # Plot shapes
-        self.plot_shape = py_wavelet.get_output_shape()
+        self.cp_wavelet = CuPyWavelet(
+            sample_rate=self.sample_rate, 
+            input_size=config.audio.chunk_size,
+            config=config.wavelet
+        )
 
-        # PyQtGraph Plotter
-        pyqtg = PyQtPlotter(
+        self.coefs_cp_wavelet = self.cp_wavelet.compute_cwt(self.audio_data)
+
+        # =====================================================================
+        #  Plotter Implementations
+        # =====================================================================
+        self.plot_shape = self.py_wavelet.get_output_shape()
+
+        self.pyqtg = PyQtPlotter(
             file_path=config.audio.file_path,
             frame_shape=self.plot_shape
         )
 
-        # Shader Plotter
-        shader = ShaderPlot(
+        self.shader = ShaderPlot(
             file_path=config.audio.file_path,
             frame_shape=self.plot_shape,
             num_frames=config.viz.num_frames,
@@ -107,18 +110,38 @@ class Benchmark():
 
         # Function List and Dummy Arguments 
         self.func_list = [
-            (audio_input.get_chunk,         ()),
-            (py_wavelet.compute_cwt,        (self.audio_data,)),
-            (np_wavelet.compute_cwt,        (self.audio_data,)),
-            (cp_wavelet.compute_cwt,        (self.audio_data,)),
-            (pyqtg.update_plot,             (self.coefs_py_wavelet,)),
-            (shader.update_plot,            (self.coefs_cp_wavelet,))
+            (self.audio_input.get_chunk,         ()),
+            (self.py_wavelet.compute_cwt,        (self.audio_data,)),
+            (self.np_wavelet.compute_cwt,        (self.audio_data,)),
+            (self.cp_wavelet.compute_cwt,        (self.audio_data,)),
+            (self.pyqtg.update_plot,             (self.coefs_py_wavelet,)),
+            (self.shader.update_plot,            (self.coefs_cp_wavelet,))
         ]
 
         # Tracks the run time of each function
         self.func_times = np.zeros(len(self.func_list))
 
-    def main(self):
+    def static_plot_analysis(self):
+        # TODO 36 - Do a crazy one shot, print all the kernels in t domain and f domain, have a scroll 
+        # static plot analysis
+        # - print all the kernels (maybe every 10?) so we can see all the kerenels in the time and f domain vs a highly curated input audio file that 
+        # has a lot of good low and high frequency transient events that would be good to compare different implementations on 
+        # Would be nice if I was able to scroll through  them with a roller slider instead of cramming them all into one window 
+        # or even export them into a pdf file or something
+        # - maybe we do first column is audio t domain, second column is py wavelet t domain, third column is np wavelet t domain, fourth column is cp wavelet t domain
+        pass  
+
+    def dynamic_plot_analysis(self):
+        # TODO 36 - This is where we bench mark the real time plotting performance
+        # and time all the functions in the plotting pipeline 
+        pass  
+
+    def run_tests(self):
+        self.static_plot_analysis()
+
+        self.dynamic_plot_analysis()
+
+        # TODO 36 - Move the below into the dynamic plot analysis function
         print()
         print("Starting Timing Analysis...\n")
 
@@ -135,6 +158,7 @@ class Benchmark():
                 base_args = item[1] if len(item) > 1 else ()
                 kwargs = item[2] if len(item) > 2 else {}
 
+                # TODO 36 - I don't like this it looks so gross
                 # Modify args based on function type and available data
                 if func.__name__ == 'get_chunk':
                     # Audio input - use original args
@@ -154,7 +178,7 @@ class Benchmark():
                         else:
                             args = base_args
                     elif 'Shader' in func.__self__.__class__.__name__:
-                        # ShaderPlot gets CupyWavelet results  
+                        # ShaderPlot gets CuPyWavelet results  
                         if cp_cwt_result is not None:
                             args = (cp_cwt_result,)
                         else:
@@ -177,7 +201,7 @@ class Benchmark():
                         py_cwt_result = result
                     elif 'AntsWavelet' in func.__self__.__class__.__name__:
                         np_cwt_result = result  # Not used in plotting but stored
-                    elif 'CupyWavelet' in func.__self__.__class__.__name__:
+                    elif 'CuPyWavelet' in func.__self__.__class__.__name__:
                         cp_cwt_result = result
 
                 t_delta = t_end - t_start
@@ -239,4 +263,4 @@ class Benchmark():
 
 if __name__ == '__main__':
     benchmark = Benchmark()
-    benchmark.main()
+    benchmark.run_tests()
