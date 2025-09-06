@@ -74,7 +74,7 @@ class SubShader:
         # Wavelet Object - performs the Continuous Wavelet Transform using CuPy
         self.wavelet = CuWavelet(
             sample_rate=self.sample_rate, 
-            input_size=config.audio.chunk_size, 
+            input_n=config.audio.chunk_size, 
             config=config.wavelet)
         self.result_shape = self.wavelet.get_output_shape()
 

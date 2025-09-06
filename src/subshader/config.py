@@ -300,7 +300,7 @@ class ProcessingConfig:
         # Estimate GPU memory usage in MB
         freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave  # Approximate
         
-        # CWT coefficients: freq_bins × input_size × 4 bytes (float32)
+        # CWT coefficients: freq_bins × input_n × 4 bytes (float32)
         cwt_memory_mb = (freq_bins * self.audio.chunk_size * 4) / (1024 * 1024)
         
         # Texture memory: freq_bins × (num_frames × target_width) × 4 bytes  
