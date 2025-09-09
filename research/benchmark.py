@@ -40,7 +40,7 @@ config.audio.chunk_size = 1024  # 1 << 10
 config.viz.num_frames = 256
 
 # =============================================================================
-# CONSTANTS
+# TEST PARAMS
 # =============================================================================
 
 NUM_ITERATIONS = 500
@@ -52,9 +52,7 @@ NUM_ITERATIONS = 500
 class Benchmark():
     def __init__(self) -> None:
         
-        # =====================================================================
-        #  Audio Input
-        # =====================================================================
+        # Audio Input
         self.audio_input = AudioInput(
             path=config.audio.file_path, 
             chunk_size=config.audio.chunk_size,
@@ -65,9 +63,7 @@ class Benchmark():
 
         self.sample_rate = self.audio_input.get_sample_rate()
 
-        # =====================================================================
-        #  Wavelet Implementations
-        # =====================================================================
+        # Wavelet Implementations
         self.py_wavelet = PyWavelet(
             sample_rate=self.sample_rate, 
             input_n=config.audio.chunk_size,
@@ -92,9 +88,7 @@ class Benchmark():
 
         self.coefs_cp_wavelet = self.cp_wavelet.compute_cwt(self.audio_data)
 
-        # =====================================================================
-        #  Plotter Implementations
-        # =====================================================================
+        # Plotter Implementations
         self.plot_shape = self.py_wavelet.get_output_shape()
 
         self.pyqtg = PyQtPlotter(
@@ -124,97 +118,97 @@ class Benchmark():
 
     def static_plot_analysis(self):
         """
-        Visualize all wavelet kernels in time and frequency domains.
-        Creates an interactive matplotlib plot with slider navigation.
+        Plot all the wavelet kernels on a time and frequency axis. 
         """
-        # Get wavelet kernels from AntsWavelet implementation
+        # Plot params and init
+        REAL_PART_COLOR = 'darkorange'
+        IMAG_PART_COLOR = 'mediumslateblue'
+        MAG_COLOR = 'black'
+        GRID_ALPHA = 0.25
+        LINE_WIDTH = 2
+
+        fig, (ax_t, ax_f) = plt.subplots(1, 2, figsize=(16, 9))
+        plt.subplots_adjust(bottom=0.2)
+
+        # Kernels
         kernels_t = self.np_wavelet.get_wavelet_kernels('time')
         kernels_f = self.np_wavelet.get_wavelet_kernels('freq')
+        kernel_i = 0
         freqs = self.np_wavelet.freqs
-        
-        if not kernels_t or not kernels_f:
-            print("No wavelet kernels available for visualization")
-            return
-            
-        # Create interactive plot with slider
-        fig, (ax_t, ax_f) = plt.subplots(1, 2, figsize=(15, 6))
-        plt.subplots_adjust(bottom=0.2)
-        
-        # Initial kernel index
-        kernel_idx = 0
-        
-        def plot_kernel(idx):
-            """Plot kernel at given index"""
+
+        # Define all functions first before using them
+        def plot_kernel(i):
+            """
+            Plot time and frequency domain kernels side by side at given index.
+            """
             ax_t.clear()
             ax_f.clear()
-            
-            # Time domain plot
-            kernel_t = kernels_t[idx]
-            time_samples = len(kernel_t)
+
+            # Prepare time domain kernels
+            kernel_t = kernels_t[i]
+            num_time_samples = len(kernel_t)
             sample_rate = self.sample_rate
-            time_axis = np.arange(time_samples) / sample_rate
-            time_axis = time_axis - time_axis[len(time_axis)//2]  # Center at 0
-            
-            ax_t.plot(time_axis, np.real(kernel_t), 'b-', label='Real', alpha=0.7)
-            ax_t.plot(time_axis, np.imag(kernel_t), 'r-', label='Imag', alpha=0.7)
-            ax_t.plot(time_axis, np.abs(kernel_t), 'k-', label='Magnitude', linewidth=2)
-            ax_t.set_title(f'Time Domain - Freq: {freqs[idx]:.1f} Hz')
+            t = np.arange(num_time_samples) / sample_rate
+            t = t - t[len(t) // 2]
+
+            # Time domain plot 
+            ax_t.plot(t, np.real(kernel_t), REAL_PART_COLOR, label='Real', linewidth=LINE_WIDTH)
+            ax_t.plot(t, np.imag(kernel_t), IMAG_PART_COLOR, label='Imag', linewidth=LINE_WIDTH)
+            ax_t.plot(t, np.abs(kernel_t), MAG_COLOR, label='Mag', linewidth=LINE_WIDTH)
+
+            ax_t.set_title(f'Time Domain - Freq: {freqs[i]:.1f} Hz')
             ax_t.set_xlabel('Time (s)')
             ax_t.set_ylabel('Amplitude')
             ax_t.legend()
-            ax_t.grid(True, alpha=0.3)
-            
-            # Frequency domain plot
-            kernel_f = kernels_f[idx]
+            ax_t.grid(True, alpha=GRID_ALPHA)
+
+            # Prepare frequency domain kernels, discard "negative" frequencies
+            kernel_f = kernels_f[i]
             freq_samples = len(kernel_f)
             freq_axis = np.fft.fftfreq(freq_samples, 1/sample_rate)
-            
-            # Only plot positive frequencies for clarity
             pos_freqs = freq_axis[:freq_samples//2]
             pos_kernel = kernel_f[:freq_samples//2]
-            
-            ax_f.plot(pos_freqs, np.abs(pos_kernel), 'g-', linewidth=2)
-            ax_f.set_title(f'Frequency Domain - Freq: {freqs[idx]:.1f} Hz')
-            ax_f.set_xlabel('Frequency (Hz)')
-            ax_f.set_ylabel('Magnitude')
-            ax_f.set_xlim(0, min(2000, sample_rate//2))  # Limit to 2kHz for visibility
-            ax_f.grid(True, alpha=0.3)
-            
-            fig.suptitle(f'Wavelet Kernel {idx+1}/{len(kernels_t)} - {freqs[idx]:.1f} Hz', fontsize=14)
-            
+
+            # Plot frequency domain kernels
+            ax_f.plot(pos_freqs, np.abs(pos_kernel), MAG_COLOR, linewidth=LINE_WIDTH)
+            ax_f.set_title(f'Freq Domain - Freq: {freqs[i]:.1f} Hz')
+            ax_f.set_xlabel('Freq (Hz)')
+            ax_f.set_ylabel('Mag')
+            ax_f.set_xlim(0, min(2000, sample_rate//2))  # TODO 36 - Limit to 2kHz for visibility
+            ax_f.grid(True, alpha=GRID_ALPHA)
+
+            fig.suptitle(f'Wavelet Kernel Visualization: {i+1}/{len(kernels_t)} {freqs[i]:.1f} Hz', fontsize=12)
+
+        def prev_kernel(event):
+            current_val = max(0, slider.val - 1)
+            slider.set_val(current_val)
+
+        def next_kernel(event):
+            current_val = min(len(kernels_t)-1, slider.val + 1)
+            slider.set_val(current_val)
+
+        def update_plot(val):
+            i = int(slider.val)
+            plot_kernel(i)
+            plt.draw()
+
         # Create slider
         ax_slider = plt.axes([0.2, 0.05, 0.6, 0.03])
-        slider = plt.Slider(ax_slider, 'Kernel', 0, len(kernels_t)-1, 
-                           valinit=kernel_idx, valfmt='%d')
-        
-        def update_plot(val):
-            idx = int(slider.val)
-            plot_kernel(idx)
-            plt.draw()
-            
+        slider = plt.Slider(ax_slider, 'Kernel', 0, len(kernels_t)-1, valinit=kernel_i, valfmt='%d')
         slider.on_changed(update_plot)
-        
+
         # Plot initial kernel
-        plot_kernel(kernel_idx)
-        
-        # Add navigation buttons
+        plot_kernel(kernel_i)
+
+        # Navigation buttons
         ax_prev = plt.axes([0.1, 0.05, 0.05, 0.04])
         ax_next = plt.axes([0.85, 0.05, 0.05, 0.04])
         btn_prev = plt.Button(ax_prev, 'Prev')
         btn_next = plt.Button(ax_next, 'Next')
-        
-        def prev_kernel(event):
-            current_val = max(0, slider.val - 1)
-            slider.set_val(current_val)
-            
-        def next_kernel(event):
-            current_val = min(len(kernels_t)-1, slider.val + 1)
-            slider.set_val(current_val)
-            
         btn_prev.on_clicked(prev_kernel)
         btn_next.on_clicked(next_kernel)
-        
-        plt.show()  
+
+        plt.show()
 
     def dynamic_plot_analysis(self):
         # TODO 36 - This is where we bench mark the real time plotting performance
@@ -344,7 +338,7 @@ class Benchmark():
         # except Exception:
         #     pass
 
-        plt.show()
+        # plt.show()
 
 if __name__ == '__main__':
     benchmark = Benchmark()
