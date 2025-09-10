@@ -127,88 +127,102 @@ class Benchmark():
         GRID_ALPHA = 0.25
         LINE_WIDTH = 2
 
-        fig, (ax_t, ax_f) = plt.subplots(1, 2, figsize=(16, 9))
-        plt.subplots_adjust(bottom=0.2)
+        sr = self.sample_rate
+        nyq = sr // 2.0
 
-        # Kernels
         kernels_t = self.np_wavelet.get_wavelet_kernels('time')
         kernels_f = self.np_wavelet.get_wavelet_kernels('freq')
+        freqs = np.asarray(self.np_wavelet.freqs)
+        N = len(kernels_t)
+
+        decades = [
+            (20.0, min(200.0, nyq)),
+            (200.0, min(2000.0, nyq)),
+            (2000.0, min(20000.0, nyq)),
+        ]
+
+        # Left column for time domain, right column for frequency domain
+        fig = plt.figure(figsize=(16, 9))
+        fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
+        ax_t = fig.add_subplot(1, 2, 1)
+        ax_fs = [fig.add_subplot(len(decades), 2, 2 + i*2) for i in range(len(decades))]  # Right column, stacked vertically
         kernel_i = 0
-        freqs = self.np_wavelet.freqs
 
-        # Define all functions first before using them
-        def plot_kernel(i):
-            """
-            Plot time and frequency domain kernels side by side at given index.
-            """
-            ax_t.clear()
-            ax_f.clear()
+        def plot_kernel(i: int):
+            # Clear axes
+            ax_t.cla()
+            for ax in ax_fs: ax.cla()
 
-            # Prepare time domain kernels
-            kernel_t = kernels_t[i]
-            num_time_samples = len(kernel_t)
-            sample_rate = self.sample_rate
-            t = np.arange(num_time_samples) / sample_rate
-            t = t - t[len(t) // 2]
-
-            # Time domain plot 
-            ax_t.plot(t, np.real(kernel_t), REAL_PART_COLOR, label='Real', linewidth=LINE_WIDTH)
-            ax_t.plot(t, np.imag(kernel_t), IMAG_PART_COLOR, label='Imag', linewidth=LINE_WIDTH)
-            ax_t.plot(t, np.abs(kernel_t), MAG_COLOR, label='Mag', linewidth=LINE_WIDTH)
-
-            ax_t.set_title(f'Time Domain - Freq: {freqs[i]:.1f} Hz')
+            # Time domain, time axis centered at zero
+            k_t = kernels_t[i]
+            t = np.arange(len(k_t)) / sr
+            t = t - t[len(t)//2]
+            ax_t.plot(t, np.real(k_t), REAL_PART_COLOR, label='Real', lw=LINE_WIDTH)
+            ax_t.plot(t, np.imag(k_t), IMAG_PART_COLOR, label='Imag', lw=LINE_WIDTH)
+            ax_t.plot(t, np.abs(k_t), MAG_COLOR, label='Mag', lw=LINE_WIDTH)
+            ax_t.set_title(f'Time Series Centered at {freqs[i]:.1f} Hz')
             ax_t.set_xlabel('Time (s)')
             ax_t.set_ylabel('Amplitude')
-            ax_t.legend()
             ax_t.grid(True, alpha=GRID_ALPHA)
+            ax_t.legend(loc='upper right', frameon=False)
 
-            # Prepare frequency domain kernels, discard "negative" frequencies
-            kernel_f = kernels_f[i]
-            freq_samples = len(kernel_f)
-            freq_axis = np.fft.fftfreq(freq_samples, 1/sample_rate)
-            pos_freqs = freq_axis[:freq_samples//2]
-            pos_kernel = kernel_f[:freq_samples//2]
+            # Frequency domain
+            k_f = kernels_f[i]
+            n_f = len(k_f)
+            f_axis = np.fft.fftfreq(n_f, d=1/sr)
+            pos = slice(0, n_f//2)
+            f_pos = f_axis[pos]
+            Kmag = np.abs(k_f[pos])
 
-            # Plot frequency domain kernels
-            ax_f.plot(pos_freqs, np.abs(pos_kernel), MAG_COLOR, linewidth=LINE_WIDTH)
-            ax_f.set_title(f'Freq Domain - Freq: {freqs[i]:.1f} Hz')
-            ax_f.set_xlabel('Freq (Hz)')
-            ax_f.set_ylabel('Mag')
-            ax_f.set_xlim(0, min(2000, sample_rate//2))  # TODO 36 - Limit to 2kHz for visibility
-            ax_f.grid(True, alpha=GRID_ALPHA)
+            for ax, (f_lo, f_hi) in zip(ax_fs, decades):
+                ax.set_xscale('log')
+                ax.plot(f_pos, Kmag, MAG_COLOR, lw=LINE_WIDTH)
+                ax.set_xlim(f_lo, f_hi)
+                ax.grid(True, which='both', alpha=GRID_ALPHA)
+                
+                # Tidy title - Hz for small, kHz for big
+                if f_hi >= 1000:
+                    f_range = f'{f_lo:.0f}–{f_hi/1000:.1f}k Hz'
+                else:
+                    f_range = f'{f_lo:.0f}–{f_hi:.0f} Hz'
+                ax.set_title(f'Frequency Domain {f_range}')
+                ax.set_xlabel('Freq (Hz)')
+            ax_fs[0].set_ylabel('Magnitude')
 
-            fig.suptitle(f'Wavelet Kernel Visualization: {i+1}/{len(kernels_t)} {freqs[i]:.1f} Hz', fontsize=12)
+            fig.suptitle(f'Wavelet Time Domain vs Frequency Domain ({i+1}/{N})', fontsize=12)
 
-        def prev_kernel(event):
-            current_val = max(0, slider.val - 1)
-            slider.set_val(current_val)
+        # Slider controls
+        ax_slider = fig.add_axes([0.2, 0.05, 0.6, 0.03])
+        slider = Slider(ax_slider, 'Kernel', 0, N-1, valinit=0, valfmt='%d')
+        
+        def update(val):
+            plot_kernel(int(slider.val))
+            fig.canvas.draw()
+            
+        slider.on_changed(update)
+        
+        # Simple buttons with debug
+        def prev(_): 
+            print("Prev button clicked!")
+            new_val = (int(slider.val) - 1) % N
+            print(f"Setting slider from {slider.val} to {new_val}")
+            slider.set_val(new_val)
+            
+        def next(_): 
+            print("Next button clicked!")
+            new_val = (int(slider.val) + 1) % N
+            print(f"Setting slider from {slider.val} to {new_val}")
+            slider.set_val(new_val)
+        
+        prev_button = Button(fig.add_axes([0.1, 0.05, 0.06, 0.03]), 'Prev')
+        next_button = Button(fig.add_axes([0.84, 0.05, 0.06, 0.03]), 'Next')
+        prev_button.on_clicked(prev)
+        next_button.on_clicked(next)
 
-        def next_kernel(event):
-            current_val = min(len(kernels_t)-1, slider.val + 1)
-            slider.set_val(current_val)
-
-        def update_plot(val):
-            i = int(slider.val)
-            plot_kernel(i)
-            plt.draw()
-
-        # Create slider
-        ax_slider = plt.axes([0.2, 0.05, 0.6, 0.03])
-        slider = plt.Slider(ax_slider, 'Kernel', 0, len(kernels_t)-1, valinit=kernel_i, valfmt='%d')
-        slider.on_changed(update_plot)
-
-        # Plot initial kernel
+        # Initial draw
         plot_kernel(kernel_i)
-
-        # Navigation buttons
-        ax_prev = plt.axes([0.1, 0.05, 0.05, 0.04])
-        ax_next = plt.axes([0.85, 0.05, 0.05, 0.04])
-        btn_prev = plt.Button(ax_prev, 'Prev')
-        btn_next = plt.Button(ax_next, 'Next')
-        btn_prev.on_clicked(prev_kernel)
-        btn_next.on_clicked(next_kernel)
-
         plt.show()
+
 
     def dynamic_plot_analysis(self):
         # TODO 36 - This is where we bench mark the real time plotting performance
