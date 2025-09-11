@@ -61,6 +61,7 @@ class Wavelet(ABC):
         
         # TODO: Confirm COI is the reliable portion of the CWT result (accounting for cone of influence wich might remove edge effects in the plot)
         # Cone of influence parameters - extract reliable center region
+        # TODO 36 - Move this lol
         self.coi_edge_percent = 0.15  # Remove 15% from each edge (30% total)
         
         # Runtime validation - sample rate must match expected frequency
@@ -98,9 +99,10 @@ class Wavelet(ABC):
 
         # Generate list of frequencies in the chromatic scale
         self.freqs = self._generate_chromatic_scale(
-            self.config.num_octaves,
-            self.config.notes_per_octave,
+            self.config.num_octaves, 
+            self.config.notes_per_octave, 
             self.config.root_note_a0_hz)
+
         self.num_freqs = len(self.freqs)
 
         # Input and output dimensions

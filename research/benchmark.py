@@ -135,36 +135,58 @@ class Benchmark():
         freqs = np.asarray(self.np_wavelet.freqs)
         N = len(kernels_t)
 
-        decades = [
+        freq_decades = [
             (20.0, min(200.0, nyq)),
             (200.0, min(2000.0, nyq)),
             (2000.0, min(20000.0, nyq)),
         ]
 
-        # Left column for time domain, right column for frequency domain
+        # Fixed time axis ranges (in seconds)
+        time_ranges = [
+            0.5,    # Wide view - 0.5 seconds
+            0.05,   # Medium view - 50 ms
+            0.005,  # Narrow view - 5 ms
+        ]
+
+        # Create subplot grid: left column for time domain, right column for frequency domain
         fig = plt.figure(figsize=(16, 9))
         fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
-        ax_t = fig.add_subplot(1, 2, 1)
-        ax_fs = [fig.add_subplot(len(decades), 2, 2 + i*2) for i in range(len(decades))]  # Right column, stacked vertically
+        ax_ts = [fig.add_subplot(len(time_ranges), 2, 1 + i*2) for i in range(len(time_ranges))]  # Left column, stacked vertically
+        ax_fs = [fig.add_subplot(len(freq_decades), 2, 2 + i*2) for i in range(len(freq_decades))]  # Right column, stacked vertically
         kernel_i = 0
 
         def plot_kernel(i: int):
             # Clear axes
-            ax_t.cla()
+            for ax in ax_ts: ax.cla()
             for ax in ax_fs: ax.cla()
 
-            # Time domain, time axis centered at zero
+            # Time domain with fixed time axes
             k_t = kernels_t[i]
             t = np.arange(len(k_t)) / sr
-            t = t - t[len(t)//2]
-            ax_t.plot(t, np.real(k_t), REAL_PART_COLOR, label='Real', lw=LINE_WIDTH)
-            ax_t.plot(t, np.imag(k_t), IMAG_PART_COLOR, label='Imag', lw=LINE_WIDTH)
-            ax_t.plot(t, np.abs(k_t), MAG_COLOR, label='Mag', lw=LINE_WIDTH)
-            ax_t.set_title(f'Time Series Centered at {freqs[i]:.1f} Hz')
-            ax_t.set_xlabel('Time (s)')
-            ax_t.set_ylabel('Amplitude')
-            ax_t.grid(True, alpha=GRID_ALPHA)
-            ax_t.legend(loc='upper right', frameon=False)
+            t = t - t[len(t)//2]  # Center time axis at zero
+            
+            for ax, t_range in zip(ax_ts, time_ranges):
+                # Plot all components
+                ax.plot(t, np.real(k_t), REAL_PART_COLOR, label='Real', lw=LINE_WIDTH)
+                ax.plot(t, np.imag(k_t), IMAG_PART_COLOR, label='Imag', lw=LINE_WIDTH)
+                ax.plot(t, np.abs(k_t), MAG_COLOR, label='Mag', lw=LINE_WIDTH)
+                
+                # Set fixed time range
+                ax.set_xlim(-t_range/2, t_range/2)
+                
+                # Create descriptive labels
+                if t_range >= 0.1:
+                    range_label = f'{t_range*1000:.0f} ms'
+                else:
+                    range_label = f'{t_range*1000:.1f} ms'
+                
+                ax.set_title(f'Time Domain ±{range_label}')
+                ax.set_xlabel('Time (s)')
+                ax.grid(True, alpha=GRID_ALPHA)
+                
+            # Only show legend on first time plot
+            ax_ts[0].legend(loc='upper right', frameon=False)
+            ax_ts[0].set_ylabel('Amplitude')
 
             # Frequency domain
             k_f = kernels_f[i]
@@ -174,7 +196,7 @@ class Benchmark():
             f_pos = f_axis[pos]
             Kmag = np.abs(k_f[pos])
 
-            for ax, (f_lo, f_hi) in zip(ax_fs, decades):
+            for ax, (f_lo, f_hi) in zip(ax_fs, freq_decades):
                 ax.set_xscale('log')
                 ax.plot(f_pos, Kmag, MAG_COLOR, lw=LINE_WIDTH)
                 ax.set_xlim(f_lo, f_hi)
@@ -189,7 +211,7 @@ class Benchmark():
                 ax.set_xlabel('Freq (Hz)')
             ax_fs[0].set_ylabel('Magnitude')
 
-            fig.suptitle(f'Wavelet Time Domain vs Frequency Domain ({i+1}/{N})', fontsize=12)
+            fig.suptitle(f'Wavelet Kernel {i+1}/{N} • Center={freqs[i]:.1f} Hz', fontsize=12)
 
         # Slider controls
         ax_slider = fig.add_axes([0.2, 0.05, 0.6, 0.03])
