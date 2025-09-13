@@ -77,6 +77,7 @@ class Wavelet(ABC):
         self.target_width = self.config.target_width
         
         # Initialize global normalizer if enabled
+        # TODO 36 - why would it not be enabled
         self.global_normalizer = None
         if self.config.global_norm.enabled:
             self.global_normalizer = GlobalNormalizer(
@@ -99,9 +100,9 @@ class Wavelet(ABC):
 
         # Generate list of frequencies in the chromatic scale
         self.freqs = self._generate_chromatic_scale(
+            self.config.root_note_a0_hz,
             self.config.num_octaves, 
-            self.config.notes_per_octave, 
-            self.config.root_note_a0_hz)
+            self.config.notes_per_octave)
 
         self.num_freqs = len(self.freqs)
 
