@@ -139,13 +139,17 @@ class Benchmark():
 
         freq_range_hz = [
             (20.0, 200.0),
-            (200.0, 2000.0),
-            (2000.0, 20000.0),
+            (20.0, 2000.0),
+            (20.0, 20000.0),
         ]
 
         # Left column for time domain, right column for frequency domain
         fig = plt.figure(figsize=(16, 9))
         fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
+        fig_manager = fig.canvas.manager
+        if hasattr(fig_manager, 'window') and hasattr(fig_manager.window, 'showMaximized'):
+            fig_manager.window.showMaximized()
+
         ax_ts = [fig.add_subplot(len(time_ranges_s), 2, 1 + i*2) for i in range(len(time_ranges_s))]
         ax_fs = [fig.add_subplot(len(freq_range_hz), 2, 2 + i*2) for i in range(len(freq_range_hz))]
 
@@ -235,6 +239,7 @@ class Benchmark():
             new_val = (int(kernel_slider.val) - 1) % num_wavelets
             kernel_slider.set_val(new_val)
 
+        # TODO 36 why are the wavelet kernel amplitudes getting bigger and bigger?
         def next(_): 
             new_val = (int(kernel_slider.val) + 1) % num_wavelets
             kernel_slider.set_val(new_val)
@@ -248,10 +253,17 @@ class Benchmark():
         plot_kernel(int(kernel_slider.val))
         plt.show()
     
-    def static_plot_analysis(self):
-        # Single window with time series on left, CWTs stacked on right
-        fig = plt.figure(constrained_layout=False)  # Disable constrained_layout to use subplots_adjust
+    def static_cwt_plot_comparison(self):
+        """
+        Comparison of the different CWT implementations using test audio. Time
+        Series on the left, Time-Frequency Coefficients on the right.
+        """
+        # Disable constrained_layout to use subplots_adjust, maximize fig window
+        fig = plt.figure(constrained_layout=False)
         fig.canvas.manager.set_window_title(f"Time Series vs CWT {os.path.basename(config.audio.file_path)}")
+        fig_manager = fig.canvas.manager
+        if hasattr(fig_manager, 'window') and hasattr(fig_manager.window, 'showMaximized'):
+            fig_manager.window.showMaximized()
         
         # Create a 2x2 grid and use different subplot positions
         ax_ts = fig.add_subplot(1, 2, 1)  # Left column, spans full height
@@ -279,14 +291,6 @@ class Benchmark():
         ax_cp.imshow(self.coefs_cp_wavelet, cmap="magma", aspect="auto", origin='lower')
         ax_cp.set_xlabel("Time")
         ax_cp.set_ylabel("Freq Bin")
-
-        # Maximize the window
-        try:
-            mng = fig.canvas.manager
-            if hasattr(mng, 'window') and hasattr(mng.window, 'showMaximized'):
-                mng.window.showMaximized()
-        except Exception:
-            pass
 
         plt.show()
 
@@ -362,7 +366,7 @@ class Benchmark():
 
         for i, item in enumerate(self.func_list):
             func = item[0]
-            time_ms = self.avg_func_times[i] * 1000  # Convert to milliseconds
+            time_ms = self.avg_func_times[i] * 1000  # ms
             print(f"-> {func.__self__.__class__.__name__}.{func.__name__}()\t{time_ms:7.3f} ms")
 
         print()
@@ -372,8 +376,8 @@ class Benchmark():
 
     def run_tests(self):
         self.static_wavelet_kernel_analysis()
-        self.static_plot_analysis()
-
+        self.static_cwt_plot_comparison()
+        self.dynamic_plot_analysis()
 
 if __name__ == '__main__':
     benchmark = Benchmark()
