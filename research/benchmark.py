@@ -26,7 +26,7 @@ from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumPyWavelet, CuPyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
-from subshader.viz.comparison_navigator import ComparisonNavigator
+from subshader.viz.comparison_navigator import PlotComparison
 
 # =============================================================================
 # CONFIGURATION
@@ -295,6 +295,27 @@ class Benchmark():
 
         plt.show()
 
+    def static_plot_analysis(self):
+        """
+        Static Plot Analysis and Comparisons
+        """
+        # Static Wavelet Kernel Analysis: Time vs Frequency Domain
+        PlotComparison(
+            mode="kernels",
+            np_wavelet=self.np_wavelet,
+            title="Static Wavelet Kernel Visualization"
+        )
+
+        # Static CWT Analysis: Audio Time Series vs CWT Implementations
+        PlotComparison(
+            mode="cwt",
+            audio_input=self.audio_input,
+            py_wavelet=self.py_wavelet,
+            cp_wavelet=self.cp_wavelet,
+            title=f"Static CWT Visualization — {os.path.basename(config.audio.file_path)}"
+        )
+
+
     def dynamic_plot_analysis(self):
         print()
         print("Starting Timing Analysis...\n")
@@ -376,23 +397,8 @@ class Benchmark():
         pass  
 
     def run_tests(self):
-        # Wavelet kernel browser (time vs FFT)
-        ComparisonNavigator(
-            mode="kernels",
-            np_wavelet=self.np_wavelet,
-            title="Wavelet Kernel Browser"
-        )
+        self.static_plot_analysis()
 
-        # Static CWT comparison (left: audio, right: two implementations)
-        ComparisonNavigator(
-            mode="cwt",
-            audio_input=self.audio_input,
-            py_wavelet=self.py_wavelet,
-            cp_wavelet=self.cp_wavelet,
-            title=f"Time Series vs CWT — {os.path.basename(config.audio.file_path)}"
-        )
-
-        # Keep dynamic benchmarks as-is below, or comment out if you don't want timing right now.
         # self.dynamic_plot_analysis()
 
 if __name__ == '__main__':

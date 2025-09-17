@@ -3,9 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
-class ComparisonNavigator:
+class PlotComparison:
     """
-    A reusable Matplotlib navigator that:
+    A reusable Plot Navigator that:
       - mode="kernels": cycles a wavelet index and plots time (L) and FFT (R)
       - mode="cwt":     steps through audio chunks; updates time (L) + two CWTs (R)
 
@@ -17,60 +17,72 @@ class ComparisonNavigator:
     def __init__(
         self,
         mode,
+        title=None,
+        cmap="magma",
         *,
         # For kernels mode:
         np_wavelet=None,               # instance with get_wavelet_kernels('time'|'freq'), .freqs, .sample_rate
         # For cwt mode:
         audio_input=None,              # instance with get_chunk(), get_sample_rate()
         py_wavelet=None,               # CWT impl with compute_cwt(audio)
-        cp_wavelet=None,               # second CWT impl with compute_cwt(audio)
-        cmap="magma",
-        title=None
+        cp_wavelet=None               # second CWT impl with compute_cwt(audio)
     ):
         assert mode in ("kernels", "cwt")
         self.mode = mode
+        self.window_title = title
+        self.cmap = cmap
         self.np_wavelet = np_wavelet
         self.audio_input = audio_input
         self.py_wavelet = py_wavelet
         self.cp_wavelet = cp_wavelet
-        self.cmap = cmap
-        self.title = title
 
-        self.idx = 0
+        self.i = 0
+
         self._init_fig()
         if self.mode == "kernels":
+            assert self.np_wavelet is not None, "np_wavelet is required for mode='kernels'"
             self._init_artists_kernels()
-        else:
+        elif self.mode == "cwt":
+            assert all([self.audio_input, self.py_wavelet, self.cp_wavelet]), \
+                "audio_input, py_wavelet, and cp_wavelet are required for mode='cwt'"
             self._init_artists_cwt()
-
+        else:
+            raise ValueError(f"Invalid Plot Comparison Mode: {self.mode}")
         self._draw()
-
         plt.show()
 
-    # ---------- Figure & Buttons ----------
+    """Figure and Buttons Initialization"""
     def _init_fig(self):
-        self.fig = plt.figure(figsize=(14, 7), constrained_layout=False)
+        self.fig = plt.figure(figsize=(16, 9), constrained_layout=False)
+
         if self.mode == "kernels":
-            # 1x2 grid: left=time, right=fft
-            self.ax_time = self.fig.add_subplot(1, 2, 1)
-            self.ax_fft  = self.fig.add_subplot(1, 2, 2)
-            window_title = self.title or "Wavelet Kernel Comparison"
-        else:
-            # Left = audio time series (full height); right = two stacked CWTs
-            self.ax_time = self.fig.add_subplot(1, 2, 1)
-            self.ax_py   = self.fig.add_subplot(2, 2, 2)
-            self.ax_cp   = self.fig.add_subplot(2, 2, 4)
-            window_title = self.title or "Static CWT Plot Comparison"
+            # 3x2 Plot Grid: Wavelet Time Series (L), Wavelet Frequency Domain (R)
+            self.ax_ts = [self.fig.add_subplot(3, 2, 1 + i*2) for i in range(3)]
+            self.ax_fs = [self.fig.add_subplot(3, 2, 2 + i*2) for i in range(3)]
 
-        try:
-            self.fig.canvas.manager.set_window_title(window_title)
-        except Exception:
-            pass
+            # Layout
+            self.fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
+            ax_prev = self.fig.add_axes([0.1, 0.05, 0.06, 0.03])
+            ax_next = self.fig.add_axes([0.84, 0.05, 0.06, 0.03])
 
-        # Buttons
-        self.fig.subplots_adjust(left=0.06, right=0.96, bottom=0.12, top=0.93, wspace=0.15, hspace=0.25)
-        ax_prev = self.fig.add_axes([0.06, 0.04, 0.08, 0.05])
-        ax_next = self.fig.add_axes([0.86, 0.04, 0.08, 0.05])
+        elif self.mode == "cwt":
+            # 2x2 Plot Grid: Audio Time Series (L), Multiple CWT Implementation Plots (R)
+            self.ax_t = self.fig.add_subplot(1, 2, 1)
+            self.ax_pywt = self.fig.add_subplot(2, 2, 2)
+            self.ax_cpwt = self.fig.add_subplot(2, 2, 4)
+
+            # Layout
+            self.fig.subplots_adjust(left=0.06, right=0.96, bottom=0.12, top=0.93, wspace=0.15, hspace=0.25)
+            ax_prev = self.fig.add_axes([0.06, 0.04, 0.08, 0.05])
+            ax_next = self.fig.add_axes([0.86, 0.04, 0.08, 0.05])
+
+        # Set Window Title and Maximize
+        self.fig.canvas.manager.set_window_title(self.window_title)
+        fig_manager = self.fig.canvas.manager
+        if hasattr(fig_manager, 'window') and hasattr(fig_manager.window, 'showMaximized'):
+            fig_manager.window.showMaximized()
+
+        # Buttons and Keybindings
         self.btn_prev = Button(ax_prev, "Prev")
         self.btn_next = Button(ax_next, "Next")
         self.btn_prev.on_clicked(lambda _ : self._step(-1))
@@ -85,123 +97,173 @@ class ComparisonNavigator:
 
     # ---------- Kernels mode ----------
     def _init_artists_kernels(self):
-        assert self.np_wavelet is not None, "np_wavelet is required for mode='kernels'"
-        self.kernels_t = self.np_wavelet.get_wavelet_kernels("time")
-        self.kernels_f = self.np_wavelet.get_wavelet_kernels("freq")
-        self.freqs     = np.asarray(self.np_wavelet.freqs)
-        self.fs        = self.np_wavelet.sample_rate
-        self.N         = len(self.kernels_t)
+        self.k_ts = self.np_wavelet.get_wavelet_kernels("time")
+        self.k_fs = self.np_wavelet.get_wavelet_kernels("freq")
+        self.num_k = len(self.k_ts)
+        self.center_freqs = np.asarray(self.np_wavelet.freqs)
+        self.sampling_freq = self.np_wavelet.sample_rate
 
-        # Time axis artists
-        self.ax_time.set_title("Wavelet (time)")
-        self.ax_time.set_xlabel("Time (s)")
-        self.ax_time.set_ylabel("Amplitude")
-        (self.l_real,) = self.ax_time.plot([], [], lw=2, label="Real")
-        (self.l_imag,) = self.ax_time.plot([], [], lw=2, label="Imag")
-        (self.l_mag,)  = self.ax_time.plot([], [], lw=2, label="Mag")
-        self.ax_time.grid(True, alpha=0.25)
-        self.ax_time.legend(loc="upper right", frameon=False)
+        # Plot visual characteristics
+        REAL_PART_COLOR = 'darkorange'
+        IMAG_PART_COLOR = 'mediumslateblue'
+        MAG_COLOR = 'black'
+        GRID_ALPHA = 0.25
+        LINE_WIDTH = 2
 
-        # FFT axis artists
-        self.ax_fft.set_title("Wavelet (FFT magnitude)")
-        self.ax_fft.set_xlabel("Frequency (Hz)")
-        self.ax_fft.set_xscale("log")
-        self.ax_fft.set_ylabel("|H(f)|")
-        (self.l_fft,) = self.ax_fft.plot([], [], lw=2)
-        self.ax_fft.grid(True, which="both", alpha=0.25)
+        # Ranges for time (s) and frequency (Hz) axes
+        self.t_ranges_s = [0.5, 0.05, 0.005]
+        self.f_ranges_hz = [(20.0, 200.0), (20.0, 2000.0), (20.0, 20000.0)]
+
+        # Initialize time and frequency domain kernel line lists
+        self.k_t_real_lines = []
+        self.k_t_imag_lines = []
+        self.k_t_mag_lines = []
+        self.k_f_lines = []
+
+        # For each time range, plot the kernel time series real + imaginary parts + magnitude 
+        for i, (ax, t_range) in enumerate(zip(self.ax_ts, self.t_ranges_s)):
+            # Decorate plot with tidy title and labels
+            x_lim = t_range/2
+            if x_lim >= 0.1:
+                time_range = f'{x_lim} s'
+            else:
+                time_range = f'{x_lim*1000:.1f} ms'
+            ax.set_title(f'Time Domain ±{time_range}')
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Amplitude')
+            ax.grid(True, alpha=GRID_ALPHA)
+
+            # Create line artists and append to line lists
+            (k_t_real_line,) = ax.plot([], [], REAL_PART_COLOR, label='Real', lw=LINE_WIDTH)
+            (k_t_imag_line,) = ax.plot([], [], IMAG_PART_COLOR, label='Imag', lw=LINE_WIDTH)
+            (k_t_mag_line,)  = ax.plot([], [], MAG_COLOR, label='Mag', lw=LINE_WIDTH)
+            self.k_t_real_lines.append(k_t_real_line)
+            self.k_t_imag_lines.append(k_t_imag_line)
+            self.k_t_mag_lines.append(k_t_mag_line)
+            
+            # Color legend only on first time series plot
+            if i == 0:
+                ax.legend(loc='upper right', frameon=False)
+
+        # For each frequency range, plot the kernel frequency series magnitude 
+        for ax, (f_lo, f_hi) in zip(self.ax_fs, self.f_ranges_hz):
+            # Format frequency range string for tidy title
+            if f_hi >= 1000:
+                f_range = f'{f_lo:.0f}–{f_hi/1000:.1f}k Hz'
+            else:
+                f_range = f'{f_lo:.0f}–{f_hi:.0f} Hz'
+            ax.set_title(f'Frequency Domain {f_range}')
+            ax.set_xlabel('Freq (Hz)')
+            ax.set_xscale('log')
+            ax.set_ylabel('Magnitude')
+            ax.grid(True, which='both', alpha=GRID_ALPHA)
+
+            # Create line artist and append to line list
+            (k_f_line,) = ax.plot([], [], MAG_COLOR, lw=LINE_WIDTH)
+            self.k_f_lines.append(k_f_line)
 
     def _draw_kernels(self):
-        i = self.idx % self.N
-        kt = self.kernels_t[i]
-        t = np.arange(len(kt)) / self.fs
+        i = self.i % self.num_k
+        k_t = self.k_ts[i]
+        t = np.arange(len(k_t)) / self.sampling_freq
         t = t - t[len(t)//2]
 
-        self.l_real.set_data(t, np.real(kt))
-        self.l_imag.set_data(t, np.imag(kt))
-        self.l_mag.set_data(t,  np.abs(kt))
-        self.ax_time.set_xlim(t[0], t[-1])
-        self.ax_time.relim(); self.ax_time.autoscale(axis="y", tight=True)
+        # Update time domain plots for each range
+        for ax, t_range, k_t_real_line, k_t_imag_line, k_t_mag_line in zip(
+            self.ax_ts, self.t_ranges_s, 
+            self.k_t_real_lines, self.k_t_imag_lines, self.k_t_mag_lines
+        ):
+            # Plot all signal parts
+            k_t_real_line.set_data(t, np.real(k_t))
+            k_t_imag_line.set_data(t, np.imag(k_t))
+            k_t_mag_line.set_data(t, np.abs(k_t))
 
-        kf = self.kernels_f[i]
-        n  = len(kf)
-        f  = np.fft.fftfreq(n, d=1/self.fs)[: n//2]
-        mag= np.abs(kf[: n//2])
-        self.l_fft.set_data(f, mag + 1e-12)  # avoid log(0)
-        self.ax_fft.set_xlim(max(20, f[1]), min(self.fs/2, f[-1]))
-        self.ax_fft.relim(); self.ax_fft.autoscale(axis="y", tight=True)
+            # Set time range
+            x_lim = t_range/2
+            ax.set_xlim(-x_lim, x_lim)
+            ax.relim(); ax.autoscale(axis="y", tight=True)
 
-        self.fig.suptitle(f"Kernel {i+1}/{self.N}  —  f₀ ≈ {self.freqs[i]:.1f} Hz")
+        # Update frequency domain plots for each range
+        k_f = self.k_fs[i]
+        k_n = len(k_f)
+        f_axis = np.fft.fftfreq(k_n, d=1/self.sampling_freq)
+
+        # Create x axis and compute magnitudes just for "positive" frequencies
+        pos_freq_slice = slice(0, k_n//2)
+        f_axis = f_axis[pos_freq_slice]
+        k_f_mag = np.abs(k_f[pos_freq_slice])
+
+        # Plot the frequency series for each decade
+        for ax, (f_lo, f_hi), k_f_line in zip(self.ax_fs, self.f_ranges_hz, self.k_f_lines):
+            k_f_line.set_data(f_axis, k_f_mag)
+            ax.set_xlim(f_lo, f_hi)
+            ax.relim(); ax.autoscale(axis="y", tight=True)
+
+        self.fig.suptitle(f'Wavelet Kernel Visualization - Center Frequency {self.center_freqs[i]:.1f} Hz ({i+1}/{self.num_k})', fontsize=12)
 
     # ---------- CWT mode ----------
     def _init_artists_cwt(self):
-        assert all([self.audio_input, self.py_wavelet, self.cp_wavelet]), \
-            "audio_input, py_wavelet, and cp_wavelet are required for mode='cwt'"
+        # Get chunk of audio
+        self.current_audio_chunk = self.audio_input.get_chunk()
+        self.chunk_i = 0
 
-        # Initial chunk sizes artists
-        self.curr_audio = self.audio_input.get_chunk()
+        # Plot audio time series and decorate plots
+        (self.l_ts,) = self.ax_t.plot(np.arange(len(self.current_audio_chunk)), self.current_audio_chunk)
+        self.ax_t.set_title("Audio Time Series")
+        self.ax_t.set_xlabel("Samples")
+        self.ax_t.set_ylabel("Amplitude")
+        self.ax_t.margins(x=0, y=0)
+        self.ax_t.grid(True, alpha=0.15)
 
-        self.ax_time.set_title("Audio (time)")
-        self.ax_time.set_xlabel("Samples")
-        self.ax_time.set_ylabel("Amplitude")
-        (self.l_ts,) = self.ax_time.plot(np.arange(len(self.curr_audio)), self.curr_audio)
-        self.ax_time.margins(x=0, y=0)
-        self.ax_time.grid(True, alpha=0.15)
+        # Compute and plot PyWavelet and CuPy CWT time-freq coefs and decorate plots
+        pywt_coefs = self.py_wavelet.compute_cwt(self.current_audio_chunk)
+        self.im_py = self.ax_pywt.imshow(pywt_coefs, cmap=self.cmap, aspect="auto", origin="lower")
+        self.ax_pywt.set_title("PyWavelet CWT")
+        self.ax_pywt.set_xlabel("Time")
+        self.ax_pywt.set_ylabel("Freq Bin")
 
-        py_coefs = self.py_wavelet.compute_cwt(self.curr_audio)
-        cp_coefs = self.cp_wavelet.compute_cwt(self.curr_audio)
+        cpwt_coefs = self.cp_wavelet.compute_cwt(self.current_audio_chunk)
+        self.im_cp = self.ax_cpwt.imshow(cpwt_coefs, cmap=self.cmap, aspect="auto", origin="lower")
+        self.ax_cpwt.set_title("CuPy CWT")
+        self.ax_cpwt.set_xlabel("Time")
+        self.ax_cpwt.set_ylabel("Freq Bin")
 
-        self.ax_py.set_title("PyWavelet CWT")
-        self.im_py = self.ax_py.imshow(py_coefs, cmap=self.cmap, aspect="auto", origin="lower")
-        self.ax_py.set_xlabel("Time")
-        self.ax_py.set_ylabel("Freq Bin")
-
-        self.ax_cp.set_title("CuPy CWT")
-        self.im_cp = self.ax_cp.imshow(cp_coefs, cmap=self.cmap, aspect="auto", origin="lower")
-        self.ax_cp.set_xlabel("Time")
-        self.ax_cp.set_ylabel("Freq Bin")
-
-        # Shared colorbar for right column
-        try:
-            self.fig.colorbar(self.im_cp, ax=[self.ax_py, self.ax_cp], fraction=0.025, pad=0.02)
-        except Exception:
-            pass
-
-        self.chunk_idx = 0
+        # Colorbar
+        self.fig.colorbar(self.im_cp, ax=[self.ax_pywt, self.ax_cpwt], fraction=0.025, pad=0.02)
 
     def _draw_cwt(self, step):
-        # Forward-only by default. Add a ring buffer if you want true "Prev".
         if step > 0:
-            self.curr_audio = self.audio_input.get_chunk()
-            self.chunk_idx += 1
+            self.current_audio_chunk = self.audio_input.get_chunk()
+            self.chunk_i += 1
 
-            x = np.arange(len(self.curr_audio))
-            self.l_ts.set_data(x, self.curr_audio)
-            self.ax_time.set_xlim(x[0], x[-1])
-            self.ax_time.relim(); self.ax_time.autoscale(axis="y", tight=True)
+            x = np.arange(len(self.current_audio_chunk))
+            self.l_ts.set_data(x, self.current_audio_chunk)
+            self.ax_t.set_xlim(x[0], x[-1])
+            self.ax_t.relim(); self.ax_t.autoscale(axis="y", tight=True)
 
-            py_coefs = self.py_wavelet.compute_cwt(self.curr_audio)
-            cp_coefs = self.cp_wavelet.compute_cwt(self.curr_audio)
+            pywt_coefs = self.py_wavelet.compute_cwt(self.current_audio_chunk)
+            cpwt_coefs = self.cp_wavelet.compute_cwt(self.current_audio_chunk)
 
-            self.im_py.set_data(py_coefs)
-            self.im_cp.set_data(cp_coefs)
+            self.im_py.set_data(pywt_coefs)
+            self.im_cp.set_data(cpwt_coefs)
 
-            self.ax_py.set_xlim(0, py_coefs.shape[1]); self.ax_py.set_ylim(0, py_coefs.shape[0])
-            self.ax_cp.set_xlim(0, cp_coefs.shape[1]); self.ax_cp.set_ylim(0, cp_coefs.shape[0])
+            self.ax_pywt.set_xlim(0, pywt_coefs.shape[1]); self.ax_pywt.set_ylim(0, pywt_coefs.shape[0])
+            self.ax_cpwt.set_xlim(0, cpwt_coefs.shape[1]); self.ax_cpwt.set_ylim(0, cpwt_coefs.shape[0])
 
-            self.fig.suptitle(f"Chunk {self.chunk_idx}")
+            self.fig.suptitle(f"Chunk {self.chunk_i}")
 
     # ---------- Shared ----------
     def _draw(self, step=0):
         if self.mode == "kernels":
             self._draw_kernels()
-        else:
+        elif self.mode == "cwt":
             self._draw_cwt(step)
         self.fig.canvas.draw_idle()
 
     def _step(self, d):
         if self.mode == "kernels":
-            self.idx = (self.idx + d)
+            self.i = (self.i + d)
             self._draw()
-        else:
+        elif self.mode == "cwt":
             # Only implement forward stepping by default
             self._draw(step=+1 if d > 0 else -1)

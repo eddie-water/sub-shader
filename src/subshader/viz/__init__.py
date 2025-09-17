@@ -1,4 +1,4 @@
 # subshader/viz/__init__.py
-from .comparison_navigator import ComparisonNavigator
+from .comparison_navigator import PlotComparison
 
-__all__ = ["ComparisonNavigator"]
+__all__ = ["PlotComparison"]
