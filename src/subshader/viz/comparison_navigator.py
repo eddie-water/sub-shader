@@ -2,107 +2,101 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
+from abc import ABC, abstractmethod
 
-class PlotComparison:
+class NavigatorBase(ABC):
     """
-    A reusable Plot Navigator that:
-      - mode="kernels": cycles a wavelet index and plots time (L) and FFT (R)
-      - mode="cwt":     steps through audio chunks; updates time (L) + two CWTs (R)
-
-    Notes:
-      - Artists are created once; updates happen with set_data.
-      - "Prev" in cwt mode is forward-only by default (easy to add a ring buffer later).
-      - Keybindings: Right/N = next, Left/P = prev.
+    Abstract base class for plot navigators with figure and button setup
     """
-
-    # TODO 36 NEXT - At this point, it doesn't seem like there is much shared 
-    # between the two modes, besides the buttons and keybindings, so split these
-    # into a base class and two subclasses for each mode, then the cwt results one
-    # can be split again for the different normalization types and coi region lengths
-    # for comparison stuff
-    def __init__(
-        self,
-        mode,
-        title=None,
-        cmap="magma",
-        *,
-        # For kernels mode:
-        np_wavelet=None,
-        # For cwt mode:
-        audio_input=None,
-        py_wavelet=None,
-        cp_wavelet=None,
-        cwt_function=None
-    ):
-        assert mode in ("kernels", "cwt")
-        self.mode = mode
+    
+    def __init__(self, title=None, cmap="magma"):
         self.window_title = title
         self.cmap = cmap
-        self.np_wavelet = np_wavelet
-        self.audio_input = audio_input
-        self.py_wavelet = py_wavelet
-        self.cp_wavelet = cp_wavelet
-
         self.i = 0
-
+        
+        self._create_fig()
         self._init_fig()
-        if self.mode == "kernels":
-            assert self.np_wavelet is not None, "np_wavelet is required for mode='kernels'"
-            self._init_kernels_mode()
-        elif self.mode == "cwt":
-            assert all([self.audio_input, self.py_wavelet, self.cp_wavelet]), \
-                "audio_input, py_wavelet, and cp_wavelet are required for mode='cwt'"
-            self._init_cwt_mode(cwt_function)
-        else:
-            raise ValueError(f"Invalid Plot Comparison Mode: {self.mode}")
+        self._init_buttons()
+        self._init_plot_comparison()
         self._draw()
         plt.show()
 
-    """Figure and Buttons Initialization"""
-    def _init_fig(self):
+    def _create_fig(self):
+        """Create the basic figure with window management"""
         self.fig = plt.figure(figsize=(16, 9), constrained_layout=False)
-
-        if self.mode == "kernels":
-            # 3x2 Plot Grid: Wavelet Time Series (L), Wavelet Frequency Domain (R)
-            self.ax_ts = [self.fig.add_subplot(3, 2, 1 + i*2) for i in range(3)]
-            self.ax_fs = [self.fig.add_subplot(3, 2, 2 + i*2) for i in range(3)]
-
-            # Layout
-            self.fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
-            ax_prev = self.fig.add_axes([0.1, 0.05, 0.06, 0.03])
-            ax_next = self.fig.add_axes([0.84, 0.05, 0.06, 0.03])
-
-        elif self.mode == "cwt":
-            # 2x2 Plot Grid: Audio Time Series (L), Multiple CWT Implementation Plots (R)
-            self.ax_t = self.fig.add_subplot(1, 2, 1)
-            self.ax_pywt = self.fig.add_subplot(2, 2, 2)
-            self.ax_cpwt = self.fig.add_subplot(2, 2, 4)
-
-            # Layout
-            self.fig.subplots_adjust(left=0.06, right=0.96, bottom=0.12, top=0.93, wspace=0.15, hspace=0.25)
-            ax_prev = self.fig.add_axes([0.06, 0.04, 0.08, 0.05])
-            ax_next = self.fig.add_axes([0.86, 0.04, 0.08, 0.05])
-
+        
         # Set Window Title and Maximize
-        self.fig.canvas.manager.set_window_title(self.window_title)
+        if self.window_title:
+            self.fig.canvas.manager.set_window_title(self.window_title)
         fig_manager = self.fig.canvas.manager
         if hasattr(fig_manager, 'window') and hasattr(fig_manager.window, 'showMaximized'):
             fig_manager.window.showMaximized()
-
-        # Buttons and Keybindings
+    
+    def _init_buttons(self):
+        """Setup buttons and key bindings"""
+        # Button positions 
+        ax_prev = self.fig.add_axes([0.1, 0.05, 0.06, 0.03])
+        ax_next = self.fig.add_axes([0.84, 0.05, 0.06, 0.03])
+        
+        # Buttons
         self.btn_prev = Button(ax_prev, "Prev")
         self.btn_next = Button(ax_next, "Next")
-        self.btn_prev.on_clicked(lambda _ : self._step(-1))
-        self.btn_next.on_clicked(lambda _ : self._step(+1))
-        self.fig.canvas.mpl_connect("key_press_event", self._on_key)
+        self.btn_prev.on_clicked(lambda _: self._step(-1))
+        self.btn_next.on_clicked(lambda _: self._step(+1))
 
-    def _on_key(self, ev):
-        if ev.key in ("right", "n"):
-            self._step(+1)
-        elif ev.key in ("left", "p"):
-            self._step(-1)
+    @abstractmethod
+    def _init_fig(self):
+        """Initialize figure layout and subplots"""
+        pass    
+    @abstractmethod
+    def _init_plot_comparison(self):
+        """Initialize the plot comparison"""
+        pass
+    
+    @abstractmethod
+    def _draw(self, step=0):
+        """Draw the plot"""
+        pass
+    
+    @abstractmethod
+    def _step(self, d):
+        """Handle stepping"""
+        pass
 
-    def _init_kernels_mode(self):
+
+class KernelNavigator(NavigatorBase):
+    """
+    Plot Navigator for kernel analysis:
+      - Cycles through wavelet indices and plots time (L) and FFT (R)
+    """
+
+    def __init__(self, np_wavelet, title=None):
+        assert np_wavelet is not None, "np_wavelet is required for KernelNavigator"
+        self.np_wavelet = np_wavelet
+        super().__init__(title)
+
+    def _init_fig(self):
+        """Initialize figure with 3x2 grid for kernel visualization"""
+        # 3x2 Plot Grid: Wavelet Time Series (L), Wavelet Frequency Domain (R)
+        self.ax_ts = [self.fig.add_subplot(3, 2, 1 + i*2) for i in range(3)]
+        self.ax_fs = [self.fig.add_subplot(3, 2, 2 + i*2) for i in range(3)]
+
+        # Layout
+        self.fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
+
+    def _init_buttons(self):
+        """Setup buttons in kernel-specific positions"""
+        ax_prev = self.fig.add_axes([0.1, 0.05, 0.06, 0.03])
+        ax_next = self.fig.add_axes([0.84, 0.05, 0.06, 0.03])
+
+        # Buttons
+        self.btn_prev = Button(ax_prev, "Prev")
+        self.btn_next = Button(ax_next, "Next")
+        self.btn_prev.on_clicked(lambda _: self._step(-1))
+        self.btn_next.on_clicked(lambda _: self._step(+1))
+
+    def _init_plot_comparison(self):
+        """Initialize kernel plot comparison"""
         self.k_ts = self.np_wavelet.get_wavelet_kernels("time")
         self.k_fs = self.np_wavelet.get_wavelet_kernels("freq")
         self.num_k = len(self.k_ts)
@@ -167,8 +161,9 @@ class PlotComparison:
             # Create line artist and append to line list
             (k_f_line,) = ax.plot([], [], MAG_COLOR, lw=LINE_WIDTH)
             self.k_f_lines.append(k_f_line)
-
-    def _draw_kernels(self):
+    
+    def _draw(self, step=0):
+        """Draw kernel visualization"""
         i = self.i % self.num_k
         k_t = self.k_ts[i]
         t = np.arange(len(k_t)) / self.sampling_freq
@@ -206,15 +201,57 @@ class PlotComparison:
             ax.relim(); ax.autoscale(axis="y", tight=True)
 
         self.fig.suptitle(f'Wavelet Kernel Visualization - Center Frequency {self.center_freqs[i]:.1f} Hz ({i+1}/{self.num_k})', fontsize=12)
+        self.fig.canvas.draw_idle()
+    
+    def _step(self, d):
+        """Handle stepping through kernels"""
+        self.i = (self.i + d)
+        self._draw()
 
-    def _init_cwt_mode(self, cwt_function: callable = None) -> None:
-        """Initialize CWT mode with specified function for wavelet computation."""
+
+class TransformNavigator(NavigatorBase):
+    """
+    Plot Navigator for transform analysis:
+      - Steps through audio chunks and updates time (L) + two CWTs (R)
+      - Forward-only stepping by default
+      - Keybindings: Right/N = next, Left/P = prev
+    """
+    
+    def __init__(self, audio_input, py_wavelet, cp_wavelet, cwt_function, title=None, cmap="magma"):
+        assert all([audio_input, py_wavelet, cp_wavelet]), \
+            "audio_input, py_wavelet, and cp_wavelet are required for TransformNavigator"
         if cwt_function is None:
-            raise ValueError("A cwt_function is required for mode='cwt'")
-        else:
-            # Use the provided function reference
-            self.cwt_function = cwt_function
-
+            raise ValueError("A cwt_function is required for TransformNavigator")
+        
+        self.audio_input = audio_input
+        self.py_wavelet = py_wavelet
+        self.cp_wavelet = cp_wavelet
+        self.cwt_function = cwt_function
+        super().__init__(title, cmap)
+    
+    def _init_fig(self):
+        """Initialize figure with 2x2 grid for CWT visualization"""
+        # 2x2 Plot Grid: Audio Time Series (L), Multiple CWT Implementation Plots (R)
+        self.ax_t = self.fig.add_subplot(1, 2, 1)
+        self.ax_pywt = self.fig.add_subplot(2, 2, 2)
+        self.ax_cpwt = self.fig.add_subplot(2, 2, 4)
+        
+        # Layout
+        self.fig.subplots_adjust(left=0.06, right=0.96, bottom=0.12, top=0.93, wspace=0.15, hspace=0.25)
+    
+    def _init_buttons(self):
+        """Setup buttons in transform-specific positions"""
+        ax_prev = self.fig.add_axes([0.06, 0.04, 0.08, 0.05])
+        ax_next = self.fig.add_axes([0.86, 0.04, 0.08, 0.05])
+        
+        # Buttons and Keybindings
+        self.btn_prev = Button(ax_prev, "Prev")
+        self.btn_next = Button(ax_next, "Next")
+        self.btn_prev.on_clicked(lambda _: self._step(-1))
+        self.btn_next.on_clicked(lambda _: self._step(+1))
+    
+    def _init_plot_comparison(self):
+        """Initialize CWT plot comparison"""
         # Get chunk of audio
         self.current_audio_chunk = self.audio_input.get_chunk()
         self.chunk_i = 0
@@ -242,8 +279,9 @@ class PlotComparison:
 
         # Colorbar
         self.fig.colorbar(self.im_cp, ax=[self.ax_pywt, self.ax_cpwt], fraction=0.025, pad=0.02)
-
-    def _draw_cwt(self, step):
+    
+    def _draw(self, step=0):
+        """Draw CWT visualization"""
         if step > 0:
             self.current_audio_chunk = self.audio_input.get_chunk()
             self.chunk_i += 1
@@ -263,19 +301,43 @@ class PlotComparison:
             self.ax_cpwt.set_xlim(0, cpwt_coefs.shape[1]); self.ax_cpwt.set_ylim(0, cpwt_coefs.shape[0])
 
             self.fig.suptitle(f"Chunk {self.chunk_i}")
-
-    # ---------- Shared ----------
-    def _draw(self, step=0):
-        if self.mode == "kernels":
-            self._draw_kernels()
-        elif self.mode == "cwt":
-            self._draw_cwt(step)
+        
         self.fig.canvas.draw_idle()
-
+    
     def _step(self, d):
-        if self.mode == "kernels":
-            self.i = (self.i + d)
-            self._draw()
-        elif self.mode == "cwt":
-            # Only implement forward stepping by default
-            self._draw(step=+1 if d > 0 else -1)
+        """Handle stepping through audio chunks"""
+        # Only implement forward stepping by default
+        self._draw(step=+1 if d > 0 else -1)
+
+
+# Legacy class for backwards compatibility
+class PlotComparison:
+    """
+    Legacy wrapper for backwards compatibility.
+    Use KernelNavigator or TransformNavigator directly for new code.
+    """
+    
+    def __init__(
+        self,
+        mode,
+        title=None,
+        cmap="magma",
+        *,
+        # For kernels mode:
+        np_wavelet=None,
+        # For cwt mode:
+        audio_input=None,
+        py_wavelet=None,
+        cp_wavelet=None,
+        cwt_function=None
+    ):
+        if mode == "kernels":
+            self._navigator = KernelNavigator(np_wavelet, title, cmap)
+        elif mode == "cwt":
+            self._navigator = TransformNavigator(audio_input, py_wavelet, cp_wavelet, cwt_function, title, cmap)
+        else:
+            raise ValueError(f"Invalid Plot Comparison Mode: {mode}")
+    
+    def __getattr__(self, name):
+        """Delegate attribute access to the underlying navigator"""
+        return getattr(self._navigator, name)
