@@ -26,7 +26,7 @@ from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumPyWavelet, CuPyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
-from subshader.viz.comparison_navigator import PlotComparison
+from subshader.viz.comparison_navigator import KernelNavigator, TransformNavigator
 
 # =============================================================================
 # CONFIGURATION
@@ -301,20 +301,18 @@ class Benchmark():
         Static Plot Analysis and Comparisons
         """
         # Static Wavelet Kernel Analysis: Time vs Frequency Domain
-        PlotComparison(
-            mode="kernels",
+        KernelNavigator(
             np_wavelet=self.np_wavelet,
             title="Static Wavelet Kernel Plot Analysis"
         )
 
         # Static CWT Analysis: Audio Time Series vs CWT Time-Freq Coefficients
-        PlotComparison(
-            mode="cwt",
+        TransformNavigator(
             audio_input=self.audio_input,
             py_wavelet=self.py_wavelet,
             cp_wavelet=self.cp_wavelet,
-            title=f"Static Class-Specific CWT Plot Analysis and Comparison — {os.path.basename(config.audio.file_path)}",
-            cwt_function=lambda wavelet, data: wavelet.class_specific_cwt(data)
+            cwt_function=lambda wavelet, data: wavelet.class_specific_cwt(data),
+            title=f"Static Class-Specific CWT Plot Analysis and Comparison — {os.path.basename(config.audio.file_path)}"
         )
 
         # TODO 36 NOW - Do a static plot analysis for the cwt that has 

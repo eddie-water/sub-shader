@@ -1,4 +1,4 @@
 # subshader/viz/__init__.py
-from .comparison_navigator import PlotComparison, KernelNavigator, TransformNavigator
+from .comparison_navigator import KernelNavigator, TransformNavigator
 
-__all__ = ["PlotComparison", "KernelNavigator", "TransformNavigator"]
+__all__ = ["KernelNavigator", "TransformNavigator"]

@@ -13,9 +13,8 @@ class NavigatorBase(ABC):
         self.window_title = title
         self.cmap = cmap
         self.i = 0
-        
+
         self._create_fig()
-        self._init_fig()
         self._init_buttons()
         self._init_plot_comparison()
         self._draw()
@@ -24,45 +23,37 @@ class NavigatorBase(ABC):
     def _create_fig(self):
         """Create the basic figure with window management"""
         self.fig = plt.figure(figsize=(16, 9), constrained_layout=False)
-        
+
         # Set Window Title and Maximize
         if self.window_title:
             self.fig.canvas.manager.set_window_title(self.window_title)
         fig_manager = self.fig.canvas.manager
         if hasattr(fig_manager, 'window') and hasattr(fig_manager.window, 'showMaximized'):
             fig_manager.window.showMaximized()
-    
+
     def _init_buttons(self):
         """Setup buttons and key bindings"""
-        # Button positions 
         ax_prev = self.fig.add_axes([0.1, 0.05, 0.06, 0.03])
         ax_next = self.fig.add_axes([0.84, 0.05, 0.06, 0.03])
-        
-        # Buttons
         self.btn_prev = Button(ax_prev, "Prev")
         self.btn_next = Button(ax_next, "Next")
         self.btn_prev.on_clicked(lambda _: self._step(-1))
         self.btn_next.on_clicked(lambda _: self._step(+1))
 
     @abstractmethod
-    def _init_fig(self):
-        """Initialize figure layout and subplots"""
-        pass    
-    @abstractmethod
     def _init_plot_comparison(self):
         """Initialize the plot comparison"""
         pass
-    
+
     @abstractmethod
     def _draw(self, step=0):
         """Draw the plot"""
         pass
-    
+
     @abstractmethod
     def _step(self, d):
         """Handle stepping"""
         pass
-
 
 class KernelNavigator(NavigatorBase):
     """
@@ -75,7 +66,7 @@ class KernelNavigator(NavigatorBase):
         self.np_wavelet = np_wavelet
         super().__init__(title)
 
-    def _init_fig(self):
+    def _init_plot_comparison(self):
         """Initialize figure with 3x2 grid for kernel visualization"""
         # 3x2 Plot Grid: Wavelet Time Series (L), Wavelet Frequency Domain (R)
         self.ax_ts = [self.fig.add_subplot(3, 2, 1 + i*2) for i in range(3)]
@@ -84,19 +75,7 @@ class KernelNavigator(NavigatorBase):
         # Layout
         self.fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
 
-    def _init_buttons(self):
-        """Setup buttons in kernel-specific positions"""
-        ax_prev = self.fig.add_axes([0.1, 0.05, 0.06, 0.03])
-        ax_next = self.fig.add_axes([0.84, 0.05, 0.06, 0.03])
-
-        # Buttons
-        self.btn_prev = Button(ax_prev, "Prev")
-        self.btn_next = Button(ax_next, "Next")
-        self.btn_prev.on_clicked(lambda _: self._step(-1))
-        self.btn_next.on_clicked(lambda _: self._step(+1))
-
-    def _init_plot_comparison(self):
-        """Initialize kernel plot comparison"""
+        # Get wavelet kernels
         self.k_ts = self.np_wavelet.get_wavelet_kernels("time")
         self.k_fs = self.np_wavelet.get_wavelet_kernels("freq")
         self.num_k = len(self.k_ts)
@@ -214,7 +193,6 @@ class TransformNavigator(NavigatorBase):
     Plot Navigator for transform analysis:
       - Steps through audio chunks and updates time (L) + two CWTs (R)
       - Forward-only stepping by default
-      - Keybindings: Right/N = next, Left/P = prev
     """
     
     def __init__(self, audio_input, py_wavelet, cp_wavelet, cwt_function, title=None, cmap="magma"):
@@ -229,8 +207,8 @@ class TransformNavigator(NavigatorBase):
         self.cwt_function = cwt_function
         super().__init__(title, cmap)
     
-    def _init_fig(self):
-        """Initialize figure with 2x2 grid for CWT visualization"""
+    def _init_plot_comparison(self):
+        """Initialize CWT plot comparison"""
         # 2x2 Plot Grid: Audio Time Series (L), Multiple CWT Implementation Plots (R)
         self.ax_t = self.fig.add_subplot(1, 2, 1)
         self.ax_pywt = self.fig.add_subplot(2, 2, 2)
@@ -238,20 +216,7 @@ class TransformNavigator(NavigatorBase):
         
         # Layout
         self.fig.subplots_adjust(left=0.06, right=0.96, bottom=0.12, top=0.93, wspace=0.15, hspace=0.25)
-    
-    def _init_buttons(self):
-        """Setup buttons in transform-specific positions"""
-        ax_prev = self.fig.add_axes([0.06, 0.04, 0.08, 0.05])
-        ax_next = self.fig.add_axes([0.86, 0.04, 0.08, 0.05])
-        
-        # Buttons and Keybindings
-        self.btn_prev = Button(ax_prev, "Prev")
-        self.btn_next = Button(ax_next, "Next")
-        self.btn_prev.on_clicked(lambda _: self._step(-1))
-        self.btn_next.on_clicked(lambda _: self._step(+1))
-    
-    def _init_plot_comparison(self):
-        """Initialize CWT plot comparison"""
+
         # Get chunk of audio
         self.current_audio_chunk = self.audio_input.get_chunk()
         self.chunk_i = 0
@@ -308,36 +273,3 @@ class TransformNavigator(NavigatorBase):
         """Handle stepping through audio chunks"""
         # Only implement forward stepping by default
         self._draw(step=+1 if d > 0 else -1)
-
-
-# Legacy class for backwards compatibility
-class PlotComparison:
-    """
-    Legacy wrapper for backwards compatibility.
-    Use KernelNavigator or TransformNavigator directly for new code.
-    """
-    
-    def __init__(
-        self,
-        mode,
-        title=None,
-        cmap="magma",
-        *,
-        # For kernels mode:
-        np_wavelet=None,
-        # For cwt mode:
-        audio_input=None,
-        py_wavelet=None,
-        cp_wavelet=None,
-        cwt_function=None
-    ):
-        if mode == "kernels":
-            self._navigator = KernelNavigator(np_wavelet, title, cmap)
-        elif mode == "cwt":
-            self._navigator = TransformNavigator(audio_input, py_wavelet, cp_wavelet, cwt_function, title, cmap)
-        else:
-            raise ValueError(f"Invalid Plot Comparison Mode: {mode}")
-    
-    def __getattr__(self, name):
-        """Delegate attribute access to the underlying navigator"""
-        return getattr(self._navigator, name)
