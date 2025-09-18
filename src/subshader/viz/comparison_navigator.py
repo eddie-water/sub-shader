@@ -14,6 +14,12 @@ class PlotComparison:
       - "Prev" in cwt mode is forward-only by default (easy to add a ring buffer later).
       - Keybindings: Right/N = next, Left/P = prev.
     """
+
+    # TODO 36 NEXT - At this point, it doesn't seem like there is much shared 
+    # between the two modes, besides the buttons and keybindings, so split these
+    # into a base class and two subclasses for each mode, then the cwt results one
+    # can be split again for the different normalization types and coi region lengths
+    # for comparison stuff
     def __init__(
         self,
         mode,
@@ -21,11 +27,12 @@ class PlotComparison:
         cmap="magma",
         *,
         # For kernels mode:
-        np_wavelet=None,               # instance with get_wavelet_kernels('time'|'freq'), .freqs, .sample_rate
+        np_wavelet=None,
         # For cwt mode:
-        audio_input=None,              # instance with get_chunk(), get_sample_rate()
-        py_wavelet=None,               # CWT impl with compute_cwt(audio)
-        cp_wavelet=None               # second CWT impl with compute_cwt(audio)
+        audio_input=None,
+        py_wavelet=None,
+        cp_wavelet=None,
+        cwt_function=None
     ):
         assert mode in ("kernels", "cwt")
         self.mode = mode
@@ -41,11 +48,11 @@ class PlotComparison:
         self._init_fig()
         if self.mode == "kernels":
             assert self.np_wavelet is not None, "np_wavelet is required for mode='kernels'"
-            self._init_artists_kernels()
+            self._init_kernels_mode()
         elif self.mode == "cwt":
             assert all([self.audio_input, self.py_wavelet, self.cp_wavelet]), \
                 "audio_input, py_wavelet, and cp_wavelet are required for mode='cwt'"
-            self._init_artists_cwt()
+            self._init_cwt_mode(cwt_function)
         else:
             raise ValueError(f"Invalid Plot Comparison Mode: {self.mode}")
         self._draw()
@@ -95,8 +102,7 @@ class PlotComparison:
         elif ev.key in ("left", "p"):
             self._step(-1)
 
-    # ---------- Kernels mode ----------
-    def _init_artists_kernels(self):
+    def _init_kernels_mode(self):
         self.k_ts = self.np_wavelet.get_wavelet_kernels("time")
         self.k_fs = self.np_wavelet.get_wavelet_kernels("freq")
         self.num_k = len(self.k_ts)
@@ -201,8 +207,14 @@ class PlotComparison:
 
         self.fig.suptitle(f'Wavelet Kernel Visualization - Center Frequency {self.center_freqs[i]:.1f} Hz ({i+1}/{self.num_k})', fontsize=12)
 
-    # ---------- CWT mode ----------
-    def _init_artists_cwt(self):
+    def _init_cwt_mode(self, cwt_function: callable = None) -> None:
+        """Initialize CWT mode with specified function for wavelet computation."""
+        if cwt_function is None:
+            raise ValueError("A cwt_function is required for mode='cwt'")
+        else:
+            # Use the provided function reference
+            self.cwt_function = cwt_function
+
         # Get chunk of audio
         self.current_audio_chunk = self.audio_input.get_chunk()
         self.chunk_i = 0
@@ -216,13 +228,13 @@ class PlotComparison:
         self.ax_t.grid(True, alpha=0.15)
 
         # Compute and plot PyWavelet and CuPy CWT time-freq coefs and decorate plots
-        pywt_coefs = self.py_wavelet.compute_cwt(self.current_audio_chunk)
+        pywt_coefs = self.cwt_function(self.py_wavelet, self.current_audio_chunk)
         self.im_py = self.ax_pywt.imshow(pywt_coefs, cmap=self.cmap, aspect="auto", origin="lower")
         self.ax_pywt.set_title("PyWavelet CWT")
         self.ax_pywt.set_xlabel("Time")
         self.ax_pywt.set_ylabel("Freq Bin")
 
-        cpwt_coefs = self.cp_wavelet.compute_cwt(self.current_audio_chunk)
+        cpwt_coefs = self.cwt_function(self.cp_wavelet, self.current_audio_chunk)
         self.im_cp = self.ax_cpwt.imshow(cpwt_coefs, cmap=self.cmap, aspect="auto", origin="lower")
         self.ax_cpwt.set_title("CuPy CWT")
         self.ax_cpwt.set_xlabel("Time")
@@ -241,8 +253,8 @@ class PlotComparison:
             self.ax_t.set_xlim(x[0], x[-1])
             self.ax_t.relim(); self.ax_t.autoscale(axis="y", tight=True)
 
-            pywt_coefs = self.py_wavelet.compute_cwt(self.current_audio_chunk)
-            cpwt_coefs = self.cp_wavelet.compute_cwt(self.current_audio_chunk)
+            pywt_coefs = self.cwt_function(self.py_wavelet, self.current_audio_chunk)
+            cpwt_coefs = self.cwt_function(self.cp_wavelet, self.current_audio_chunk)
 
             self.im_py.set_data(pywt_coefs)
             self.im_cp.set_data(cpwt_coefs)

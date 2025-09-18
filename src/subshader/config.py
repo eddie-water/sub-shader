@@ -93,26 +93,31 @@ class GlobalNormalizationConfig:
 @dataclass
 class WaveletConfig:
     """Configuration for wavelet transform and normalization."""
-    
-    # Global normalization configuration
-    global_norm: GlobalNormalizationConfig = None
-    
-    # Legacy normalization parameters (used when global normalization is disabled)
-    db_floor: float = -80.0  # Less aggressive floor for better dynamic range visibility
-    db_ceil: float = 0.0
-    epsilon: float = 1e-12
-    output_dtype: np.dtype = np.float32
 
-    # Downsampling parameters - optimized for real-time rendering
-    target_width: int = 256  # Reduced for better performance while maintaining visual quality
+    # Sampling parameters
+    typical_sampling_freq: int = 44100
 
-    # Musical scale parameters
+    # Scale parameters for chromatic (musical) scale
     notes_per_octave: int = 12
     num_octaves: int = 10
     root_note_a0_hz: float = 27.5
+    
+    # Downsampling parameters - default for real-time rendering, reduce for better performance 
+    target_width: int = 256
 
-    # Audio parameters
-    typical_sampling_freq: int = 44100
+    # TODO 36 - Instead of being able to disable global normalization, determine
+    # how I can use it for certain when in the main loop, but access the 
+    # stages of the wavelet cwt call
+    global_norm: GlobalNormalizationConfig = None
+
+    # TODO 36 - If global normalization is disabled, would I really even need to
+    # be using these? Think of when I would want these old legacy params?
+    # Maybe they'd be useful for ^ but atm can't really think of any
+    # Legacy normalization parameters (used when global normalization is disabled)
+    db_floor: float = -80.0
+    db_ceil: float = 0.0
+    epsilon: float = 1e-12
+    output_dtype: np.dtype = np.float32
     
     def __post_init__(self):
         """Initialize global normalization config if not provided."""

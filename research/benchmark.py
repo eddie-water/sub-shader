@@ -39,6 +39,7 @@ config = get_default_config()
 config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 config.audio.chunk_size = 1024  # 1 << 10
 config.viz.num_frames = 256
+config.wavelet.target_width = config.audio.chunk_size 
 
 # =============================================================================
 # TEST PARAMS
@@ -303,18 +304,28 @@ class Benchmark():
         PlotComparison(
             mode="kernels",
             np_wavelet=self.np_wavelet,
-            title="Static Wavelet Kernel Visualization"
+            title="Static Wavelet Kernel Plot Analysis"
         )
 
-        # Static CWT Analysis: Audio Time Series vs CWT Implementations
+        # Static CWT Analysis: Audio Time Series vs CWT Time-Freq Coefficients
         PlotComparison(
             mode="cwt",
             audio_input=self.audio_input,
             py_wavelet=self.py_wavelet,
             cp_wavelet=self.cp_wavelet,
-            title=f"Static CWT Visualization — {os.path.basename(config.audio.file_path)}"
+            title=f"Static Class-Specific CWT Plot Analysis and Comparison — {os.path.basename(config.audio.file_path)}",
+            cwt_function=lambda wavelet, data: wavelet.class_specific_cwt(data)
         )
 
+        # TODO 36 NOW - Do a static plot analysis for the cwt that has 
+        # normalization - distinguish global normalization for the viz plotter
+        # vs normalization used in each class-specific cwt call
+
+        # Then do a global normalization plot analysis where we try different 
+        # types of normalizaition params, be able to turn off the warm up to isolate
+
+        # Then do a static plot analysis for the coi where we try out different
+        # coi region lengths - see what's obnoxious vs what's needed
 
     def dynamic_plot_analysis(self):
         print()
@@ -398,7 +409,6 @@ class Benchmark():
 
     def run_tests(self):
         self.static_plot_analysis()
-
         # self.dynamic_plot_analysis()
 
 if __name__ == '__main__':

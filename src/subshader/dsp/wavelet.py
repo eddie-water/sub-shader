@@ -407,7 +407,10 @@ class PyWavelet(Wavelet):
         # in the parent class?
         coefs_scaled = coefs_raw / np.sqrt(self.scales[:, None])
 
-        return coefs_scaled
+        # Convert to magnitude squared to match ANTS Implementations
+        coefs_magnitude = np.abs(coefs_scaled) ** 2
+        
+        return coefs_magnitude.astype(np.float32)
     
     def cleanup(self):
         """
