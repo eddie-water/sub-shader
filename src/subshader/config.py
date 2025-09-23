@@ -101,6 +101,9 @@ class WaveletConfig:
     notes_per_octave: int = 12
     num_octaves: int = 10
     root_note_a0_hz: float = 27.5
+
+    # Result of CWT is either its magnitude ("mag") or power ("pow")
+    cwt_out_type: str = "pow"
     
     # Downsampling parameters - default for real-time rendering, reduce for better performance 
     target_width: int = 256

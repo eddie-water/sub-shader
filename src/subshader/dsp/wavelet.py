@@ -191,23 +191,28 @@ class Wavelet(ABC):
                              f"does not match expected input data size {self.input_n}")
 
         # Increase precision
+        # TODO 36 - why turn to float64 instead of float32?
         data = input_data.astype(np.float64)
 
+        # Perform the CWT
         cwt_coefs = self.class_specific_cwt(data)
         
-        # Extract reliable region (avoid cone of influence edge artifacts)
-        reliable_coefs = self.extract_reliable_region(cwt_coefs)
+        # Scale-Dependent Normalization to account for the energy bias that occurs at higher scales
+        cwt_coefs = self.normalize_by_scale(cwt_coefs)
+
+        # Convert to magnitude or power
+        cwt_coefs = self.compute_mag_pow(cwt_coefs)
         
-        # Downsample the reliable CWT coefficients to produce output data
+        # Avoid edge effects by extracting just reliable region (cone of influence)
+        reliable_coefs = self.extract_reliable_region(cwt_coefs)
+
+        # Downsample to target width
         downsampled_coefs = self.downsample(reliable_coefs, self.target_width)
         
-        # Apply normalization (global or legacy)
-        if self.global_normalizer is not None:
-            # Use global normalization
-            return self.apply_global_normalization(downsampled_coefs)
-        else:
-            # Use legacy per-frame normalization
-            return self.normalize_coefs(downsampled_coefs)
+        # Apply normalization at the global level 
+        # TODO 36 - Is this where we would apply the 10 or 20 log 10?
+        # TODO 36 - Maybe this needs to be done in the plotting? It's the per frame normalization.
+        return self.normalize_globally(downsampled_coefs)
 
     @abstractmethod
     def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
@@ -221,6 +226,36 @@ class Wavelet(ABC):
             np.ndarray: The CWT coefficients 
         """
         pass
+
+    def normalize_by_scale(self, cwt_coefs: np.ndarray) -> np.ndarray:
+        """
+        Scale-Dependent Normalization to account for energy bias at higher 
+        scales s = 1/f TODO 36 sqrt() and add link that explains this
+
+        Args:
+            cwt_coefs (np.ndarray): CWT coefficients
+
+        Returns:
+            np.ndarray: Scale-Invariant CWT coefficients
+        """
+        return cwt_coefs * np.sqrt(self.freqs[:, None])
+
+    def compute_mag_pow(self, cwt_coefs: np.ndarray) -> np.ndarray:
+        """
+        Convert the CWT coefficients to magnitude or power depending on the 
+        config.
+
+        Args:
+            cwt_coefs (np.ndarray): CWT coefficients
+
+        Returns:
+            np.ndarray: Magnitude or power of the CWT coefficients
+        """
+        # TODO 36 - understand when to apply the 10 log 10. Here? or when plotting?
+        if self.config.cwt_out_type == "mag":
+            return np.abs(cwt_coefs)
+        elif self.config.cwt_out_type == "pow":
+            return np.abs(cwt_coefs) ** 2
 
     def extract_reliable_region(self, cwt_coefs: np.ndarray) -> np.ndarray:
         """
@@ -236,6 +271,7 @@ class Wavelet(ABC):
         Returns:
             np.ndarray: Reliable center region (freq_bins, reliable_time_samples)
         """
+        if self.coi_edge_percent <= 0: return cwt_coefs
         # Extract the reliable center region
         reliable_region = cwt_coefs[:, self.coi_start_idx:self.coi_end_idx]
         
@@ -273,7 +309,7 @@ class Wavelet(ABC):
 
         return norm_vals.astype(np.float32)
     
-    def apply_global_normalization(self, raw_coefs: np.ndarray) -> np.ndarray:
+    def normalize_globally(self, raw_coefs: np.ndarray) -> np.ndarray:
         """
         Apply global normalization using the GlobalNormalizer.
         
@@ -475,7 +511,7 @@ class AntsWavelet(Wavelet):
 
             # Scale Dependendant Normalization - account for the energy bias that occurs at higher scales (f ~= 1/s)
             # TODO 36 - Why do I normalize this here? What about the PyWavelet implenetation that does it in the normalization step?
-            kernel_t *= np.sqrt(f)
+            # kernel_t *= np.sqrt(f)
 
             # Store the time domain representation of the wavelet kernel
             self.wavelet_kernels_t.append(np.asarray(kernel_t, dtype=np.complex64))
@@ -489,7 +525,7 @@ class AntsWavelet(Wavelet):
             # Store the normalized frequency domain representation of the wavelet kernel
             kernel_f = fft(kernel_t, conv_n)
             # TODO 36 how is the normalization here affected by the scale normalization earlier?
-            kernel_f = kernel_f / np.max(np.abs(kernel_f))
+            # kernel_f = kernel_f / np.max(np.abs(kernel_f))
             self.wavelet_kernels_f.append(np.asarray(kernel_f, dtype=np.complex64))
 
         self.num_wavelets = len(self.wavelet_kernels_f)
@@ -507,6 +543,15 @@ class AntsWavelet(Wavelet):
 
 
 class NumPyWavelet(AntsWavelet):
+    def __init__(self, sample_rate, input_n, num_cycles=6.0, fwhm_cycles=3.0, 
+                 config: Optional[WaveletConfig] = None):
+        """
+        NumPy-based CWT with true scale-dependent time support.
+        """
+        super().__init__(sample_rate, input_n, num_cycles, fwhm_cycles, config)
+
+        self.scale_bias = np.sqrt(self.freqs).astype(np.float32)
+
     def class_specific_cwt(self, data) -> np.ndarray:
         """
         Perform CWT using variable-length wavelets, CPU version.
@@ -517,6 +562,7 @@ class NumPyWavelet(AntsWavelet):
             conv_n = cmw_x.shape[0]
             data_x = fft(data, conv_n)
             conv = ifft(data_x * cmw_x)
+            conv = conv * self.scale_bias[i]
             conv = np.abs(conv) ** 2
             half_kern_n = self.half_kern_n[i]
             conv_valid = conv[half_kern_n:half_kern_n + self.input_n]
@@ -537,6 +583,9 @@ class CuPyWavelet(AntsWavelet):
         self.wavelet_kernels_f = [cp.asarray(w) for w in self.wavelet_kernels_f]
         self.num_wavelets = len(self.wavelet_kernels_f)
 
+        self.scale_bias = np.sqrt(self.freqs).astype(np.float32)
+        self.scale_bias = cp.asarray(self.scale_bias, dtype=cp.float32)
+
         # Allocate GPU time-frequency matrix
         self.tf_gpu = cp.zeros((self.num_freqs, self.input_n), dtype=cp.float32)
 
@@ -549,6 +598,7 @@ class CuPyWavelet(AntsWavelet):
             conv_n = cmw_x.shape[0]
             data_x = cp_fft.fftn(cp.asarray(data, dtype=cp.complex64), conv_n)
             conv = cp_fft.ifft(data_x * cmw_x)
+            conv = conv * self.scale_bias[i]
             conv = cp.abs(conv) ** 2
             half_kern_n = self.half_kern_n[i]
             conv_valid = conv[half_kern_n:half_kern_n + self.input_n]
@@ -556,7 +606,7 @@ class CuPyWavelet(AntsWavelet):
 
         return cp.asnumpy(self.tf_gpu)
     
-    def apply_global_normalization(self, raw_coefs: np.ndarray) -> np.ndarray:
+    def normalize_globally(self, raw_coefs: np.ndarray) -> np.ndarray:
         """
         Apply global normalization for CuPy-based wavelets.
         
@@ -571,11 +621,11 @@ class CuPyWavelet(AntsWavelet):
         """
         if self.global_normalizer is None:
             # Fallback to parent implementation
-            return super().apply_global_normalization(raw_coefs)
+            return super().normalize_globally(raw_coefs)
         
         # Since raw_coefs is already numpy (converted in class_specific_cwt),
         # we can use the parent implementation directly
-        return super().apply_global_normalization(raw_coefs)
+        return super().normalize_globally(raw_coefs)
 
     def cleanup(self):
         try:
