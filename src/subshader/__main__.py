@@ -39,6 +39,8 @@ config = get_default_config()
 
 # Override default configs
 config.audio.file_path = "assets/audio/songs/beltran_sc_rip_8bar.wav"
+# TODO 36 this breaks when I do != 1.0 - maybe that's why I wasn't seeing much edge effects go away
+config.wavelet.reliable_mid_section_p = 1.0
 
 # =============================================================================
 # EXCEPTIONS
@@ -111,7 +113,7 @@ class SubShader:
 
             # Grab a chunk of audio and check for end of file
             if (audio_data := self.audio_input.get_chunk()) is None:
-               raise EndOfAudioException("Audio file processing complete")
+               raise EndOfAudioException("Audio file processing complete - reached EOF")
 
             # Compute CWT on audio
             coefs = self.wavelet.compute_cwt(audio_data)

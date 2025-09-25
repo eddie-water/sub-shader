@@ -1,12 +1,15 @@
 """
-Wavelet Transform Module for SubShader.
+Wavelet Module for SubShader.
 
-This module provides GPU-accelerated Continuous Wavelet Transform (CWT) 
-implementation for real-time audio analysis:
- - Computes time-frequency representations using the Morlet wavelet
- - Utilizes CuPy for GPU acceleration and performance optimization
- - Supports chromatic scale frequency mapping for musical visualization
- - Includes global normalization for consistent amplitude scaling
+This module provides Continuous Wavelet Transform (CWT) implementations for 
+time-frequency analysis of audio data in real-time:
+  - Creates a list of frequencies based on the chromatic scale (the typical 
+    piano/musical scale we're all used to) to analyze the incoming audio data.
+  - Transforms the audio data into its time-frequency representation according 
+    to this list of frequencies via the CWT.
+  - Each implementation is found in a subclass of the Wavelet base class,
+    either a 3rd Part Library like PyWavelet, or manual implementations using
+    NumPy and CuPy (GPU acceleration).
 """
 
 from __future__ import annotations
@@ -80,13 +83,11 @@ class Wavelet(ABC):
             config = WaveletConfig()
         self.config: WaveletConfig = config
 
-        # Runtime validation - sample rate must match expected frequency
+        # Sampling Parameters
         if sample_rate != self.config.typical_sampling_freq:
             log.error(f"Invalid sample rate: {sample_rate} Hz (expected {self.config.typical_sampling_freq} Hz)")
             raise ValueError(f"Sampling Rate: {sample_rate} Hz is not the typical {self.config.typical_sampling_freq} Hz. "
                              f"The CWT doesn't support non-typical sampling rates at the moment.")
-
-        # Sampling Parameters
         self.sample_rate: int = sample_rate
         self.nyquist_freq: float = (self.sample_rate / 2.0)
         self.sampling_period: float = (1.0 / self.sample_rate)
@@ -105,8 +106,8 @@ class Wavelet(ABC):
         self.target_width: int = int(self.config.target_width)
         self.output_shape: tuple[int, int] = (self.num_freqs, self.target_width)
 
-        # Create a mask to slice for the reliable region of the CWT result
-        self.reliable_region_mask: slice = self._create_reliable_region_slice(
+        # Create a slice for the reliable region of the CWT output
+        self.reliable_slice: slice = self._create_reliable_region_slice(
             float(self.config.reliable_mid_section_p)
         )
 
@@ -150,21 +151,25 @@ class Wavelet(ABC):
 
     def _create_reliable_region_slice(self, center_keep: float) -> slice:
         """
-        Creates a mask to slice for the reliable mid region of the CWT result.
+        Creates a slice that masks just for the reliable mid region of the CWT 
+        output result.
 
         Args:
             center_keep (float): As a %, the center region to keep of the CWT 
-            result.
+            outputresult.
 
         Returns:
             slice: A mask used to slice for the reliable mid region of the CWT 
-            result.
+            output result.
         """
         log.info(f"Reliable Region: keeping the middle {center_keep:.1%} of the CWT result")
+        result_width: int = int(self.get_output_shape()[1])
         if center_keep >= 1.0: 
             return slice(None)
-        keep = int(round(self.input_n * center_keep))
-        trim = max(0, (self.input_n - keep) // 2)
+        keep: int = int(round(result_width * center_keep))
+        trim: int = max(0, (result_width - keep) // 2)
+
+        # Slice that keeps the reliable middle section of the output result
         return slice(trim, trim + keep)
 
     def get_input_shape(self) -> tuple[int]:
@@ -293,7 +298,7 @@ class Wavelet(ABC):
         Returns:
             Reliable center region (freq_bins, reliable_time_samples).
         """
-        reliable_region = cwt_coefs[:, self.reliable_region_mask]
+        reliable_region = cwt_coefs[:, self.reliable_slice]
         log.debug(
             f"Reliable Region: extracted reliable region {cwt_coefs.shape} -> {reliable_region.shape}"
         )
