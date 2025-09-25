@@ -104,7 +104,10 @@ class WaveletConfig:
 
     # Result of CWT is either its magnitude ("mag") or power ("pow")
     cwt_out_type: str = "pow"
-    
+
+    # Percentage of the middle section of the CWT result to keep
+    reliable_mid_section_p: float = 0.7 
+
     # Downsampling parameters - default for real-time rendering, reduce for better performance 
     target_width: int = 256
 

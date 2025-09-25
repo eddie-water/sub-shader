@@ -9,12 +9,15 @@ implementation for real-time audio analysis:
  - Includes global normalization for consistent amplitude scaling
 """
 
+from __future__ import annotations
+
 # =============================================================================
 # IMPORTS
 # =============================================================================
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Final, Optional, Literal
+from numpy.typing import NDArray
 
 import numpy as np
 from numpy.fft import fft, ifft
@@ -28,6 +31,20 @@ from subshader.utils.logging import get_logger
 from ..config import WaveletConfig
 
 # =============================================================================
+# TYPE ALIASES
+# =============================================================================
+
+# Scalar/array aliases
+Float32Arr: type[NDArray[np.float32]]
+Float64Arr: type[NDArray[np.float64]]
+Complex64Arr: type[NDArray[np.complex64]]
+Complex128Arr: type[NDArray[np.complex128]]
+
+# Generic 2D arrays (freq x time)
+Float32TF: type[NDArray[np.float32]]
+Float64TF: type[NDArray[np.float64]]
+
+# =============================================================================
 # LOGGING
 # =============================================================================
 
@@ -37,259 +54,263 @@ log = get_logger(__name__)
 # CONSTANTS
 # =============================================================================
 
-PI = np.pi
+PI: Final[float] = float(np.pi)
 
 # =============================================================================
 # WAVELET CLASSES
 # =============================================================================
 
 class Wavelet(ABC):
-    def __init__(self, sample_rate: int, input_n: int, config: Optional[WaveletConfig] = None):
+    def __init__(self,
+                 sample_rate: int,
+                 input_n: int,
+                 config: Optional[WaveletConfig] = None) -> None:
         """
         Wavelet base class that all other wavelet classes are derived from.
         Uses a list of frequencies that follows the chromatic scale starting at
         A0 to specify which frequencies to look for in the input audio data.
 
         Args:
-            sample_rate (int): The rate the input data was sampled in Hz
-            input_n (int): The length of the input data
-            config (WaveletConfig, optional): Configuration object with wavelet parameters
+            sample_rate: The rate the input data was sampled in Hz.
+            input_n: The length of the input data (samples).
+            config: Configuration object with wavelet parameters.
         """
+        # Config
         if config is None:
             config = WaveletConfig()
-        self.config = config
-        
-        # TODO: Confirm COI is the reliable portion of the CWT result (accounting for cone of influence wich might remove edge effects in the plot)
-        # Cone of influence parameters - extract reliable center region
-        # TODO 36 - Move this lol
-        self.coi_edge_percent = 0.15  # Remove 15% from each edge (30% total)
-        
+        self.config: WaveletConfig = config
+
         # Runtime validation - sample rate must match expected frequency
         if sample_rate != self.config.typical_sampling_freq:
             log.error(f"Invalid sample rate: {sample_rate} Hz (expected {self.config.typical_sampling_freq} Hz)")
-            raise ValueError(f"Sampling Rate: {sample_rate} Hz is not {self.config.typical_sampling_freq} Hz. "
-                             f"The CWT may not work as expected.")
-        
-        self.sample_rate = sample_rate
-        self.input_n = input_n
-        
-        # Store downsampling target width from config
-        self.target_width = self.config.target_width
-        
+            raise ValueError(f"Sampling Rate: {sample_rate} Hz is not the typical {self.config.typical_sampling_freq} Hz. "
+                             f"The CWT doesn't support non-typical sampling rates at the moment.")
+
+        # Sampling Parameters
+        self.sample_rate: int = sample_rate
+        self.nyquist_freq: float = (self.sample_rate / 2.0)
+        self.sampling_period: float = (1.0 / self.sample_rate)
+
+        # Generate list of frequencies following the chromatic scale
+        self.freqs: NDArray[np.float64] = self._generate_chromatic_scale(
+            float(self.config.root_note_a0_hz),
+            int(self.config.num_octaves),
+            int(self.config.notes_per_octave),
+        ).astype(np.float64, copy=False)
+        self.num_freqs: int = int(len(self.freqs))
+
+        # Input and output dimensions
+        self.input_n: int = int(input_n)
+        self.input_shape: tuple[int] = (self.input_n,)
+        self.target_width: int = int(self.config.target_width)
+        self.output_shape: tuple[int, int] = (self.num_freqs, self.target_width)
+
+        # Create a mask to slice for the reliable region of the CWT result
+        self.reliable_region_mask: slice = self._create_reliable_region_slice(
+            float(self.config.reliable_mid_section_p)
+        )
+
+        # TODO 36 - Should global normalization be here or closer to the circular plot buffer?
         # Initialize global normalizer if enabled
-        # TODO 36 - why would it not be enabled
-        self.global_normalizer = None
+        self.global_normalizer: Optional[GlobalNormalizer]
         if self.config.global_norm.enabled:
             self.global_normalizer = GlobalNormalizer(
                 percentile=self.config.global_norm.percentile,
                 decay_rate=self.config.global_norm.decay_rate,
                 floor_value=self.config.global_norm.floor_value,
                 warmup_frames=self.config.global_norm.warmup_frames,
-                log_mapping=self.config.global_norm.log_mapping
+                log_mapping=self.config.global_norm.log_mapping,
             )
+        else:
+            self.global_normalizer = None
 
-        # Sampling Parameters
-        self.sample_rate = sample_rate
-        self.nyquist_freq = (sample_rate / 2.0)
-        self.sampling_period = (1.0 / self.sample_rate)
-        
-        # Calculate cone of influence boundaries for reliable region extraction
-        self.coi_start_idx = int(self.input_n * self.coi_edge_percent)
-        self.coi_end_idx = int(self.input_n * (1.0 - self.coi_edge_percent))
-        self.coi_reliable_length = self.coi_end_idx - self.coi_start_idx
-
-        # Generate list of frequencies in the chromatic scale
-        self.freqs = self._generate_chromatic_scale(
-            self.config.root_note_a0_hz,
-            self.config.num_octaves, 
-            self.config.notes_per_octave)
-
-        self.num_freqs = len(self.freqs)
-
-        # Input and output dimensions
-        self.input_shape = (self.num_freqs, self.input_n)
-        self.output_shape = (self.num_freqs, self.target_width)
-        
-        log.info(f"Cone of influence: removing edges {self.coi_edge_percent:.1%} each side")
-        log.info(f"Reliable region: samples {self.coi_start_idx}-{self.coi_end_idx} ({self.coi_reliable_length}/{self.input_n})")
-
-    def _generate_chromatic_scale(self, root_note: float, num_octaves: int, notes_per_octave: int = 12) -> list[float]:
+    def _generate_chromatic_scale(self,
+                                  root_note: float,
+                                  num_octaves: int,
+                                  notes_per_octave: int = 12) -> NDArray[np.float64]:
         """
-        Generates a list of frequencies that follow the exponential step size of 
+        Generates a list of frequencies that follow the exponential step size of
         the chromatic scale.
 
         Args:
-            root_note (float): The root note of the chromatic scale
-            num_octaves (int): The number of octaves to generate
-            notes_per_octave (int): The number of notes per octave
+            root_note: The root note of the chromatic scale (Hz).
+            num_octaves: The number of octaves to generate.
+            notes_per_octave: The number of notes per octave.
 
         Returns:
-            list[float]: A list of frequencies in the chromatic scale
+            1D array of frequencies (Hz) in ascending order.
         """
         # Frequencies double every octave
         scale_factor = 2 ** (1 / notes_per_octave)
-        i = np.arange(0, notes_per_octave * num_octaves, 1)
-        freqs = root_note * (scale_factor ** i)
+        i = np.arange(0, notes_per_octave * num_octaves, 1, dtype=np.float64)
+        freqs = float(root_note) * (scale_factor ** i)
 
         # Discard frequencies that are unmeasurable
         return freqs[freqs < self.nyquist_freq]
 
-    def get_input_shape(self) -> np.ndarray.shape:
+    def _create_reliable_region_slice(self, center_keep: float) -> slice:
         """
-        Computes the shape of the input data for CWT processing.
+        Creates a mask to slice for the reliable mid region of the CWT result.
+
+        Args:
+            center_keep (float): As a %, the center region to keep of the CWT 
+            result.
 
         Returns:
-            np.ndarray.shape: Shape of the input data
+            slice: A mask used to slice for the reliable mid region of the CWT 
+            result.
+        """
+        log.info(f"Reliable Region: keeping the middle {center_keep:.1%} of the CWT result")
+        if center_keep >= 1.0: 
+            return slice(None)
+        keep = int(round(self.input_n * center_keep))
+        trim = max(0, (self.input_n - keep) // 2)
+        return slice(trim, trim + keep)
+
+    def get_input_shape(self) -> tuple[int]:
+        """
+        Returns:
+            The shape of the input data for CWT processing.
         """
         return self.input_shape
-    
-    def get_output_shape(self) -> np.ndarray.shape:
+
+    def get_output_shape(self) -> tuple[int, int]:
         """
-        Computes the shape of the output data (downsampled CWT coefficients).
-            
         Returns:
-            np.ndarray.shape: Shape of the output data
+            The shape of the output data (downsampled CWT coefficients).
         """
         return self.output_shape
     
-    # Preserve external interface for backward compatibility
-    def get_downsampled_shape(self) -> np.ndarray.shape:
-        """
-        Computes the shape of the output data (downsampled CWT coefficients).
-        
-        Note: This method is kept for backward compatibility.
-        Use get_output_shape() for new code.
-            
-        Returns:
-            np.ndarray.shape: Shape of the output data
-        """
-        return self.get_output_shape()
-
     def get_num_freqs(self) -> int:
         """
-        Get the number of frequencies in the used in the CWT
-
         Returns:
-            int: Number of frequencies in the CWT
+            The number of frequencies used in the CWT.
         """
         return self.num_freqs
   
-    def compute_cwt(self, input_data: np.ndarray) -> np.ndarray:
+    def compute_cwt(self, input_data: NDArray[np.floating]) -> NDArray[np.floating]:
         """
-        Performs the Continuous Wavelet Transform (CWT) on input audio data, 
+        Performs the Continuous Wavelet Transform (CWT) on input audio data,
         normalizes the results, and downsamples to produce output coefficients.
 
         Args:
-            input_data (np.ndarray): Raw input audio signal data
+            input_data: Raw input audio signal data; 1D array of shape (input_n,).
+                        Any floating dtype accepted; internally cast to float64.
 
         Returns:
-            np.ndarray: The normalized and downsampled output coefficients
+            2D array (num_freqs, target_width) of globally normalized magnitudes
+            in the dtype specified by config.output_dtype.
         """
-        if len(input_data) != self.input_n:
-            log.error(f"Input data length mismatch: {len(input_data)} != {self.input_n}")
-            raise ValueError(f"Input data length {len(input_data)} "
-                             f"does not match expected input data size {self.input_n}")
+        if input_data.shape != (self.input_n,):
+            log.error(
+                f"Input data length mismatch: {input_data.shape[0]} != {self.input_n}"
+            )
+            raise ValueError(
+                f"Input data length {input_data.shape[0]} "
+                f"does not match expected input data size {self.input_n}"
+            )
 
-        # Increase precision
-        # TODO 36 - why turn to float64 instead of float32?
-        data = input_data.astype(np.float64)
+        # Increase precision (algorithm currently prefers float64 numerics)
+        data: NDArray[np.float64] = np.asarray(input_data, dtype=np.float64)
 
-        # Perform the CWT
-        cwt_coefs = self.class_specific_cwt(data)
-        
-        # Scale-Dependent Normalization to account for the energy bias that occurs at higher scales
+        # Perform the CWT (subclass-specific)
+        cwt_coefs: NDArray[np.complexfloating] = self.class_specific_cwt(data)
+
+        # Scale-Dependent Normalization
         cwt_coefs = self.normalize_by_scale(cwt_coefs)
 
         # Convert to magnitude or power
-        cwt_coefs = self.compute_mag_pow(cwt_coefs)
-        
-        # Avoid edge effects by extracting just reliable region (cone of influence)
-        reliable_coefs = self.extract_reliable_region(cwt_coefs)
+        mag_or_pow: NDArray[np.floating] = self.compute_mag_pow(cwt_coefs)
+
+        # Avoid edge effects by extracting just reliable region
+        reliable_coefs: NDArray[np.floating] = self.extract_reliable_region(mag_or_pow)
 
         # Downsample to target width
-        downsampled_coefs = self.downsample(reliable_coefs, self.target_width)
-        
-        # Apply normalization at the global level 
-        # TODO 36 - Is this where we would apply the 10 or 20 log 10?
-        # TODO 36 - Maybe this needs to be done in the plotting? It's the per frame normalization.
+        downsampled_coefs: NDArray[np.floating] = self.downsample(
+            reliable_coefs, self.target_width
+        )
+
+        # Apply global normalization (if configured)
         return self.normalize_globally(downsampled_coefs)
 
     @abstractmethod
-    def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
+    def class_specific_cwt(self, data: NDArray[np.float64]) -> NDArray[np.complexfloating]:
         """
-        Computes the subclass-specific implementation of the CWT
+        Computes the subclass-specific implementation of the CWT.
 
         Args:
-            data (np.ndarray): The data to perform the CWT on
+            data: 1D float64 array of audio samples of length input_n.
 
         Returns:
-            np.ndarray: The CWT coefficients 
+            Complex CWT coefficients with shape (num_freqs, input_n) *before*
+            reliable-region extraction and downsampling. Subclasses may choose
+            to return real magnitudes if that is their native representation,
+            but the parent expects complex here for consistency.
         """
-        pass
+        raise NotImplementedError
 
-    def normalize_by_scale(self, cwt_coefs: np.ndarray) -> np.ndarray:
+    def normalize_by_scale(self, cwt_coefs: NDArray[np.complexfloating]) -> NDArray[np.complexfloating]:
         """
-        Scale-Dependent Normalization to account for energy bias at higher 
-        scales s = 1/f TODO 36 sqrt() and add link that explains this
+        Scale-Dependent Normalization to account for energy bias at higher
+        scales (s ≈ 1/f).
 
         Args:
-            cwt_coefs (np.ndarray): CWT coefficients
+            cwt_coefs: Complex CWT coefficients, shape: num_freqs x time_samples
 
         Returns:
-            np.ndarray: Scale-Invariant CWT coefficients
+            Complex CWT coefficients after scale normalization.
         """
         return cwt_coefs * np.sqrt(self.freqs[:, None])
-
-    def compute_mag_pow(self, cwt_coefs: np.ndarray) -> np.ndarray:
+    
+    # TODO ISSUE-36: This changes the units depending on mag vs pow choice
+    def compute_mag_pow(self, cwt_coefs: NDArray[np.complexfloating]) -> NDArray[np.floating]:
         """
-        Convert the CWT coefficients to magnitude or power depending on the 
+        Convert the CWT coefficients to magnitude or power depending on the
         config.
 
         Args:
-            cwt_coefs (np.ndarray): CWT coefficients
+            cwt_coefs: Complex CWT coefficients.
 
         Returns:
-            np.ndarray: Magnitude or power of the CWT coefficients
+            Real magnitudes (|x|) or power (|x|^2) as a float array.
         """
         # TODO 36 - understand when to apply the 10 log 10. Here? or when plotting?
         if self.config.cwt_out_type == "mag":
             return np.abs(cwt_coefs)
         elif self.config.cwt_out_type == "pow":
             return np.abs(cwt_coefs) ** 2
+        else:
+            # Fallback: magnitude
+            return np.abs(cwt_coefs)
 
-    def extract_reliable_region(self, cwt_coefs: np.ndarray) -> np.ndarray:
+    def extract_reliable_region(self, cwt_coefs: NDArray[np.floating]) -> NDArray[np.floating]:
         """
         Extract the reliable center region from CWT coefficients to avoid edge artifacts.
-        
-        The cone of influence in wavelet transforms creates unreliable results near
-        the edges where the wavelet doesn't have sufficient data support. This method
-        extracts only the center region where results are reliable.
-        
+
         Args:
-            cwt_coefs (np.ndarray): Full CWT coefficients (freq_bins, time_samples)
-            
+            cwt_coefs: Full CWT coefficients (freq_bins, time_samples).
+
         Returns:
-            np.ndarray: Reliable center region (freq_bins, reliable_time_samples)
+            Reliable center region (freq_bins, reliable_time_samples).
         """
-        if self.coi_edge_percent <= 0: return cwt_coefs
-        # Extract the reliable center region
-        reliable_region = cwt_coefs[:, self.coi_start_idx:self.coi_end_idx]
-        
-        log.debug(f"Cone of influence: extracted reliable region {cwt_coefs.shape} -> {reliable_region.shape}")
+        reliable_region = cwt_coefs[:, self.reliable_region_mask]
+        log.debug(
+            f"Reliable Region: extracted reliable region {cwt_coefs.shape} -> {reliable_region.shape}"
+        )
         return reliable_region
 
-    def normalize_coefs(self, raw_coefs: np.ndarray) -> np.ndarray:
+    def normalize_coefs(self, raw_coefs: NDArray[np.complexfloating | np.floating]) -> NDArray[np.float32]:
         """
         Normalize CWT coefficients for plotting using a fixed dB range.
-        
+
         This avoids per-frame min/max scaling (which causes flicker and grain)
         by mapping magnitudes into a consistent dynamic range.
 
         Args:
-            raw_coefs (np.ndarray): Raw CWT coefficients (complex or real).
+            raw_coefs: Raw CWT coefficients (complex or real).
 
         Returns:
-            np.ndarray: Normalized magnitudes in [0, 1].
+            Normalized magnitudes in [0, 1] as float32.
         """
         # Magnitude of the CWT coefficients, add epsilon to avoid log(0)
         mag = np.abs(raw_coefs) + self.config.epsilon
@@ -309,60 +330,67 @@ class Wavelet(ABC):
 
         return norm_vals.astype(np.float32)
     
-    def normalize_globally(self, raw_coefs: np.ndarray) -> np.ndarray:
+    def normalize_globally(self, raw_coefs: NDArray[np.floating]) -> NDArray[np.floating]:
         """
         Apply global normalization using the GlobalNormalizer.
-        
+
         This method computes magnitude, updates the global normalization factor,
         and returns normalized values in [0, 1] range.
-        
+
         Args:
-            raw_coefs (np.ndarray): Raw CWT coefficients (complex or real).
-            
+            raw_coefs: Real-valued CWT magnitudes or power.
+
         Returns:
-            np.ndarray: Globally normalized magnitudes in [0, 1].
+            Globally normalized magnitudes in [0, 1]. Dtype follows
+            ``config.output_dtype``.
         """
+        if self.global_normalizer is None:
+            # If disabled, pass-through with casting to output dtype
+            return np.asarray(raw_coefs, dtype=self.config.output_dtype)
+
         # Compute magnitude of the CWT coefficients
         mag = np.abs(raw_coefs)
-        
+
         # Create a valid data mask (exclude very small values that might be noise)
         valid_mask = mag > self.config.epsilon
-        
+
         # Update global normalization factor
         self.global_normalizer.update(mag, mask=valid_mask)
-        
+
         # Apply global normalization
         normalized = self.global_normalizer.normalize(mag)
-        
+
         # Ensure output type consistency
         return normalized.astype(self.config.output_dtype)
     
-    def downsample(self, coefs: np.ndarray, target_width: int = None) -> np.ndarray:
+    def downsample(self,
+                   coefs: NDArray[np.floating],
+                   target_width: Optional[int] = None) -> NDArray[np.floating]:
         """
         Downsample CWT coefficients to produce final output data.
-        
+
         This method reduces the time dimension while preserving frequency resolution
         to make the data suitable for real-time GPU rendering.
 
         Args:
-            coefs (np.ndarray): Input CWT coefficients (freq_bins, time_samples)
-            target_width (int): Target output width (uses config if None)
-            
+            coefs: Input CWT coefficients (freq_bins, time_samples).
+            target_width: Target output width (uses config if None).
+
         Returns:
-            np.ndarray: Output data suitable for visualization
+            Output data suitable for visualization with shape (freq_bins, target_width).
         """
         # Use config target width if not specified
         if target_width is None:
             target_width = self.config.target_width
-            
-        freq_bins, time_samples = coefs.shape
+
+        freq_bins, time_samples = coefs.shape  # type: ignore[assignment]
         
         # If already at target size or smaller, return as-is
         if time_samples <= target_width:
             return coefs
         
         # Calculate downsampling factor
-        downsample_factor = max(1, time_samples // target_width)
+        downsample_factor = max(1, time_samples // int(target_width))
 
         # Simple downsampling strategy - take every Nth sample
         # This preserves the most recent data (right side of the buffer)
@@ -370,124 +398,103 @@ class Wavelet(ABC):
         
         # If still too wide, crop to target size
         if downsampled.shape[1] > target_width:
-            downsampled = downsampled[:, -target_width:]  # Keep most recent data
+            downsampled = downsampled[:, -int(target_width):]  # Keep most recent data
         
-        log.debug(f"Downsampled to output data: {coefs.shape} -> {downsampled.shape} (factor: {downsample_factor})")
+        log.debug(
+            f"Downsampled to output data: {coefs.shape} -> {downsampled.shape} (factor: {downsample_factor})"
+        )
         return downsampled
     
     @abstractmethod
-    def cleanup(self):
+    def cleanup(self) -> None:
         """
         Clean up any resources used by the wavelet implementation.
-        
+
         This method should be overridden by subclasses that allocate
         significant resources (especially GPU memory).
         """
-        pass
+        raise NotImplementedError
 
 class PyWavelet(Wavelet):
-    def __init__(self, sample_rate, input_n, config: Optional[WaveletConfig] = None):
+    def __init__(self,
+                 sample_rate: int,
+                 input_n: int,
+                 config: Optional[WaveletConfig] = None) -> None:
         """
-        The PyWavelet implementation of the CWT
+        The PyWavelet implementation of the CWT.
 
         Args:
-            sample_rate (int): The rate the input data was sampled in Hz
-            input_n (int): The length of the input data
-            config (WaveletConfig, optional): Configuration object with wavelet parameters
+            sample_rate: The rate the input data was sampled in Hz.
+            input_n: The length of the input data.
+            config: Configuration object with wavelet parameters.
         """
         super().__init__(sample_rate, input_n, config)
 
         # Wavelet info TODO ISSUE-36 why 1.5-1.0?
-        self.wavelet_name = "cmor1.5-1.0"
+        self.wavelet_name: str = "cmor1.5-1.0"
 
         # Scale array used to specify wavelet dilation amounts during CWT
-        f_norm = (self.freqs / self.sample_rate)
-        self.scales = pywt.frequency2scale(self.wavelet_name, f_norm)
+        f_norm: NDArray[np.float64] = (self.freqs / self.sample_rate)
+        self.scales: NDArray[np.float64] = pywt.frequency2scale(self.wavelet_name, f_norm)
 
-    def class_specific_cwt(self, data: np.ndarray) -> np.ndarray:
+    def class_specific_cwt(self, data: NDArray[np.float64]) -> NDArray[np.complexfloating]:
         """
-        Produces the normalized CWT coefficients using PyWavelets. 
+        Produces the normalized CWT coefficients using PyWavelets.
 
         Args:
-            data (np.ndarray): The data to perform the CWT on
+            data: 1D float64 array of audio samples.
 
         Returns:
-            np.ndarray: The scale-based normalized CWT coefficients 
+            Scale-normalized complex CWT coefficients (num_freqs, input_n).
         """
-        coefs_raw, _ = pywt.cwt(data = data,
-                                scales = self.scales,
-                                wavelet = self.wavelet_name,
-                                sampling_period = self.sampling_period)
+        coefs_raw, _ = pywt.cwt(
+            data=data,
+            scales=self.scales,
+            wavelet=self.wavelet_name,
+            sampling_period=self.sampling_period,
+        )
     
-        """
-        Scale-Based Normalization 
-        
-        This account for the energy bias that occurs at higher scales which 
-        PyWavelets does not do internally it seems. The wavelet equation is 
-        this: 
-        
-            Psi_s(t) = 1/sqrt(s) * Psi(t-T/s)
-        
-        Where Psi is the wavelet at a scale s, and localized in time by T. We 
-        need the '1/sqrt(s)' term to account for the energy bias that occurs at
-        higher scales for 'Psi(t-T/s)'. The 's' term, since it's in the 
-        denominator, stretches the wavelet horizontally when 's' is large, and 
-        compresses it horizontally when 's' is small. Higher-scale wavelets 
-        will have more area under their curves, and will seem to contribute 
-        more energy to the inner product that is going on inside the CWT. To 
-        account for this, we normalize the coefficients by dividing it by
-        the square root of the scale. Not sure why PyWavelets doesn't just do
-        this under the hood.
-        """
-        # TODO ISSUE-36 Why aren't I doing this to all the wavelet subclasses
-        # in the parent class?
-        coefs_scaled = coefs_raw / np.sqrt(self.scales[:, None])
+        # Scale-Based Normalization (1/sqrt(s))
+        coefs_scaled: NDArray[np.complexfloating] = coefs_raw / np.sqrt(self.scales[:, None])
 
         # Convert to magnitude squared to match ANTS Implementations
-        coefs_magnitude = np.abs(coefs_scaled) ** 2
-        
-        return coefs_magnitude.astype(np.float32)
-    
-    def cleanup(self):
-        """
-        Clean up any resources used by PyWavelet.
-        
-        PyWavelet doesn't allocate significant resources, so this is a no-op.
-        """
-        pass
+        coefs_magnitude: NDArray[np.float32] = (np.abs(coefs_scaled) ** 2).astype(np.float32)
 
-# TODO 36 - Use namesapce array namespace pattern 'xp = cp elif np' to 
-# consolidate the code. Maybe if the ANTS wavelet is the parent class that 
-# checks a bool, and if it's true, use cp, else use np and then CuWavelet sets 
-# it true, NumPyWavelet sets its false. Except notice that the fft and ifft 
-# function don't necessarily follow that pattern... 
+        # Return as real-valued array (parent method expects complex; here we relax)
+        return coefs_magnitude  # type: ignore[return-value]
+    
+    def cleanup(self) -> None:
+        """PyWavelet doesn't allocate significant resources, so this is a no-op."""
+        return None
+
 class AntsWavelet(Wavelet):
-    def __init__(self, sample_rate: int, input_n: int, num_cycles: float = 6.0, 
-        fwhm_cycles: float = 3.0, config: Optional[WaveletConfig] = None):
+    def __init__(self,
+                 sample_rate: int,
+                 input_n: int,
+                 num_cycles: float = 6.0,
+                 fwhm_cycles: float = 3.0,
+                 config: Optional[WaveletConfig] = None) -> None:
         """
         ANTS-style CWT with true scale-dependent time support.
 
         Args:
-            sample_rate (int): Input audio sample rate in Hz
-            input_n (int): Input data length in samples
-            num_cycles (float): number of carrier cycles per wavelet
-            fwhm_cycles (float): Gaussian FWHM width in cycles
-            config (WaveletConfig, optional): Configuration object with wavelet parameters
+            sample_rate: Input audio sample rate in Hz.
+            input_n: Input data length in samples.
+            num_cycles: Number of carrier cycles per wavelet.
+            fwhm_cycles: Gaussian FWHM width in cycles.
+            config: Configuration object with wavelet parameters.
         """
         super().__init__(sample_rate, input_n, config)
 
-        self.input_n = input_n
-
         # The number of cycles we want present in the wavelet we're constructing
-        self.num_wavelet_cycles = num_cycles
+        self.num_wavelet_cycles: float = float(num_cycles)
 
-        # We want the width of the bell curve to contain this many cycles in its 
-        # main energy lobe aka where the energy > half of its max
-        self.num_fwhm_cycles = fwhm_cycles 
+        # Width of the Gaussian bell curve where the energy > half the max
+        self.num_fwhm_cycles: float = float(fwhm_cycles)
 
-        # Containers for the time and frequency domain wavelet kernels 
-        self.wavelet_kernels_t: list[np.ndarray] = []
-        self.wavelet_kernels_f: list[np.ndarray] = []
+        # Containers for the time and frequency domain wavelet kernels
+        self.wavelet_kernels_t: list[NDArray[np.complex64]] = []
+        self.wavelet_kernels_f: list[NDArray[np.complex64]] = []
 
         # Since each wavelet kernel is variable in length, we need to track each
         # half kernel length for later when we crop the convolution result
@@ -495,153 +502,160 @@ class AntsWavelet(Wavelet):
 
         # Construct each wavelet kernel for each frequency
         for f in self.freqs:
-            # Duration in sec of the wavelet for the number of cycles at this 
-            # frequency where the units := cycles / (cycles / s) = s
-            wavelet_dur_s = self.num_wavelet_cycles / f
+            f = float(f)
+            # Duration in sec of the wavelet for the number of cycles at this frequency
+            wavelet_dur_s: float = self.num_wavelet_cycles / f
             wavelet_n = int(np.round(wavelet_dur_s * self.sample_rate))
 
             # Time vector centered at t = 0
-            t = (np.arange(wavelet_n) / self.sample_rate) - (wavelet_dur_s / 2)
+            t = (np.arange(wavelet_n, dtype=np.float64) / self.sample_rate) - (wavelet_dur_s / 2)
 
-            # Duration in sec of the width of the Guassian bell curve where the energy > half the max
-            fwhm_dur_s = self.num_fwhm_cycles / f
+            # Duration in sec of the width of the Gaussian bell curve where the energy > half the max
+            fwhm_dur_s: float = self.num_fwhm_cycles / f
 
-            # Complex Morlet Wavelet in the time domain - a sinusoid enveloped by a FWHM Gaussian bell curve
+            # Complex Morlet Wavelet in the time domain - sinusoid * Gaussian bell curve
             kernel_t = np.exp(1j * 2 * PI * f * t) * np.exp(-4 * np.log(2) * (t ** 2) / fwhm_dur_s ** 2)
-
-            # Scale Dependendant Normalization - account for the energy bias that occurs at higher scales (f ~= 1/s)
-            # TODO 36 - Why do I normalize this here? What about the PyWavelet implenetation that does it in the normalization step?
-            # kernel_t *= np.sqrt(f)
 
             # Store the time domain representation of the wavelet kernel
             self.wavelet_kernels_t.append(np.asarray(kernel_t, dtype=np.complex64))
 
             # Predetermine the N's of convolution
-            kernel_n = len(kernel_t)
+            kernel_n = int(len(kernel_t))
             conv_n = self.input_n + kernel_n - 1
             half_kern_n = kernel_n // 2
-            self.half_kern_n.append(half_kern_n)
+            self.half_kern_n.append(int(half_kern_n))
 
-            # Store the normalized frequency domain representation of the wavelet kernel
+            # Store the frequency domain representation of the wavelet kernel
             kernel_f = fft(kernel_t, conv_n)
-            # TODO 36 how is the normalization here affected by the scale normalization earlier?
-            # kernel_f = kernel_f / np.max(np.abs(kernel_f))
             self.wavelet_kernels_f.append(np.asarray(kernel_f, dtype=np.complex64))
 
-        self.num_wavelets = len(self.wavelet_kernels_f)
+        self.num_wavelets: int = int(len(self.wavelet_kernels_f))
 
-    def get_wavelet_kernels(self, domain: str = 'time') -> list[np.ndarray]:
-        """
-        Access the wavelet kernels.
-        """
+    def get_wavelet_kernels(self, domain: Literal['time', 'freq'] = 'time') -> list[NDArray[np.complex64]]:
+        """Access the wavelet kernels in the requested domain."""
         if domain == 'time':
             return self.wavelet_kernels_t
-        elif domain == 'freq':
+        else:  # 'freq'
             return self.wavelet_kernels_f
-        else:
-            return None
 
 
 class NumPyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, input_n, num_cycles=6.0, fwhm_cycles=3.0, 
-                 config: Optional[WaveletConfig] = None):
-        """
-        NumPy-based CWT with true scale-dependent time support.
-        """
+    def __init__(self,
+                 sample_rate: int,
+                 input_n: int,
+                 num_cycles: float = 6.0,
+                 fwhm_cycles: float = 3.0,
+                 config: Optional[WaveletConfig] = None) -> None:
+        """NumPy-based CWT with true scale-dependent time support."""
         super().__init__(sample_rate, input_n, num_cycles, fwhm_cycles, config)
 
-        self.scale_bias = np.sqrt(self.freqs).astype(np.float32)
+        self.scale_bias: NDArray[np.float32] = np.sqrt(self.freqs).astype(np.float32)
 
-    def class_specific_cwt(self, data) -> np.ndarray:
+    def class_specific_cwt(self, data: NDArray[np.float64]) -> NDArray[np.complexfloating]:
         """
         Perform CWT using variable-length wavelets, CPU version.
-        Returns: (num_freqs, input_n) matrix.
+
+        Args:
+            data: 1D float64 array of audio samples.
+
+        Returns:
+            Real-valued TF matrix (num_freqs, input_n) containing power (|x|^2).
         """
-        tf = np.zeros((self.num_freqs, self.input_n), dtype=np.float32)
+        tf: NDArray[np.float32] = np.zeros((self.num_freqs, self.input_n), dtype=np.float32)
+        data_x_cache: dict[int, NDArray[np.complex128]] = {}
         for i, cmw_x in enumerate(self.wavelet_kernels_f):
-            conv_n = cmw_x.shape[0]
-            data_x = fft(data, conv_n)
+            conv_n = int(cmw_x.shape[0])
+            # Cache FFT lengths if repeated sizes appear
+            if conv_n not in data_x_cache:
+                data_x_cache[conv_n] = fft(data, conv_n)
+            data_x = data_x_cache[conv_n]
+
             conv = ifft(data_x * cmw_x)
             conv = conv * self.scale_bias[i]
             conv = np.abs(conv) ** 2
-            half_kern_n = self.half_kern_n[i]
+            half_kern_n = int(self.half_kern_n[i])
             conv_valid = conv[half_kern_n:half_kern_n + self.input_n]
-            tf[i, :] = conv_valid
-        return tf
+            tf[i, :] = conv_valid.astype(np.float32, copy=False)
+        # Return as real-valued array (parent method expects complex; here we relax)
+        return tf  # type: ignore[return-value]
 
-    def cleanup(self):
-        pass
+    def cleanup(self) -> None:
+        return None
 
 
 class CuPyWavelet(AntsWavelet):
-    def __init__(self, sample_rate, input_n,
-                 num_cycles=6.0, fwhm_cycles=3.0, config: Optional[WaveletConfig] = None):
+    def __init__(self,
+                 sample_rate: int,
+                 input_n: int,
+                 num_cycles: float = 6.0,
+                 fwhm_cycles: float = 3.0,
+                 config: Optional[WaveletConfig] = None) -> None:
         super().__init__(sample_rate, input_n, num_cycles, fwhm_cycles, config)
         log.info(f"CPU→GPU: Uploading {len(self.wavelet_kernels_f)} wavelets to GPU")
 
         # Convert each kernel individually to CuPy
-        self.wavelet_kernels_f = [cp.asarray(w) for w in self.wavelet_kernels_f]
+        self.wavelet_kernels_f: list[cp.ndarray] = [cp.asarray(w) for w in self.wavelet_kernels_f]
         self.num_wavelets = len(self.wavelet_kernels_f)
 
         self.scale_bias = np.sqrt(self.freqs).astype(np.float32)
         self.scale_bias = cp.asarray(self.scale_bias, dtype=cp.float32)
 
         # Allocate GPU time-frequency matrix
-        self.tf_gpu = cp.zeros((self.num_freqs, self.input_n), dtype=cp.float32)
+        self.tf_gpu: cp.ndarray = cp.zeros((self.num_freqs, self.input_n), dtype=cp.float32)
 
-    def class_specific_cwt(self, data) -> np.ndarray:
+    def class_specific_cwt(self, data: NDArray[np.float64]) -> NDArray[np.complexfloating]:
         """
         Perform CWT using variable-length wavelets, GPU version.
-        Returns: (num_freqs, input_n) matrix.
+
+        Args:
+            data: 1D float64 array of audio samples.
+
+        Returns:
+            Real-valued TF matrix (num_freqs, input_n) containing power (|x|^2),
+            transferred back to NumPy on return.
         """
+        data_cp = cp.asarray(data, dtype=cp.complex64)
         for i, cmw_x in enumerate(self.wavelet_kernels_f):
-            conv_n = cmw_x.shape[0]
-            data_x = cp_fft.fftn(cp.asarray(data, dtype=cp.complex64), conv_n)
+            conv_n = int(cmw_x.shape[0])
+            data_x = cp_fft.fftn(data_cp, conv_n)
             conv = cp_fft.ifft(data_x * cmw_x)
             conv = conv * self.scale_bias[i]
             conv = cp.abs(conv) ** 2
-            half_kern_n = self.half_kern_n[i]
+            half_kern_n = int(self.half_kern_n[i])
             conv_valid = conv[half_kern_n:half_kern_n + self.input_n]
             self.tf_gpu[i, :] = conv_valid
 
-        return cp.asnumpy(self.tf_gpu)
+        tf_np: NDArray[np.float32] = cp.asnumpy(self.tf_gpu)
+        # Return as real-valued array (parent method expects complex; here we relax)
+        return tf_np  # type: ignore[return-value]
     
-    def normalize_globally(self, raw_coefs: np.ndarray) -> np.ndarray:
+    def normalize_globally(self, raw_coefs: NDArray[np.floating]) -> NDArray[np.floating]:
         """
         Apply global normalization for CuPy-based wavelets.
-        
-        This method handles the GPU-to-CPU transfer needed for the GlobalNormalizer
-        while maintaining efficiency.
-        
+
         Args:
-            raw_coefs (np.ndarray): Raw CWT coefficients (already converted from GPU).
-            
+            raw_coefs: Raw CWT coefficients (already converted from GPU, NumPy array).
+
         Returns:
-            np.ndarray: Globally normalized magnitudes in [0, 1].
+            Globally normalized magnitudes in [0, 1].
         """
         if self.global_normalizer is None:
-            # Fallback to parent implementation
-            return super().normalize_globally(raw_coefs)
-        
-        # Since raw_coefs is already numpy (converted in class_specific_cwt),
-        # we can use the parent implementation directly
+            return np.asarray(raw_coefs, dtype=self.config.output_dtype)
         return super().normalize_globally(raw_coefs)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         try:
-            if hasattr(self, 'tf_gpu'):
+            if hasattr(self, 'tf_gpu') and self.tf_gpu is not None:
                 del self.tf_gpu
-                self.tf_gpu = None
-            if hasattr(self, 'wavelet_kernels'):
+                self.tf_gpu = None  # type: ignore[assignment]
+            if hasattr(self, 'wavelet_kernels_f') and self.wavelet_kernels_f is not None:
                 del self.wavelet_kernels_f
-                self.wavelet_kernels_f = None
+                self.wavelet_kernels_f = []  # type: ignore[assignment]
             cp.get_default_memory_pool().free_all_blocks()
             cp.get_default_pinned_memory_pool().free_all_blocks()
-        except Exception as e:
+        except Exception as e:  # pragma: no cover - defensive cleanup
             print(f"Warning: Error during GPU cleanup: {e}")
     
 class CuWavelet(CuPyWavelet):
-    """
-    This just kind of renames the class becuase it sounds ~cool~
-    """
+    """Alias of CuPyWavelet with a shorter name."""
     pass

@@ -39,6 +39,7 @@ config = get_default_config()
 config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 config.audio.chunk_size = 1024  # 1 << 10
 config.viz.num_frames = 256
+config.wavelet.reliable_mid_section_p = 1.0
 config.wavelet.target_width = config.audio.chunk_size 
 
 # =============================================================================
