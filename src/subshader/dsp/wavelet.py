@@ -101,6 +101,7 @@ class Wavelet(ABC):
         self.num_freqs: int = int(len(self.freqs))
 
         # Input and output dimensions
+        # TODO 36 - Establish the difference between output_size and downsampled_output_size - it's fucking up the plotter
         self.input_n: int = int(input_n)
         self.input_shape: tuple[int] = (self.input_n,)
         self.target_width: int = int(self.config.target_width)
@@ -335,6 +336,7 @@ class Wavelet(ABC):
 
         return norm_vals.astype(np.float32)
     
+    # TODO 36 wtf is this? Why is is it done two different places and differently?
     def normalize_globally(self, raw_coefs: NDArray[np.floating]) -> NDArray[np.floating]:
         """
         Apply global normalization using the GlobalNormalizer.
@@ -633,7 +635,8 @@ class CuPyWavelet(AntsWavelet):
         tf_np: NDArray[np.float32] = cp.asnumpy(self.tf_gpu)
         # Return as real-valued array (parent method expects complex; here we relax)
         return tf_np  # type: ignore[return-value]
-    
+
+    # TODO 36 why is this done in two different places?
     def normalize_globally(self, raw_coefs: NDArray[np.floating]) -> NDArray[np.floating]:
         """
         Apply global normalization for CuPy-based wavelets.
