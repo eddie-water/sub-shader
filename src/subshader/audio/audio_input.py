@@ -73,7 +73,7 @@ class AudioInput:
         # Keep file handle open to avoid reopening it every time
         try:
             self.file_handle = sf.SoundFile(self.file_path, 'r')
-            self.sample_rate = self.file_handle.samplerate
+            self.sample_rate = np.float64(self.file_handle.samplerate)
             self.total_frames = self.file_handle.frames
             self.pos = 0
             log.info(f"Audio file loaded: {self.file_path} ({self.total_frames} frames, {self.sample_rate} Hz)")
@@ -82,7 +82,7 @@ class AudioInput:
             log.error(f"Failed to load audio file {self.file_path}: {e}")
             raise
 
-    def get_chunk(self) -> np.ndarray:
+    def get_chunk(self) -> np.ndarray[np.float64]:
         """
         Gets an overlapping frame of audio to reduce edge artifacts.
         
@@ -99,7 +99,7 @@ class AudioInput:
         
         # Seek and read (file stays open)
         self.file_handle.seek(self.pos)
-        frame = self.file_handle.read(self.chunk_size)
+        frame = self.file_handle.read(self.chunk_size, dtype=np.float64)
         
         # Convert stereo to mono 
         if len(frame.shape) > 1:
@@ -108,14 +108,13 @@ class AudioInput:
         # Advance by hop_size instead of full window_size for overlap
         self.pos += self.hop_size
         return frame
-
-    def get_sample_rate(self) -> int:
+    def get_sample_rate(self) -> np.float64:
         """
         Gets the sample rate of the audio file.
 
         Returns:
-            int: Sample rate
-        """
+            np.float64: Sample rate
+    """
         return self.sample_rate
 
     def cleanup(self):

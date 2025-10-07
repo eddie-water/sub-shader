@@ -95,18 +95,22 @@ class WaveletConfig:
     """Configuration for wavelet transform and normalization."""
 
     # Sampling parameters
-    typical_sampling_freq: int = 44100
+    typical_sampling_freq: np.float64 = 44100.0
 
-    # Scale parameters for chromatic (musical) scale
+    # Scale parameters for chromatic (musical) scale frequency list
     notes_per_octave: int = 12
     num_octaves: int = 10
-    root_note_a0_hz: float = 27.5
+    root_note_a0_hz: np.float64 = 27.5
+
+    # Wavelet shape parameters for wavelet kernel construction
+    num_cycles: int = 6
+    fwhm_cycles: int = 3
 
     # Result of CWT is either its magnitude ("mag") or power ("pow")
     cwt_out_type: str = "pow"
 
     # Percentage of the middle section of the CWT result to keep
-    reliable_mid_section_p: float = 0.7 
+    reliable_mid_section_p: np.float64 = 0.7 
 
     # Downsampling parameters - default for real-time rendering, reduce for better performance 
     target_width: int = 256
@@ -120,9 +124,9 @@ class WaveletConfig:
     # be using these? Think of when I would want these old legacy params?
     # Maybe they'd be useful for ^ but atm can't really think of any
     # Legacy normalization parameters (used when global normalization is disabled)
-    db_floor: float = -80.0
-    db_ceil: float = 0.0
-    epsilon: float = 1e-12
+    db_floor: np.float64 = -80.0
+    db_ceil: np.float64 = 0.0
+    epsilon: np.float64 = 1e-12
     output_dtype: np.dtype = np.float32
     
     def __post_init__(self):

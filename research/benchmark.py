@@ -73,7 +73,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.coefs_py_wavelet = self.py_wavelet.compute_cwt(self.audio_data)
+        self.coefs_py_wavelet = self.py_wavelet.cwt_pipeline(self.audio_data)
 
         self.np_wavelet = NumPyWavelet(
             sample_rate=self.sample_rate, 
@@ -81,7 +81,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.coefs_np_wavelet = self.np_wavelet.compute_cwt(self.audio_data)
+        self.coefs_np_wavelet = self.np_wavelet.cwt_pipeline(self.audio_data)
 
         self.cp_wavelet = CuPyWavelet(
             sample_rate=self.sample_rate, 
@@ -89,7 +89,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.coefs_cp_wavelet = self.cp_wavelet.compute_cwt(self.audio_data)
+        self.coefs_cp_wavelet = self.cp_wavelet.cwt_pipeline(self.audio_data)
 
         # Plotter Implementations
         self.plot_shape = self.py_wavelet.get_output_shape()
@@ -109,9 +109,9 @@ class Benchmark():
         # Function List and Dummy Arguments 
         self.func_list = [
             (self.audio_input.get_chunk,         ()),
-            (self.py_wavelet.compute_cwt,        (self.audio_data,)),
-            (self.np_wavelet.compute_cwt,        (self.audio_data,)),
-            (self.cp_wavelet.compute_cwt,        (self.audio_data,)),
+            (self.py_wavelet.cwt_pipeline,        (self.audio_data,)),
+            (self.np_wavelet.cwt_pipeline,        (self.audio_data,)),
+            (self.cp_wavelet.cwt_pipeline,        (self.audio_data,)),
             (self.pyqtg.update_plot,             (self.coefs_py_wavelet,)),
             (self.shader.update_plot,            (self.coefs_cp_wavelet,))
         ]
@@ -348,7 +348,7 @@ class Benchmark():
                 if func.__name__ == 'get_chunk':
                     # Audio input - use original args
                     args = base_args
-                elif func.__name__ == 'compute_cwt':
+                elif func.__name__ == 'cwt_pipeline':
                     # CWT functions - use fresh audio data if available
                     if fresh_audio_data is not None:
                         args = (fresh_audio_data,)
@@ -381,7 +381,7 @@ class Benchmark():
                 # Store results for next functions in pipeline
                 if func.__name__ == 'get_chunk':
                     fresh_audio_data = result
-                elif func.__name__ == 'compute_cwt':
+                elif func.__name__ == 'cwt_pipeline':
                     if 'PyWavelet' in func.__self__.__class__.__name__:
                         py_cwt_result = result
                     elif 'AntsWavelet' in func.__self__.__class__.__name__:

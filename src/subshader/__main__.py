@@ -116,7 +116,7 @@ class SubShader:
                raise EndOfAudioException("Audio file processing complete - reached EOF")
 
             # Compute CWT on audio
-            coefs = self.wavelet.compute_cwt(audio_data)
+            coefs = self.wavelet.cwt_pipeline(audio_data)
 
             # Update plot with coefficient results
             self.plotter.update_plot(coefs)
