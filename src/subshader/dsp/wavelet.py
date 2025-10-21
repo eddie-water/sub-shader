@@ -392,7 +392,7 @@ class Wavelet(ABC):
             f"Downsampled to output data: {coefs.shape} -> {downsampled.shape} (factor: {downsample_factor})"
         )
         return downsampled
-    
+
     @abstractmethod
     def cleanup(self) -> None:
         """
@@ -403,57 +403,58 @@ class Wavelet(ABC):
         """
         raise NotImplementedError
 
-class WaveletKernels():
+class WaveletKernel():
     def __init__(self,
-                 freqs: np.ndarray[np.float64],
+                 f: np.float64,
                  input_n: int,
                  sample_rate: int,
-                 config: WaveletConfig) -> tuple[list[np.ndarray[np.complex64]], list[np.ndarray[np.complex64]]]:
+                 num_cycles: int,
+                 num_fwhm_cycles: int) -> tuple[list[np.ndarray[np.complex64]], list[np.ndarray[np.complex64]]]:
 
-        self.freqs: np.ndarray[np.float64] = freqs
-        self.input_n: int = input_n
-        self.sample_rate: int = sample_rate
-        self.config: WaveletConfig = config
+        self.center_freq: np.float64 = f
 
-        self.num_wavelet_cycles: int = int(config.num_cycles)
-        self.num_fwhm_cycles: int = int(config.fwhm_cycles)
+        # Wavelets in time/freq domain and their length attributes
+        self.kernel_t: np.ndarray[np.complex64] = None
+        self.kernel_f: np.ndarray[np.complex64] = None
+        self.kernel_n: int = None
+        self.half_kernel_n: int = None
+        self.conv_n: Optional[int] = None
 
-        # Construct the wavelet kernels and store them in lists for each domain
-        self.kernels_t: list[np.ndarray[np.complex64]] = []
-        self.kernels_f: list[np.ndarray[np.complex64]] = []
-        self.half_kern_n: list[int] = []
-        self._construct_wavelet_kernels(self.freqs)
-        self.num_wavelets: int = len(self.kernels_f)
+        # Wavelet duration in sec for the number of cycles at this center frequency
+        wavelet_dur_s: np.float64 = num_cycles / self.center_freq
 
-    def _construct_wavelet_kernels(self, freqs: np.ndarray[np.float64]) -> tuple[list[np.ndarray[np.complex64]], list[np.ndarray[np.complex64]]]:
-        """Construct the wavelet kernels in the time and frequency domains."""
-        for f in freqs:
-            # Wavelet duration in sec for the number of cycles at this frequency
-            wavelet_dur_s: np.float64 = self.num_wavelet_cycles / f
+        # Number of samples in the kernel (s * samples / s)
+        wavelet_n: int = int(np.round(wavelet_dur_s * sample_rate))
 
-            # Number of samples in the kernel (s * samples / s)
-            wavelet_n: int = int(np.round(wavelet_dur_s * self.sample_rate))
+        # Time vector centered at t = 0
+        t: np.ndarray[np.float64] = (np.arange(wavelet_n, dtype=np.float64) / sample_rate) - (wavelet_dur_s / 2)
 
-            # Time vector centered at t = 0
-            t: np.ndarray[np.float64] = (np.arange(wavelet_n, dtype=np.float64) / self.sample_rate) - (wavelet_dur_s / 2)
+        # Gaussian bell duration in sec for the width of the curve where the energy > half the max
+        fwhm_dur_s: np.float64 = num_fwhm_cycles / self.center_freq
 
-            # Gaussian bell duration in sec for the width of the curve where the energy > half the max
-            fwhm_dur_s: np.float64 = self.num_fwhm_cycles / f
+        # Complex Morlet Wavelet in the time domain: sinusoid * Gaussian bell curve
+        sinusoid: np.ndarray[np.complex64] = np.exp(1j * 2 * PI * f * t)
+        gaussian: np.ndarray[np.complex64] = np.exp(-4 * np.log(2) * (t ** 2) / fwhm_dur_s ** 2)
+        cmw: np.ndarray[np.complex64] = sinusoid * gaussian
 
-            # Complex Morlet Wavelet in the time domain: sinusoid * Gaussian bell curve
-            kernel_t: np.ndarray[np.complex64] = (np.exp(1j * 2 * PI * f * t)) * (np.exp(-4 * np.log(2) * (t ** 2) / fwhm_dur_s ** 2))
+        self.kernel_t = cmw.astype(np.complex64)
+        self.kern_n = int(len(self.kernel_t))
+        self.conv_n = int(input_n + self.kern_n - 1)
+        self.half_kern_n = int(self.kern_n // 2)
+        self.slice = slice(self.half_kern_n, self.half_kern_n + input_n)
 
-            # Store the time domain representation of the wavelet kernel
-            self.kernels_t.append(np.asarray(kernel_t, dtype=np.complex64))
+        # Store the frequency domain representation of the wavelet kernel
+        self.kernel_f = fft(self.kernel_t, self.conv_n)
 
-            # Predetermine the N's of convolution
-            kernel_n: int = int(len(kernel_t))
-            conv_n: int = int(self.input_n + kernel_n - 1)
-            self.half_kern_n.append(int(kernel_n // 2))
+        # GPU-specific attributes
+        self.kernel_f_gpu: Optional[cp.ndarray] = None
+        self.slice_gpu: slice = self.slice 
 
-            # Store the frequency domain representation of the wavelet kernel
-            kernel_f: np.ndarray[np.complex64] = fft(kernel_t, conv_n)
-            self.kernels_f.append(np.asarray(kernel_f, dtype=np.complex64))
+    def upload_to_gpu(self) -> None:
+        """
+        Upload the wavelet kernel to the GPU.
+        """
+        self.kernel_f_gpu = cp.asarray(self.kernel_f, dtype=cp.complex64)
 
 class PyWavelet(Wavelet):
     def __init__(self,
@@ -517,19 +518,12 @@ class AntsWavelet(Wavelet):
         """
         super().__init__(sample_rate, input_n, config)
 
-        self.wavelets = WaveletKernels(self.freqs, input_n, sample_rate, self.config)
+        self.wavelets: list[WaveletKernel] = []
 
-        self.num_wavelets: int = int(len(self.wavelets.kernels_f))
+        for f in self.freqs:
+            self.wavelets.append(WaveletKernel(f, self.input_n, self.sample_rate, config.num_cycles, config.num_fwhm_cycles))
 
-    def get_wavelet_kernels(self, domain: Literal['time', 'freq'] = 'time') -> list[np.ndarray[np.complex64]]:
-        """Access the wavelet kernels in the requested domain."""
-        if domain == 'time':
-            return self.wavelets.kernels_t
-        elif domain == 'freq':
-            return self.wavelets.kernels_f
-        else:
-            raise ValueError(f"Invalid domain: {domain}")
-
+        self.num_wavelets = len(self.wavelets)
 
 class NumPyWavelet(AntsWavelet):
     def __init__(self,
@@ -554,15 +548,11 @@ class NumPyWavelet(AntsWavelet):
         output_tf: np.ndarray[np.float64] = np.zeros((self.num_freqs, self.input_n), dtype=np.float64)
 
         # Convolve input data and each wavelet kernel via frequency domain multiplication
-        for i, k_f in enumerate(self.wavelets.kernels_f):
-            conv_n = int(k_f.shape[0])
-            input_f = fft(input_t, conv_n)
-            conv = ifft(input_f * k_f)
-
-            hk_n = int(self.wavelets.half_kern_n[i])
-            conv_valid = conv[hk_n:hk_n + self.input_n]
-            output_tf[i, :] = conv_valid.astype(np.float64, copy=False)
-
+        for i, w in enumerate(self.wavelets):
+            input_f = fft(input_t, w.conv_n)
+            conv = ifft(input_f * w.kernel_f)
+            conv_valid = conv[w.slice]
+            output_tf[i, :] = conv_valid
         # Return as real-valued array (parent method expects complex; here we relax)
         return output_tf
 
@@ -576,11 +566,11 @@ class CuPyWavelet(AntsWavelet):
                  input_n: int,
                  config: Optional[WaveletConfig] = None) -> None:
         super().__init__(sample_rate, input_n, config)
-        log.info(f"CPU→GPU: Uploading {len(self.wavelets.kernels_f)} wavelets to GPU")
 
-        # Convert each kernel individually to CuPy
-        self.wavelet_kernels_f: list[cp.ndarray] = [cp.asarray(w) for w in self.wavelets.kernels_f]
-        self.num_wavelets = len(self.wavelets.kernels_f)
+        log.info(f"CPU→GPU: Uploading {self.num_wavelets} wavelets to GPU")
+
+        for w in self.wavelets:
+            w.upload_to_gpu()
 
         self.scale_bias = np.sqrt(self.freqs).astype(np.float64)
         self.scale_bias = cp.asarray(self.scale_bias, dtype=cp.float32)
@@ -588,7 +578,7 @@ class CuPyWavelet(AntsWavelet):
         # Allocate GPU time-frequency matrix
         self.tf_gpu: cp.ndarray = cp.zeros((self.num_freqs, self.input_n), dtype=cp.complex64)
 
-    def class_specific_cwt(self, data: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
+    def class_specific_cwt(self, input_t: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
         Perform CWT using variable-length wavelets, GPU version.
 
@@ -599,19 +589,17 @@ class CuPyWavelet(AntsWavelet):
             Real-valued TF matrix (num_freqs, input_n) containing power (|x|^2),
             transferred back to NumPy on return.
         """
-        data_cp = cp.asarray(data, dtype=cp.complex64)
+        input_t_cp = cp.asarray(input_t, dtype=cp.complex64)
 
-        for i, k_f in enumerate(self.wavelet_kernels_f):
-            conv_n = int(k_f.shape[0])
-            data_x = cp_fft.fftn(data_cp, conv_n)
-            conv = cp_fft.ifftn(data_x * k_f)
-            hk_n = int(self.wavelets.half_kern_n[i])
-            conv_valid = conv[hk_n:hk_n + self.input_n]
+        for i, w in enumerate(self.wavelets):
+            input_f = cp_fft.fftn(input_t_cp, w.conv_n)
+            conv = cp_fft.ifftn(input_f * w.kernel_f_gpu)
+            conv_valid = conv[w.slice_gpu]
             self.tf_gpu[i, :] = conv_valid
 
-        tf_np: np.ndarray[np.float64] = cp.asnumpy(self.tf_gpu)
-        return tf_np
+        return cp.asnumpy(self.tf_gpu)
 
+    # TODO NOW - remove this?
     # TODO 36 why is this done in two different places?
     def normalize_globally(self, raw_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """

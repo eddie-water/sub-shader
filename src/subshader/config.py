@@ -104,7 +104,7 @@ class WaveletConfig:
 
     # Wavelet shape parameters for wavelet kernel construction
     num_cycles: int = 6
-    fwhm_cycles: int = 3
+    num_fwhm_cycles: int = 3
 
     # Result of CWT is either its magnitude ("mag") or power ("pow")
     cwt_out_type: str = "pow"

@@ -76,11 +76,12 @@ class KernelNavigator(NavigatorBase):
         self.fig.subplots_adjust(bottom=0.15, top=0.92, left=0.06, right=0.98, wspace=0.12, hspace=0.4)
 
         # Get wavelet kernels
-        self.k_ts = self.np_wavelet.get_wavelet_kernels("time")
-        self.k_fs = self.np_wavelet.get_wavelet_kernels("freq")
+        self.wavelets = self.np_wavelet.wavelets
+        self.k_ts = [w.kernel_t for w in self.wavelets]
+        self.k_fs = [w.kernel_f for w in self.wavelets]
         self.num_k = len(self.k_ts)
         self.center_freqs = np.asarray(self.np_wavelet.freqs)
-        self.sampling_freq = self.np_wavelet.sample_rate
+        self.sampling_freq = self.np_wavelet.sample_rate  
 
         # Plot visual characteristics
         REAL_PART_COLOR = 'darkorange'
