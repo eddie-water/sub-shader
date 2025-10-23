@@ -12,7 +12,7 @@ Centralized configuration management for SubShader module components:
 # =============================================================================
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Tuple, List
 
 import numpy as np
@@ -52,11 +52,8 @@ def _get_system_display_size() -> Tuple[int, int]:
 # =============================================================================
 
 @dataclass
-class GlobalNormalizationConfig:
-    """Configuration for global normalization across frames."""
-    
-    # Enable/disable global normalization
-    enabled: bool = True
+class ColorNormalizationConfig:
+    """Configuration for color normalization across all data frames."""
     
     # Robust statistics parameters
     percentile: float = 99.0
@@ -72,7 +69,7 @@ class GlobalNormalizationConfig:
     log_mapping: bool = False  # Apply log1p mapping for perceptual detail
     
     def validate(self) -> List[str]:
-        """Validate global normalization configuration parameters."""
+        """Validate color normalization configuration parameters."""
         errors = []
         
         if not (0.0 < self.percentile <= 100.0):
@@ -88,7 +85,6 @@ class GlobalNormalizationConfig:
             errors.append(f"warmup_frames ({self.warmup_frames}) must be non-negative")
         
         return errors
-
 
 @dataclass
 class WaveletConfig:
@@ -115,11 +111,6 @@ class WaveletConfig:
     # Downsampling parameters - default for real-time rendering, reduce for better performance 
     target_width: int = 256
 
-    # TODO 36 - Instead of being able to disable global normalization, determine
-    # how I can use it for certain when in the main loop, but access the 
-    # stages of the wavelet cwt call
-    global_norm: GlobalNormalizationConfig = None
-
     # TODO 36 - If global normalization is disabled, would I really even need to
     # be using these? Think of when I would want these old legacy params?
     # Maybe they'd be useful for ^ but atm can't really think of any
@@ -129,11 +120,6 @@ class WaveletConfig:
     epsilon: np.float64 = 1e-12
     output_dtype: np.dtype = np.float32
     
-    def __post_init__(self):
-        """Initialize global normalization config if not provided."""
-        if self.global_norm is None:
-            self.global_norm = GlobalNormalizationConfig()
-    
     def validate(self) -> List[str]:
         """
         Validate critical wavelet configuration parameters.
@@ -142,10 +128,6 @@ class WaveletConfig:
             List[str]: List of validation error messages (empty if valid)
         """
         errors = []
-        
-        # Validate global normalization config
-        if self.global_norm:
-            errors.extend(self.global_norm.validate())
         
         # Legacy normalization validation (still needed for fallback)
         if self.db_floor >= self.db_ceil:
@@ -181,6 +163,8 @@ class VisualizationConfig:
     
     # Texture parameters
     texture_slot: int = 0
+
+    color_norm: ColorNormalizationConfig = field(default_factory=ColorNormalizationConfig)
     
     def __post_init__(self):
         """Initialize window dimensions from system if not provided."""

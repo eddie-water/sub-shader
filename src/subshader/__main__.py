@@ -85,7 +85,7 @@ class SubShader:
             file_path=config.audio.file_path, 
             frame_shape=self.result_shape, 
             num_frames=config.viz.num_frames,
-            gamma=config.viz.gamma
+            config=config.viz
         )
 
         # Loop timer - performance monitoring

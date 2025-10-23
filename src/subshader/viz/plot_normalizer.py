@@ -11,7 +11,7 @@ except ImportError:
     CUPY_AVAILABLE = False
 
 # TODO 36 Rename this. The result of the CWT is "normalized" this more like a "max tracker" as a reference point for the shader color map
-class GlobalNormalizer:
+class PlotNormalizer:
     """Tracks global normalization factor across frames for stable scaling."""
     
     def __init__(
@@ -31,69 +31,63 @@ class GlobalNormalizer:
         self.global_factor = 0.0
         self.frame_count = 0
         self.is_ready = False
+
+    def process(self, frame: Union[np.ndarray, 'cp.ndarray']) -> Union[np.ndarray, 'cp.ndarray']:
+        """
+        Process the frame and return the normalized frame.
+
+        Args:
+            frame (Union[np.ndarray, 'cp.ndarray']): The frame to process.
+
+        Returns:
+            Union[np.ndarray, 'cp.ndarray']: The normalized frame.
+        """
+        self.global_factor = self.update(frame)
+        return self.apply_normalization(frame, self.global_factor)
     
-    def update(self, frame: Union[np.ndarray, 'cp.ndarray'], mask: Optional[Union[np.ndarray, 'cp.ndarray']] = None) -> float:
+    def update(self, frame: Union[np.ndarray, 'cp.ndarray']) -> float:
         """
         Update the global factor with a new frame.
 
         Args:
             frame (Union[np.ndarray, 'cp.ndarray']): The frame to update the global factor with.
-            mask (Optional[Union[np.ndarray, 'cp.ndarray']]): The mask to apply to the frame.
 
         Returns:
             float: The updated global factor.
         """
-        # TODO 36: What is isinstance even checking here?
-        is_cupy = CUPY_AVAILABLE and isinstance(frame, cp.ndarray)
-        xp = cp if is_cupy else np
-        
-        # TODO 36: I don't understnad why this is asrray vs numpy
-        if mask is not None:
-            if is_cupy and not isinstance(mask, cp.ndarray):
-                mask = cp.asarray(mask)
-            elif not is_cupy and isinstance(mask, cp.ndarray):
-                mask = cp.asnumpy(mask)
-            valid_data = frame[mask]
-        else:
-            valid_data = frame.flatten()
-        
-        if valid_data.size == 0:
-            return self.global_factor
-        
-        frame_stat = float(xp.percentile(valid_data, self.percentile))
-        
-        # TODO 36: Feel like this is a little much
+        flat_data = frame.flatten()
+        frame_stat = float(np.percentile(flat_data, self.percentile))
+
         self.global_factor = (1.0 - self.decay_rate) * self.global_factor
         self.global_factor = max(self.global_factor, self.floor_value)
         self.global_factor = max(self.global_factor, frame_stat)
-        
+
         self.frame_count += 1
         if self.frame_count >= self.warmup_frames:
             self.is_ready = True
-        
+
         return self.global_factor
-    
-    def normalize(self, frame: Union[np.ndarray, 'cp.ndarray']) -> Union[np.ndarray, 'cp.ndarray']:
+
+    def apply_normalization(self, data: Union[np.ndarray, 'cp.ndarray'], norm_factor: float) -> Union[np.ndarray, 'cp.ndarray']:
         """
-        Normalize the frame with the global factor.
+        Normalize the data with the normalization factor.
 
         Args:
-            frame (Union[np.ndarray, 'cp.ndarray']): The frame to normalize.
-
+            data (Union[np.ndarray, 'cp.ndarray']): The data to normalize.
+            norm_factor (float): The normalization factor to apply to the frame.
         Returns:
-            Union[np.ndarray, 'cp.ndarray']: The normalized frame.
+            Union[np.ndarray, 'cp.ndarray']: The normalized data.
         """
-        
-        is_cupy = CUPY_AVAILABLE and isinstance(frame, cp.ndarray)
+        is_cupy = CUPY_AVAILABLE and isinstance(data, cp.ndarray)
         xp = cp if is_cupy else np
-        
-        if self.global_factor <= 0:
-            return xp.zeros_like(frame)
-        
-        normalized = frame / self.global_factor
+
+        if norm_factor <= 0:
+            return xp.zeros_like(data)
+
+        normalized = data / norm_factor
         normalized = xp.clip(normalized, 0.0, 1.0)
-        
+
         if self.log_mapping:
             normalized = xp.log1p(normalized) / xp.log1p(1.0)
-        
+
         return normalized

@@ -1,6 +1,7 @@
 # subshader/viz/comparison_navigator.py
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Button
 from abc import ABC, abstractmethod
 
@@ -8,7 +9,7 @@ class NavigatorBase(ABC):
     """
     Abstract base class for plot navigators with figure and button setup
     """
-    
+
     def __init__(self, title=None, cmap="magma"):
         self.window_title = title
         self.cmap = cmap
@@ -58,11 +59,12 @@ class NavigatorBase(ABC):
 class KernelNavigator(NavigatorBase):
     """
     Plot Navigator for kernel analysis:
-      - Cycles through wavelet indices and plots time (L) and FFT (R)
+      - Cycles through wavelet indices plots each kernel in the time domain (L) 
+        and the frequency domain (R)
+      - Plots three different time ranges / zoom levels for each kernel
     """
 
     def __init__(self, np_wavelet, title=None):
-        assert np_wavelet is not None, "np_wavelet is required for KernelNavigator"
         self.np_wavelet = np_wavelet
         super().__init__(title)
 
@@ -188,6 +190,113 @@ class KernelNavigator(NavigatorBase):
         self.i = (self.i + d)
         self._draw()
 
+class DspStageNavigator(NavigatorBase):
+    """
+    Plot Navigator for DSP stage analysis:
+      - Plots every DSP stage of the cwt pipeline
+      - Steps through audio chunks and plots the current audio time series (L)
+        and each DSP stage (R)
+    """
+    def __init__(self, audio_input, wavelet, title=None):
+        self.audio_input = audio_input
+        self.wavelet = wavelet
+        self.gs = gridspec.GridSpec(nrows=5, ncols=2)
+        super().__init__(title)
+
+    def _init_plot_comparison(self):
+        """Initialize figure with 1x5 grid for DSP stage visualization"""
+        self.ax_t = self.fig.add_subplot(1, 2, 1)
+        self.ax_cwt = self.fig.add_subplot(4, 2, 2)
+        self.ax_scl = self.fig.add_subplot(4, 2, 4)
+        self.ax_coi = self.fig.add_subplot(4, 2, 6)
+        self.ax_ds = self.fig.add_subplot(4, 2, 8)
+
+        # Layout
+        self.fig.subplots_adjust(left=0.06, right=0.96, bottom=0.12, top=0.93, wspace=0.15, hspace=0.25)
+
+        # Get audio chunk
+        self.current_audio_chunk = self.audio_input.get_chunk()
+        self.chunk_i = 0
+
+        # Plot audio time series and decorate plots
+        (self.line_audio_t,) = self.ax_t.plot(np.arange(len(self.current_audio_chunk)), self.current_audio_chunk)
+        self.ax_t.set_title("Audio Time Series")
+        self.ax_t.set_xlabel("Samples")
+        self.ax_t.set_ylabel("Amplitude")
+        self.ax_t.margins(x=0, y=0)
+        self.ax_t.grid(True, alpha=0.15)
+
+        # Compute and plot each DSP stage and decorate plots
+        self.cwt_coefs = self.wavelet.class_specific_cwt(self.current_audio_chunk)
+        self.mag_coefs = self.wavelet.compute_mag_pow(self.cwt_coefs)
+        self.im_cwt = self.ax_cwt.imshow(self.mag_coefs, cmap=self.cmap, aspect="auto", origin="lower")
+        self.ax_cwt.set_title("Raw CWT")
+        self.ax_cwt.set_ylabel("Freq Bin")
+        self.ax_cwt.set_xticks([])
+        self.ax_cwt.set_xticklabels([])
+
+        self.scl_coefs = self.wavelet.normalize_by_scale(self.cwt_coefs)
+        self.mag_coefs = self.wavelet.compute_mag_pow(self.scl_coefs)
+        self.im_scl = self.ax_scl.imshow(self.mag_coefs, cmap=self.cmap, aspect="auto", origin="lower")
+        self.ax_scl.set_title("Scale Normalization")
+        self.ax_scl.set_ylabel("Freq Bin")
+        self.ax_scl.set_xticks([])
+        self.ax_scl.set_xticklabels([])
+
+        self.coi_coefs = self.wavelet.extract_reliable_region(self.mag_coefs)
+        self.im_coi = self.ax_coi.imshow(self.coi_coefs, cmap=self.cmap, aspect="auto", origin="lower")
+        self.ax_coi.set_title("Cone of Influence")
+        self.ax_coi.set_ylabel("Freq Bin")
+        self.ax_coi.set_xticks([])
+        self.ax_coi.set_xticklabels([])
+
+        self.ds_coefs = self.wavelet.downsample(self.coi_coefs)
+        self.im_ds = self.ax_ds.imshow(self.ds_coefs, cmap=self.cmap, aspect="auto", origin="lower")
+        self.ax_ds.set_title("Downsampled")
+        self.ax_ds.set_xlabel("Time")
+        self.ax_ds.set_ylabel("Freq Bin")
+
+        # Colorbar
+        self.fig.colorbar(self.im_ds, ax=[self.ax_cwt, self.ax_scl, self.ax_coi, self.ax_ds], fraction=0.025, pad=0.02)
+
+    def _draw(self, step=0):
+        """Draw DSP stage visualization"""
+        self.current_audio_chunk = self.audio_input.get_chunk()
+        self.chunk_i += 1
+
+        self.line_audio_t.set_data(np.arange(len(self.current_audio_chunk)), self.current_audio_chunk)
+        self.ax_t.set_xlim(0, len(self.current_audio_chunk))
+        self.ax_t.relim(); self.ax_t.autoscale(axis="y", tight=True)
+
+        self.cwt_coefs = self.wavelet.class_specific_cwt(self.current_audio_chunk)
+        self.mag_coefs = self.wavelet.compute_mag_pow(self.cwt_coefs)
+        self.im_cwt.set_data(self.mag_coefs)
+        self.ax_cwt.set_xlim(0, self.cwt_coefs.shape[1])
+        self.ax_cwt.set_ylim(0, self.cwt_coefs.shape[0])
+
+        self.scl_coefs = self.wavelet.normalize_by_scale(self.cwt_coefs)
+        self.mag_coefs = self.wavelet.compute_mag_pow(self.scl_coefs)
+        self.im_scl.set_data(self.mag_coefs)
+        self.ax_scl.set_xlim(0, self.scl_coefs.shape[1])
+        self.ax_scl.set_ylim(0, self.scl_coefs.shape[0])
+
+        self.coi_coefs = self.wavelet.extract_reliable_region(self.mag_coefs)
+        self.im_coi.set_data(self.coi_coefs)
+        self.ax_coi.set_xlim(0, self.coi_coefs.shape[1])
+        self.ax_coi.set_ylim(0, self.coi_coefs.shape[0])
+
+        self.ds_coefs = self.wavelet.downsample(self.coi_coefs)
+        self.im_ds.set_data(self.ds_coefs)
+        self.ax_ds.set_xlim(0, self.ds_coefs.shape[1])
+        self.ax_ds.set_ylim(0, self.ds_coefs.shape[0])
+
+        self.fig.suptitle(f"DSP Stage Visualization - Chunk {self.chunk_i}")
+        self.fig.canvas.draw_idle()
+
+    def _step(self, d):
+        """Handle stepping through audio chunks"""
+        self.i = (self.i + d)
+        self._draw()
 
 class TransformNavigator(NavigatorBase):
     """
@@ -197,15 +306,11 @@ class TransformNavigator(NavigatorBase):
     """
     
     def __init__(self, audio_input, py_wavelet, cp_wavelet, cwt_function, title=None, cmap="magma"):
-        assert all([audio_input, py_wavelet, cp_wavelet]), \
-            "audio_input, py_wavelet, and cp_wavelet are required for TransformNavigator"
-        if cwt_function is None:
-            raise ValueError("A cwt_function is required for TransformNavigator")
-        
         self.audio_input = audio_input
         self.py_wavelet = py_wavelet
         self.cp_wavelet = cp_wavelet
         self.cwt_function = cwt_function
+
         super().__init__(title, cmap)
     
     def _init_plot_comparison(self):
@@ -223,7 +328,7 @@ class TransformNavigator(NavigatorBase):
         self.chunk_i = 0
 
         # Plot audio time series and decorate plots
-        (self.l_ts,) = self.ax_t.plot(np.arange(len(self.current_audio_chunk)), self.current_audio_chunk)
+        (self.line_audio_t,) = self.ax_t.plot(np.arange(len(self.current_audio_chunk)), self.current_audio_chunk)
         self.ax_t.set_title("Audio Time Series")
         self.ax_t.set_xlabel("Samples")
         self.ax_t.set_ylabel("Amplitude")
@@ -253,7 +358,7 @@ class TransformNavigator(NavigatorBase):
             self.chunk_i += 1
 
             x = np.arange(len(self.current_audio_chunk))
-            self.l_ts.set_data(x, self.current_audio_chunk)
+            self.line_audio_t.set_data(x, self.current_audio_chunk)
             self.ax_t.set_xlim(x[0], x[-1])
             self.ax_t.relim(); self.ax_t.autoscale(axis="y", tight=True)
 

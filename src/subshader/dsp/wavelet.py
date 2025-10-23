@@ -27,7 +27,6 @@ import cupy as cp
 from cupyx.scipy import fft as cp_fft
 import pywt
 
-from subshader.utils.global_normalizer import GlobalNormalizer
 from subshader.utils.logging import get_logger
 
 from ..config import WaveletConfig
@@ -97,19 +96,6 @@ class Wavelet(ABC):
             float(self.config.reliable_mid_section_p)
         )
 
-        # TODO 36 - Should global normalization be here or closer to the circular plot buffer?
-        # Initialize global normalizer if enabled
-        self.global_normalizer: Optional[GlobalNormalizer]
-        if self.config.global_norm.enabled:
-            self.global_normalizer = GlobalNormalizer(
-                percentile=self.config.global_norm.percentile,
-                decay_rate=self.config.global_norm.decay_rate,
-                floor_value=self.config.global_norm.floor_value,
-                warmup_frames=self.config.global_norm.warmup_frames,
-                log_mapping=self.config.global_norm.log_mapping,
-            )
-        else:
-            self.global_normalizer = None
 
     def _generate_chromatic_scale(self,
                                   root_note: np.float64,
@@ -214,8 +200,7 @@ class Wavelet(ABC):
         # Downsample to target width
         downsampled_coefs: np.ndarray[np.floating] = self.downsample(reliable_coefs, self.output_n)
 
-        # Apply global normalization (if configured)
-        return self.normalize_globally(downsampled_coefs)
+        return downsampled_coefs
 
     @abstractmethod
     def class_specific_cwt(self, data: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
@@ -316,40 +301,6 @@ class Wavelet(ABC):
         norm_vals = (db_vals - db_floor) / (db_ceil - db_floor)
 
         return norm_vals.astype(np.float64)
-    
-    # TODO 36 wtf is this? Why is is it done two different places and differently?
-    def normalize_globally(self, raw_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
-        """
-        Apply global normalization using the GlobalNormalizer.
-
-        This method computes magnitude, updates the global normalization factor,
-        and returns normalized values in [0, 1] range.
-
-        Args:
-            raw_coefs: Real-valued CWT magnitudes or power.
-
-        Returns:
-            Globally normalized magnitudes in [0, 1]. Dtype follows
-            ``config.output_dtype``.
-        """
-        if self.global_normalizer is None:
-            # If disabled, pass-through with casting to output dtype
-            return np.asarray(raw_coefs, dtype=self.config.output_dtype)
-
-        # Compute magnitude of the CWT coefficients
-        mag = np.abs(raw_coefs)
-
-        # Create a valid data mask (exclude very small values that might be noise)
-        valid_mask = mag > self.config.epsilon
-
-        # Update global normalization factor
-        self.global_normalizer.update(mag, mask=valid_mask)
-
-        # Apply global normalization
-        normalized = self.global_normalizer.normalize(mag)
-
-        # Ensure output type consistency
-        return normalized.astype(self.config.output_dtype)
     
     def downsample(self,
                    coefs: np.ndarray[np.floating],
@@ -545,7 +496,7 @@ class NumPyWavelet(AntsWavelet):
         Returns:
             Real-valued TF matrix (num_freqs, input_n) 
         """
-        output_tf: np.ndarray[np.float64] = np.zeros((self.num_freqs, self.input_n), dtype=np.float64)
+        output_tf: np.ndarray[np.complex64] = np.zeros((self.num_freqs, self.input_n), dtype=np.complex64)
 
         # Convolve input data and each wavelet kernel via frequency domain multiplication
         for i, w in enumerate(self.wavelets):
@@ -553,7 +504,7 @@ class NumPyWavelet(AntsWavelet):
             conv = ifft(input_f * w.kernel_f)
             conv_valid = conv[w.slice]
             output_tf[i, :] = conv_valid
-        # Return as real-valued array (parent method expects complex; here we relax)
+
         return output_tf
 
     def cleanup(self) -> None:
@@ -572,6 +523,7 @@ class CuPyWavelet(AntsWavelet):
         for w in self.wavelets:
             w.upload_to_gpu()
 
+        # TODO-36 NEXT - what's the purpose of this being here?
         self.scale_bias = np.sqrt(self.freqs).astype(np.float64)
         self.scale_bias = cp.asarray(self.scale_bias, dtype=cp.float32)
 

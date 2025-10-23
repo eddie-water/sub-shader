@@ -26,7 +26,7 @@ from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumPyWavelet, CuPyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
-from subshader.viz.comparison_navigator import KernelNavigator, TransformNavigator
+from subshader.viz.comparison_navigator import KernelNavigator, DspStageNavigator, TransformNavigator
 
 # =============================================================================
 # CONFIGURATION
@@ -103,7 +103,7 @@ class Benchmark():
             file_path=config.audio.file_path,
             frame_shape=self.plot_shape,
             num_frames=config.viz.num_frames,
-            gamma=config.viz.gamma
+            config=config.viz
         )
 
         # Function List and Dummy Arguments 
@@ -304,17 +304,23 @@ class Benchmark():
         # Static Wavelet Kernel Analysis: Time vs Frequency Domain
         KernelNavigator(
             np_wavelet=self.np_wavelet,
-            title="Static Wavelet Kernel Plot Analysis"
+            title="Static Wavelet Kernel Analysis"
         )
 
-        # Static CWT Analysis: Audio Time Series vs CWT Time-Freq Coefficients
-        TransformNavigator(
+        DspStageNavigator(
             audio_input=self.audio_input,
-            py_wavelet=self.py_wavelet,
-            cp_wavelet=self.cp_wavelet,
-            cwt_function=lambda wavelet, data: wavelet.class_specific_cwt(data),
-            title=f"Static Class-Specific CWT Plot Analysis and Comparison — {os.path.basename(config.audio.file_path)}"
+            wavelet=self.np_wavelet,
+            title="Static DSP Stage Analysis"
         )
+
+        # # Static CWT Analysis: Audio Time Series vs CWT Time-Freq Coefficients
+        # TransformNavigator(
+        #     audio_input=self.audio_input,
+        #     py_wavelet=self.py_wavelet,
+        #     cp_wavelet=self.cp_wavelet,
+        #     cwt_function=lambda wavelet, data: wavelet.class_specific_cwt(data),
+        #     title=f"Static Class-Specific CWT Plot Analysis and Comparison — {os.path.basename(config.audio.file_path)}"
+        # )
 
         # TODO 36 NOW - Do a static plot analysis for the cwt that has 
         # normalization - distinguish global normalization for the viz plotter

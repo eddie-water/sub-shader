@@ -15,13 +15,18 @@ audio visualization:
 
 import os
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import numpy as np
 import pyqtgraph as pg
 import moderngl
 import glfw
+
 from .shaders import get_vertex_shader_source, get_fragment_shader_source
-from ..utils.logging import get_logger
+from .plot_normalizer import PlotNormalizer
+
+from subshader.utils.logging import get_logger
+from subshader.config import VisualizationConfig
 
 # =============================================================================
 # LOGGING
@@ -73,7 +78,11 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], num_frames: int = 32, gamma: float = 0.35):
+    def __init__(self, 
+                 file_path: str, 
+                 frame_shape: tuple[int, int],
+                 num_frames: int = 32,
+                 config: Optional[VisualizationConfig] = None):
         """
         2D data visualization using shaders
 
@@ -81,11 +90,13 @@ class ShaderPlot(Plotter):
             file_path (str): Path to the file to plot.
             frame_shape (tuple[int, int]): Shape of each data frame to plot.
             num_frames (int): Number of frames to use for the visualization.
+            gamma (float): Gamma correction factor (0.0 to 1.0).
+            config (Optional[VisualizationConfig]): Configuration for the visualizer
         """
         super().__init__(file_path, frame_shape)
 
         # Circular buffer for scrolling plot
-        self.plot_frame_buffer = RollingFrameBuffer(num_frames, self.y_n, self.x_n)
+        self.plot_frame_buffer = RollingFrameBuffer(num_frames, self.y_n, self.x_n, config.color_norm)
 
         # Create GL Context - handles window creation and OpenGL context setup
         file_name = os.path.basename(file_path)
@@ -94,10 +105,10 @@ class ShaderPlot(Plotter):
         # GPU Renderer - handles shader compilation, texture management, and rendering
         texture_height, texture_width = self.plot_frame_buffer.get_flattened_buffer_shape()
         self.renderer = Renderer(self.gl_context.ctx, texture_width, texture_height)
-        
+
         # Set gamma correction uniform
-        self.renderer.shader['gamma'] = gamma
-        log.info(f"Set gamma uniform: {gamma}")
+        self.renderer.shader['gamma'] = config.gamma
+        log.info(f"Set gamma uniform: {self.renderer.shader['gamma']}")
 
     def update_plot(self, plot_values: np.ndarray):
         """
@@ -119,12 +130,6 @@ class ShaderPlot(Plotter):
         self.gl_context.clear_graphic()
         self.renderer.render_graphic()
         self.gl_context.display_graphic()
-    
-    def update_fps(self, fps: int):
-        """
-        GPU visualizer doesn't have FPS display
-        """
-        raise NotImplementedError("FPS display not implemented for GPU visualizer")
     
     def should_window_close(self):
         """
@@ -408,7 +413,7 @@ class Renderer:
         return texture
 
 class RollingFrameBuffer:
-    def __init__(self, num_frames, height, width):
+    def __init__(self, num_frames, height, width, color_norm_config):
         """
         Handles circular buffer for scrolling visualization
         
@@ -428,6 +433,15 @@ class RollingFrameBuffer:
         # Pre-allocate flattened buffer
         self.flattened_buffer = np.zeros((height, num_frames * width), dtype=np.float32)
 
+        self.plot_normalizer = PlotNormalizer(
+            percentile=color_norm_config.percentile,
+            decay_rate=color_norm_config.decay_rate,
+            floor_value=color_norm_config.floor_value,
+            warmup_frames=color_norm_config.warmup_frames,
+            log_mapping=color_norm_config.log_mapping,
+        )
+
+
     # =============================================================================
     # PUBLIC METHODS - External interface
     # =============================================================================
@@ -437,13 +451,49 @@ class RollingFrameBuffer:
         if frame_data.shape != (self.height, self.width):
             log.error(f"Frame data shape mismatch: expected {(self.height, self.width)}, got {frame_data.shape}")
             raise ValueError(f"Expected shape {(self.height, self.width)}, got {frame_data.shape}")
-        
-        self.frames[self.frame_index] = frame_data
+
+        self.frames[self.frame_index] = self.plot_normalizer.process(frame_data)
         self.frame_index = (self.frame_index + 1) % self.num_frames
-        
+
         # Update flattened buffer immediately
         self._update_flattened_buffer()
-    
+
+    # TODO 36 wtf is this? Why is is it done two different places and differently?
+    def track_max_value(self, raw_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+        """
+        Track the max value of the CWT coefficients using the PlotNormalizer.
+
+        Args:
+            raw_coefs: Real-valued CWT magnitudes or power.
+
+        Returns:
+            Globally normalized magnitudes in [0, 1]. Dtype follows
+            ``config.output_dtype``.
+        """
+        # TODO-36 NEXT ensure this is doing what it should be doing
+        # - Should just be tracking the max value of the passed in coefs, so when we go to plot
+        # all we're doing is using the max value to ensure the next plots we're 
+        # visualizing are relative to each other in magnitude
+
+        if self.global_normalizer is None:
+            # If disabled, pass-through with casting to output dtype
+            return np.asarray(raw_coefs, dtype=self.config.output_dtype)
+
+        # Compute magnitude of the CWT coefficients
+        mag = np.abs(raw_coefs)
+
+        # Create a valid data mask (exclude very small values that might be noise)
+        valid_mask = mag > self.config.epsilon
+
+        # Update global normalization factor
+        self.global_normalizer.update(mag, mask=valid_mask)
+
+        # Apply global normalization
+        normalized = self.global_normalizer.normalize(mag)
+
+        # Ensure output type consistency
+        return normalized.astype(self.config.output_dtype)
+
     def get_flattened_buffer_shape(self):
         """
         Get the shape of the flattened buffer
