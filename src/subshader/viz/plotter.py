@@ -78,11 +78,7 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, 
-                 file_path: str, 
-                 frame_shape: tuple[int, int],
-                 num_frames: int = 32,
-                 config: Optional[VisualizationConfig] = None):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], config: VisualizationConfig):
         """
         2D data visualization using shaders
 
@@ -96,19 +92,23 @@ class ShaderPlot(Plotter):
         super().__init__(file_path, frame_shape)
 
         # Circular buffer for scrolling plot
-        self.plot_frame_buffer = RollingFrameBuffer(num_frames, self.y_n, self.x_n, config.color_norm)
+        self.plot_frame_buffer = RollingFrameBuffer(num_frames=config.num_frames, 
+                                                    height=self.y_n, 
+                                                    width=self.x_n, 
+                                                    color_norm_config=config.color_norm)
 
         # Create GL Context - handles window creation and OpenGL context setup
         file_name = os.path.basename(file_path)
+
         self.gl_context = GLContext(title=f"SubShader - {file_name}")
 
         # GPU Renderer - handles shader compilation, texture management, and rendering
         texture_height, texture_width = self.plot_frame_buffer.get_flattened_buffer_shape()
-        self.renderer = Renderer(self.gl_context.ctx, texture_width, texture_height)
 
-        # Set gamma correction uniform
-        self.renderer.shader['gamma'] = config.gamma
-        log.info(f"Set gamma uniform: {self.renderer.shader['gamma']}")
+        self.renderer = Renderer(self.gl_context.ctx, 
+                                 texture_width,
+                                 texture_height,
+                                 config.gamma)
 
     def update_plot(self, plot_values: np.ndarray):
         """
@@ -130,13 +130,13 @@ class ShaderPlot(Plotter):
         self.gl_context.clear_graphic()
         self.renderer.render_graphic()
         self.gl_context.display_graphic()
-    
+
     def should_window_close(self):
         """
         Check if user wants to close the window
         """  
         return self.gl_context.should_close()
-    
+
     def cleanup(self):
         """
         Clean shutdown
@@ -147,7 +147,7 @@ class GLContext:
     def __init__(self, width=1920, height=1080, title="SubShader"):
         """
         Handles GLFW window and OpenGL context setup
-        
+
         Args:
             width (int): Default window width 
             height (int): Default window height
@@ -288,7 +288,7 @@ class Renderer:
     # Texture slot that tells the fragment shader which texture to read from
     TEXTURE_SLOT = 0
 
-    def __init__(self, ctx, texture_width, texture_height):
+    def __init__(self, ctx, texture_width, texture_height, gamma):
         """
         Main GPU rendering component that 
             - Compiles the shaders 
@@ -305,7 +305,7 @@ class Renderer:
         self.ctx = ctx
         
         # Initialize core rendering components
-        self.shader = self._compile_shaders()
+        self.shader = self._compile_shaders(gamma)
         self.vbo, self.vao = self._setup_rendering_geometry(self.shader)
         self.texture = self._setup_texture(self.shader, texture_width, texture_height)
 
@@ -347,17 +347,20 @@ class Renderer:
     # PRIVATE METHODS - Internal implementation
     # =============================================================================
 
-    def _compile_shaders(self):
+    def _compile_shaders(self, gamma):
         """
         Compile and link vertex (geometry) and fragment (color) shaders into 
         a GPU-executable program
         """
+
         vertex_shader = get_vertex_shader_source()
         fragment_shader = get_fragment_shader_source()
         
         log.info("Compiling shaders...")
         shader = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
         log.info("Shader compilation successful!")
+
+        shader['gamma'] = gamma
 
         return shader
 
@@ -433,13 +436,11 @@ class RollingFrameBuffer:
         # Pre-allocate flattened buffer
         self.flattened_buffer = np.zeros((height, num_frames * width), dtype=np.float32)
 
-        self.plot_normalizer = PlotNormalizer(
-            percentile=color_norm_config.percentile,
-            decay_rate=color_norm_config.decay_rate,
-            floor_value=color_norm_config.floor_value,
-            warmup_frames=color_norm_config.warmup_frames,
-            log_mapping=color_norm_config.log_mapping,
-        )
+        self.plot_normalizer = PlotNormalizer(percentile=color_norm_config.percentile,
+                                              decay_rate=color_norm_config.decay_rate,
+                                              floor_value=color_norm_config.floor_value,
+                                              warmup_frames=color_norm_config.warmup_frames,
+                                              log_mapping=color_norm_config.log_mapping)
 
 
     # =============================================================================

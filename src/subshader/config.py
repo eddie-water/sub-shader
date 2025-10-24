@@ -149,27 +149,13 @@ class WaveletConfig:
 class VisualizationConfig:
     """Configuration for visualization rendering."""
     
-    # Window parameters (auto-derived from system display)
-    window_width: int = None
-    window_height: int = None
-    # Frame buffer parameters - optimized for texture limits and performance  
-    num_frames: int = 64  # Increased for smoother scrolling (64 * 256 = 16384, exactly at OpenGL limit) 
-    
-    # Shader parameters - optimized for visual clarity
-    scaling_factor: float = 0.25  # Boost dim audio signals for visibility (currently unused in shader)
-    gamma: float = 0.4  # Slightly increased gamma for better contrast
+    # Number of frames in Circular Plot Buffer
+    num_frames: int = 32
 
-    # Note: Colormap is now handled by the inferno colormap in the fragment shader
-    
-    # Texture parameters
-    texture_slot: int = 0
+    # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
+    gamma: float = 1.0
 
     color_norm: ColorNormalizationConfig = field(default_factory=ColorNormalizationConfig)
-    
-    def __post_init__(self):
-        """Initialize window dimensions from system if not provided."""
-        if self.window_width is None or self.window_height is None:
-            self.window_width, self.window_height = _get_system_display_size()
     
     def validate(self) -> List[str]:
         """
@@ -182,14 +168,12 @@ class VisualizationConfig:
         
         if self.num_frames <= 0:
             errors.append(f"num_frames ({self.num_frames}) must be positive")
-        
-        if self.scaling_factor <= 0:
-            errors.append(f"scaling_factor ({self.scaling_factor}) must be positive")
-            
-        if self.gamma <= 0:
+
+        if self.gamma <= 0.0:
             errors.append(f"gamma ({self.gamma}) must be positive")
-        
-        # Note: colormap validation removed as colors are now handled by inferno shader
+
+        if self.color_norm:
+            errors.extend(self.color_norm.validate())
         
         return errors
 
@@ -317,7 +301,7 @@ class ProcessingConfig:
                 f"(CWT: {cwt_memory_mb:.1f}, Texture: {texture_memory_mb:.1f}, Buffer: {buffer_memory_mb:.1f}). "
                 f"Consider reducing num_frames or target_width."
             )
-        
+
         return errors
 
     def _validate_cpu_memory(self) -> List[str]:

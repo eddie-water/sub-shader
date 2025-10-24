@@ -102,7 +102,6 @@ class Benchmark():
         self.shader = ShaderPlot(
             file_path=config.audio.file_path,
             frame_shape=self.plot_shape,
-            num_frames=config.viz.num_frames,
             config=config.viz
         )
 
