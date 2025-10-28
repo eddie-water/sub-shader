@@ -58,7 +58,7 @@ class AudioInput:
             path (str): Path to the audio file.
             chunk_size (int): Size of the audio frame in samples.
             overlap_factor (float): Overlap between consecutive windows (0.0 to 
-                1.0). 0.5 means 50% overlap to reduce edge artifacts.
+                1.0). 0.5 = 50% overlap to reduce edge artifacts.
         """
         self.file_path = path
         self.chunk_size = chunk_size
@@ -74,9 +74,9 @@ class AudioInput:
         try:
             self.file_handle = sf.SoundFile(self.file_path, 'r')
             self.sample_rate = np.float64(self.file_handle.samplerate)
-            self.total_frames = self.file_handle.frames
-            self.pos = 0
-            log.info(f"Audio file loaded: {self.file_path} ({self.total_frames} frames, {self.sample_rate} Hz)")
+            self.total_samples = self.file_handle.frames
+            self.file_pos = 0
+            log.info(f"Audio file loaded: {self.file_path} ({self.total_samples} frames, {self.sample_rate} Hz)")
             log.info(f"Window size: {self.chunk_size}, Overlap: {self.overlap_factor:.1%}, Hop size: {self.hop_size}")
         except Exception as e:
             log.error(f"Failed to load audio file {self.file_path}: {e}")
@@ -84,30 +84,29 @@ class AudioInput:
 
     def get_chunk(self) -> np.ndarray[np.float64]:
         """
-        Gets an overlapping frame of audio to reduce edge artifacts.
+        Retrieves the next chunk of audio samples from the file specified by the
+        current file position and its hop size to acheive overlapping chunks of 
+        audio
         
-        Uses overlapping windows where each new frame advances by hop_size
-        instead of the full window_size, providing better continuity for
-        wavelet analysis and reducing cone of influence artifacts.
-
         Returns:
-            np.ndarray: The next frame of audio data from the file.
-                       None if EOF reached.
+            np.ndarray: The next chunk of audio data from the file. The end of
+                file (EOF) is indicated to the caller when None is returned
         """
-        if self.pos + self.chunk_size > self.total_frames:
-            return None  # Signal EOF
+        # Check if we are going to seek beyond the EOF
+        if self.file_pos + self.hop_size > self.total_samples:
+            return None
         
-        # Seek and read (file stays open)
-        self.file_handle.seek(self.pos)
-        frame = self.file_handle.read(self.chunk_size, dtype=np.float64)
-        
-        # Convert stereo to mono 
-        if len(frame.shape) > 1:
-            frame = frame[:, 0]
-            
-        # Advance by hop_size instead of full window_size for overlap
-        self.pos += self.hop_size
-        return frame
+        # Seek to the file position and retrieve the next chunk of audio samples
+        self.file_handle.seek(self.file_pos)
+        sample_chunk = self.file_handle.read(self.chunk_size, dtype=np.float64)
+        self.file_pos += self.hop_size
+
+        # Convert stereo to mono if necessary
+        if len(sample_chunk.shape) > 1:
+            sample_chunk = sample_chunk[:, 0]
+
+        return sample_chunk
+
     def get_sample_rate(self) -> np.float64:
         """
         Gets the sample rate of the audio file.
@@ -125,7 +124,7 @@ class AudioInput:
         if hasattr(self, 'file_handle'):
             self.file_handle.close()
 
-    def _display_file_info(self) -> None:
+    def _report_file_info(self) -> None:
         """
         Display File Information
             Logs information about the audio file
