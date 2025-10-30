@@ -73,7 +73,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.coefs_py_wavelet = self.py_wavelet.cwt_pipeline(self.audio_data)
+        self.py_coefs = self.py_wavelet.cwt_pipeline(self.audio_data)
 
         self.np_wavelet = NumPyWavelet(
             sample_rate=self.sample_rate, 
@@ -81,7 +81,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.coefs_np_wavelet = self.np_wavelet.cwt_pipeline(self.audio_data)
+        self.np_coefs = self.np_wavelet.cwt_pipeline(self.audio_data)
 
         self.cp_wavelet = CuPyWavelet(
             sample_rate=self.sample_rate, 
@@ -89,7 +89,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.coefs_cp_wavelet = self.cp_wavelet.cwt_pipeline(self.audio_data)
+        self.cp_coefs = self.cp_wavelet.cwt_pipeline(self.audio_data)
 
         # Plotter Implementations
         self.plot_shape = self.py_wavelet.get_output_shape()
@@ -107,12 +107,12 @@ class Benchmark():
 
         # Function List and Dummy Arguments 
         self.func_list = [
-            (self.audio_input.get_chunk,         ()),
-            (self.py_wavelet.cwt_pipeline,        (self.audio_data,)),
-            (self.np_wavelet.cwt_pipeline,        (self.audio_data,)),
-            (self.cp_wavelet.cwt_pipeline,        (self.audio_data,)),
-            (self.pyqtg.update_plot,             (self.coefs_py_wavelet,)),
-            (self.shader.update_plot,            (self.coefs_cp_wavelet,))
+            (self.audio_input.get_chunk,    ()),
+            (self.py_wavelet.cwt_pipeline,  (self.audio_data,)),
+            (self.np_wavelet.cwt_pipeline,  (self.audio_data,)),
+            (self.cp_wavelet.cwt_pipeline,  (self.audio_data,)),
+            (self.pyqtg.update_plot,        (self.py_coefs,)),
+            (self.shader.update_plot,       (self.cp_coefs,))
         ]
 
         # Tracks the run time of each function
@@ -123,16 +123,37 @@ class Benchmark():
         Static Plot Analysis and Comparisons
         """
         # Static Wavelet Kernel Analysis: Time vs Frequency Domain
-        KernelNavigator(
-            np_wavelet=self.np_wavelet,
-            title="Static Wavelet Kernel Analysis"
-        )
+        # TODO 36 - it would be nice to have a way to see the construction of 
+        # these wavelets - original sine wave and its time support and the 
+        # gaussian bell curve used to create the wavelet
 
-        DspStageNavigator(
-            audio_input=self.audio_input,
-            wavelet=self.np_wavelet,
-            title="Static DSP Stage Analysis"
-        )
+        
+
+        # KernelNavigator(
+        #     np_wavelet=self.np_wavelet,
+        #     title="Static Wavelet Kernel Analysis"
+        # )
+
+        # DspStageNavigator(
+        #     audio_input=self.audio_input,
+        #     wavelet=self.np_wavelet,
+        #     title="Static DSP Stage Analysis"
+        # )
+
+        # # Static CWT Analysis: Audio Time Series vs CWT Time-Freq Coefficients
+        # TransformNavigator(
+        #     audio_input=self.audio_input,
+        #     py_wavelet=self.py_wavelet,
+        #     cp_wavelet=self.cp_wavelet,
+        #     cwt_function=lambda wavelet, data: wavelet.class_specific_cwt(data),
+        #     title=f"Static Class-Specific CWT Plot Analysis and Comparison — {os.path.basename(config.audio.file_path)}"
+        # )
+
+        # Then do a global normalization plot analysis where we try different 
+        # types of normalizaition params, be able to turn off the warm up to isolate
+
+        # Then do a static plot analysis for the coi where we try out different
+        # coi region lengths - see what's obnoxious vs what's needed
 
     def dynamic_plot_analysis(self):
         print()

@@ -28,6 +28,7 @@ from cupyx.scipy import fft as cp_fft
 import pywt
 
 from subshader.utils.logging import get_logger
+from subshader.dsp.wavelet_kernel import WaveletKernel
 
 from ..config import WaveletConfig
 
@@ -95,7 +96,6 @@ class Wavelet(ABC):
         self.reliable_slice: slice = self._create_reliable_region_slice(
             float(self.config.reliable_mid_section_p)
         )
-
 
     def _generate_chromatic_scale(self,
                                   root_note: np.float64,
@@ -354,59 +354,6 @@ class Wavelet(ABC):
         """
         raise NotImplementedError
 
-class WaveletKernel():
-    def __init__(self,
-                 f: np.float64,
-                 input_n: int,
-                 sample_rate: int,
-                 num_cycles: int,
-                 num_fwhm_cycles: int) -> tuple[list[np.ndarray[np.complex64]], list[np.ndarray[np.complex64]]]:
-
-        self.center_freq: np.float64 = f
-
-        # Wavelets in time/freq domain and their length attributes
-        self.kernel_t: np.ndarray[np.complex64] = None
-        self.kernel_f: np.ndarray[np.complex64] = None
-        self.kernel_n: int = None
-        self.half_kernel_n: int = None
-        self.conv_n: Optional[int] = None
-
-        # Wavelet duration in sec for the number of cycles at this center frequency
-        wavelet_dur_s: np.float64 = num_cycles / self.center_freq
-
-        # Number of samples in the kernel (s * samples / s)
-        wavelet_n: int = int(np.round(wavelet_dur_s * sample_rate))
-
-        # Time vector centered at t = 0
-        t: np.ndarray[np.float64] = (np.arange(wavelet_n, dtype=np.float64) / sample_rate) - (wavelet_dur_s / 2)
-
-        # Gaussian bell duration in sec for the width of the curve where the energy > half the max
-        fwhm_dur_s: np.float64 = num_fwhm_cycles / self.center_freq
-
-        # Complex Morlet Wavelet in the time domain: sinusoid * Gaussian bell curve
-        sinusoid: np.ndarray[np.complex64] = np.exp(1j * 2 * PI * f * t)
-        gaussian: np.ndarray[np.complex64] = np.exp(-4 * np.log(2) * (t ** 2) / fwhm_dur_s ** 2)
-        cmw: np.ndarray[np.complex64] = sinusoid * gaussian
-
-        self.kernel_t = cmw.astype(np.complex64)
-        self.kern_n = int(len(self.kernel_t))
-        self.conv_n = int(input_n + self.kern_n - 1)
-        self.half_kern_n = int(self.kern_n // 2)
-        self.slice = slice(self.half_kern_n, self.half_kern_n + input_n)
-
-        # Store the frequency domain representation of the wavelet kernel
-        self.kernel_f = fft(self.kernel_t, self.conv_n)
-
-        # GPU-specific attributes
-        self.kernel_f_gpu: Optional[cp.ndarray] = None
-        self.slice_gpu: slice = self.slice 
-
-    def upload_to_gpu(self) -> None:
-        """
-        Upload the wavelet kernel to the GPU.
-        """
-        self.kernel_f_gpu = cp.asarray(self.kernel_f, dtype=cp.complex64)
-
 class PyWavelet(Wavelet):
     def __init__(self,
                  sample_rate: int,
@@ -510,7 +457,6 @@ class NumPyWavelet(AntsWavelet):
     def cleanup(self) -> None:
         return None
 
-
 class CuPyWavelet(AntsWavelet):
     def __init__(self,
                  sample_rate: int,
@@ -546,7 +492,7 @@ class CuPyWavelet(AntsWavelet):
         for i, w in enumerate(self.wavelets):
             input_f = cp_fft.fftn(input_t_cp, w.conv_n)
             conv = cp_fft.ifftn(input_f * w.kernel_f_gpu)
-            conv_valid = conv[w.slice_gpu]
+            conv_valid = conv[w.slice_start_gpu:w.slice_end_gpu]
             self.tf_gpu[i, :] = conv_valid
 
         return cp.asnumpy(self.tf_gpu)
