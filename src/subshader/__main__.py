@@ -38,7 +38,10 @@ log = get_logger(__name__)
 config = get_default_config()
 
 # Override default configs
-config.audio.file_path = "assets/audio/songs/beltran_sc_rip_8bar.wav"
+config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
+# TODO 36 - make the default config in the config.py file 50%
+config.audio.overlap_factor = 0.5
+
 # TODO 36 this breaks when I do != 1.0 - maybe that's why I wasn't seeing much edge effects go away
 config.wavelet.reliable_mid_section_p = 1.0
 
@@ -62,8 +65,8 @@ class SubShader:
     """Main class that orchestrates the audio visualization pipeline."""
 
     def __init__(self):
-        """Initialize the SubShader application and all high levelmodules."""
-        log.info("Init modules...")
+        """Initialize all high level modules."""
+        log.info("Initializing modules...")
 
         # Audio Input - handles file reading and audio getter 
         self.audio_input = AudioInput(path=config.audio.file_path, 
@@ -87,7 +90,7 @@ class SubShader:
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()
         
-        log.info("Init complete")
+        log.info("Initialization complete")
     
     def loop(self):
         """
@@ -107,24 +110,24 @@ class SubShader:
             # Start loop timing
             loop_start = self.loop_timer.start_loop()
 
-            # Grab a chunk of audio and check for end of file
+            # Retrieve audio chunk and check for end of audio
             if (audio_data := self.audio_input.get_chunk()) is None:
-               raise EndOfAudioException("Audio file processing complete - reached EOF")
+               raise EndOfAudioException("Audio file processing complete - reached end of file.")
 
-            # Compute CWT on audio
+            # Perform CWT on audio
             coefs = self.wavelet.cwt_pipeline(audio_data)
 
-            # Update plot with coefficient results
+            # Update plot with CWT results
             self.plotter.update_plot(coefs)
 
             # End loop timing 
             self.loop_timer.end_loop_and_report(loop_start)
 
-        raise WindowCloseException("Window Closed")
+        raise WindowCloseException("Window closed by user")
 
     def cleanup(self):
         """Idempotent cleanup: safe to call any time, even after partial init."""
-        log.info("Cleaning up resources")
+        log.info("Cleaning up module resources")
 
         if self.plotter:
             try:
@@ -169,6 +172,4 @@ def main():
     log.info("Application shutdown complete")
 
 if __name__ == '__main__':
-    # TODO What is the value of the env_init? Can it be tucked in somewhere else?
-    env_init()
     main()

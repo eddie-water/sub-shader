@@ -52,6 +52,35 @@ def _get_system_display_size() -> Tuple[int, int]:
 # =============================================================================
 
 @dataclass
+class AudioConfig:
+    """Configuration for audio processing."""
+
+    # Audio File parameters
+    file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
+    chunk_size: int = 1 << 14 # 16384
+    overlap_factor: float = 0.5     # As a percentage (0.5 = 50% overlap)
+
+    def validate(self) -> List[str]:
+        """
+        Validate critical audio configuration parameters.
+
+        Returns:
+            List[str]: List of validation error messages (empty if valid)
+        """
+        errors = []
+
+        if not os.path.exists(self.file_path):
+            errors.append(f"Audio file not found: {self.file_path}")
+
+        if self.chunk_size <= 0:
+            errors.append(f"chunk_size ({self.chunk_size}) must be positive")
+
+        if not (0.0 <= self.overlap_factor <= 0.9):
+            errors.append(f"overlap_factor ({self.overlap_factor}) must be between 0.0 and 0.9")
+
+        return errors
+
+@dataclass
 class ColorNormalizationConfig:
     """Configuration for color normalization across all data frames."""
     
@@ -175,36 +204,6 @@ class VisualizationConfig:
         if self.color_norm:
             errors.extend(self.color_norm.validate())
         
-        return errors
-
-
-@dataclass
-class AudioConfig:
-    """Configuration for audio processing."""
-    
-    # Audio File parameters
-    file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
-    chunk_size: int = 2048
-    overlap_factor: float = 0.5     # As a percentage (0.5 = 50% overlap)
-
-    def validate(self) -> List[str]:
-        """
-        Validate critical audio configuration parameters.
-        
-        Returns:
-            List[str]: List of validation error messages (empty if valid)
-        """
-        errors = []
-        
-        if not os.path.exists(self.file_path):
-            errors.append(f"Audio file not found: {self.file_path}")
-        
-        if self.chunk_size <= 0:
-            errors.append(f"chunk_size ({self.chunk_size}) must be positive")
-        
-        if not (0.0 <= self.overlap_factor <= 0.9):
-            errors.append(f"overlap_factor ({self.overlap_factor}) must be between 0.0 and 0.9")
-
         return errors
 
 
@@ -356,11 +355,16 @@ class ProcessingConfig:
                 f"WARNING: Very high frame rate estimated: {frames_per_second:.1f} FPS. "
                 f"This may cause excessive GPU updates. Consider increasing chunk_size."
             )
-        elif frames_per_second < 10:  # Very low frame rate  
-            errors.append(
-                f"WARNING: Low frame rate estimated: {frames_per_second:.1f} FPS. "
-                f"This may cause choppy visualization. Consider decreasing chunk_size."
-            )
+        # TODO-36 This check needs to be re-visited because the number of 
+        # samples I need to process depends on the smallest wavelet's time 
+        # support. So either I ditch the lower frequency wavelets (I think this
+        # is the easier option) or I need to figure out a way to optimize 
+        # processing such large chunk of audio data (ideal option4656544564654685)
+        # elif frames_per_second < 10:  # Very low frame rate  
+        #     errors.append(
+        #         f"WARNING: Low frame rate estimated: {frames_per_second:.1f} FPS. "
+        #         f"This may cause choppy visualization. Consider decreasing chunk_size."
+        #     )
         
         return errors
 

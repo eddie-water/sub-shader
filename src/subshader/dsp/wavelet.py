@@ -21,11 +21,15 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Final, Optional, Literal
 
-import numpy as np
-from numpy.fft import fft, ifft
 import cupy as cp
 from cupyx.scipy import fft as cp_fft
+import numpy as np
+from numpy.fft import fft, ifft
 import pywt
+
+# TODO 36 - remove these imports
+from matplotlib import pyplot as plt
+from matplotlib import gridspec
 
 from subshader.utils.logging import get_logger
 from subshader.dsp.wavelet_kernel import WaveletKernel
@@ -52,7 +56,7 @@ class Wavelet(ABC):
     def __init__(self,
                  sample_rate: np.float64,
                  input_n: int,
-                 config: Optional[WaveletConfig] = None) -> None:
+                 config: WaveletConfig) -> None:
         """
         Wavelet base class that all other wavelet classes are derived from.
         Uses a list of frequencies that follows the chromatic scale starting at
@@ -63,9 +67,6 @@ class Wavelet(ABC):
             input_n: The length of the input data (samples).
             config: Configuration object with wavelet parameters.
         """
-        # Config
-        if config is None:
-            config = WaveletConfig()
         self.config: WaveletConfig = config
 
         # Sampling Parameters
@@ -78,24 +79,20 @@ class Wavelet(ABC):
         self.sampling_period: np.float64 = 1.0 / self.sample_rate
 
         # Generate list of frequencies following the chromatic scale
-        self.freqs: np.ndarray[np.float64] = self._generate_chromatic_scale(
-            np.float64(self.config.root_note_a0_hz),
-            int(self.config.num_octaves),
-            int(self.config.notes_per_octave),
-        ).astype(np.float64, copy=False)
+        self.freqs: np.ndarray[np.float64] = self._generate_chromatic_scale(self.config.root_note_a0_hz,
+                                                                            self.config.num_octaves,
+                                                                            self.config.notes_per_octave).astype(np.float64, copy=False)
+
         self.num_freqs: int = int(len(self.freqs))
 
         # Input and output dimensions
         # TODO 36 - Establish the difference between output_size and downsampled_output_size - it's fucking up the plotter
         self.input_n: int = int(input_n)
         self.input_shape: tuple[int] = (self.input_n,)
+        # TODO 36 - need to remove "target wdith" and determine output_n based o
+        # on the reliable region and downsampling amount
         self.output_n: int = int(self.config.target_width)
         self.output_shape: tuple[int, int] = (self.num_freqs, self.output_n)
-
-        # Create a slice for the reliable region of the CWT output
-        self.reliable_slice: slice = self._create_reliable_region_slice(
-            float(self.config.reliable_mid_section_p)
-        )
 
     def _generate_chromatic_scale(self,
                                   root_note: np.float64,
@@ -120,29 +117,6 @@ class Wavelet(ABC):
 
         # Discard frequencies that are unmeasurable
         return freqs[freqs < self.nyquist_freq]
-
-    def _create_reliable_region_slice(self, center_keep: float) -> slice:
-        """
-        Creates a slice that masks just for the reliable mid region of the CWT 
-        output result.
-
-        Args:
-            center_keep (float): As a %, the center region to keep of the CWT 
-            outputresult.
-
-        Returns:
-            slice: A mask used to slice for the reliable mid region of the CWT 
-            output result.
-        """
-        log.info(f"Reliable Region: keeping the middle {center_keep:.1%} of the CWT result")
-        result_width: int = int(self.get_output_shape()[1])
-        if center_keep >= 1.0: 
-            return slice(None)
-        keep: int = int(round(result_width * center_keep))
-        trim: int = max(0, (result_width - keep) // 2)
-
-        # Slice that keeps the reliable middle section of the output result
-        return slice(trim, trim + keep)
 
     def get_input_shape(self) -> tuple[int]:
         """
@@ -184,21 +158,28 @@ class Wavelet(ABC):
             raise ValueError(f"Input data length {input_data.shape[0]} does not match expected input data size {self.input_n}")
 
         # Class-Specific CWT
-        cwt_coefs: np.ndarray[np.complexfloating] = self.class_specific_cwt(np.asarray(input_data, dtype=np.float64))
+        cwt_coefs = self.class_specific_cwt(np.asarray(input_data, dtype=np.float64))
 
         # Scale-Dependent Normalization
-        cwt_coefs: np.ndarray[np.complexfloating] = self.normalize_by_scale(cwt_coefs)
+        cwt_coefs = self.normalize_by_scale(cwt_coefs)
 
         # TODO 36 
         # Standardize this section: mag vs pow units, clamping (don't do this) and downsampling, and global normalization
         # Convert to magnitude or power
-        mag_or_pow: np.ndarray[np.floating] = self.compute_mag_pow(cwt_coefs)
+        mag_or_pow = self.compute_mag_pow(cwt_coefs)
+
+        # TODO 36 - explain how this avoids edge effects with a readme and some 
+        # pictures
+        # "Unreliable" results becuase of edge effects that occur during 
+        # convolution when the wavelet kernels are collecting zero-energy 
+        # contributions at the edges - signals seem artificially weaker here
+        # but really its just the start and stop of the signal
 
         # Avoid edge effects by extracting just reliable region
-        reliable_coefs: np.ndarray[np.floating] = self.extract_reliable_region(mag_or_pow)
+        reliable_coefs = self.discard_unreliable_coefs(mag_or_pow)
 
         # Downsample to target width
-        downsampled_coefs: np.ndarray[np.floating] = self.downsample(reliable_coefs, self.output_n)
+        downsampled_coefs = self.downsample(reliable_coefs, self.output_n)
 
         return downsampled_coefs
 
@@ -220,17 +201,17 @@ class Wavelet(ABC):
 
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
         """
-        Scale-Dependent Normalization to account for energy bias across scales. 
-        At higher scales aka lower frequencies, the wavelet physically gets 
-        wider so naturally it "collects more stuff" aka energy. To compensate 
-        for that, we reduce the energy of the coefficients of a certain scale
-        by its scale (s ≈ 1/f).
+        Scale-Dependent Normalization to account for the energy bias introduced
+        by scaling each wavelet. At higher scales (lower frequencies), the 
+        wavelet physically gets wider so naturally it collects more energy. To 
+        compensate for that, we reduce the energy of the cwt's result by square 
+        root of the scale where s ≈ 1/f -> 1/sqrt(s) ≈ sqrt(f) 
 
         Args:
-            cwt_coefs: Complex CWT coefficients, shape: num_freqs x time_samples
+            cwt_coefs: Complex CWT coefficients.
 
         Returns:
-            Complex CWT coefficients after scale normalization.
+            Scale-normalized complex CWT coefficients.
         """
         return cwt_coefs * np.sqrt(self.freqs[:, None])
     
@@ -255,21 +236,19 @@ class Wavelet(ABC):
             # Fallback: magnitude
             return np.abs(cwt_coefs)
 
-    def extract_reliable_region(self, cwt_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+    @abstractmethod
+    def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
-        Extract the reliable center region from CWT coefficients to avoid edge artifacts.
+        Discards the unreliable coefficients outside the reliable region of the
+        CWT output. 
 
         Args:
-            cwt_coefs: Full CWT coefficients (freq_bins, time_samples).
+            coefs: Result time-frequency coefficients from the CWT.
 
         Returns:
-            Reliable center region (freq_bins, reliable_time_samples).
+            The reliable time-frequency coefficients.
         """
-        reliable_region = cwt_coefs[:, self.reliable_slice]
-        log.debug(
-            f"Reliable Region: extracted reliable region {cwt_coefs.shape} -> {reliable_region.shape}"
-        )
-        return reliable_region
+        raise NotImplementedError
 
     def normalize_coefs(self, raw_coefs: np.ndarray[np.complexfloating | np.floating]) -> np.ndarray[np.float64]:
         """
@@ -416,12 +395,153 @@ class AntsWavelet(Wavelet):
         """
         super().__init__(sample_rate, input_n, config)
 
-        self.wavelets: list[WaveletKernel] = []
+        self.wavelets: list[WaveletKernel] = [WaveletKernel(f=f, 
+                                                            sample_rate=self.sample_rate, 
+                                                            num_cycles=self.config.num_cycles, 
+                                                            num_fwhm_cycles=self.config.num_fwhm_cycles, 
+                                                            input_n=self.input_n) for f in self.freqs]
+        
+        self.num_wavelets: int = len(self.wavelets)
+        
+        self.coi_mask: np.ndarray[bool] = self._create_coi_mask()
+        self.reliable_slice: slice = self._create_reliable_slice()
 
-        for f in self.freqs:
-            self.wavelets.append(WaveletKernel(f, self.input_n, self.sample_rate, config.num_cycles, config.num_fwhm_cycles))
+    def _create_coi_mask(self) -> np.ndarray[bool]:
+        """
+        Creates a mask for the reliable region of the CWT output.
+        """
+        mask = np.zeros((self.num_freqs, self.input_n), dtype=bool)
 
-        self.num_wavelets = len(self.wavelets)
+        for i, w in enumerate(self.wavelets):
+            margin: int = w.time_support_n // 2
+            start: int =  margin
+            stop: int = self.input_n - margin
+            log.info(f"Wavelet {i} margin: {margin}, start: {start}, stop: {stop}")
+            mask[i, start:stop] = True
+
+        return mask
+
+
+    def apply_coi_mask(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+        """
+        Apply the Cone of Influence mask for reliable region of the CWT results
+        to avoid edge artifacts from the variable length wavelets.
+
+        Args:
+            coefs: CWT output coefficients.
+
+        Returns:
+            Masked CWT output coefficients.
+        """
+        masked_coefs: np.ndarray[np.floating] = coefs * self.coi_mask
+
+        return masked_coefs
+
+    def _create_reliable_slice(self) -> slice:
+        """
+        Uses the wavelet with the widest time support to create a center keep
+        slice for the reliable region of the CWT output.
+
+        Returns:
+            slice: A slice used to mask the reliable center region of the CWT 
+            result.
+        """
+
+        keep: int = 0
+
+        for w in self.wavelets:
+            if w.time_support_n > keep:
+                keep = w.time_support_n
+
+        log.info(f"Reliable Region: keeping the middle {keep} samples of the CWT result")
+
+        # Slice indices for the reliable center region of the CWT output 
+        slice_start: int = (self.output_n - keep) // 2
+        slice_end: int = slice_start + keep
+
+        return slice(slice_start, slice_end)
+
+    def slice_for_reliable_region(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+        """
+        Slices the CWT output for the reliable region of the CWT output.
+
+        Args:
+            coefs: CWT output coefficients.
+
+        Returns:
+            Sliced CWT output coefficients.
+        """
+        return coefs[self.reliable_slice]
+
+    def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+        """
+        Discards the unreliable coefficients outside the reliable region of the
+        CWT output.
+
+        Edge Effects:
+            After performing the CWT, portions of the output near the signal 
+            boundaries are unreliable due to edge effects in the convolution. At
+            the start and end of the input, the wavelet kernel extends beyond 
+            the signal into regions of zero energy. During convolution, the 
+            kernels accumulate 'artificial' zero-energy contributions, 
+            influencing and effectively weakening the CWT results each edge. 
+            
+            There are also edge effects where the samples abruptly change from a
+            zero to non-zero value at the starting edge, or a non-zero to zero 
+            value at the ending edge. These abrupt changes in value inflate the 
+            CWT result with 'artificial' high-energy because it thinks it's 
+            measuring a high-frequency component of the signal.
+
+            Because each wavelet has a different time support (width), this edge 
+            effect varies by scale - wider, high-scale/low-frequency wavelets are 
+            more susceptible to this edge effect than narrow, low-scale/high-
+            frequency ones. This is because the wider the wavelet, the left wing 
+            of the wavelet extends itself further before the starting edge of 
+            the signal, and the right wing extends itself further after the 
+            ending edge.
+
+        Mitigating Edge Effects:
+            To mitigate artificial contributions for the CWT results, we can 
+            determine which parts of each convolution are reliable based on its 
+            wavelet's time support, discarding the unreliable edge regions. 
+            Aggregating these reliable regions across the scales forms the Cone 
+            of Influence (COI) - a mask that preserves CWT results uninfluenced 
+            by edge effects.
+
+            Unfortunately, using the COI to discard unreliable results produces 
+            another, somewhat undesirable effect: it produces an irregularly
+            shaped result. 
+            
+            TODO-36 Insert COI Mask Figure Here
+            
+            Low scales wavelets have narrower time supports, 
+            less edge effects and less unreliable results. High scale wavlets 
+            have wider time supports, more edge effects, and more unreliable
+            results. The amount of reliable results to preserve varies by 
+            scale, and discarding the unreliable results by scale-dependent 
+            time-support produces a ragged, pinched, cone-shaped output. Each 
+            row retains a different number of samples in the time dimension, and
+            this irregular shape makes it awkward to visualize and unsuitable 
+            for rectangular plotting.
+            
+            To maintain a consistent rectangular output, we instead trim the CWT 
+            using the widest wavelet's time support, keeping a uniform central 
+            region to keep across all scales. 
+            
+            TODO-36 Insert Center Keep Slice Figure Here
+            
+            Although this approach discards some valid data from high-frequency 
+            wavelets, it still removes energy bias from the edges and produces
+            a clean, usable output shape.
+            
+        Args:
+            coefs: CWT output coefficients.
+
+        Returns:
+            Reliable CWT results.
+        """
+        # return self.apply_coi_mask(coefs)
+        return self.slice_for_reliable_region(coefs)
 
 class NumPyWavelet(AntsWavelet):
     def __init__(self,
