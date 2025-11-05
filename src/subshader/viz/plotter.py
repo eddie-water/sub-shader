@@ -60,7 +60,6 @@ class Plotter(ABC):
         """
         self.file_path = file_path
         self.frame_shape = frame_shape
-        self.y_n, self.x_n = self.frame_shape
 
     @abstractmethod
     def update_plot(self, plot_values):
@@ -78,37 +77,34 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], config: VisualizationConfig):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], frame_overlap: float, config: VisualizationConfig):
         """
         2D data visualization using shaders
 
         Args:
             file_path (str): Path to the file to plot.
-            frame_shape (tuple[int, int]): Shape of each data frame to plot.
-            num_frames (int): Number of frames to use for the visualization.
-            gamma (float): Gamma correction factor (0.0 to 1.0).
-            config (Optional[VisualizationConfig]): Configuration for the visualizer
+            frame_shape (tuple[int, int]): Initial shape estimate - will be 
+                updated with actual data
+            config: Global configuration for the visualizer
         """
         super().__init__(file_path, frame_shape)
+        self.config = config
 
-        # Circular buffer for scrolling plot
-        self.plot_frame_buffer = RollingFrameBuffer(num_frames=config.num_frames, 
-                                                    height=self.y_n, 
-                                                    width=self.x_n, 
-                                                    color_norm_config=config.color_norm)
+        # Circular buffer to aggregate frames in chronological order
+        self.frame_buffer = CircularFrameBuffer(frame_shape=self.frame_shape,
+                                                                     num_frames=self.config.num_frames,
+                                                                     frame_overlap=frame_overlap,
+                                                                     color_norm_config=self.config.color_norm)
 
-        # Create GL Context - handles window creation and OpenGL context setup
-        file_name = os.path.basename(file_path)
+        # ModernGL Context - window creation and OpenGL context setup
+        self.gl_context = GLContext(title=f"SubShader - {os.path.basename(file_path)}")
 
-        self.gl_context = GLContext(title=f"SubShader - {file_name}")
+        # GPU Renderer - shader compilation, texture management, and rendering 
+        self.renderer = Renderer(ctx=self.gl_context.ctx,
+                                           texture_shape=self.frame_buffer.get_shape(),
+                                           gamma=self.config.gamma)
 
-        # GPU Renderer - handles shader compilation, texture management, and rendering
-        texture_height, texture_width = self.plot_frame_buffer.get_flattened_buffer_shape()
-
-        self.renderer = Renderer(self.gl_context.ctx, 
-                                 texture_width,
-                                 texture_height,
-                                 config.gamma)
+        # log.info(f"Renderer initialized with texture shape: {frame_buffer_shape}")
 
     def update_plot(self, plot_values: np.ndarray):
         """
@@ -121,10 +117,10 @@ class ShaderPlot(Plotter):
             plot_values (np.ndarray): The new data to plot.
         """
         # Add a new plot frame to the circular buffer
-        self.plot_frame_buffer.add_frame(plot_values)
+        self.frame_buffer.add_frame(plot_values)
 
         # Update the texture with the new data
-        self.renderer.update_texture(self.plot_frame_buffer.get_flattened_buffer())
+        self.renderer.update_texture(self.frame_buffer.get_flattened_buffer())
 
         # Clear the old graphic and render the new one
         self.gl_context.clear_graphic()
@@ -288,7 +284,7 @@ class Renderer:
     # Texture slot that tells the fragment shader which texture to read from
     TEXTURE_SLOT = 0
 
-    def __init__(self, ctx, texture_width, texture_height, gamma):
+    def __init__(self, ctx, texture_shape: tuple[int, int], gamma):
         """
         Main GPU rendering component that 
             - Compiles the shaders 
@@ -299,15 +295,15 @@ class Renderer:
         Args:
             ctx (moderngl.Context): The ModernGL context to use for shader 
                 compilation.
-            texture_width (int): The width of the texture.
-            texture_height (int): The height of the texture.
+            texture_shape (tuple[int, int]): Texture dimensions (height, width).
+            gamma (float): The gamma correction factor.
         """
         self.ctx = ctx
         
         # Initialize core rendering components
         self.shader = self._compile_shaders(gamma)
         self.vbo, self.vao = self._setup_rendering_geometry(self.shader)
-        self.texture = self._setup_texture(self.shader, texture_width, texture_height)
+        self.texture = self._setup_texture(self.shader, texture_shape)
 
     # =============================================================================
     # PUBLIC METHODS - External interface
@@ -320,32 +316,92 @@ class Renderer:
         Args:
             texture_data (np.ndarray): 2D array of data to upload to texture.
         """
+        # Validate texture data before upload
+        if texture_data is None:
+            log.error("Texture data is None")
+            return
+
+        if not hasattr(texture_data, 'shape'):
+            log.error(f"Texture data has no shape attribute: {type(texture_data)}")
+            return
+
+        if len(texture_data.shape) != 2:
+            log.error(f"Expected 2D texture data, got shape: {texture_data.shape}")
+            return
+
+        # Check for invalid values
+        if np.any(np.isnan(texture_data)):
+            log.error("Texture data contains NaN values")
+            return
+
+        if np.any(np.isinf(texture_data)):
+            log.error("Texture data contains infinite values")
+            return
+
         # Data is already downsampled from the wavelet class
         data_bytes = texture_data.astype('f4').tobytes()
+
         log.debug(f"CPU→GPU: Uploading texture data ({texture_data.shape}, f4, {len(data_bytes)} bytes)")
+        log.debug(f"Texture size: {self.texture.size}, Expected data size: {self.texture.size[0] * self.texture.size[1] * 4} bytes")
+
+        # Check for OpenGL errors before texture operations
+        error = self.ctx.error
+        if error != 'GL_NO_ERROR':
+            log.error(f"GL error before texture write: {error}")
+            return
+
+        # Validate data size matches texture size
+        expected_bytes = self.texture.size[0] * self.texture.size[1] * 4  # 4 bytes per float32
+        if len(data_bytes) != expected_bytes:
+            log.error(f"Data size mismatch: got {len(data_bytes)} bytes, expected {expected_bytes} bytes")
+            log.error(f"Texture size: {self.texture.size}, Data shape: {texture_data.shape}")
+            return
+
         self.texture.write(data_bytes)
+
+        # Check for OpenGL errors after texture write
+        error = self.ctx.error
+        if error != 'GL_NO_ERROR':
+            log.error(f"GL error after texture write: {error}")
+            return
+
         self.texture.use(location=self.TEXTURE_SLOT)
         log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
-    
+
     def render_graphic(self):
         """
         Render the quad - this one-shots the graphics pipeline from the source
         data stored in the texture to the back buffer.
         """
         try:
+            # Check for OpenGL errors before rendering
+            error = self.ctx.error
+            if error != 'GL_NO_ERROR':
+                log.error(f"GL error before render: {error}")
+                return
+
+            # Ensure texture is bound
+            self.texture.use(location=self.TEXTURE_SLOT)
+
+            # Check for OpenGL errors after texture binding
+            error = self.ctx.error
+            if error != 'GL_NO_ERROR':
+                log.error(f"GL error after texture binding: {error}")
+                return
+
             self.vao.render(moderngl.TRIANGLE_STRIP)
-            
-            # Check for OpenGL errors
+
+            # Check for OpenGL errors after rendering
             error = self.ctx.error
             if error != 'GL_NO_ERROR':
                 log.error(f"Render error: {error}")
-            
+
         except Exception as e:
             log.error(f"Render exception: {e}")
 
-    # =============================================================================
+    # ==========================================================================
     # PRIVATE METHODS - Internal implementation
-    # =============================================================================
+    # ==========================================================================
 
     def _compile_shaders(self, gamma):
         """
@@ -355,7 +411,7 @@ class Renderer:
 
         vertex_shader = get_vertex_shader_source()
         fragment_shader = get_fragment_shader_source()
-        
+
         log.info("Compiling shaders...")
         shader = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
         log.info("Shader compilation successful!")
@@ -375,7 +431,7 @@ class Renderer:
             -1.0,  1.0,  # Top-left
              1.0,  1.0,  # Top-right
         ], dtype=np.float32)
-        
+
         # Vertex Buffer Object stores the quad vertices in GPU memory (tobytes()
         # removes NumPy stuff that GPU doesn't need)
         log.info(f"CPU→GPU: Uploading vertex buffer ({quad_vertices.shape}, {quad_vertices.dtype}, {quad_vertices.nbytes} bytes)")
@@ -387,65 +443,69 @@ class Renderer:
 
         return vbo, vao
 
-    def _setup_texture(self, shader: moderngl.Program, width: int, height: int):
+    def _setup_texture(self, shader: moderngl.Program, texture_shape: tuple[int, int]):
         """
         Create texture and connect it to shader uniform via texture slot
-        
+
         Args:
-            width (int): Width of the texture.
-            height (int): Height of the texture.
+            shader (moderngl.Program): The shader program to use for texture 
+                creation.
+            texture_shape (tuple[int, int]): Texture dimensions (height, width).
         """
-        # Use actual data size - downsampling is handled at the source
+        height, width = texture_shape
+
+        # Create texture object in memory 
         log.info(f"Creating texture: {width}x{height} (1 channel grayscale, float32)")
         log.info(f"CPU→GPU: Allocating texture buffer ({width}×{height}, f4, {width * height * 4} bytes)")
-        texture = self.ctx.texture((width, height), 1, dtype='f4')
+        self.texture = self.ctx.texture((width, height), 1, dtype='f4')
 
-        # Linear interpolation for smoothness between pixels
-        texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
-        
-        # Store texture size
-        self.size = (width, height)
-        
-        # Connect texture slot to shader uniform
+        # Set texture filtering for smoothness between pixels
+        self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+
+        # Assign texture slot to shader uniform
         shader['texture_sampler'] = self.TEXTURE_SLOT
         log.info(f"Assigned texture slot {self.TEXTURE_SLOT} to shader uniform 'texture_sampler'")
-        
-        # Store shader reference for updating uniforms
-        self.shader = shader
 
-        return texture
+        return self.texture
 
-class RollingFrameBuffer:
-    def __init__(self, num_frames, height, width, color_norm_config):
+class CircularFrameBuffer:
+    def __init__(self, frame_shape, num_frames, frame_overlap, color_norm_config):
         """
         Handles circular buffer for scrolling visualization
-        
+
         Args:
             num_frames (int): Number of frames to store
             height (int): Height of each frame (frequency bins)
             width (int): Width of each frame (time samples)
         """
-        self.num_frames = num_frames
-        self.height = height
-        self.width = width
-        
+        self.num_frames = num_frames 
+        self.height, self.width = frame_shape
+
+        # TODO 36 - NOW how do we handle the frame overlap, reliable region, and 
+        # downsampling?
+
+        # TODO 36 Wait I don't see how we're handling for the overlap here, I 
+        # think I'm just getting lucky 
+        self.frame_overlap = frame_overlap
+
+        log.info(f"Plotting {self.num_frames} {frame_shape} sized frames")
+
         # Store full frames (no overlap)
-        self.frames = np.zeros((num_frames, height, width), dtype=np.float32)
+        self.frames = np.zeros((num_frames, self.height, self.width), dtype=np.float32)
         self.frame_index = 0
-        
+
         # Pre-allocate flattened buffer
-        self.flattened_buffer = np.zeros((height, num_frames * width), dtype=np.float32)
+        self.flattened_buffer = np.zeros((self.height, self.width * num_frames), dtype=np.float32)
 
         self.plot_normalizer = PlotNormalizer(percentile=color_norm_config.percentile,
-                                              decay_rate=color_norm_config.decay_rate,
-                                              floor_value=color_norm_config.floor_value,
-                                              warmup_frames=color_norm_config.warmup_frames,
-                                              log_mapping=color_norm_config.log_mapping)
+                                                              decay_rate=color_norm_config.decay_rate,
+                                                              floor_value=color_norm_config.floor_value,
+                                                              warmup_frames=color_norm_config.warmup_frames,
+                                                              log_mapping=color_norm_config.log_mapping)
 
-
-    # =============================================================================
+    # ==========================================================================
     # PUBLIC METHODS - External interface
-    # =============================================================================
+    # ==========================================================================
 
     def add_frame(self, frame_data):
         """Add new frame to circular buffer and update flattened buffer"""
@@ -457,6 +517,8 @@ class RollingFrameBuffer:
         self.frame_index = (self.frame_index + 1) % self.num_frames
 
         # Update flattened buffer immediately
+
+        # TODO 36 bro what is this?
         self._update_flattened_buffer()
 
     # TODO 36 wtf is this? Why is is it done two different places and differently?
@@ -495,19 +557,20 @@ class RollingFrameBuffer:
         # Ensure output type consistency
         return normalized.astype(self.config.output_dtype)
 
-    def get_flattened_buffer_shape(self):
+    def get_shape(self):
         """
-        Get the shape of the flattened buffer
+        Get the shape of the entire, flattened frame buffer
 
         Returns:
             tuple: Shape of the flattened buffer.
         """
         return self.flattened_buffer.shape
-    
+
+    # TODO 36 don't like "flattened" here
     def get_flattened_buffer(self):
         """
         Get time-ordered flattened buffer for texture
-        
+
         Returns:
             np.ndarray: Time-ordered flattened buffer.
         """
@@ -521,13 +584,12 @@ class RollingFrameBuffer:
         """Update flattened buffer with correct coordinate mapping"""
         # Calculate the correct order of frames (oldest first)
         frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
-        
+
         # Use vectorized operations for better performance
         for i, frame_i in enumerate(frame_order):
             start_col = i * self.width
             end_col = start_col + self.width
             self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
-
 
 # =============================================================================
 # ALTERNATIVE IMPLEMENTATION: PyQtGraph-based visualizer
@@ -547,7 +609,7 @@ class PyQtPlotter(Plotter):
             frame_shape (tuple[int, int]): Shape of each data frame to plot.
         """
         super().__init__(file_path, frame_shape)
-        
+
         # PyQtGraph configuration
         pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
 

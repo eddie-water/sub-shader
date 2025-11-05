@@ -37,6 +37,7 @@ class WaveletKernel():
                 this wavelet kernel (num)
         """
         self.freq: np.float64 = f
+        self.input_n: int = input_n
 
         # Time Support is the duration (s) over which the wavelet has meaningful 
         # energy, defined as the length of time needed to contain a given number

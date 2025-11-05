@@ -49,6 +49,23 @@ log = get_logger(__name__)
 PI: Final[float] = float(np.pi)
 
 # =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
+def pow2_floor(n: int) -> int:
+    """
+    Returns the largest power of 2 less than or equal to n. Used to determine the
+    downsampling factor for the CWT output.
+
+    Args:
+        n: The number to find the largest power of 2 less than or equal to.
+
+    Returns:
+        The largest power of 2 less than or equal to n.
+    """
+    return 2 ** int(np.floor(np.log2(n)))
+
+# =============================================================================
 # WAVELET CLASSES
 # =============================================================================
 
@@ -86,12 +103,9 @@ class Wavelet(ABC):
         self.num_freqs: int = int(len(self.freqs))
 
         # Input and output dimensions
-        # TODO 36 - Establish the difference between output_size and downsampled_output_size - it's fucking up the plotter
         self.input_n: int = int(input_n)
         self.input_shape: tuple[int] = (self.input_n,)
-        # TODO 36 - need to remove "target wdith" and determine output_n based o
-        # on the reliable region and downsampling amount
-        self.output_n: int = int(self.config.target_width)
+        self.output_n: int = self.config.target_width
         self.output_shape: tuple[int, int] = (self.num_freqs, self.output_n)
 
     def _generate_chromatic_scale(self,
@@ -125,19 +139,11 @@ class Wavelet(ABC):
         """
         return self.input_shape
 
-    def get_output_shape(self) -> tuple[int, int]:
+    def get_output_shape(self) -> tuple[int]:
         """
-        Returns:
-            The shape of the output data (downsampled CWT coefficients).
+        Determines the shape of the output data for the CWT.
         """
         return self.output_shape
-    
-    def get_num_freqs(self) -> int:
-        """
-        Returns:
-            The number of frequencies used in the CWT.
-        """
-        return self.num_freqs
 
     def cwt_pipeline(self, input_data: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
@@ -167,13 +173,6 @@ class Wavelet(ABC):
         # Standardize this section: mag vs pow units, clamping (don't do this) and downsampling, and global normalization
         # Convert to magnitude or power
         mag_or_pow = self.compute_mag_pow(cwt_coefs)
-
-        # TODO 36 - explain how this avoids edge effects with a readme and some 
-        # pictures
-        # "Unreliable" results becuase of edge effects that occur during 
-        # convolution when the wavelet kernels are collecting zero-energy 
-        # contributions at the edges - signals seem artificially weaker here
-        # but really its just the start and stop of the signal
 
         # Avoid edge effects by extracting just reliable region
         reliable_coefs = self.discard_unreliable_coefs(mag_or_pow)
@@ -283,44 +282,36 @@ class Wavelet(ABC):
     
     def downsample(self,
                    coefs: np.ndarray[np.floating],
-                   target_width: Optional[int] = None) -> np.ndarray[np.floating]:
+                   target_width: int) -> np.ndarray[np.floating]:
         """
         Downsample CWT coefficients to produce final output data.
 
-        This method reduces the time dimension while preserving frequency resolution
-        to make the data suitable for real-time GPU rendering.
+        This method reduces the time dimension 
 
         Args:
-            coefs: Input CWT coefficients (freq_bins, time_samples).
-            target_width: Target output width (uses config if None).
+            coefs: Input CWT coefficients (freq_bins, num_samples).
+            target_width: Target output width.
 
         Returns:
             Output data suitable for visualization with shape (freq_bins, target_width).
         """
-        # Use config target width if not specified
-        if target_width is None:
-            target_width = self.config.target_width
+        _, num_samples = coefs.shape
 
-        freq_bins, time_samples = coefs.shape  # type: ignore[assignment]
-        
-        # If already at target size or smaller, return as-is
-        if time_samples <= target_width:
-            return coefs
-        
-        # Calculate downsampling factor
-        downsample_factor = max(1, time_samples // int(target_width))
+        # Input Validation
+        if target_width <= 0 or target_width > num_samples:
+            raise ValueError(f"Invalid target width: {target_width} (must be between 0 and {num_samples})")
 
-        # Simple downsampling strategy - take every Nth sample
-        # This preserves the most recent data (right side of the buffer)
-        downsampled = coefs[:, ::downsample_factor]
-        
-        # If still too wide, crop to target size
-        if downsampled.shape[1] > target_width:
-            downsampled = downsampled[:, -int(target_width):]  # Keep most recent data
-        
-        log.debug(
-            f"Downsampled to output data: {coefs.shape} -> {downsampled.shape} (factor: {downsample_factor})"
-        )
+        # Fractional hop size
+        hop = num_samples / target_width
+
+        # Determine the indices to keep using hop size
+        indices = np.floor(np.arange(target_width) * hop).astype(int)
+
+        indices = np.clip(indices, 0, num_samples - 1)
+        downsampled = coefs[:, indices]
+
+        log.debug(f"Downsampled to output data: {coefs.shape} -> {downsampled.shape}")
+
         return downsampled
 
     @abstractmethod
@@ -402,25 +393,29 @@ class AntsWavelet(Wavelet):
                                                             input_n=self.input_n) for f in self.freqs]
         
         self.num_wavelets: int = len(self.wavelets)
-        
-        self.coi_mask: np.ndarray[bool] = self._create_coi_mask()
-        self.reliable_slice: slice = self._create_reliable_slice()
 
-    def _create_coi_mask(self) -> np.ndarray[bool]:
-        """
-        Creates a mask for the reliable region of the CWT output.
-        """
-        mask = np.zeros((self.num_freqs, self.input_n), dtype=bool)
+        # Assess the reliable regions of the CWT output
+        self.coi_mask: np.ndarray[bool] = self._create_coi_mask(self.wavelets)
+        self.reliable_slice: slice = self._create_reliable_slice(self.wavelets)
 
-        for i, w in enumerate(self.wavelets):
+    def _create_coi_mask(self, wavelets: list[WaveletKernel]) -> np.ndarray[bool]:
+        """
+        Creates a mask marking the center (reliable) region of the CWT result 
+        for each wavelet. For each frequency row, only the central segment—the 
+        length of the wavelet's time support (i.e., the number of samples 
+        spanned by its time support)—is kept as reliable; edges are masked out, 
+        as wavelets do not provide accurate energy information there.
+        """
+        mask = np.zeros((len(wavelets), self.input_n), dtype=bool)
+
+        for i, w in enumerate(wavelets):
             margin: int = w.time_support_n // 2
             start: int =  margin
-            stop: int = self.input_n - margin
-            log.info(f"Wavelet {i} margin: {margin}, start: {start}, stop: {stop}")
+            stop: int = w.input_n - margin
+            log.info(f"Wavelet Mask {i} margin: {margin}, start: {start}, stop: {stop}")
             mask[i, start:stop] = True
 
         return mask
-
 
     def apply_coi_mask(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
@@ -437,7 +432,7 @@ class AntsWavelet(Wavelet):
 
         return masked_coefs
 
-    def _create_reliable_slice(self) -> slice:
+    def _create_reliable_slice(self, wavelets: list[WaveletKernel]) -> slice:
         """
         Uses the wavelet with the widest time support to create a center keep
         slice for the reliable region of the CWT output.
@@ -449,14 +444,14 @@ class AntsWavelet(Wavelet):
 
         keep: int = 0
 
-        for w in self.wavelets:
+        for w in wavelets:
             if w.time_support_n > keep:
-                keep = w.time_support_n
-
-        log.info(f"Reliable Region: keeping the middle {keep} samples of the CWT result")
+                log.info(f"Determining reliable region for Wavelet {w.freq} Hz with time support: {w.time_support_n} samples")
+                keep = pow2_floor(w.time_support_n)
+                log.info(f"Keeping to the nearest power of 2: {keep}")
 
         # Slice indices for the reliable center region of the CWT output 
-        slice_start: int = (self.output_n - keep) // 2
+        slice_start: int = (self.input_n - keep) // 2
         slice_end: int = slice_start + keep
 
         return slice(slice_start, slice_end)
@@ -471,7 +466,7 @@ class AntsWavelet(Wavelet):
         Returns:
             Sliced CWT output coefficients.
         """
-        return coefs[self.reliable_slice]
+        return coefs[:, self.reliable_slice]
 
     def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
