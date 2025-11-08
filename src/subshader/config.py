@@ -139,15 +139,6 @@ class WaveletConfig:
 
     # Downsampling parameters - default for real-time rendering, reduce for better performance 
     target_width: int = 256
-
-    # TODO 36 - If global normalization is disabled, would I really even need to
-    # be using these? Think of when I would want these old legacy params?
-    # Maybe they'd be useful for ^ but atm can't really think of any
-    # Legacy normalization parameters (used when global normalization is disabled)
-    db_floor: np.float64 = -80.0
-    db_ceil: np.float64 = 0.0
-    epsilon: np.float64 = 1e-12
-    output_dtype: np.dtype = np.float32
     
     def validate(self) -> List[str]:
         """
@@ -157,10 +148,6 @@ class WaveletConfig:
             List[str]: List of validation error messages (empty if valid)
         """
         errors = []
-        
-        # Legacy normalization validation (still needed for fallback)
-        if self.db_floor >= self.db_ceil:
-            errors.append(f"db_floor ({self.db_floor}) must be less than db_ceil ({self.db_ceil})")
         
         if self.target_width <= 0:
             errors.append(f"target_width ({self.target_width}) must be positive")

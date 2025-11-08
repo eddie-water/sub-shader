@@ -116,13 +116,13 @@ class ShaderPlot(Plotter):
         Args:
             plot_values (np.ndarray): The new data to plot.
         """
-        # Add a new plot frame to the circular buffer
+        # Append new frame to circular buffer
         self.frame_buffer.add_frame(plot_values)
 
-        # Update the texture with the new data
+        # Upload the entire chronologically ordered buffer to the texture
         self.renderer.update_texture(self.frame_buffer.get_flattened_buffer())
 
-        # Clear the old graphic and render the new one
+        # Render pass 
         self.gl_context.clear_graphic()
         self.renderer.render_graphic()
         self.gl_context.display_graphic()
@@ -305,100 +305,6 @@ class Renderer:
         self.vbo, self.vao = self._setup_rendering_geometry(self.shader)
         self.texture = self._setup_texture(self.shader, texture_shape)
 
-    # =============================================================================
-    # PUBLIC METHODS - External interface
-    # =============================================================================
-
-    def update_texture(self, texture_data):
-        """
-        Upload new data to texture and activate it in the assigned slot
-        
-        Args:
-            texture_data (np.ndarray): 2D array of data to upload to texture.
-        """
-        # Validate texture data before upload
-        if texture_data is None:
-            log.error("Texture data is None")
-            return
-
-        if not hasattr(texture_data, 'shape'):
-            log.error(f"Texture data has no shape attribute: {type(texture_data)}")
-            return
-
-        if len(texture_data.shape) != 2:
-            log.error(f"Expected 2D texture data, got shape: {texture_data.shape}")
-            return
-
-        # Check for invalid values
-        if np.any(np.isnan(texture_data)):
-            log.error("Texture data contains NaN values")
-            return
-
-        if np.any(np.isinf(texture_data)):
-            log.error("Texture data contains infinite values")
-            return
-
-        # Data is already downsampled from the wavelet class
-        data_bytes = texture_data.astype('f4').tobytes()
-
-        log.debug(f"CPU→GPU: Uploading texture data ({texture_data.shape}, f4, {len(data_bytes)} bytes)")
-        log.debug(f"Texture size: {self.texture.size}, Expected data size: {self.texture.size[0] * self.texture.size[1] * 4} bytes")
-
-        # Check for OpenGL errors before texture operations
-        error = self.ctx.error
-        if error != 'GL_NO_ERROR':
-            log.error(f"GL error before texture write: {error}")
-            return
-
-        # Validate data size matches texture size
-        expected_bytes = self.texture.size[0] * self.texture.size[1] * 4  # 4 bytes per float32
-        if len(data_bytes) != expected_bytes:
-            log.error(f"Data size mismatch: got {len(data_bytes)} bytes, expected {expected_bytes} bytes")
-            log.error(f"Texture size: {self.texture.size}, Data shape: {texture_data.shape}")
-            return
-
-        self.texture.write(data_bytes)
-
-        # Check for OpenGL errors after texture write
-        error = self.ctx.error
-        if error != 'GL_NO_ERROR':
-            log.error(f"GL error after texture write: {error}")
-            return
-
-        self.texture.use(location=self.TEXTURE_SLOT)
-        log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
-
-    def render_graphic(self):
-        """
-        Render the quad - this one-shots the graphics pipeline from the source
-        data stored in the texture to the back buffer.
-        """
-        try:
-            # Check for OpenGL errors before rendering
-            error = self.ctx.error
-            if error != 'GL_NO_ERROR':
-                log.error(f"GL error before render: {error}")
-                return
-
-            # Ensure texture is bound
-            self.texture.use(location=self.TEXTURE_SLOT)
-
-            # Check for OpenGL errors after texture binding
-            error = self.ctx.error
-            if error != 'GL_NO_ERROR':
-                log.error(f"GL error after texture binding: {error}")
-                return
-
-            self.vao.render(moderngl.TRIANGLE_STRIP)
-
-            # Check for OpenGL errors after rendering
-            error = self.ctx.error
-            if error != 'GL_NO_ERROR':
-                log.error(f"Render error: {error}")
-
-        except Exception as e:
-            log.error(f"Render exception: {e}")
-
     # ==========================================================================
     # PRIVATE METHODS - Internal implementation
     # ==========================================================================
@@ -467,6 +373,109 @@ class Renderer:
         log.info(f"Assigned texture slot {self.TEXTURE_SLOT} to shader uniform 'texture_sampler'")
 
         return self.texture
+
+    def _validate_texture_data(self, texture_data):
+        """
+        Validate data before uploading it to the texture.
+        """
+        if texture_data is None:
+            log.error("Texture data is None")
+            return
+
+        if not hasattr(texture_data, 'shape'):
+            log.error(f"Texture data has no shape attribute: {type(texture_data)}")
+            return
+
+        if len(texture_data.shape) != 2:
+            log.error(f"Expected 2D texture data, got shape: {texture_data.shape}")
+            return
+
+        if np.any(np.isnan(texture_data)):
+            log.error("Texture data contains NaN values")
+            return
+
+        if np.any(np.isinf(texture_data)):
+            log.error("Texture data contains infinite values")
+            return
+
+        # Validate data size matches texture size
+        texture_bytes = texture_data.astype('f4').tobytes()
+        expected_bytes = self.texture.size[0] * self.texture.size[1] * 4  # 4 bytes per float32
+        if len(texture_bytes) != expected_bytes:
+            log.error(f"Data size mismatch: got {len(texture_bytes)} bytes, expected {expected_bytes} bytes")
+            log.error(f"Texture size: {self.texture.size}, Data shape: {texture_data.shape}")
+            return
+
+        return True
+
+    def _check_gl_error(self, ctx: moderngl.Context, operation: str):
+        """
+        Check for OpenGL errors and log 
+        """
+        error = ctx.error
+
+        if error != 'GL_NO_ERROR':
+            log.error(f"GL error during '{operation}': {error}")
+            return False
+        else:
+            log.debug(f"GL OK: {operation}")
+            return True
+
+    # ==========================================================================
+    # PUBLIC METHODS - External interface
+    # ==========================================================================
+
+    def update_texture(self, texture_data):
+        """
+        Upload new data to texture and activate it in the assigned slot
+
+        Args:
+            texture_data (np.ndarray): 2D array of data to upload to texture.
+        """
+        # Validate data before upload
+        if not self._validate_texture_data(texture_data):
+            return
+
+        if not self._check_gl_error(self.ctx, "before texture write"):
+            return
+
+        # Convert to bytes and upload to texture
+        texture_bytes = texture_data.astype('f4').tobytes()
+        self.texture.write(texture_bytes)
+
+        log.debug(f"Texture size: {self.texture.size}, Expected data size: {self.texture.size[0] * self.texture.size[1] * 4} bytes")
+        log.debug(f"CPU→GPU: Uploaded texture data ({texture_data.shape}, f4, {len(texture_bytes)} bytes)")
+
+        # Check for OpenGL errors after texture write
+        if not self._check_gl_error(self.ctx, "after texture write"):
+            return
+
+        self.texture.use(location=self.TEXTURE_SLOT)
+
+        log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
+
+    def render_graphic(self):
+        """
+        Render the quad - this one-shots the graphics pipeline from the source
+        data stored in the texture to the back buffer.
+        """
+        try:
+            if not self._check_gl_error(self.ctx, "before rendering"):
+                return
+
+            # Ensure texture is bound
+            self.texture.use(location=self.TEXTURE_SLOT)
+
+            if not self._check_gl_error(self.ctx, "after texture binding"):
+                return
+
+            self.vao.render(moderngl.TRIANGLE_STRIP)
+
+            if not self._check_gl_error(self.ctx, "after rendering"):
+                return
+
+        except Exception as e:
+            log.error(f"Render exception: {e}")
 
 class CircularFrameBuffer:
     def __init__(self, frame_shape, num_frames, frame_overlap, color_norm_config):

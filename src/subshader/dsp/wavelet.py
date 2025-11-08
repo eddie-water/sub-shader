@@ -54,8 +54,8 @@ PI: Final[float] = float(np.pi)
 
 def pow2_floor(n: int) -> int:
     """
-    Returns the largest power of 2 less than or equal to n. Used to determine the
-    downsampling factor for the CWT output.
+    Returns the largest power of 2 less than or equal to n. Used to determine 
+    the downsampling factor for the CWT output.
 
     Args:
         n: The number to find the largest power of 2 less than or equal to.
@@ -76,8 +76,8 @@ class Wavelet(ABC):
                  config: WaveletConfig) -> None:
         """
         Wavelet base class that all other wavelet classes are derived from.
-        Uses a list of frequencies that follows the chromatic scale starting at
-        A0 to specify which frequencies to look for in the input audio data.
+        Generates a list of frequencies that follows the chromatic scale that
+        specify which frequencies to look for in the input audio data.
 
         Args:
             sample_rate: The rate the input data was sampled in Hz.
@@ -86,11 +86,12 @@ class Wavelet(ABC):
         """
         self.config: WaveletConfig = config
 
-        # Sampling Parameters
         if sample_rate != self.config.typical_sampling_freq:
             log.error(f"Invalid sample rate: {sample_rate} Hz (expected {self.config.typical_sampling_freq} Hz)")
-            raise ValueError(f"Sampling Rate: {sample_rate} Hz is not the typical {self.config.typical_sampling_freq} Hz. "
+            raise ValueError(f"Sampling Rate: {sample_rate} Hz is not the typical {self.config.typical_sampling_freq} Hz."
                              f"The CWT doesn't support non-typical sampling rates at the moment.")
+
+        # Store params
         self.sample_rate: np.float64 = np.float64(sample_rate)
         self.nyquist_freq: np.float64 = self.sample_rate / 2.0
         self.sampling_period: np.float64 = 1.0 / self.sample_rate
@@ -158,7 +159,6 @@ class Wavelet(ABC):
             2D array (num_freqs, target_width) of globally normalized magnitudes
             in the dtype specified by config.output_dtype.
         """
-        # Input Validation
         if input_data.shape != self.input_shape:
             log.error(f"Input data length mismatch: {input_data.shape[0]} != {self.input_n}")
             raise ValueError(f"Input data length {input_data.shape[0]} does not match expected input data size {self.input_n}")
@@ -169,13 +169,11 @@ class Wavelet(ABC):
         # Scale-Dependent Normalization
         cwt_coefs = self.normalize_by_scale(cwt_coefs)
 
-        # TODO 36 
-        # Standardize this section: mag vs pow units, clamping (don't do this) and downsampling, and global normalization
-        # Convert to magnitude or power
-        mag_or_pow = self.compute_mag_pow(cwt_coefs)
+        # Convert to magnitude
+        mag_coefs = self.compute_mag(cwt_coefs)
 
-        # Avoid edge effects by extracting just reliable region
-        reliable_coefs = self.discard_unreliable_coefs(mag_or_pow)
+        # Keep only the reliable region to avoid edge effects
+        reliable_coefs = self.discard_unreliable_coefs(mag_coefs)
 
         # Downsample to target width
         downsampled_coefs = self.downsample(reliable_coefs, self.output_n)
@@ -198,6 +196,7 @@ class Wavelet(ABC):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
         """
         Scale-Dependent Normalization to account for the energy bias introduced
@@ -212,28 +211,19 @@ class Wavelet(ABC):
         Returns:
             Scale-normalized complex CWT coefficients.
         """
-        return cwt_coefs * np.sqrt(self.freqs[:, None])
-    
-    # TODO ISSUE-36: This changes the units depending on mag vs pow choice
-    def compute_mag_pow(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.floating]:
+        raise NotImplementedError
+
+    def compute_mag(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.floating]:
         """
-        Convert the CWT coefficients to magnitude or power depending on the
-        config.
+        Convert the raw CWT coefficients to magnitude 
 
         Args:
             cwt_coefs: Complex CWT coefficients.
 
         Returns:
-            Real magnitudes (|x|) or power (|x|^2) as a float array.
+            Real magnitudes (|x|) as a float array.
         """
-        # TODO 36 - understand when to apply the 10 log 10. Here? or when plotting?
-        if self.config.cwt_out_type == "mag":
-            return np.abs(cwt_coefs)
-        elif self.config.cwt_out_type == "pow":
-            return np.abs(cwt_coefs) ** 2
-        else:
-            # Fallback: magnitude
-            return np.abs(cwt_coefs)
+        return np.abs(cwt_coefs)
 
     @abstractmethod
     def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
@@ -248,37 +238,6 @@ class Wavelet(ABC):
             The reliable time-frequency coefficients.
         """
         raise NotImplementedError
-
-    def normalize_coefs(self, raw_coefs: np.ndarray[np.complexfloating | np.floating]) -> np.ndarray[np.float64]:
-        """
-        Normalize CWT coefficients for plotting using a fixed dB range.
-
-        This avoids per-frame min/max scaling (which causes flicker and grain)
-        by mapping magnitudes into a consistent dynamic range.
-
-        Args:
-            raw_coefs: Raw CWT coefficients (complex or real).
-
-        Returns:
-            Normalized magnitudes in [0, 1] as float32.
-        """
-        # Magnitude of the CWT coefficients, add epsilon to avoid log(0)
-        mag = np.abs(raw_coefs) + self.config.epsilon
-
-        # Convert to decibels
-        db_vals = 20.0 * np.log10(mag)
-
-        # Fixed display range (dB)
-        db_floor = self.config.db_floor
-        db_ceil = self.config.db_ceil
-
-        # Clamp to dB range
-        db_vals = np.clip(db_vals, db_floor, db_ceil)
-
-        # Map to [0, 1]
-        norm_vals = (db_vals - db_floor) / (db_ceil - db_floor)
-
-        return norm_vals.astype(np.float64)
     
     def downsample(self,
                    coefs: np.ndarray[np.floating],
@@ -397,6 +356,22 @@ class AntsWavelet(Wavelet):
         # Assess the reliable regions of the CWT output
         self.coi_mask: np.ndarray[bool] = self._create_coi_mask(self.wavelets)
         self.reliable_slice: slice = self._create_reliable_slice(self.wavelets)
+
+    def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
+        """
+        Scale-Dependent Normalization to account for the energy bias introduced
+        by scaling each wavelet. At higher scales (lower frequencies), the 
+        wavelet physically gets wider so naturally it collects more energy. To 
+        compensate for that, we reduce the energy of the cwt's result by square 
+        root of the scale where s ≈ 1/f -> 1/sqrt(s) ≈ sqrt(f) 
+
+        Args:
+            cwt_coefs: Complex CWT coefficients.
+
+        Returns:
+            Scale-normalized complex CWT coefficients.
+        """
+        return cwt_coefs * np.sqrt(self.freqs[:, None])
 
     def _create_coi_mask(self, wavelets: list[WaveletKernel]) -> np.ndarray[bool]:
         """

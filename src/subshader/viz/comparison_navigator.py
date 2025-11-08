@@ -228,7 +228,7 @@ class DspStageNavigator(NavigatorBase):
 
         # Compute and plot each DSP stage and decorate plots
         self.cwt_coefs = self.wavelet.class_specific_cwt(self.current_audio_chunk)
-        self.mag_coefs = self.wavelet.compute_mag_pow(self.cwt_coefs)
+        self.mag_coefs = self.wavelet.compute_mag(self.cwt_coefs)
         self.im_cwt = self.ax_cwt.imshow(self.mag_coefs, cmap=self.cmap, aspect="auto", origin="lower")
         self.ax_cwt.set_title("Raw CWT")
         self.ax_cwt.set_ylabel("Freq Bin")
@@ -236,7 +236,7 @@ class DspStageNavigator(NavigatorBase):
         self.ax_cwt.set_xticklabels([])
 
         self.scl_coefs = self.wavelet.normalize_by_scale(self.cwt_coefs)
-        self.mag_coefs = self.wavelet.compute_mag_pow(self.scl_coefs)
+        self.mag_coefs = self.wavelet.compute_mag(self.scl_coefs)
         self.im_scl = self.ax_scl.imshow(self.mag_coefs, cmap=self.cmap, aspect="auto", origin="lower")
         self.ax_scl.set_title("Scale Normalization")
         self.ax_scl.set_ylabel("Freq Bin")
@@ -269,13 +269,13 @@ class DspStageNavigator(NavigatorBase):
         self.ax_t.relim(); self.ax_t.autoscale(axis="y", tight=True)
 
         self.cwt_coefs = self.wavelet.class_specific_cwt(self.current_audio_chunk)
-        self.mag_coefs = self.wavelet.compute_mag_pow(self.cwt_coefs)
+        self.mag_coefs = self.wavelet.compute_mag(self.cwt_coefs)
         self.im_cwt.set_data(self.mag_coefs)
         self.ax_cwt.set_xlim(0, self.cwt_coefs.shape[1])
         self.ax_cwt.set_ylim(0, self.cwt_coefs.shape[0])
 
         self.scl_coefs = self.wavelet.normalize_by_scale(self.cwt_coefs)
-        self.mag_coefs = self.wavelet.compute_mag_pow(self.scl_coefs)
+        self.mag_coefs = self.wavelet.compute_mag(self.scl_coefs)
         self.im_scl.set_data(self.mag_coefs)
         self.ax_scl.set_xlim(0, self.scl_coefs.shape[1])
         self.ax_scl.set_ylim(0, self.scl_coefs.shape[0])
