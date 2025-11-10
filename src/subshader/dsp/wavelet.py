@@ -303,6 +303,32 @@ class PyWavelet(Wavelet):
     
         return coefs_raw
     
+    def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
+        """
+        Scale-Dependent Normalization to account for the energy bias introduced
+        by scaling each wavelet.
+
+        Args:
+            cwt_coefs: Complex CWT coefficients.
+
+        Returns:
+            Scale-normalized complex CWT coefficients.
+        """
+        raise NotImplementedError("PyWavelet does not implement scale-dependent normalization")
+    
+    def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+        """
+        Discards the unreliable coefficients outside the reliable region of the
+        CWT output.
+
+        Args:
+            coefs: Result time-frequency coefficients from the CWT.
+
+        Returns:
+            The reliable time-frequency coefficients.
+        """
+        raise NotImplementedError("PyWavelet does not implement reliable region extraction")
+    
     def cleanup(self) -> None:
         """PyWavelet doesn't allocate significant resources, so this is a no-op."""
         return None
