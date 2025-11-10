@@ -4,7 +4,7 @@ Audio Input Module for SubShader.
 This module handles audio file processing and frame extraction for real-time
 visualization:
  - Loads audio files using soundfile with format detection
- - Implements overlapping window extraction to reduce edge artifacts
+ - Implements overlapping window file reading
  - Supports configurable chunk sizes and overlap factors
  - Provides graceful error handling for file operations
 """
