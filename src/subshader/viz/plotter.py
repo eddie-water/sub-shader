@@ -507,10 +507,10 @@ class CircularFrameBuffer:
         self.flattened_buffer = np.zeros((self.height, self.width * num_frames), dtype=np.float32)
 
         self.plot_normalizer = PlotNormalizer(percentile=color_norm_config.percentile,
-                                                              decay_rate=color_norm_config.decay_rate,
-                                                              floor_value=color_norm_config.floor_value,
-                                                              warmup_frames=color_norm_config.warmup_frames,
-                                                              log_mapping=color_norm_config.log_mapping)
+                                              decay_rate=color_norm_config.decay_rate,
+                                              floor_value=color_norm_config.floor_value,
+                                              warmup_frames=color_norm_config.warmup_frames,
+                                              log_mapping=color_norm_config.log_mapping)
 
     # ==========================================================================
     # PUBLIC METHODS - External interface
@@ -525,46 +525,14 @@ class CircularFrameBuffer:
         self.frames[self.frame_index] = self.plot_normalizer.process(frame_data)
         self.frame_index = (self.frame_index + 1) % self.num_frames
 
-        # Update flattened buffer immediately
+        # Calculate the correct order of frames (oldest first)
+        frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
 
-        # TODO 36 bro what is this?
-        self._update_flattened_buffer()
-
-    # TODO 36 wtf is this? Why is is it done two different places and differently?
-    def track_max_value(self, raw_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
-        """
-        Track the max value of the CWT coefficients using the PlotNormalizer.
-
-        Args:
-            raw_coefs: Real-valued CWT magnitudes or power.
-
-        Returns:
-            Globally normalized magnitudes in [0, 1]. Dtype follows
-            ``config.output_dtype``.
-        """
-        # TODO-36 NEXT ensure this is doing what it should be doing
-        # - Should just be tracking the max value of the passed in coefs, so when we go to plot
-        # all we're doing is using the max value to ensure the next plots we're 
-        # visualizing are relative to each other in magnitude
-
-        if self.global_normalizer is None:
-            # If disabled, pass-through with casting to output dtype
-            return np.asarray(raw_coefs, dtype=self.config.output_dtype)
-
-        # Compute magnitude of the CWT coefficients
-        mag = np.abs(raw_coefs)
-
-        # Create a valid data mask (exclude very small values that might be noise)
-        valid_mask = mag > self.config.epsilon
-
-        # Update global normalization factor
-        self.global_normalizer.update(mag, mask=valid_mask)
-
-        # Apply global normalization
-        normalized = self.global_normalizer.normalize(mag)
-
-        # Ensure output type consistency
-        return normalized.astype(self.config.output_dtype)
+        # Use vectorized operations for better performance
+        for i, frame_i in enumerate(frame_order):
+            start_col = i * self.width
+            end_col = start_col + self.width
+            self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
 
     def get_shape(self):
         """
@@ -575,7 +543,6 @@ class CircularFrameBuffer:
         """
         return self.flattened_buffer.shape
 
-    # TODO 36 don't like "flattened" here
     def get_flattened_buffer(self):
         """
         Get time-ordered flattened buffer for texture
@@ -584,21 +551,6 @@ class CircularFrameBuffer:
             np.ndarray: Time-ordered flattened buffer.
         """
         return self.flattened_buffer
-
-    # =============================================================================
-    # PRIVATE METHODS - Internal implementation
-    # =============================================================================
-
-    def _update_flattened_buffer(self):
-        """Update flattened buffer with correct coordinate mapping"""
-        # Calculate the correct order of frames (oldest first)
-        frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
-
-        # Use vectorized operations for better performance
-        for i, frame_i in enumerate(frame_order):
-            start_col = i * self.width
-            end_col = start_col + self.width
-            self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
 
 # =============================================================================
 # ALTERNATIVE IMPLEMENTATION: PyQtGraph-based visualizer

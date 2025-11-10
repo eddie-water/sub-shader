@@ -27,10 +27,6 @@ import numpy as np
 from numpy.fft import fft, ifft
 import pywt
 
-# TODO 36 - remove these imports
-from matplotlib import pyplot as plt
-from matplotlib import gridspec
-
 from subshader.utils.logging import get_logger
 from subshader.dsp.wavelet_kernel import WaveletKernel
 
@@ -422,7 +418,7 @@ class AntsWavelet(Wavelet):
         for w in wavelets:
             if w.time_support_n > keep:
                 log.info(f"Determining reliable region for Wavelet {w.freq} Hz with time support: {w.time_support_n} samples")
-                keep = pow2_floor(w.time_support_n)
+                keep = 2 ** int(np.floor(np.log2(w.time_support_n)))
                 log.info(f"Keeping to the nearest power of 2: {keep}")
 
         # Slice indices for the reliable center region of the CWT output 
@@ -482,7 +478,7 @@ class AntsWavelet(Wavelet):
             another, somewhat undesirable effect: it produces an irregularly
             shaped result. 
             
-            TODO-36 Insert COI Mask Figure Here
+            TODO-37 Insert COI Mask Figure Here
             
             Low scales wavelets have narrower time supports, 
             less edge effects and less unreliable results. High scale wavlets 
@@ -498,7 +494,7 @@ class AntsWavelet(Wavelet):
             using the widest wavelet's time support, keeping a uniform central 
             region to keep across all scales. 
             
-            TODO-36 Insert Center Keep Slice Figure Here
+            TODO-37 Insert Center Keep Slice Figure Here
             
             Although this approach discards some valid data from high-frequency 
             wavelets, it still removes energy bias from the edges and produces
@@ -520,8 +516,6 @@ class NumPyWavelet(AntsWavelet):
                  config: Optional[WaveletConfig] = None) -> None:
         """NumPy-based CWT with true scale-dependent time support."""
         super().__init__(sample_rate, input_n, config)
-
-        self.scale_bias: np.ndarray[np.float64] = np.sqrt(self.freqs).astype(np.float64)
 
     def class_specific_cwt(self, input_t: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
@@ -559,10 +553,6 @@ class CuPyWavelet(AntsWavelet):
         for w in self.wavelets:
             w.upload_to_gpu()
 
-        # TODO-36 NEXT - what's the purpose of this being here?
-        self.scale_bias = np.sqrt(self.freqs).astype(np.float64)
-        self.scale_bias = cp.asarray(self.scale_bias, dtype=cp.float32)
-
         # Allocate GPU time-frequency matrix
         self.tf_gpu: cp.ndarray = cp.zeros((self.num_freqs, self.input_n), dtype=cp.complex64)
 
@@ -586,22 +576,6 @@ class CuPyWavelet(AntsWavelet):
             self.tf_gpu[i, :] = conv_valid
 
         return cp.asnumpy(self.tf_gpu)
-
-    # TODO NOW - remove this?
-    # TODO 36 why is this done in two different places?
-    def normalize_globally(self, raw_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
-        """
-        Apply global normalization for CuPy-based wavelets.
-
-        Args:
-            raw_coefs: Raw CWT coefficients (already converted from GPU, NumPy array).
-
-        Returns:
-            Globally normalized magnitudes in [0, 1].
-        """
-        if self.global_normalizer is None:
-            return np.asarray(raw_coefs, dtype=self.config.output_dtype)
-        return super().normalize_globally(raw_coefs)
 
     def cleanup(self) -> None:
         try:
