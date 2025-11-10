@@ -15,13 +15,13 @@ This module orchestrates the audio processing pipeline:
 # =============================================================================
 
 from subshader.utils.logging import logger_init, get_logger
-from subshader.utils.os_env_setup import env_init
 from subshader.utils.loop_timer import LoopTimer
 
 from subshader.config import get_default_config
-from subshader.audio.audio_input import AudioInput, AudioFileNotFoundError, EndOfAudioException
+
+from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import CuWavelet
-from subshader.viz.plotter import ShaderPlot, WindowCloseException
+from subshader.viz.plotter import ShaderPlot
 
 from subshader import exceptions
 
