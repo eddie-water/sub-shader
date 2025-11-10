@@ -7,7 +7,7 @@ This module orchestrates the audio processing pipeline:
  - Retrieves audio data from a local file
  - Performs Time-Frequency Analysis on the audio via the Continuous Wavelet 
    Transform implemented with CuPy
- - Visualizes the results using a GPU-accelerated shader plot with OpenGL
+ - Visualizes the time-frequency results with a 2D shader (OpenGL)
 """
 
 # =============================================================================
