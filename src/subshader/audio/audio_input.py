@@ -93,7 +93,7 @@ class AudioInput:
                 file (EOF) is indicated to the caller when None is returned
         """
         # Check if we are going to seek beyond the EOF
-        if self.file_pos + self.hop_size > self.total_samples:
+        if self.file_pos + self.chunk_size > self.total_samples:
             return None
         
         # Seek to the file position and retrieve the next chunk of audio samples
