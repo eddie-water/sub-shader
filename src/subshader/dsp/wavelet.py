@@ -339,7 +339,12 @@ class AntsWavelet(Wavelet):
                  input_n: int,
                  config: Optional[WaveletConfig] = None) -> None:
         """
-        ANTS-style CWT with true scale-dependent time support.
+        CWT implementation from Analyzing Neural Time Series (ANTS) by Mike X 
+        Cohen translated from Matlab. According to the list of frequencies, we
+        generate a bank of wavelet kernels on init. Then determine the output's
+        reliable region based on the wavelet with the widest time support. All
+        of this in preparation for the CWT call, which performs the convolution
+        between the audio data and the bank of wavelet kernels.
 
         Args:
             sample_rate: Input audio sample rate in Hz.
@@ -355,11 +360,10 @@ class AntsWavelet(Wavelet):
                                                             num_cycles=self.config.num_cycles, 
                                                             num_fwhm_cycles=self.config.num_fwhm_cycles, 
                                                             input_n=self.input_n) for f in self.freqs]
-        
+
         self.num_wavelets: int = len(self.wavelets)
 
         # Assess the reliable regions of the CWT output
-        self.coi_mask: np.ndarray[bool] = self._create_coi_mask(self.wavelets)
         self.reliable_slice: slice = self._create_reliable_slice(self.wavelets)
 
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
