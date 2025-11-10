@@ -373,6 +373,8 @@ class AntsWavelet(Wavelet):
         wavelet physically gets wider so naturally it collects more energy. To 
         compensate for that, we reduce the energy of the cwt's result by square 
         root of the scale where s ≈ 1/f -> 1/sqrt(s) ≈ sqrt(f) 
+        
+        TODO-37 explain the square root is because power is mag^2
 
         Args:
             cwt_coefs: Complex CWT coefficients.
