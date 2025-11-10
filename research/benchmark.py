@@ -1,5 +1,4 @@
 """
-TODO 36 - Rename this to bench or performance or something funny
 Benchmark Module for SubShader Performance Analysis.
 
 This module provides comprehensive performance benchmarking for all SubShader
@@ -39,7 +38,6 @@ config = get_default_config()
 config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 config.audio.chunk_size = 1024  # 1 << 10
 config.viz.num_frames = 256
-config.wavelet.reliable_mid_section_p = 1.0
 config.wavelet.target_width = config.audio.chunk_size 
 
 # =============================================================================
@@ -73,7 +71,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.py_coefs = self.py_wavelet.cwt_pipeline(self.audio_data)
+        self.py_coefs = self.py_wavelet.cwt(self.audio_data)
 
         self.np_wavelet = NumPyWavelet(
             sample_rate=self.sample_rate, 
@@ -81,7 +79,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.np_coefs = self.np_wavelet.cwt_pipeline(self.audio_data)
+        self.np_coefs = self.np_wavelet.cwt(self.audio_data)
 
         self.cp_wavelet = CuPyWavelet(
             sample_rate=self.sample_rate, 
@@ -89,7 +87,7 @@ class Benchmark():
             config=config.wavelet
         )
 
-        self.cp_coefs = self.cp_wavelet.cwt_pipeline(self.audio_data)
+        self.cp_coefs = self.cp_wavelet.cwt(self.audio_data)
 
         # Plotter Implementations
         self.plot_shape = self.py_wavelet.get_output_shape()
@@ -108,9 +106,9 @@ class Benchmark():
         # Function List and Dummy Arguments 
         self.func_list = [
             (self.audio_input.get_chunk,    ()),
-            (self.py_wavelet.cwt_pipeline,  (self.audio_data,)),
-            (self.np_wavelet.cwt_pipeline,  (self.audio_data,)),
-            (self.cp_wavelet.cwt_pipeline,  (self.audio_data,)),
+            (self.py_wavelet.cwt,  (self.audio_data,)),
+            (self.np_wavelet.cwt,  (self.audio_data,)),
+            (self.cp_wavelet.cwt,  (self.audio_data,)),
             (self.pyqtg.update_plot,        (self.py_coefs,)),
             (self.shader.update_plot,       (self.cp_coefs,))
         ]
@@ -177,7 +175,7 @@ class Benchmark():
                 if func.__name__ == 'get_chunk':
                     # Audio input - use original args
                     args = base_args
-                elif func.__name__ == 'cwt_pipeline':
+                elif func.__name__ == 'cwt':
                     # CWT functions - use fresh audio data if available
                     if fresh_audio_data is not None:
                         args = (fresh_audio_data,)
@@ -210,7 +208,7 @@ class Benchmark():
                 # Store results for next functions in pipeline
                 if func.__name__ == 'get_chunk':
                     fresh_audio_data = result
-                elif func.__name__ == 'cwt_pipeline':
+                elif func.__name__ == 'cwt':
                     if 'PyWavelet' in func.__self__.__class__.__name__:
                         py_cwt_result = result
                     elif 'AntsWavelet' in func.__self__.__class__.__name__:

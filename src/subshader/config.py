@@ -57,8 +57,12 @@ class AudioConfig:
 
     # Audio File parameters
     file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
+
+    # Number of samples to grab from the audio file at a time
     chunk_size: int = 1 << 14 # 16384
-    overlap_factor: float = 0.5     # As a percentage (0.5 = 50% overlap)
+
+    # Percentage of overlap between consecutive chunks (0.5 = 50%)
+    overlap_factor: float = 0.5
 
     def validate(self) -> List[str]:
         """
@@ -134,9 +138,6 @@ class WaveletConfig:
     # Result of CWT is either its magnitude ("mag") or power ("pow")
     cwt_out_type: str = "pow"
 
-    # Percentage of the middle section of the CWT result to keep
-    reliable_mid_section_p: np.float64 = 0.7 
-
     # Downsampling parameters - default for real-time rendering, reduce for better performance 
     target_width: int = 256
     
@@ -169,7 +170,7 @@ class VisualizationConfig:
     num_frames: int = 32
 
     # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
-    gamma: float = 1.0
+    gamma: float = 0.5
 
     color_norm: ColorNormalizationConfig = field(default_factory=ColorNormalizationConfig)
     

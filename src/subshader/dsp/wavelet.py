@@ -146,7 +146,7 @@ class Wavelet(ABC):
         """
         return self.output_shape
 
-    def cwt_pipeline(self, input_data: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+    def cwt(self, input_data: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
         Performs the Continuous Wavelet Transform (CWT) on input audio data,
         normalizes the results, and downsamples to produce output coefficients.

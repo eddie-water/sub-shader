@@ -23,6 +23,8 @@ from subshader.audio.audio_input import AudioInput, AudioFileNotFoundError, EndO
 from subshader.dsp.wavelet import CuWavelet
 from subshader.viz.plotter import ShaderPlot, WindowCloseException
 
+from subshader import exceptions
+
 # =============================================================================
 # LOGGING
 # =============================================================================
@@ -39,23 +41,6 @@ config = get_default_config()
 
 # Override default configs
 config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
-# TODO 36 - make the default config in the config.py file 50%
-config.audio.overlap_factor = 0.5
-
-# TODO 36 this breaks when I do != 1.0 - maybe that's why I wasn't seeing much edge effects go away
-config.wavelet.reliable_mid_section_p = 1.0
-
-# =============================================================================
-# EXCEPTIONS
-# =============================================================================
-
-GRACEFUL_EXCEPTIONS = (
-    KeyboardInterrupt,
-    RuntimeError,
-    EndOfAudioException, 
-    WindowCloseException,
-    AudioFileNotFoundError
-)
 
 # =============================================================================
 # MAIN APP
@@ -70,23 +55,23 @@ class SubShader:
 
         # Audio Input - handles file reading and audio getter 
         self.audio_input = AudioInput(path=config.audio.file_path, 
-                                                  chunk_size=config.audio.chunk_size,
-                                                  overlap_factor=config.audio.overlap_factor)
+                                      chunk_size=config.audio.chunk_size,
+                                      overlap_factor=config.audio.overlap_factor)
 
         self.sample_rate = self.audio_input.get_sample_rate()
 
         # Wavelet Object - performs the Continuous Wavelet Transform using CuPy
         self.wavelet = CuWavelet(sample_rate=self.sample_rate, 
-                                              input_n=config.audio.chunk_size,
-                                              config=config.wavelet)
+                                 input_n=config.audio.chunk_size,
+                                 config=config.wavelet)
 
         self.result_shape = self.wavelet.get_output_shape()
 
         # Plotter Object - GPU-accelerated shader plot of output results
         self.plotter = ShaderPlot(file_path=config.audio.file_path, 
-                                              frame_shape=self.result_shape,
-                                              frame_overlap=config.audio.overlap_factor,
-                                              config=config.viz)
+                                  frame_shape=self.result_shape,
+                                  frame_overlap=config.audio.overlap_factor,
+                                  config=config.viz)
 
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()
@@ -104,19 +89,18 @@ class SubShader:
         - Updates the plot with the results
         - FPS monitoring
         """
-        
         log.info("Starting main loop")
-        
+
         while not self.plotter.should_window_close():
             # Start loop timing
             loop_start = self.loop_timer.start_loop()
 
             # Retrieve audio chunk and check for end of audio
             if (audio_data := self.audio_input.get_chunk()) is None:
-               raise EndOfAudioException("Audio file processing complete - reached end of file.")
+               raise exceptions.EndOfAudioException("Audio file processing complete - reached end of file.")
 
             # Perform CWT on audio
-            coefs = self.wavelet.cwt_pipeline(audio_data)
+            coefs = self.wavelet.cwt(audio_data)
 
             # Update plot with CWT results
             self.plotter.update_plot(coefs)
@@ -124,7 +108,7 @@ class SubShader:
             # End loop timing 
             self.loop_timer.end_loop_and_report(loop_start)
 
-        raise WindowCloseException("Window closed by user")
+        raise exceptions.WindowCloseException("Window closed by user")
 
     def cleanup(self):
         """Idempotent cleanup: safe to call any time, even after partial init."""
@@ -160,13 +144,8 @@ def main():
 
     try:
         subshader.loop()
-    except GRACEFUL_EXCEPTIONS as e:
-        if hasattr(e, 'log_level') and hasattr(e, 'log_message'):
-            getattr(log, e.log_level)(e.log_message)
-        elif isinstance(e, KeyboardInterrupt):
-            log.warning("Keyboard Interrupt received.")
-        else:
-            log.error(f"Unexpected error: {e}")
+    except exceptions.GRACEFUL_EXCEPTIONS as e:
+        exceptions.reporter.report(e)
     finally:
         subshader.cleanup()
         
