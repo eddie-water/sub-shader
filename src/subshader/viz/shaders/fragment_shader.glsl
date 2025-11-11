@@ -4,7 +4,7 @@
  * Determines the color of each pixel by reading the values from the source
  * data texture. The texture contains coefficient frames stacked
  * side-by-side in a scrolling buffer. Each pixel samples one coefficient
- * value (already globally normalized to [0,1] range) and maps it to a color
+ * value (already normalized to [0,1] range) and maps it to a color
  * using matplotlib's inferno colormap for accurate data representation.
  * 
  * Inputs:
