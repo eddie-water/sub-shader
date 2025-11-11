@@ -3,9 +3,9 @@ SubShader plotter module.
 
 Handles real-time GPU rendering for the 2D data visualization:
  - Creates the window and OpenGL context with GLFW and ModernGL
- - Stores each 2D plot frame chronologically in a circular buffer and renders it
-   in full each frame as a texture 
- - Applies minor color correction (gamma)
+ - Stores each 2D plot frame chronologically in a circular buffer 
+ - Renders using a shader program all the frames as a single texture and applies
+   minor gamma color correction 
  - Includes a deprecated PyQtGraph implementation for legacy or debug use
 """
 
@@ -82,8 +82,8 @@ class ShaderPlot(Plotter):
 
         Args:
             file_path (str): Path to the file to plot.
-            frame_shape (tuple[int, int]): Initial shape estimate - will be 
-                updated with actual data
+            frame_shape (tuple[int, int]): The shape of each individual frame to
+                add to the frame buffer
             config: Global configuration for the visualizer
         """
         super().__init__(file_path, frame_shape)
@@ -117,10 +117,8 @@ class ShaderPlot(Plotter):
         # Append new frame to circular buffer
         self.frame_buffer.add_frame(plot_values)
 
-        # Upload the entire chronologically ordered buffer to the texture
+        # Upload and render entire chronologically ordered buffer to the texture
         self.renderer.update_texture(self.frame_buffer.get_flattened_buffer())
-
-        # Render pass 
         self.gl_context.clear_graphic()
         self.renderer.render_graphic()
         self.gl_context.display_graphic()

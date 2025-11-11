@@ -314,8 +314,8 @@ class PyWavelet(Wavelet):
         Returns:
             Scale-normalized complex CWT coefficients.
         """
-        raise NotImplementedError("PyWavelet does not implement scale-dependent normalization")
-    
+        pass    
+
     def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
         Discards the unreliable coefficients outside the reliable region of the
@@ -327,7 +327,7 @@ class PyWavelet(Wavelet):
         Returns:
             The reliable time-frequency coefficients.
         """
-        raise NotImplementedError("PyWavelet does not implement reliable region extraction")
+        pass
     
     def cleanup(self) -> None:
         """PyWavelet doesn't allocate significant resources, so this is a no-op."""
@@ -364,6 +364,7 @@ class AntsWavelet(Wavelet):
         self.num_wavelets: int = len(self.wavelets)
 
         # Assess the reliable regions of the CWT output
+        # self.coi_mask: np.ndarray[bool] = self._create_coi_mask(self.wavelets)
         self.reliable_slice: slice = self._create_reliable_slice(self.wavelets)
 
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
@@ -415,6 +416,7 @@ class AntsWavelet(Wavelet):
             Masked CWT output coefficients.
         """
         masked_coefs: np.ndarray[np.floating] = coefs * self.coi_mask
+
         return masked_coefs
 
     def _create_reliable_slice(self, wavelets: list[WaveletKernel]) -> slice:
