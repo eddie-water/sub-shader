@@ -13,20 +13,19 @@ audio visualization:
 # IMPORTS
 # =============================================================================
 
-import os
 from abc import ABC, abstractmethod
-from typing import Optional
 
-import numpy as np
-import pyqtgraph as pg
-import moderngl
 import glfw
-
-from .shaders import get_vertex_shader_source, get_fragment_shader_source
-from .plot_normalizer import PlotNormalizer
+import moderngl
+import numpy as np
+import os
+import pyqtgraph as pg
 
 from subshader.utils.logging import get_logger
 from subshader.config import VisualizationConfig
+
+from .shaders import get_vertex_shader_source, get_fragment_shader_source
+from .plot_normalizer import PlotNormalizer
 
 # =============================================================================
 # LOGGING
@@ -55,14 +54,14 @@ class Plotter(ABC):
         Abstract base class for all plotters.
 
         Args:
-            file_path (str): Path to the file to plot.
+            file_path (str): Path to the data file to plot.
             frame_shape (tuple[int, int]): Shape of each data frame to plot.
         """
         self.file_path = file_path
         self.frame_shape = frame_shape
 
     @abstractmethod
-    def update_plot(self, plot_values):
+    def update_plot(self, plot_values) -> None:
         """
         Abstract method to update the plot with new data.
 
@@ -72,12 +71,12 @@ class Plotter(ABC):
         pass
 
     @abstractmethod
-    def should_window_close(self):
+    def should_window_close(self) -> None:
         """Check if the window should close based on user input."""
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], frame_overlap: float, config: VisualizationConfig):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], config: VisualizationConfig):
         """
         2D data visualization using shaders
 
@@ -88,23 +87,21 @@ class ShaderPlot(Plotter):
             config: Global configuration for the visualizer
         """
         super().__init__(file_path, frame_shape)
+
         self.config = config
 
-        # Circular buffer to aggregate frames in chronological order
+        # Circular buffer to store frames in chronological order
         self.frame_buffer = CircularFrameBuffer(frame_shape=self.frame_shape,
-                                                                     num_frames=self.config.num_frames,
-                                                                     frame_overlap=frame_overlap,
-                                                                     color_norm_config=self.config.color_norm)
+                                                num_frames=self.config.num_frames,
+                                                color_norm_config=self.config.color_norm)
 
         # ModernGL Context - window creation and OpenGL context setup
         self.gl_context = GLContext(title=f"SubShader - {os.path.basename(file_path)}")
 
         # GPU Renderer - shader compilation, texture management, and rendering 
         self.renderer = Renderer(ctx=self.gl_context.ctx,
-                                           texture_shape=self.frame_buffer.get_shape(),
-                                           gamma=self.config.gamma)
-
-        # log.info(f"Renderer initialized with texture shape: {frame_buffer_shape}")
+                                 texture_shape=self.frame_buffer.get_shape(),
+                                 gamma=self.config.gamma)
 
     def update_plot(self, plot_values: np.ndarray):
         """
@@ -140,7 +137,7 @@ class ShaderPlot(Plotter):
         glfw.terminate()
 
 class GLContext:
-    def __init__(self, width=1920, height=1080, title="SubShader"):
+    def __init__(self, title="SubShader"):
         """
         Handles GLFW window and OpenGL context setup
 
@@ -149,16 +146,17 @@ class GLContext:
             height (int): Default window height
             title (str): Window title
         """
-        self.width = width
-        self.height = height
-        self.title = title
-        self.window = None
-        self.ctx = None
-        self._init_graphics()
+        self.window: object | None = None
+        self.width: int = 0
+        self.height: int = 0
+        self.ctx: moderngl.Context | None = None
 
-    # =============================================================================
+        self.window, self.width, self.height = self._init_window(title)
+        self.ctx = self._init_opengl_context(self.width, self.height)
+
+    # =========================================================================
     # PUBLIC METHODS - External interface
-    # =============================================================================
+    # =========================================================================
 
     def should_close(self):
         """
@@ -182,15 +180,21 @@ class GLContext:
         """
         self.ctx.clear(r, g, b)
 
-    # =============================================================================
+    # =========================================================================
     # PRIVATE METHODS - Internal implementation
-    # =============================================================================
+    # =========================================================================
 
-    def _init_graphics(self):
+    def _init_window(self, title: str) -> tuple[any, int, int]:
         """
         GLFW is a cross-platform library used for creating windows with OpenGL 
         contexts and handling input. It's the way OpenGL displays the graphics
         onto the screen.
+
+        Args:
+            title (str): Title of the window
+
+        Returns:
+            tuple[glfw.Window, int, int]: The window, width, and height.
         """
         # Set up GLFW error callback to redirect messages to log
         self._setup_glfw_error_callback()
@@ -213,43 +217,57 @@ class GLContext:
         # Create maximized window with decorations 
         monitor = glfw.get_primary_monitor()
         mode = glfw.get_video_mode(monitor)
-        self.width, self.height = mode.size.width, mode.size.height
-        
-        log.info(f"Creating maximized window: {self.width}×{self.height}")
-        self.window = glfw.create_window(self.width, self.height, self.title, None, None)
-        glfw.maximize_window(self.window)
-        if not self.window:
+
+        width, height = mode.size.width, mode.size.height
+
+        log.info(f"Creating maximized window: {width}×{height}")
+
+        window = glfw.create_window(width, height, title, None, None)
+        glfw.maximize_window(window)
+
+        if not window:
             # Clean up GLFW before failing
             glfw.terminate()
             log.error("GLFW window creation failed")
             raise RuntimeError("Failed to create window")
 
         # Make OpenGL context current for this thread before any OpenGL calls
-        glfw.make_context_current(self.window)
-        
+        glfw.make_context_current(window)
+
+        return window, width, height
+
+    def _init_opengl_context(self, view_width: int, view_height: int) -> moderngl.Context:
         """
         ModernGL is a Python wrapper around OpenGL that provides a more
         pythonic interface for OpenGL calls. It allows us to create shaders,
         buffers, textures, and other OpenGL objects without dealing with the
-        low-level OpenGL API directly.
+        low-level OpenGL API directly.  
+        Args:
+            view_width (int): Width of the viewport
+            view_height (int): Height of the viewport
+
+        Returns:
+            moderngl.Context: The ModernGL context.
         """
-        self.ctx = moderngl.create_context()
+        ctx = moderngl.create_context()
         
         # Log OpenGL info for debugging
-        log.info(f"OpenGL Version: {self.ctx.info['GL_VERSION']}")
-        log.debug(f"Viewport: {self.ctx.viewport}")
+        log.info(f"OpenGL Version: {ctx.info['GL_VERSION']}")
+        log.debug(f"Viewport: {ctx.viewport}")
 
         # Setup viewport (area of window where OpenGL renders) to match window 
-        self.ctx.viewport = (0, 0, self.width, self.height)
+        ctx.viewport = (0, 0, view_width, view_height)
         
         # Disable depth testing (z-values) since rendering 2D content only 
-        self.ctx.disable(moderngl.DEPTH_TEST)
+        ctx.disable(moderngl.DEPTH_TEST)
         
         # Disable face culling - we want to see both sides of triangles
         # Face culling normally hides back-facing triangles for performance
-        self.ctx.disable(moderngl.CULL_FACE)
+        ctx.disable(moderngl.CULL_FACE)
         
         log.info("Graphics context initialized successfully")
+
+        return ctx
     
     def _setup_glfw_error_callback(self):
         """
@@ -305,14 +323,20 @@ class Renderer:
         self.vbo, self.vao = self._setup_rendering_geometry(self.shader)
         self.texture = self._setup_texture(self.shader, texture_shape)
 
-    # ==========================================================================
+    # =========================================================================
     # PRIVATE METHODS - Internal implementation
-    # ==========================================================================
+    # =========================================================================
 
-    def _compile_shaders(self, gamma):
+    def _compile_shaders(self, gamma: float) -> moderngl.Program:
         """
         Compile and link vertex (geometry) and fragment (color) shaders into 
         a GPU-executable program
+
+        Args:
+            gamma (float): The gamma correction factor.
+
+        Returns:
+            moderngl.Program: The compiled shader program.
         """
 
         vertex_shader = get_vertex_shader_source()
@@ -361,9 +385,9 @@ class Renderer:
         height, width = texture_shape
 
         # Create texture object in memory 
-        log.info(f"Creating texture: {width}x{height} (1 channel grayscale, float32)")
-        log.info(f"CPU→GPU: Allocating texture buffer ({width}×{height}, f4, {width * height * 4} bytes)")
         self.texture = self.ctx.texture((width, height), 1, dtype='f4')
+        log.info(f"Creating texture: {width}x{height} (1 channel grayscale, float32)")
+        log.info(f"CPU→GPU: Allocating texture buffer with {width * height * 4} bytes)")
 
         # Set texture filtering for smoothness between pixels
         self.texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
@@ -421,9 +445,9 @@ class Renderer:
             log.debug(f"GL OK: {operation}")
             return True
 
-    # ==========================================================================
+    # =========================================================================
     # PUBLIC METHODS - External interface
-    # ==========================================================================
+    # =========================================================================
 
     def update_texture(self, texture_data):
         """
@@ -449,8 +473,6 @@ class Renderer:
         # Check for OpenGL errors after texture write
         if not self._check_gl_error(self.ctx, "after texture write"):
             return
-
-        self.texture.use(location=self.TEXTURE_SLOT)
 
         log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
 
@@ -478,7 +500,7 @@ class Renderer:
             log.error(f"Render exception: {e}")
 
 class CircularFrameBuffer:
-    def __init__(self, frame_shape, num_frames, frame_overlap, color_norm_config):
+    def __init__(self, frame_shape, num_frames, color_norm_config):
         """
         Handles circular buffer for scrolling visualization
 
@@ -489,13 +511,6 @@ class CircularFrameBuffer:
         """
         self.num_frames = num_frames 
         self.height, self.width = frame_shape
-
-        # TODO 36 - NOW how do we handle the frame overlap, reliable region, and 
-        # downsampling?
-
-        # TODO 36 Wait I don't see how we're handling for the overlap here, I 
-        # think I'm just getting lucky 
-        self.frame_overlap = frame_overlap
 
         log.info(f"Plotting {self.num_frames} {frame_shape} sized frames")
 
@@ -512,12 +527,18 @@ class CircularFrameBuffer:
                                               warmup_frames=color_norm_config.warmup_frames,
                                               log_mapping=color_norm_config.log_mapping)
 
-    # ==========================================================================
+    # =========================================================================
     # PUBLIC METHODS - External interface
-    # ==========================================================================
+    # =========================================================================
 
-    def add_frame(self, frame_data):
-        """Add new frame to circular buffer and update flattened buffer"""
+    def add_frame(self, frame_data) -> None:
+        """
+        Add new frame to circular buffer and update flattened buffer
+
+        Args:
+            frame_data (np.ndarray): The new frame data to add to the circular
+                buffer.
+        """
         if frame_data.shape != (self.height, self.width):
             log.error(f"Frame data shape mismatch: expected {(self.height, self.width)}, got {frame_data.shape}")
             raise ValueError(f"Expected shape {(self.height, self.width)}, got {frame_data.shape}")

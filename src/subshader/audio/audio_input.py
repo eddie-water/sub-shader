@@ -116,6 +116,15 @@ class AudioInput:
     """
         return self.sample_rate
 
+    def get_chunk_size(self) -> int:
+        """
+        Gets the chunk size of the audio file.
+
+        Returns:
+            int: Chunk size
+        """
+        return self.chunk_size
+
     def cleanup(self):
         """
         Audio File Cleanup

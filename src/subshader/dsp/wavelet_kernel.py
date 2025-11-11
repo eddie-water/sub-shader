@@ -1,5 +1,6 @@
 from typing import Optional, Final
 
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy.fft import fft
 import cupy as cp
@@ -47,7 +48,7 @@ class WaveletKernel():
         # Convert to number of samples (s * samples / s)
         self.time_support_n: int = int(np.round(self.time_support_s * sample_rate))
 
-        log.info(f"Wavelet {f} time support: {self.time_support_s} s, {self.time_support_n} samples")
+        log.info(f"Wavelet {f} time support: {self.time_support_s:.2f} s, {self.time_support_n} samples")
 
         # Time vector centered at t = 0 with time support duration
         self.t: np.ndarray[np.float64] = (np.arange(self.time_support_n, dtype=np.float64) / sample_rate) - (self.time_support_s / 2)

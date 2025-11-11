@@ -266,7 +266,7 @@ class PyWavelet(Wavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: Optional[WaveletConfig] = None) -> None:
+                 config: WaveletConfig) -> None:
         """
         The PyWavelet implementation of the CWT.
 
@@ -415,42 +415,6 @@ class AntsWavelet(Wavelet):
             Masked CWT output coefficients.
         """
         masked_coefs: np.ndarray[np.floating] = coefs * self.coi_mask
-
-        # Create a figure with room on the right for colorbars
-        fig = plt.figure(figsize=(10, 6), constrained_layout=True)
-        gs = gridspec.GridSpec(nrows=3, ncols=2, figure=fig, 
-                                    width_ratios=[50, 1], wspace=0.1, hspace=0.1)
-
-        # Create axes for plots and colorbars
-        ax = [fig.add_subplot(gs[i, 0]) for i in range(3)]
-        cax = [fig.add_subplot(gs[i, 1]) for i in range(3)]
-
-        # CWT Coefficients
-        im_coefs = ax[0].imshow(coefs, aspect='auto', cmap='viridis', origin='lower')
-        ax[0].set_title("CWT Coefficients")
-        ax[0].set_xlabel("Time (samples)")
-        ax[0].set_ylabel("Scale index (0 = lowest frequency)")
-        fig.colorbar(im_coefs, cax=cax[0], label='Magnitude')
-
-        # Cone of Influence Mask
-        im_coi_mask = ax[1].imshow(~self.coi_mask, aspect='auto', cmap='gray_r', origin='lower')
-        ax[1].set_title("Cone of Influence Mask")
-        ax[1].set_xlabel("Time (samples)")
-        ax[1].set_ylabel("Scale index (0 = lowest frequency)")
-        fig.colorbar(im_coi_mask, cax=cax[1], label='Reliable (white = True)')
-
-        # Masked CWT
-        im_masked_coefs = ax[2].imshow(masked_coefs, aspect='auto', cmap='viridis', origin='lower')
-        ax[2].set_title("Masked CWT Coefficients")
-        ax[2].set_xlabel("Time (samples)")
-        ax[2].set_ylabel("Scale index (0 = lowest frequency)")
-        fig.colorbar(im_masked_coefs, cax=cax[2], label='Magnitude')
-
-        # Final layout polish - hide inner tick labels for cleaner stack
-        for a in ax:
-            a.label_outer() 
-
-        plt.show()
         return masked_coefs
 
     def _create_reliable_slice(self, wavelets: list[WaveletKernel]) -> slice:

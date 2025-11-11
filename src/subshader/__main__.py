@@ -58,19 +58,14 @@ class SubShader:
                                       chunk_size=config.audio.chunk_size,
                                       overlap_factor=config.audio.overlap_factor)
 
-        self.sample_rate = self.audio_input.get_sample_rate()
-
         # Wavelet Object - performs the Continuous Wavelet Transform using CuPy
-        self.wavelet = CuWavelet(sample_rate=self.sample_rate, 
-                                 input_n=config.audio.chunk_size,
+        self.wavelet = CuWavelet(sample_rate=self.audio_input.get_sample_rate(), 
+                                 input_n=self.audio_input.get_chunk_size(),
                                  config=config.wavelet)
-
-        self.result_shape = self.wavelet.get_output_shape()
 
         # Plotter Object - GPU-accelerated shader plot of output results
         self.plotter = ShaderPlot(file_path=config.audio.file_path, 
-                                  frame_shape=self.result_shape,
-                                  frame_overlap=config.audio.overlap_factor,
+                                  frame_shape=self.wavelet.get_output_shape(),
                                   config=config.viz)
 
         # Loop timer - performance monitoring
