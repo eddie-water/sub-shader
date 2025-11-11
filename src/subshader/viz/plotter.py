@@ -1,12 +1,12 @@
 """
-Visualization Module for SubShader.
+SubShader plotter module.
 
-This module provides GPU-accelerated shader-based plotting for real-time
-audio visualization:
- - Renders time-frequency data using OpenGL shaders
- - Implements efficient texture-based data streaming
- - Supports customizable gamma correction and color mapping
- - Manages GLFW window lifecycle and input handling
+Handles real-time GPU rendering for the 2D data visualization:
+ - Creates the window and OpenGL context with GLFW and ModernGL
+ - Stores each 2D plot frame chronologically in a circular buffer and renders it
+   in full each frame as a texture 
+ - Applies minor color correction (gamma)
+ - Includes a deprecated PyQtGraph implementation for legacy or debug use
 """
 
 # =============================================================================
@@ -90,7 +90,7 @@ class ShaderPlot(Plotter):
 
         self.config = config
 
-        # Circular buffer to store frames in chronological order
+        # Circular buffer to store data frames in chronological order
         self.frame_buffer = CircularFrameBuffer(frame_shape=self.frame_shape,
                                                 num_frames=self.config.num_frames,
                                                 color_norm_config=self.config.color_norm)
@@ -103,12 +103,13 @@ class ShaderPlot(Plotter):
                                  texture_shape=self.frame_buffer.get_shape(),
                                  gamma=self.config.gamma)
 
-    def update_plot(self, plot_values: np.ndarray):
+    def update_plot(self, plot_values: np.ndarray) -> None:
         """
-        Updates the rolling plot frame buffer with a new frame of data. Then 
-        sends the entire buffer of frames to the texture. Clears the back buffer
-        and renders the new graphic. Displays the graphic on the screen by
-        swapping the front and back buffers.
+        Updates the circular buffer with a new frame of plot data. Then 
+        sends the entire buffer (oldest on the left, newest on the right) of 
+        frames to the texture. Clears the back bufferand renders the new 
+        graphic. Displays the graphic on the screen by swapping the front and 
+        back buffers.
 
         Args:
             plot_values (np.ndarray): The new data to plot.
@@ -124,13 +125,13 @@ class ShaderPlot(Plotter):
         self.renderer.render_graphic()
         self.gl_context.display_graphic()
 
-    def should_window_close(self):
+    def should_window_close(self) -> bool:
         """
         Check if user wants to close the window
         """  
         return self.gl_context.should_close()
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """
         Clean shutdown
         """
@@ -158,7 +159,7 @@ class GLContext:
     # PUBLIC METHODS - External interface
     # =========================================================================
 
-    def should_close(self):
+    def should_close(self) -> bool:
         """
         Checks if the window should close based on user input.
         
@@ -167,14 +168,14 @@ class GLContext:
         """
         return glfw.window_should_close(self.window)
     
-    def display_graphic(self):
+    def display_graphic(self) -> None:
         """
         Display the rendered content (swap front/back buffers).
         """
         glfw.swap_buffers(self.window)
         glfw.poll_events()  # Process window events
     
-    def clear_graphic(self, r=0.0, g=0.0, b=0.0):
+    def clear_graphic(self, r: float = 0.0, g: float = 0.0, b: float = 0.0) -> None:
         """
         Clear the OpenGL context with a specified color.
         """
@@ -184,7 +185,7 @@ class GLContext:
     # PRIVATE METHODS - Internal implementation
     # =========================================================================
 
-    def _init_window(self, title: str) -> tuple[any, int, int]:
+    def _init_window(self, title: str) -> tuple[object, int, int]:
         """
         GLFW is a cross-platform library used for creating windows with OpenGL 
         contexts and handling input. It's the way OpenGL displays the graphics
@@ -269,7 +270,7 @@ class GLContext:
 
         return ctx
     
-    def _setup_glfw_error_callback(self):
+    def _setup_glfw_error_callback(self) -> None:
         """
         Set up GLFW error callback to redirect messages to log instead of terminal.
         """
@@ -302,7 +303,7 @@ class Renderer:
     # Texture slot that tells the fragment shader which texture to read from
     TEXTURE_SLOT = 0
 
-    def __init__(self, ctx, texture_shape: tuple[int, int], gamma):
+    def __init__(self, ctx: moderngl.Context, texture_shape: tuple[int, int], gamma: float):
         """
         Main GPU rendering component that 
             - Compiles the shaders 
@@ -350,7 +351,7 @@ class Renderer:
 
         return shader
 
-    def _setup_rendering_geometry(self, shader: moderngl.Program):
+    def _setup_rendering_geometry(self, shader: moderngl.Program) -> tuple[moderngl.Buffer, moderngl.VertexArray]:
         """
         Create quad geometry (rectangle) that covers the GLFW window, store in 
         OpenGL context/memory via VBO, and bind to the shader program via VAO.
@@ -373,7 +374,7 @@ class Renderer:
 
         return vbo, vao
 
-    def _setup_texture(self, shader: moderngl.Program, texture_shape: tuple[int, int]):
+    def _setup_texture(self, shader: moderngl.Program, texture_shape: tuple[int, int]) -> moderngl.Texture:
         """
         Create texture and connect it to shader uniform via texture slot
 
@@ -398,7 +399,7 @@ class Renderer:
 
         return self.texture
 
-    def _validate_texture_data(self, texture_data):
+    def _validate_texture_data(self, texture_data: np.ndarray) -> bool:
         """
         Validate data before uploading it to the texture.
         """
@@ -432,7 +433,7 @@ class Renderer:
 
         return True
 
-    def _check_gl_error(self, ctx: moderngl.Context, operation: str):
+    def _check_gl_error(self, ctx: moderngl.Context, operation: str) -> bool:
         """
         Check for OpenGL errors and log 
         """
@@ -449,7 +450,7 @@ class Renderer:
     # PUBLIC METHODS - External interface
     # =========================================================================
 
-    def update_texture(self, texture_data):
+    def update_texture(self, texture_data: np.ndarray) -> None:
         """
         Upload new data to texture and activate it in the assigned slot
 
@@ -476,7 +477,7 @@ class Renderer:
 
         log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
 
-    def render_graphic(self):
+    def render_graphic(self) -> None:
         """
         Render the quad - this one-shots the graphics pipeline from the source
         data stored in the texture to the back buffer.
@@ -500,7 +501,7 @@ class Renderer:
             log.error(f"Render exception: {e}")
 
 class CircularFrameBuffer:
-    def __init__(self, frame_shape, num_frames, color_norm_config):
+    def __init__(self, frame_shape: tuple[int, int], num_frames: int, color_norm_config) -> None:
         """
         Handles circular buffer for scrolling visualization
 
@@ -555,7 +556,7 @@ class CircularFrameBuffer:
             end_col = start_col + self.width
             self.flattened_buffer[:, start_col:end_col] = self.frames[frame_i]
 
-    def get_shape(self):
+    def get_shape(self) -> tuple[int, int]:
         """
         Get the shape of the entire, flattened frame buffer
 
@@ -564,7 +565,7 @@ class CircularFrameBuffer:
         """
         return self.flattened_buffer.shape
 
-    def get_flattened_buffer(self):
+    def get_flattened_buffer(self) -> np.ndarray:
         """
         Get time-ordered flattened buffer for texture
 
