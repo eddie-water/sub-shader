@@ -53,7 +53,7 @@ class WaveletKernel():
         # Time vector centered at t = 0 with time support duration
         self.t: np.ndarray[np.float64] = (np.arange(self.time_support_n, dtype=np.float64) / sample_rate) - (self.time_support_s / 2)
 
-        # Create Complex Morlet Wavelet by shaping the sinusoid with the Gaussian
+        # Create Complex Morlet Wavelet by shaping a sinusoid with a Gaussian
         self.sinusoid: np.ndarray[np.complex64] = np.exp(1j * 2 * PI * self.freq * self.t)
         self.gaussian: np.ndarray[np.complex64] = Gaussian(self.t, self.freq, num_fwhm_cycles).gauss
         self.cmw: np.ndarray[np.complex64] = self.sinusoid * self.gaussian
