@@ -593,21 +593,27 @@ class CuPyWavelet(AntsWavelet):
             Real-valued TF matrix (num_freqs, input_n) containing power (|x|^2),
             transferred back to NumPy on return.
         """
-        input_t_cp = cp.asarray(input_t, dtype=cp.complex64)
+        log.info(f"CPU→GPU: Uploading input data of size {input_t_cpu.shape[0]} to GPU")
+        
+        self.input_f_gpu = cp.asarray(fft(input_t_cpu, self.max_conv_n), 
+                                      dtype=cp.complex64,
+                                      order='C')
 
-        for i, w in enumerate(self.wavelets):
-            input_f = cp_fft.fftn(input_t_cp, w.conv_n)
-            conv = cp_fft.ifftn(input_f * w.kernel_f_gpu)
-            conv_valid = conv[w.slice_start_gpu:w.slice_end_gpu]
-            self.tf_gpu[i, :] = conv_valid
+        # Perform convolution via broadcasting frequency domain multiplication per row 
+        conv_f_gpu = self.input_f_gpu * self.kernel_f_bank_gpu
 
-        return cp.asnumpy(self.tf_gpu)
+        log.info(f"GPU→CPU: Downloading convolution result of size {conv_f_gpu.shape} to CPU")
+        conv_f_cpu = cp.asnumpy(conv_f_gpu)
+
+        conv_t_cpu = ifft(conv_f_cpu, axis=1)
+
+        return conv_t_cpu[:, :self.input_n]
 
     def cleanup(self) -> None:
         try:
-            if hasattr(self, 'tf_gpu') and self.tf_gpu is not None:
-                del self.tf_gpu
-                self.tf_gpu = None  # type: ignore[assignment]
+            if hasattr(self, 'tf_gpu') and self.output_tf_cpu is not None:
+                del self.output_tf_cpu
+                self.output_tf_cpu = None  # type: ignore[assignment]
             if hasattr(self, 'wavelet_kernels_f') and self.wavelet_kernels_f is not None:
                 del self.wavelet_kernels_f
                 self.wavelet_kernels_f = []  # type: ignore[assignment]
@@ -616,6 +622,11 @@ class CuPyWavelet(AntsWavelet):
         except Exception as e:  # pragma: no cover - defensive cleanup
             print(f"Warning: Error during GPU cleanup: {e}")
     
+
+class NpWavelet(NumPyWavelet):
+    """Alias for NumPyWavelet."""
+    pass
+
 class CuWavelet(CuPyWavelet):
-    """Alias of CuPyWavelet with a shorter name."""
+    """Alias forCuPyWavelet"""
     pass
