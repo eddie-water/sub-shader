@@ -355,6 +355,7 @@ class AntsWavelet(Wavelet):
         """
         super().__init__(sample_rate, input_n, config)
 
+        # Generate the each wavelet
         self.wavelets: list[WaveletKernel] = [WaveletKernel(f=f, 
                                                             sample_rate=self.sample_rate, 
                                                             num_cycles=self.config.num_cycles, 
@@ -363,27 +364,17 @@ class AntsWavelet(Wavelet):
 
         self.num_wavelets: int = len(self.wavelets)
 
+        # Store each kernel in the bank where each kernel is zero-padded to the longest kernel's conv length
+        self.max_conv_n: int = max(w.get_conv_n() for w in self.wavelets)
+
+        self.kernel_f_bank: np.ndarray[np.complex64] = np.zeros((self.num_wavelets, self.max_conv_n), dtype=np.complex64)
+
+        for i, w in enumerate(self.wavelets):
+            self.kernel_f_bank[i, :w.get_conv_n()] = w.kernel_f
+
         # Assess the reliable regions of the CWT output
         # self.coi_mask: np.ndarray[bool] = self._create_coi_mask(self.wavelets)
         self.reliable_slice: slice = self._create_reliable_slice(self.wavelets)
-
-    def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
-        """
-        Scale-Dependent Normalization to account for the energy bias introduced
-        by scaling each wavelet. At higher scales (lower frequencies), the 
-        wavelet physically gets wider so naturally it collects more energy. To 
-        compensate for that, we reduce the energy of the cwt's result by square 
-        root of the scale where s ≈ 1/f -> 1/sqrt(s) ≈ sqrt(f) 
-        
-        TODO-37 explain the square root is because power is mag^2
-
-        Args:
-            cwt_coefs: Complex CWT coefficients.
-
-        Returns:
-            Scale-normalized complex CWT coefficients.
-        """
-        return cwt_coefs * np.sqrt(self.freqs[:, None])
 
     def _create_coi_mask(self, wavelets: list[WaveletKernel]) -> np.ndarray[bool]:
         """
@@ -403,21 +394,6 @@ class AntsWavelet(Wavelet):
             mask[i, start:stop] = True
 
         return mask
-
-    def apply_coi_mask(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
-        """
-        Apply the Cone of Influence mask for reliable region of the CWT results
-        to avoid edge artifacts from the variable length wavelets.
-
-        Args:
-            coefs: CWT output coefficients.
-
-        Returns:
-            Masked CWT output coefficients.
-        """
-        masked_coefs: np.ndarray[np.floating] = coefs * self.coi_mask
-
-        return masked_coefs
 
     def _create_reliable_slice(self, wavelets: list[WaveletKernel]) -> slice:
         """
@@ -442,6 +418,37 @@ class AntsWavelet(Wavelet):
         slice_end: int = slice_start + keep
 
         return slice(slice_start, slice_end)
+
+    def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
+        """
+        Scale-Dependent Normalization to account for the energy bias introduced
+        by scaling each wavelet. At higher scales (lower frequencies), the 
+        wavelet physically gets wider so naturally it collects more energy. To 
+        compensate for that, we reduce the energy of the cwt's result by square 
+        root of the scale where s ≈ 1/f -> 1/sqrt(s) ≈ sqrt(f) 
+        
+        TODO-37 explain the square root is because power is mag^2
+
+        Args:
+            cwt_coefs: Complex CWT coefficients.
+
+        Returns:
+            Scale-normalized complex CWT coefficients.
+        """
+        return cwt_coefs * np.sqrt(self.freqs[:, None])
+
+    def apply_coi_mask(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+        """
+        Apply the Cone of Influence mask for reliable region of the CWT results
+        to avoid edge artifacts from the variable length wavelets.
+
+        Args:
+            coefs: CWT output coefficients.
+
+        Returns:
+            Masked CWT output coefficients.
+        """
+        return coefs * self.coi_mask
 
     def slice_for_reliable_region(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
@@ -525,6 +532,10 @@ class AntsWavelet(Wavelet):
         # return self.apply_coi_mask(coefs)
         return self.slice_for_reliable_region(coefs)
 
+    @abstractmethod
+    def class_specific_cwt(self, data: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
+        pass
+
 class NumPyWavelet(AntsWavelet):
     def __init__(self,
                  sample_rate: int,
@@ -543,16 +554,15 @@ class NumPyWavelet(AntsWavelet):
         Returns:
             Real-valued TF matrix (num_freqs, input_n) 
         """
-        output_tf: np.ndarray[np.complex64] = np.zeros((self.num_freqs, self.input_n), dtype=np.complex64)
+        # Transform input data to frequency domain
+        input_f = fft(input_t, self.max_conv_n)
 
-        # Convolve input data and each wavelet kernel via frequency domain multiplication
-        for i, w in enumerate(self.wavelets):
-            input_f = fft(input_t, w.conv_n)
-            conv = ifft(input_f * w.kernel_f)
-            conv_valid = conv[w.slice]
-            output_tf[i, :] = conv_valid
+        # Perform convolution per row as frequency domain multiplication
+        conv_f = input_f * self.kernel_f_bank
 
-        return output_tf
+        conv_t = ifft(conv_f, axis=1)
+
+        return conv_t[:, :self.input_n]
 
     def cleanup(self) -> None:
         return None
@@ -566,13 +576,13 @@ class CuPyWavelet(AntsWavelet):
 
         log.info(f"CPU→GPU: Uploading {self.num_wavelets} wavelets to GPU")
 
-        for w in self.wavelets:
-            w.upload_to_gpu()
+        # Upload wavelets to GPU
+        self.kernel_f_bank_gpu = cp.asarray(
+            self.kernel_f_bank, 
+            dtype=cp.complex64, 
+            order='C')
 
-        # Allocate GPU time-frequency matrix
-        self.tf_gpu: cp.ndarray = cp.zeros((self.num_freqs, self.input_n), dtype=cp.complex64)
-
-    def class_specific_cwt(self, input_t: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
+    def class_specific_cwt(self, input_t_cpu: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
         Perform CWT using variable-length wavelets, GPU version.
 

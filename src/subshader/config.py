@@ -62,6 +62,7 @@ class AudioConfig:
     chunk_size: int = 1 << 14 # 16384
 
     # Percentage of overlap between consecutive chunks (0.5 = 50%)
+    # TODO-45 Fix the overlap and plot overlap relationship
     overlap_factor: float = 0.5
 
     def validate(self) -> List[str]:
@@ -84,40 +85,6 @@ class AudioConfig:
 
         return errors
 
-@dataclass
-class ColorNormalizationConfig:
-    """Configuration for color normalization across all data frames."""
-    
-    # Robust statistics parameters
-    percentile: float = 99.0
-    
-    # Adaptation parameters
-    decay_rate: float = 0.001  # Exponential decay rate per frame
-    floor_value: float = 1e-8  # Minimum global factor to prevent division by zero
-    
-    # Warm-up parameters
-    warmup_frames: int = 10  # Frames to process before normalization is "ready"
-    
-    # Enhancement parameters
-    log_mapping: bool = False  # Apply log1p mapping for perceptual detail
-    
-    def validate(self) -> List[str]:
-        """Validate color normalization configuration parameters."""
-        errors = []
-        
-        if not (0.0 < self.percentile <= 100.0):
-            errors.append(f"percentile ({self.percentile}) must be between 0 and 100")
-        
-        if not (0.0 <= self.decay_rate < 1.0):
-            errors.append(f"decay_rate ({self.decay_rate}) must be between 0 and 1")
-        
-        if self.floor_value <= 0:
-            errors.append(f"floor_value ({self.floor_value}) must be positive")
-        
-        if self.warmup_frames < 0:
-            errors.append(f"warmup_frames ({self.warmup_frames}) must be non-negative")
-        
-        return errors
 
 @dataclass
 class WaveletConfig:
@@ -163,11 +130,46 @@ class WaveletConfig:
 
 
 @dataclass
+class ColorNormalizationConfig:
+    """Configuration for color normalization across all data frames."""
+    
+    # Robust statistics parameters
+    percentile: float = 99.0
+    
+    # Adaptation parameters
+    decay_rate: float = 0.001  # Exponential decay rate per frame
+    floor_value: float = 1e-8  # Minimum global factor to prevent division by zero
+    
+    # Warm-up parameters
+    warmup_frames: int = 10  # Frames to process before normalization is "ready"
+    
+    # Enhancement parameters
+    log_mapping: bool = False  # Apply log1p mapping for perceptual detail
+    
+    def validate(self) -> List[str]:
+        """Validate color normalization configuration parameters."""
+        errors = []
+        
+        if not (0.0 < self.percentile <= 100.0):
+            errors.append(f"percentile ({self.percentile}) must be between 0 and 100")
+        
+        if not (0.0 <= self.decay_rate < 1.0):
+            errors.append(f"decay_rate ({self.decay_rate}) must be between 0 and 1")
+        
+        if self.floor_value <= 0:
+            errors.append(f"floor_value ({self.floor_value}) must be positive")
+        
+        if self.warmup_frames < 0:
+            errors.append(f"warmup_frames ({self.warmup_frames}) must be non-negative")
+        
+        return errors
+
+@dataclass
 class VisualizationConfig:
     """Configuration for visualization rendering."""
     
     # Number of frames in Circular Plot Buffer
-    num_frames: int = 32
+    num_frames: int = 16
 
     # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
     gamma: float = 0.5

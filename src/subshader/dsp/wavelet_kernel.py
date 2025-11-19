@@ -43,63 +43,53 @@ class WaveletKernel():
         # Time Support is the duration (s) over which the wavelet has meaningful 
         # energy, defined as the length of time needed to contain a given number
         # of cycles for a particular center frequency.
-        self.time_support_s: np.float64 = num_cycles / self.freq
+        time_support_s: np.float64 = num_cycles / self.freq
 
         # Convert to number of samples (s * samples / s)
-        self.time_support_n: int = int(np.round(self.time_support_s * sample_rate))
+        self.time_support_n: int = int(np.round(time_support_s * sample_rate))
 
-        log.info(f"Wavelet {f} time support: {self.time_support_s:.2f} s, {self.time_support_n} samples")
+        log.info(f"Wavelet {f:.2f} Hz | Time Support: {time_support_s:.2f} s, {self.time_support_n} samples")
 
         # Time vector centered at t = 0 with time support duration
-        self.t: np.ndarray[np.float64] = (np.arange(self.time_support_n, dtype=np.float64) / sample_rate) - (self.time_support_s / 2)
+        self._t: np.ndarray[np.float64] = (np.arange(self.time_support_n, dtype=np.float64) / sample_rate) - (time_support_s / 2)
 
         # Create Complex Morlet Wavelet by shaping a sinusoid with a Gaussian
-        self.sinusoid: np.ndarray[np.complex64] = np.exp(1j * 2 * PI * self.freq * self.t)
-        self.gaussian: np.ndarray[np.complex64] = Gaussian(self.t, self.freq, num_fwhm_cycles).gauss
-        self.cmw: np.ndarray[np.complex64] = self.sinusoid * self.gaussian
-        self.kernel_t: np.ndarray[np.complex64] = self.cmw
+        self._sinusoid: np.ndarray[np.complex64] = np.exp(1j * 2 * PI * self.freq * self._t)
+        self._gaussian: np.ndarray[np.complex64] = Gaussian(self._t, self.freq, num_fwhm_cycles).gauss
+        self._cmw: np.ndarray[np.complex64] = self._sinusoid * self._gaussian
+        self._kernel_t: np.ndarray[np.complex64] = self._cmw
 
-        # Determine N's of convolution 
-        self.kern_n: int = int(len(self.kernel_t))
-        self.conv_n: int = int(input_n + self.kern_n - 1)
-        self.half_kern_n: int = int(self.kern_n // 2)
+        # Convolution length N
+        self.conv_n: int = int(input_n + self.time_support_n - 1)
 
         # Transform the time domain wavelet kernel to the frequency domain
-        self.kernel_f: np.ndarray[np.complex64] = fft(self.kernel_t, self.conv_n)
+        self.kernel_f: np.ndarray[np.complex64] = fft(self._kernel_t, self.conv_n)
 
         # Create a slice object to later extract the valid portion of the convolution result
-        self.slice_start: int = self.half_kern_n
-        self.slice_end: int = self.half_kern_n + input_n
+        half_width: int = int(self.time_support_n // 2)
+        self.slice_start: int = half_width
+        self.slice_end: int = half_width + input_n
         self.slice: slice = slice(self.slice_start, self.slice_end)
-
-        # If deriving a GPU-based wavelet class, create variables to be stored on the GPU
-        self.kernel_f_gpu: Optional[cp.ndarray] = None
-        self.slice_start_gpu: Optional[int] = None
-        self.slice_end_gpu: Optional[int] = None
 
     def _plot_kernel(self) -> None:
         """
         Plot the wavelet kernel components.
         """
-        fig, ax = plt.subplots()
-        ax.set_title(f"Wavelet Kernel Components - Center Frequency: {self.freq:.1f} Hz")
-        ax.set_ylabel("Amplitude")
-        ax.set_xlabel("Time (s)")
-        ax.plot(self.t, self.sinusoid.real, label="Real Sin", color="orange", linewidth=2)
-        ax.plot(self.t, self.sinusoid.imag, label="Imag Sin", color="mediumslateblue")        
-        ax.plot(self.t, self.gaussian, label="Gaussian", color="firebrick")
-        ax.plot(self.t, self.cmw.real, label="Real CMW", color="black")
-        ax.legend(loc="upper right")
+        # fig, ax = plt.subplots()
+        # ax.set_title(f"Wavelet Kernel Components - Center Frequency: {self.freq:.1f} Hz")
+        # ax.set_ylabel("Amplitude")
+        # ax.set_xlabel("Time (s)")
+        # ax.plot(self._t, self._sinusoid.real, label="Real Sin", color="orange", linewidth=2)
+        # ax.plot(self._t, self._sinusoid.imag, label="Imag Sin", color="mediumslateblue")        
+        # ax.plot(self._t, self._gaussian, label="Gaussian", color="firebrick")
+        # ax.plot(self._t, self._cmw.real, label="Real CMW", color="black")
+        # ax.legend(loc="upper right")
 
-        plt.show()
+        # plt.show()
+        pass
 
-    def upload_to_gpu(self) -> None:
+    def get_conv_n(self) -> int:
         """
-        Upload the wavelet kernel to the GPU.
-
-        CuPy cannot store slices, so just store the start and end indices of the
-        slice
+        Get the convolution length N.
         """
-        self.kernel_f_gpu: cp.ndarray[np.complex64] = cp.asarray(self.kernel_f, dtype=cp.complex64)
-        self.slice_start_gpu: cp.int32 = self.slice_start
-        self.slice_end_gpu: cp.int32 = self.slice_end
+        return self.conv_n
