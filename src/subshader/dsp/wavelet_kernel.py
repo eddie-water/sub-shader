@@ -51,19 +51,18 @@ class WaveletKernel():
         log.info(f"Wavelet {f:.2f} Hz | Time Support: {time_support_s:.2f} s, {self.time_support_n} samples")
 
         # Time vector centered at t = 0 with time support duration
-        self._t: np.ndarray[np.float64] = (np.arange(self.time_support_n, dtype=np.float64) / sample_rate) - (time_support_s / 2)
+        self.time_t: np.ndarray[np.float64] = (np.arange(self.time_support_n, dtype=np.float64) / sample_rate) - (time_support_s / 2)
 
         # Create Complex Morlet Wavelet by shaping a sinusoid with a Gaussian
-        self._sinusoid: np.ndarray[np.complex64] = np.exp(1j * 2 * PI * self.freq * self._t)
-        self._gaussian: np.ndarray[np.complex64] = Gaussian(self._t, self.freq, num_fwhm_cycles).gauss
-        self._cmw: np.ndarray[np.complex64] = self._sinusoid * self._gaussian
-        self._kernel_t: np.ndarray[np.complex64] = self._cmw
+        self.sinusoid: np.ndarray[np.complex64] = np.exp(1j * 2 * PI * self.freq * self.time_t)
+        self.gaussian: np.ndarray[np.complex64] = Gaussian(self.time_t, self.freq, num_fwhm_cycles).gauss
+        self.kernel_t: np.ndarray[np.complex64] = self.sinusoid * self.gaussian
 
         # Convolution length N
         self.conv_n: int = int(input_n + self.time_support_n - 1)
 
         # Transform the time domain wavelet kernel to the frequency domain
-        self.kernel_f: np.ndarray[np.complex64] = fft(self._kernel_t, self.conv_n)
+        self.kernel_f: np.ndarray[np.complex64] = fft(self.kernel_t, self.conv_n)
 
         # Create a slice object to later extract the valid portion of the convolution result
         half_width: int = int(self.time_support_n // 2)
@@ -79,10 +78,10 @@ class WaveletKernel():
         # ax.set_title(f"Wavelet Kernel Components - Center Frequency: {self.freq:.1f} Hz")
         # ax.set_ylabel("Amplitude")
         # ax.set_xlabel("Time (s)")
-        # ax.plot(self._t, self._sinusoid.real, label="Real Sin", color="orange", linewidth=2)
-        # ax.plot(self._t, self._sinusoid.imag, label="Imag Sin", color="mediumslateblue")        
-        # ax.plot(self._t, self._gaussian, label="Gaussian", color="firebrick")
-        # ax.plot(self._t, self._cmw.real, label="Real CMW", color="black")
+        # ax.plot(self.time_t, self.sinusoid.real, label="Real Sin", color="orange", linewidth=2)
+        # ax.plot(self.time_t, self.sinusoid.imag, label="Imag Sin", color="mediumslateblue")        
+        # ax.plot(self.time_t, self.gaussian, label="Gaussian", color="firebrick")
+        # ax.plot(self.time_t, self.kernel_t.real, label="Real CMW", color="black")
         # ax.legend(loc="upper right")
 
         # plt.show()

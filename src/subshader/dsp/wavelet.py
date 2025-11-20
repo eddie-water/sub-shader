@@ -220,7 +220,7 @@ class Wavelet(ABC):
     
     def downsample(self,
                    coefs: np.ndarray[np.floating],
-                   target_width: int) -> np.ndarray[np.floating]:
+                   target_width: Optional[int] = None) -> np.ndarray[np.floating]:
         """
         Downsample CWT coefficients to produce final output data.
 
@@ -233,6 +233,9 @@ class Wavelet(ABC):
         Returns:
             Output data suitable for visualization with shape (freq_bins, target_width).
         """
+        if target_width is None:
+            target_width = self.output_n
+
         _, num_samples = coefs.shape
 
         # Input Validation
@@ -337,7 +340,7 @@ class AntsWavelet(Wavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: Optional[WaveletConfig] = None) -> None:
+                 config: WaveletConfig = None) -> None:
         """
         CWT implementation from Analyzing Neural Time Series (ANTS) by Mike X 
         Cohen translated from Matlab. According to the list of frequencies, we
@@ -540,7 +543,7 @@ class NumPyWavelet(AntsWavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: Optional[WaveletConfig] = None) -> None:
+                 config: WaveletConfig = None) -> None:
         """NumPy-based CWT with true scale-dependent time support."""
         super().__init__(sample_rate, input_n, config)
 
@@ -571,7 +574,7 @@ class CuPyWavelet(AntsWavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: Optional[WaveletConfig] = None) -> None:
+                 config: WaveletConfig = None) -> None:
         super().__init__(sample_rate, input_n, config)
 
         log.info(f"CPU→GPU: Uploading {self.num_wavelets} wavelets to GPU")
