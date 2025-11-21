@@ -35,4 +35,4 @@ class Gaussian:
         self.gauss_std: np.ndarray[np.complex64] = np.exp(-(t ** 2) / (2 * self.num_std_deviations ** 2)).astype(np.complex64)
 
         # Use the FWHM-based Gaussian by defualt
-        self.gauss = self.gauss_fwhm 
+        self.gauss_t = self.gauss_fwhm 

@@ -81,16 +81,26 @@ class KernelNavigator(NavigatorBase):
         and the frequency domain (R)
       - Plots three different time ranges / zoom levels for each kernel
     """
+    SINUSOID_COLOR = 'black'
+    GAUSSIAN_COLOR = 'mediumslateblue'
+    WAVELET_COLOR = 'darkorange'
+    VERTICAL_COLOR = 'black'
+    VERTICAL_ALPHA = 0.8
+    VERTICAL_WIDTH = 3
+    FWHM_COLOR = 'red'
+    VERTICAL_FWHM_ALPHA = 0.8
+    VERTICAL_FWHM_WIDTH = 3
+    GRID_ALPHA = 0.25
+    LINE_WIDTH = 2
 
     def __init__(self, wavelet, title=None):
         self.wavelet = wavelet
         super().__init__(title)
 
-    # Public - Plot Setup
-
     def _init_plots(self):
         """Initialize figure with 4x2 grid for kernel visualization"""
         self.wavelets = self.wavelet.wavelets
+        self.sample_rate = self.wavelet.sample_rate
 
         self.num_kernels = len(self.wavelets)
         self.kernels_t = [w.kernel_t for w in self.wavelets]
@@ -98,84 +108,102 @@ class KernelNavigator(NavigatorBase):
 
         self.time_supports_n = [w.time_support_n for w in self.wavelets]
 
-        self.sins_t = [w.sinusoid.real for w in self.wavelets]
-        self.gaussians_t = [w.gaussian.real for w in self.wavelets]
+        self.sins_t = [w.sin_t.real for w in self.wavelets]
+        self.gaussians_t = [w.gauss_t.real for w in self.wavelets]
 
+        fwhm_supports_s = [w.gauss.fwhm_support_s for w in self.wavelets]
+        self.fwhm_supports_n = [int(np.round(fwhm_support_s * self.sample_rate)) for fwhm_support_s in fwhm_supports_s]
+        self.fwhm_supports_t = [fwhm_n / self.sample_rate for fwhm_n in self.fwhm_supports_n]
         self.center_freqs_hz = np.asarray(self.wavelet.freqs)
-        self.sampling_freq_hz = self.wavelet.sample_rate
-
-        REAL_PART_COLOR = 'darkorange'
-        IMAG_PART_COLOR = 'mediumslateblue'
-        MAG_COLOR = 'black'
-        GRID_ALPHA = 0.25
-        LINE_WIDTH = 2
 
         self.fig.subplots_adjust(bottom=0.12, top=0.93, left=0.06, right=0.98, wspace=0.15, hspace=0.4)
+        self.gs = gridspec.GridSpec(3, 3, figure=self.fig)
 
-        # Row 0: All components overlaid (time and frequency)
-        self.ax_components_t = self.fig.add_subplot(4, 2, 1)
-        (self.sin_t_line,) = self.ax_components_t.plot([], [], REAL_PART_COLOR, label='Sinusoid', lw=LINE_WIDTH)
-        (self.gaus_t_line,) = self.ax_components_t.plot([], [], IMAG_PART_COLOR, label='Gaussian', lw=LINE_WIDTH)
-        (self.kernel_t_real_line,) = self.ax_components_t.plot([], [], MAG_COLOR, label='Kernel (Real)', lw=LINE_WIDTH)
-        self.ax_components_t.set_title('Time Domain Components')
-        self.ax_components_t.set_xlabel('Time (s)')
-        self.ax_components_t.set_ylabel('Amplitude')
-        self.ax_components_t.legend(loc='upper right', frameon=False)
-        self.ax_components_t.grid(True, alpha=GRID_ALPHA)
+        # Row 0: Sinusoid Component
+        self.ax_sin_t = self.fig.add_subplot(self.gs[0, 1])
+        (self.sin_t_line,) = self.ax_sin_t.plot([], [], self.SINUSOID_COLOR, label='Sinusoid', lw=self.LINE_WIDTH)
+        # (self.sin_f_line,) = self.ax_components_f.plot([], [], SINUSOID_COLOR, label='Sinusoid', lw=LINE_WIDTH)
+        # self.ax_sin_t.set_title('Time Domain Sinusoid Component')
+        # self.ax_sin_t.set_xlabel('Time (s)')
+        # self.ax_sin_t.set_ylabel('Amplitude')
+        # self.ax_sin_t.legend(loc='upper right', frameon=False)
+        self.ax_sin_t.grid(True, alpha=self.GRID_ALPHA)
+        self.sin_period_vlines = []
 
-        self.ax_components_f = self.fig.add_subplot(4, 2, 2)
-        (self.sin_f_line,) = self.ax_components_f.plot([], [], REAL_PART_COLOR, label='Sinusoid', lw=LINE_WIDTH)
-        (self.gaus_f_line,) = self.ax_components_f.plot([], [], IMAG_PART_COLOR, label='Gaussian', lw=LINE_WIDTH)
-        (self.kernel_f_line,) = self.ax_components_f.plot([], [], MAG_COLOR, label='Kernel', lw=LINE_WIDTH)
-        self.ax_components_f.set_title('Frequency Domain Components')
-        self.ax_components_f.set_xlabel('Freq (Hz)')
-        self.ax_components_f.set_ylabel('Magnitude')
-        self.ax_components_f.legend(loc='upper right', frameon=False)
-        self.ax_components_f.grid(True, alpha=GRID_ALPHA)
+        # Row 1: Gaussian component
+        self.ax_gaus_t = self.fig.add_subplot(self.gs[1, 1])
+        (self.gaus_t_line,) = self.ax_gaus_t.plot([], [], self.GAUSSIAN_COLOR, label='Gaussian', lw=self.LINE_WIDTH)
+        (self.gaus_fwhm_line,) = self.ax_gaus_t.plot([], [], self.FWHM_COLOR, label='FWHM', lw=self.LINE_WIDTH)
+        (self.gaus_hline,) = self.ax_gaus_t.plot([], [], 'gray', alpha=0.5, linewidth=1, linestyle='--')
+        # -> (self.kernel_t_real_line,) = self.ax_gaus_t.plot([], [], self.WAVELET_COLOR, label='Kernel (Real)', lw=self.LINE_WIDTH)
+        # self.ax_gaus_t.set_xlabel('Time (s)')
+        # self.ax_gaus_t.set_ylabel('Amplitude')
+        # self.ax_gaus_t.legend(loc='upper right', frameon=False)
+        self.ax_gaus_t.grid(True, alpha=self.GRID_ALPHA)
+        self.gaus_fwhm_vlines = []
 
-        # Rows 1-3: Three zoom levels for kernel (time and frequency)
-        self.ax_time = [self.fig.add_subplot(4, 2, 3 + i*2) for i in range(3)]
-        self.ax_freq = [self.fig.add_subplot(4, 2, 4 + i*2) for i in range(3)]
+        # Row 2: Kernel Component
+        self.ax_kernel_t = self.fig.add_subplot(self.gs[2, 1])
+        (self.kernel_sin_t_line,) = self.ax_kernel_t.plot([], [], self.SINUSOID_COLOR, label='Sinusoid', lw=self.LINE_WIDTH)
+        (self.kernel_gaus_t_line,) = self.ax_kernel_t.plot([], [], self.GAUSSIAN_COLOR, label='Gaussian', lw=self.LINE_WIDTH)
+        (self.kernel_t_real_line,) = self.ax_kernel_t.plot([], [], self.WAVELET_COLOR, label='Kernel (Real)', lw=self.LINE_WIDTH)
+        # self.ax_kernel_t.set_title('All Components Overlaid')
+        # self.ax_kernel_t.set_ylabel('Amplitude')
+        # self.ax_kernel_t.legend(loc='upper right', frameon=False)
+        self.ax_kernel_t.grid(True, alpha=self.GRID_ALPHA)
 
-        self.time_ranges_sec = [0.5, 0.05, 0.005]
-        self.freq_ranges_hz = [(20.0, 200.0), (20.0, 2000.0), (20.0, 20000.0)]
+        # self.ax_components_f = self.fig.add_subplot(4, 2, 4)
+        # (self.gaus_f_line,) = self.ax_components_f.plot([], [], GAUSSIAN_COLOR, label='Gaussian', lw=LINE_WIDTH)
+        # (self.kernel_f_line,) = self.ax_components_f.plot([], [], WAVELET_COLOR, label='Kernel', lw=LINE_WIDTH)
+        # self.ax_components_f.set_title('Frequency Domain Components')
+        # self.ax_components_f.set_xlabel('Freq (Hz)')
+        # self.ax_components_f.set_ylabel('Magnitude')
+        # self.ax_components_f.legend(loc='upper right', frameon=False)
+        # self.ax_components_f.grid(True, alpha=GRID_ALPHA)
 
-        self.kernel_t_real_lines = []
-        self.kernel_t_imag_lines = []
-        self.kernel_t_mag_lines = []
-        self.kernel_f_lines = []
+        # # Rows 1-3: Three zoom levels for kernel (time and frequency)
+        # self.ax_time = [self.fig.add_subplot(4, 2, 3 + i*2) for i in range(3)]
+        # self.ax_freq = [self.fig.add_subplot(4, 2, 4 + i*2) for i in range(3)]
 
-        # Setup time domain plots
-        for i, (ax, time_range_sec) in enumerate(zip(self.ax_time, self.time_ranges_sec)):
-            half_range_sec = time_range_sec / 2
-            time_label = f'{half_range_sec} s' if half_range_sec >= 0.1 else f'{half_range_sec*1000:.1f} ms'
-            ax.set_title(f'Time Domain ±{time_label}')
-            ax.set_xlabel('Time (s)')
-            ax.set_ylabel('Amplitude')
-            ax.grid(True, alpha=GRID_ALPHA)
+        # self.time_ranges_sec = [0.5, 0.05, 0.005]
+        # self.freq_ranges_hz = [(20.0, 200.0), (20.0, 2000.0), (20.0, 20000.0)]
 
-            (k_t_real_line,) = ax.plot([], [], REAL_PART_COLOR, label='Real', lw=LINE_WIDTH)
-            (k_t_imag_line,) = ax.plot([], [], IMAG_PART_COLOR, label='Imag', lw=LINE_WIDTH)
-            (k_t_mag_line,)  = ax.plot([], [], MAG_COLOR, label='Mag', lw=LINE_WIDTH)
-            self.kernel_t_real_lines.append(k_t_real_line)
-            self.kernel_t_imag_lines.append(k_t_imag_line)
-            self.kernel_t_mag_lines.append(k_t_mag_line)
+        # self.kernel_t_real_lines = []
+        # self.kernel_t_imag_lines = []
+        # self.kernel_t_mag_lines = []
+        # self.kernel_f_lines = []
+
+        # # Setup time domain plots
+        # for i, (ax, time_range_sec) in enumerate(zip(self.ax_time, self.time_ranges_sec)):
+        #     half_range_sec = time_range_sec / 2
+        #     time_label = f'{half_range_sec} s' if half_range_sec >= 0.1 else f'{half_range_sec*1000:.1f} ms'
+        #     ax.set_title(f'Time Domain ±{time_label}')
+        #     ax.set_xlabel('Time (s)')
+        #     ax.set_ylabel('Amplitude')
+        #     ax.grid(True, alpha=GRID_ALPHA)
+
+        #     (k_t_real_line,) = ax.plot([], [], SINUSOID_COLOR, label='Real', lw=LINE_WIDTH)
+        #     (k_t_imag_line,) = ax.plot([], [], GAUSSIAN_COLOR, label='Imag', lw=LINE_WIDTH)
+        #     (k_t_mag_line,)  = ax.plot([], [], WAVELET_COLOR, label='Mag', lw=LINE_WIDTH)
+        #     self.kernel_t_real_lines.append(k_t_real_line)
+        #     self.kernel_t_imag_lines.append(k_t_imag_line)
+        #     self.kernel_t_mag_lines.append(k_t_mag_line)
             
 
-            if i == 0:
-                ax.legend(loc='upper right', frameon=False)
+        #     if i == 0:
+        #         ax.legend(loc='upper right', frameon=False)
 
-        # Setup frequency domain plots
-        for ax, (freq_lo_hz, freq_hi_hz) in zip(self.ax_freq, self.freq_ranges_hz):
-            freq_label = f'{freq_lo_hz:.0f}–{freq_hi_hz/1000:.1f}k Hz' if freq_hi_hz >= 1000 else f'{freq_lo_hz:.0f}–{freq_hi_hz:.0f} Hz'
-            ax.set_title(f'Frequency Domain {freq_label}')
-            ax.set_xlabel('Freq (Hz)')
-            ax.set_xscale('log')
-            ax.set_ylabel('Magnitude')
-            ax.grid(True, which='both', alpha=GRID_ALPHA)
+        # # Setup frequency domain plots
+        # for ax, (freq_lo_hz, freq_hi_hz) in zip(self.ax_freq, self.freq_ranges_hz):
+        #     freq_label = f'{freq_lo_hz:.0f}–{freq_hi_hz/1000:.1f}k Hz' if freq_hi_hz >= 1000 else f'{freq_lo_hz:.0f}–{freq_hi_hz:.0f} Hz'
+        #     ax.set_title(f'Frequency Domain {freq_label}')
+        #     ax.set_xlabel('Freq (Hz)')
+        #     ax.set_xscale('log')
+        #     ax.set_ylabel('Magnitude')
+        #     ax.grid(True, which='both', alpha=GRID_ALPHA)
 
-            (k_f_line,) = ax.plot([], [], MAG_COLOR, lw=LINE_WIDTH)
-            self.kernel_f_lines.append(k_f_line)
+        #     (k_f_line,) = ax.plot([], [], WAVELET_COLOR, lw=LINE_WIDTH)
+        #     self.kernel_f_lines.append(k_f_line)
     
     def _update(self):
         """Update kernel visualization"""
@@ -185,13 +213,13 @@ class KernelNavigator(NavigatorBase):
         Component Analysis: Sinusoid, Gaussian, and Kernel
         '''
         # Time axis (centered at t=0)
-        axis_t = np.arange(self.time_supports_n[i]) / self.sampling_freq_hz
+        axis_t = np.arange(self.time_supports_n[i]) / self.sample_rate
         axis_t = axis_t - axis_t[len(axis_t)//2]
 
         # Frequency axis (for kernel FFT)
         kernel_f = self.kernels_f[i]
         num_samples_f = len(kernel_f)
-        axis_f_kernel = np.fft.fftfreq(num_samples_f, d=1/self.sampling_freq_hz)
+        axis_f_kernel = np.fft.fftfreq(num_samples_f, d=1/self.sample_rate)
         pos_f_slice = slice(0, num_samples_f//2)
         axis_f_kernel_pos = axis_f_kernel[pos_f_slice]
         
@@ -202,91 +230,176 @@ class KernelNavigator(NavigatorBase):
         i_hi_f = np.searchsorted(axis_f_kernel_pos, range_f[1], side='right')
         axis_f_zoomed = axis_f_kernel_pos[i_lo_f:i_hi_f]
 
-        # Time domain: all three components overlaid
+        # Sinusoid Component
+        pad = 0.1
+        y_min = np.min(self.sins_t[i])
+        y_max = np.max(self.sins_t[i])
+        y_range = y_max - y_min
+        y_min = y_min - pad * y_range
+        y_max = y_max + pad * y_range
+
         self.sin_t_line.set_data(axis_t, self.sins_t[i])
-        self.gaus_t_line.set_data(axis_t, self.gaussians_t[i])
-        kernel_t_real = np.real(self.kernels_t[i])
-        self.kernel_t_real_line.set_data(axis_t, kernel_t_real)
+        self.ax_sin_t.set_ylim(y_min, y_max)
+        self.ax_sin_t.set_xlim(axis_t[0], axis_t[-1])
+        self.ax_sin_t.autoscale(axis="y", tight=True)
         
-        self.ax_components_t.set_xlim(axis_t[0], axis_t[-1])
-        self.ax_components_t.relim()
-        self.ax_components_t.autoscale(axis="y", tight=True)
+        # Vertical Period Lines
+        for line in self.sin_period_vlines:
+            line.remove()
+        self.sin_period_vlines.clear()
+        
+        period_sec = 1.0 / center_f
+        t_start = axis_t[0]
+        t_end = axis_t[-1] + 1
+        num_periods = int(np.ceil((t_end - t_start) / period_sec))
+        first_line_t = np.ceil(t_start / period_sec) * period_sec
+        
+        for j in range(num_periods + 2):
+            line_t = first_line_t + j * period_sec
+            if t_start <= line_t <= t_end:
+                vline = self.ax_sin_t.axvline(line_t, color=self.VERTICAL_COLOR, alpha=self.VERTICAL_ALPHA, linewidth=self.VERTICAL_WIDTH, linestyle=':')
+                self.sin_period_vlines.append(vline)
+
+        # Draw two red lines at 1.5 periods to the left and right of the center of axis_t
+        mid_t = 0  # axis_t is centered at t=0
+        offset = 1.5 * period_sec
+        left_line_t = mid_t - offset
+        right_line_t = mid_t + offset
+        vline_left = self.ax_sin_t.axvline(left_line_t, color=self.FWHM_COLOR, alpha=self.VERTICAL_FWHM_ALPHA, linewidth=self.VERTICAL_FWHM_WIDTH, linestyle='--')
+        vline_right = self.ax_sin_t.axvline(right_line_t, color=self.FWHM_COLOR, alpha=self.VERTICAL_FWHM_ALPHA, linewidth=self.VERTICAL_FWHM_WIDTH, linestyle='--')
+        self.sin_period_vlines.extend([vline_left, vline_right])
+
+        # Gaussian Component
+        pad = 0.1
+        y_min = np.min(self.gaussians_t[i])
+        y_max = np.max(self.gaussians_t[i])
+        y_range = y_max - y_min
+        y_min = y_min - pad * y_range
+        y_max = y_max + pad * y_range
+
+        self.gaus_t_line.set_data(axis_t, self.gaussians_t[i])
+        
+        # Plot FWHM as horizontal line at y=0.5
+        fwhm_half_width_t = self.fwhm_supports_t[i] / 2
+        fwhm_t_left = -fwhm_half_width_t
+        fwhm_t_right = fwhm_half_width_t
+        self.gaus_fwhm_line.set_data([fwhm_t_left, fwhm_t_right], [0.5, 0.5])
+        
+        # Horizontal reference line at y=0.5
+        self.gaus_hline.set_data([axis_t[0], axis_t[-1]], [0.5, 0.5])
+        
+        # Vertical red lines at FWHM boundaries
+        for line in self.gaus_fwhm_vlines:
+            line.remove()
+        self.gaus_fwhm_vlines.clear()
+        
+        vline_left = self.ax_gaus_t.axvline(fwhm_t_left, color=self.FWHM_COLOR, alpha=self.VERTICAL_FWHM_ALPHA, linewidth=self.VERTICAL_FWHM_WIDTH, linestyle='--')
+        vline_right = self.ax_gaus_t.axvline(fwhm_t_right, color=self.FWHM_COLOR, alpha=self.VERTICAL_FWHM_ALPHA, linewidth=self.VERTICAL_FWHM_WIDTH, linestyle='--')
+        self.gaus_fwhm_vlines.extend([vline_left, vline_right])
+        
+        self.ax_gaus_t.set_ylim(y_min, y_max)
+        self.ax_gaus_t.set_xlim(axis_t[0], axis_t[-1])
+        
+        # Add y-tick at 0.5
+        current_yticks = list(self.ax_gaus_t.get_yticks())
+        if 0.5 not in current_yticks:
+            current_yticks.append(0.5)
+            current_yticks.sort()
+            self.ax_gaus_t.set_yticks(current_yticks)
+        
+        self.ax_gaus_t.autoscale(axis="y", tight=True)
+
+        # Kernel Component
+        pad = 0.1
+        y_min = np.min(np.real(self.kernels_t[i]))
+        y_max = np.max(np.real(self.kernels_t[i]))
+        y_range = y_max - y_min
+        y_min = y_min - pad * y_range
+        y_max = y_max + pad * y_range
+
+        self.kernel_sin_t_line.set_data(axis_t, self.sins_t[i])
+        self.kernel_gaus_t_line.set_data(axis_t, self.gaussians_t[i])
+        self.kernel_t_real_line.set_data(axis_t, np.real(self.kernels_t[i]))
+        self.ax_kernel_t.set_ylim(y_min, y_max)
+        self.ax_kernel_t.set_xlim(axis_t[0], axis_t[-1])
+        self.ax_kernel_t.autoscale(axis="y", tight=True)
+
 
         # Frequency domain: all three components overlaid (zoomed to ±50% of center)
-        sin_f = np.fft.fft(self.wavelets[i].sinusoid, num_samples_f)
-        sin_f_mag = (1/num_samples_f)* np.abs(sin_f[pos_f_slice])
-        sin_f_mag_zoomed = sin_f_mag[i_lo_f:i_hi_f]
+        # sin_f = np.fft.fft(self.wavelets[i].sinusoid, num_samples_f)
+        # sin_f_mag = (1/num_samples_f)* np.abs(sin_f[pos_f_slice])
+        # sin_f_mag_zoomed = sin_f_mag[i_lo_f:i_hi_f]
         
-        gaus_f = np.fft.fft(self.wavelets[i].gaussian, num_samples_f)
-        gaus_f_mag = (1/num_samples_f) * np.abs(gaus_f[pos_f_slice])
-        gaus_f_mag_zoomed = gaus_f_mag[i_lo_f:i_hi_f]
+        # gaus_f = np.fft.fft(self.wavelets[i].gaussian, num_samples_f)
+        # gaus_f_mag = (1/num_samples_f) * np.abs(gaus_f[pos_f_slice])
+        # gaus_f_mag_zoomed = gaus_f_mag[i_lo_f:i_hi_f]
         
-        kernel_f_mag = np.abs(kernel_f[pos_f_slice])
-        kernel_f_mag = (1/num_samples_f) * kernel_f_mag
-        kernel_f_mag_zoomed = kernel_f_mag[i_lo_f:i_hi_f]
+        # kernel_f_mag = np.abs(kernel_f[pos_f_slice])
+        # kernel_f_mag = (1/num_samples_f) * kernel_f_mag
+        # kernel_f_mag_zoomed = kernel_f_mag[i_lo_f:i_hi_f]
         
-        self.sin_f_line.set_data(axis_f_zoomed, sin_f_mag_zoomed)
-        self.gaus_f_line.set_data(axis_f_zoomed, gaus_f_mag_zoomed)
-        self.kernel_f_line.set_data(axis_f_zoomed, kernel_f_mag_zoomed)
+        # self.sin_f_line.set_data(axis_f_zoomed, sin_f_mag_zoomed)
+        # self.gaus_f_line.set_data(axis_f_zoomed, gaus_f_mag_zoomed)
+        # self.kernel_f_line.set_data(axis_f_zoomed, kernel_f_mag_zoomed)
         
-        y_min = 0
-        y_max = np.max([np.max(sin_f_mag_zoomed), np.max(gaus_f_mag_zoomed), np.max(kernel_f_mag_zoomed)])
-        self.ax_components_f.set_xlim(range_f[0], range_f[1])
-        self.ax_components_f.set_ylim(y_min, y_max * 1.05)
-        # self.ax_components_f.relim()
-        self.ax_components_f.autoscale(axis="y", tight=True)
+        # y_min = 0
+        # y_max = np.max([np.max(sin_f_mag_zoomed), np.max(gaus_f_mag_zoomed), np.max(kernel_f_mag_zoomed)])
+        # self.ax_components_f.set_xlim(range_f[0], range_f[1])
+        # self.ax_components_f.set_ylim(y_min, y_max * 1.05)
+        # # self.ax_components_f.relim()
+        # self.ax_components_f.autoscale(axis="y", tight=True)
 
         '''
         ZoomedWavelet Kernels
         '''
-        # Time and Frequency Axes
-        zoom_axis_t = np.arange(self.time_supports_n[i]) / self.sampling_freq_hz
-        zoom_axis_t = zoom_axis_t - zoom_axis_t[len(zoom_axis_t)//2]
+        # # Time and Frequency Axes
+        # zoom_axis_t = np.arange(self.time_supports_n[i]) / self.sampling_freq_hz
+        # zoom_axis_t = zoom_axis_t - zoom_axis_t[len(zoom_axis_t)//2]
 
-        num_samples_f = len(self.kernels_f[i])
-        zoom_axis_f = np.fft.fftfreq(num_samples_f, d=1/self.sampling_freq_hz)
+        # num_samples_f = len(self.kernels_f[i])
+        # zoom_axis_f = np.fft.fftfreq(num_samples_f, d=1/self.sampling_freq_hz)
 
-        # Time Domain Plots at different zoom levels
-        for ax, time_range_sec, k_t_real_line, k_t_imag_line, k_t_mag_line in zip(
-            self.ax_time, self.time_ranges_sec, 
-            self.kernel_t_real_lines, self.kernel_t_imag_lines, self.kernel_t_mag_lines
-        ):
-            kernel_t = self.kernels_t[i]
-            k_t_real_line.set_data(zoom_axis_t, np.real(kernel_t))
-            k_t_imag_line.set_data(zoom_axis_t, np.imag(kernel_t))
-            k_t_mag_line.set_data(zoom_axis_t, np.abs(kernel_t))
+        # # Time Domain Plots at different zoom levels
+        # for ax, time_range_sec, k_t_real_line, k_t_imag_line, k_t_mag_line in zip(
+        #     self.ax_time, self.time_ranges_sec, 
+        #     self.kernel_t_real_lines, self.kernel_t_imag_lines, self.kernel_t_mag_lines
+        # ):
+        #     kernel_t = self.kernels_t[i]
+        #     k_t_real_line.set_data(zoom_axis_t, np.real(kernel_t))
+        #     k_t_imag_line.set_data(zoom_axis_t, np.imag(kernel_t))
+        #     k_t_mag_line.set_data(zoom_axis_t, np.abs(kernel_t))
 
-            half_range_sec = time_range_sec / 2
-            y_min = np.min([
-                np.min(np.real(kernel_t)), 
-                np.min(np.imag(kernel_t)), 
-                np.min(np.abs(kernel_t))])
+        #     half_range_sec = time_range_sec / 2
+        #     y_min = np.min([
+        #         np.min(np.real(kernel_t)), 
+        #         np.min(np.imag(kernel_t)), 
+        #         np.min(np.abs(kernel_t))])
 
-            y_max = np.max([
-                np.max(np.real(kernel_t)), 
-                np.max(np.imag(kernel_t)), 
-                np.max(np.abs(kernel_t))])
+        #     y_max = np.max([
+        #         np.max(np.real(kernel_t)), 
+        #         np.max(np.imag(kernel_t)), 
+        #         np.max(np.abs(kernel_t))])
 
-            ax.set_ylim(y_min * 1.1, y_max * 1.1)
-            ax.set_xlim(-half_range_sec, half_range_sec)
-            # ax.relim()
-            ax.autoscale(axis="y", tight=True)
+        #     ax.set_ylim(y_min * 1.1, y_max * 1.1)
+        #     ax.set_xlim(-half_range_sec, half_range_sec)
+        #     # ax.relim()
+        #     ax.autoscale(axis="y", tight=True)
 
 
-        # Frequency Domain Plots at different zoom levels
-        pos_freq_slice = slice(0, num_samples_f//2)
-        zoom_axis_f = zoom_axis_f[pos_freq_slice]
-        zoom_kernel_f_mag = np.abs(self.kernels_f[i][pos_freq_slice])
+        # # Frequency Domain Plots at different zoom levels
+        # pos_freq_slice = slice(0, num_samples_f//2)
+        # zoom_axis_f = zoom_axis_f[pos_freq_slice]
+        # zoom_kernel_f_mag = np.abs(self.kernels_f[i][pos_freq_slice])
 
-        for ax, (freq_lo_hz, freq_hi_hz), k_f_line in zip(self.ax_freq, self.freq_ranges_hz, self.kernel_f_lines):
-            k_f_line.set_data(zoom_axis_f, zoom_kernel_f_mag)
-            y_max = np.max(zoom_kernel_f_mag)
-            ax.set_ylim(0, y_max * 1.05)
-            ax.set_xlim(freq_lo_hz, freq_hi_hz)
-            # ax.relim()
-            ax.autoscale(axis="y", tight=True)
+        # for ax, (freq_lo_hz, freq_hi_hz), k_f_line in zip(self.ax_freq, self.freq_ranges_hz, self.kernel_f_lines):
+        #     k_f_line.set_data(zoom_axis_f, zoom_kernel_f_mag)
+        #     y_max = np.max(zoom_kernel_f_mag)
+        #     ax.set_ylim(0, y_max * 1.05)
+        #     ax.set_xlim(freq_lo_hz, freq_hi_hz)
+        #     # ax.relim()
+        #     ax.autoscale(axis="y", tight=True)
 
-        self.fig.suptitle(f'Wavelet Kernel Visualization - Center Frequency {self.center_freqs_hz[i]:.1f} Hz ({i+1}/{self.num_kernels})', fontsize=12)
+        # self.fig.suptitle(f'Wavelet Kernel Visualization - Center Frequency {self.center_freqs_hz[i]:.1f} Hz ({i+1}/{self.num_kernels})', fontsize=12)
         self.fig.canvas.draw_idle()
     
     def _get_num_items(self):
