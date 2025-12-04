@@ -82,6 +82,15 @@ class AudioInput:
             log.error(f"Failed to load audio file {self.file_path}: {e}")
             raise
 
+    def get_sample_rate(self) -> np.float64:
+        """
+        Gets the sample rate of the audio file.
+
+        Returns:
+            np.float64: Sample rate
+        """
+        return self.sample_rate
+
     def get_chunk(self) -> np.ndarray[np.float64]:
         """
         Retrieves the next chunk of audio samples from the file specified by the
@@ -107,15 +116,6 @@ class AudioInput:
 
         return sample_chunk
 
-    def get_sample_rate(self) -> np.float64:
-        """
-        Gets the sample rate of the audio file.
-
-        Returns:
-            np.float64: Sample rate
-    """
-        return self.sample_rate
-
     def get_chunk_size(self) -> int:
         """
         Gets the chunk size of the audio file.
@@ -124,6 +124,31 @@ class AudioInput:
             int: Chunk size
         """
         return self.chunk_size
+
+    def get_entire_audio(self) -> np.ndarray[np.float64]:
+        """
+        Gets the entire audio file as a single chunk.
+
+        Returns:
+            np.ndarray: The entire audio file as a single chunk.
+        """
+        self.file_handle.seek(0)
+        audio_data = self.file_handle.read(dtype=np.float64)
+        
+        # Convert stereo to mono if necessary
+        if len(audio_data.shape) > 1:
+            audio_data = audio_data[:, 0]
+        
+        return audio_data
+
+    def get_total_samples(self) -> int:
+        """
+        Gets the total number of samples in the audio file.
+        
+        Returns:
+            int: Total number of samples in the audio
+        """
+        return self.total_samples
 
     def cleanup(self):
         """

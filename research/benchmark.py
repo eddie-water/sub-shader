@@ -25,7 +25,7 @@ from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumPyWavelet, CuPyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
-from subshader.viz.comparison_navigator import KernelNavigator, DspStageNavigator, TransformNavigator
+from subshader.viz.comparison_navigator import AudioNavigator, KernelNavigator, DspStageNavigator, TransformNavigator
 
 # =============================================================================
 # CONFIGURATION
@@ -34,8 +34,8 @@ from subshader.viz.comparison_navigator import KernelNavigator, DspStageNavigato
 # Load default configuration
 config = get_default_config()
 
-# Override benchmark-specific configs
-config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
+# Override benchmark-specific configs (ensure string, not Path)
+config.audio.file_path = str("assets/audio/daw/a2a3_a4_minor_scale.wav")
 
 # =============================================================================
 # TEST PARAMS
@@ -116,6 +116,11 @@ class Benchmark():
         Static Plot Analysis and Comparisons
         """
         # Static Wavelet Kernel Analysis: Time vs Frequency Domain
+        AudioNavigator(
+            audio_input=self.audio_input,
+            title="Static Audio Analysis"
+        )
+
         KernelNavigator(
             wavelet=self.np_wavelet,
             title="Static Wavelet Kernel Analysis"
@@ -181,8 +186,8 @@ class Benchmark():
         pass  
 
     def run_tests(self):
-        # self.static_plot_analysis()
-        self.dynamic_plot_analysis()
+        self.static_plot_analysis()
+        # self.dynamic_plot_analysis()
 
 if __name__ == '__main__':
     benchmark = Benchmark()

@@ -64,11 +64,63 @@ class NavigatorBase(ABC):
         """Update plots with current data"""
         pass
 
-    @abstractmethod
     def _get_num_items(self):
         """Return total number of items to navigate through"""
         pass
 
+class AudioNavigator(NavigatorBase):
+    """
+    Plot Navigator for audio analysis:
+      - Plots the audio time series
+    """
+    def __init__(self, audio_input, title=None):
+        self.audio_input = audio_input
+        super().__init__(title)
+        
+    def _init_plots(self):
+        """Initialize audio time series plot"""
+        self.ax_audio_t = self.fig.add_subplot(1, 1, 1)
+        self.ax_audio_t.set_title("Audio Time Series")
+        self.ax_audio_t.set_xlabel("Samples")
+        self.ax_audio_t.set_ylabel("Amplitude")
+        
+        (self.line_audio_t,) = self.ax_audio_t.plot([], [])
+        self.ax_audio_t.margins(x=0, y=0)
+        self.ax_audio_t.grid(True, alpha=0.15)
+        
+        # Store chunk parameters
+        self.chunk_size = self.audio_input.get_chunk_size()
+        self.hop_size = self.audio_input.hop_size
+        
+        # Chunk highlight box (will be recreated in _update)
+        self.chunk_span = None
+        
+    def _update(self):
+        """Update audio time series plot"""
+        self.entire_audio = self.audio_input.get_entire_audio()
+        self.total_samples = len(self.entire_audio)
+        self.line_audio_t.set_data(np.arange(self.total_samples), self.entire_audio)
+
+        self.ax_audio_t.set_xlim(0, self.total_samples)
+        self.ax_audio_t.relim()
+        self.ax_audio_t.autoscale(axis="y", tight=True)
+        
+        # Update chunk highlight position (remove old, create new)
+        chunk_start = self.i * self.hop_size
+        chunk_end = chunk_start + self.chunk_size
+        if self.chunk_span is not None:
+            self.chunk_span.remove()
+        self.chunk_span = self.ax_audio_t.axvspan(chunk_start, chunk_end, alpha=0.3, color='orange')
+        
+        self.fig.suptitle(f"Audio Analysis - Chunk {self.i + 1}/{self._get_num_items()} (samples {chunk_start}-{chunk_end})")
+        self.fig.canvas.draw_idle()
+
+    def _get_num_items(self):
+        """Return number of chunks that fit in the audio"""
+        total_samples = self.audio_input.get_total_samples()
+        chunk_size = self.audio_input.get_chunk_size()
+        hop_size = self.audio_input.hop_size
+        return max(1, (total_samples - chunk_size) // hop_size + 1)
 
 class KernelNavigator(NavigatorBase):
     """
@@ -239,17 +291,16 @@ class KernelNavigator(NavigatorBase):
         axis_f_zoomed = axis_f_kernel[i_lo_f:i_hi_f]
 
         # Row 0: Sinusoid Component Time Domain
+        y_data_min = np.min(self.sins_t[i])
+        y_data_max = np.max(self.sins_t[i])
+        y_range = y_data_max - y_data_min
         pad = 0.1
-        y_min = np.min(self.sins_t[i])
-        y_max = np.max(self.sins_t[i])
-        y_range = y_max - y_min
-        y_min = y_min - pad * y_range
-        y_max = y_max + pad * y_range
+        y_min = y_data_min - pad * y_range
+        y_max = y_data_max + pad * y_range
 
         self.line_sin_t.set_data(axis_t, self.sins_t[i])
         self.ax_sin_t.set_ylim(y_min, y_max)
         self.ax_sin_t.set_xlim(axis_t[0], axis_t[-1])
-        self.ax_sin_t.autoscale(axis="y", tight=True)
         
         # Vertical Period Lines
         for line in self.sin_period_vlines:
@@ -279,15 +330,17 @@ class KernelNavigator(NavigatorBase):
         vline_right = self.ax_sin_t.axvline(right_line_t, color=self.FWHM_COLOR, alpha=self.MARKER_ALPHA, linewidth=self.MARKER_WIDTH, linestyle=':')
         self.sin_period_vlines.extend([vline_left, vline_right])
         
-        # Set x-ticks to range limits, zero, and only red FWHM line positions
+        # Set x-ticks to range limits, zero, and red FWHM line positions
         xtick_positions = sorted([axis_t[0], left_line_t, 0, right_line_t, axis_t[-1]])
         self.ax_sin_t.set_xticks(xtick_positions)
+        self.ax_sin_t.ticklabel_format(axis='x', style='scientific', scilimits=(-3, 3))
         
-        # Set y-ticks: min, max, and 0 if in range
-        ytick_positions = [y_min, y_max]
-        if y_min <= 0 <= y_max:
+        # Set y-ticks: data min, max, and 0 if in range
+        ytick_positions = [y_data_min, y_data_max]
+        if y_data_min < 0 < y_data_max:
             ytick_positions.insert(1, 0)
         self.ax_sin_t.set_yticks(ytick_positions)
+        self.ax_sin_t.ticklabel_format(axis='y', style='scientific', scilimits=(-3, 3))
 
         # Row 0: Sinusoid Frequency Domain
         sin_f = np.fft.fft(self.sins_t[i], num_samples_f)
@@ -295,13 +348,12 @@ class KernelNavigator(NavigatorBase):
         sin_f_mag = (1/num_samples_f) * np.abs(sin_f)
         sin_f_mag_zoomed = sin_f_mag[i_lo_f:i_hi_f]
 
+        y_data_min = 0
+        y_data_max = np.max(sin_f_mag_zoomed)
+        y_range = y_data_max - y_data_min
         pad = 0.1
-        y_min = 0
-        # y_min = np.min(sin_f_mag_zoomed)
-        y_max = np.max(sin_f_mag_zoomed)
-        y_range = y_max - y_min
-        y_max = y_max + pad * y_range
-        # y_min = y_min - pad * y_range
+        y_min = y_data_min
+        y_max = y_data_max + pad * y_range
 
         self.line_sin_f.set_data(axis_f_zoomed, sin_f_mag_zoomed)
         self.ax_sin_f.set_xscale('log' if self.freq_axis_mode == 'log_positive' else 'linear')
@@ -324,26 +376,38 @@ class KernelNavigator(NavigatorBase):
             self.sin_peak_vlines.append(vline)
             peak_freqs.append(center_f)
         
-        # Set ticks: range limits, zero (if in range), and peak positions
-        xtick_positions = [range_f[0], range_f[1]]
-        if range_f[0] <= 0 <= range_f[1]:
-            xtick_positions.append(0)
-        xtick_positions.extend(peak_freqs)
-        self.ax_sin_f.set_xticks(sorted(set(xtick_positions)))
+        # Set x-ticks: include peak frequencies in both modes
+        if self.freq_axis_mode == 'log_positive':
+            # In log mode: decade boundaries and positive peak frequencies
+            xtick_positions = []
+            # Add decade boundaries within range
+            for decade in [20, 100, 1000, 10000, 20000]:
+                if range_f[0] <= decade <= range_f[1]:
+                    xtick_positions.append(decade)
+            # Add positive peak frequencies
+            xtick_positions.extend([f for f in peak_freqs if f > 0 and range_f[0] <= f <= range_f[1]])
+            self.ax_sin_f.set_xticks(sorted(set(xtick_positions)))
+        else:
+            # In linear mode: range limits, zero, and all peak frequencies
+            xtick_positions = [range_f[0], range_f[1]]
+            if range_f[0] < 0 < range_f[1]:
+                xtick_positions.append(0)
+            xtick_positions.extend(peak_freqs)
+            self.ax_sin_f.set_xticks(sorted(set(xtick_positions)))
+            self.ax_sin_f.ticklabel_format(axis='x', style='plain', useOffset=False)
         
-        # Set y-ticks: min, max, and 0 if in range
-        ytick_positions = [y_min, y_max]
-        if y_min < 0 < y_max:
-            ytick_positions.insert(1, 0)
+        # Set y-ticks: data min and max
+        ytick_positions = [y_data_min, y_data_max]
         self.ax_sin_f.set_yticks(ytick_positions)
+        self.ax_sin_f.ticklabel_format(axis='y', style='scientific', scilimits=(-3, 3))
 
         # Row 1: Gaussian Component Time Domain
+        y_data_min = np.min(self.gaussians_t[i])
+        y_data_max = np.max(self.gaussians_t[i])
+        y_range = y_data_max - y_data_min
         pad = 0.1
-        y_min = -1
-        y_max = np.max(self.gaussians_t[i])
-        y_range = y_max - y_min
-        y_min = y_min - pad * y_range
-        y_max = y_max + pad * y_range
+        y_min = y_data_min - pad * y_range
+        y_max = y_data_max + pad * y_range
 
         self.line_gauss_t.set_data(axis_t, self.gaussians_t[i])
         
@@ -366,12 +430,17 @@ class KernelNavigator(NavigatorBase):
         self.ax_gauss_t.set_ylim(y_min, y_max)
         self.ax_gauss_t.set_xlim(axis_t[0], axis_t[-1])
         
-        # Show y-ticks at -1, zero, FWHM (0.5), and peak (1.0)
-        self.ax_gauss_t.set_yticks([-1.0, 0.0, 0.5, 1.0])
+        # Set y-ticks at key gaussian values: 0, FWHM (0.5), and peak (1.0)
+        ytick_positions = [0.0, 0.5, 1.0]
+        if y_data_min < 0:
+            ytick_positions.insert(0, y_data_min)
+        self.ax_gauss_t.set_yticks(ytick_positions)
+        self.ax_gauss_t.ticklabel_format(axis='y', style='plain', useOffset=False)
         
         # Set x-ticks to range limits, zero, and FWHM boundary positions
         xtick_positions = sorted([axis_t[0], fwhm_t_left, 0, fwhm_t_right, axis_t[-1]])
         self.ax_gauss_t.set_xticks(xtick_positions)
+        self.ax_gauss_t.ticklabel_format(axis='x', style='scientific', scilimits=(-3, 3))
 
         # Row 1: Gaussian Frequency Domain
         gaus_f = np.fft.fft(self.gaussians_t[i], num_samples_f)
@@ -379,47 +448,65 @@ class KernelNavigator(NavigatorBase):
         gaus_f_mag = (1 / num_samples_f) * np.abs(gaus_f)
         gaus_f_mag_zoomed = gaus_f_mag[i_lo_f:i_hi_f]
 
+        y_data_min = np.min(gaus_f_mag_zoomed)
+        y_data_max = np.max(gaus_f_mag_zoomed)
+        y_range = y_data_max - y_data_min
         pad = 0.1
-        y_min = np.min(gaus_f_mag_zoomed)
-        y_max = np.max(gaus_f_mag_zoomed)
-        y_range = y_max - y_min
-        y_min = y_min - pad * y_range
-        y_max = y_max + pad * y_range
+        y_min = y_data_min - pad * y_range
+        y_max = y_data_max + pad * y_range
 
         self.line_gauss_f.set_data(axis_f_zoomed, gaus_f_mag_zoomed)
         self.ax_gauss_f.set_xscale('log' if self.freq_axis_mode == 'log_positive' else 'linear')
         self.ax_gauss_f.set_xlim(range_f[0], range_f[1])
         self.ax_gauss_f.set_ylim(y_min, y_max)
         
-        # Set y-ticks: min, max, and 0 if in range
-        ytick_positions = [y_min, y_max]
-        if y_min < 0 < y_max:
+        # Set x-ticks: decade boundaries for log mode, range limits for linear
+        if self.freq_axis_mode == 'log_positive':
+            # In log mode: decade boundaries within range
+            xtick_positions = []
+            for decade in [20, 100, 1000, 10000, 20000]:
+                if range_f[0] <= decade <= range_f[1]:
+                    xtick_positions.append(decade)
+            self.ax_gauss_f.set_xticks(sorted(xtick_positions))
+        else:
+            # In linear mode: range limits and zero
+            xtick_positions = [range_f[0], range_f[1]]
+            if range_f[0] < 0 < range_f[1]:
+                xtick_positions.append(0)
+            self.ax_gauss_f.set_xticks(sorted(xtick_positions))
+            self.ax_gauss_f.ticklabel_format(axis='x', style='plain', useOffset=False)
+        
+        # Set y-ticks: data min and max
+        ytick_positions = [y_data_min, y_data_max]
+        if y_data_min < 0 < y_data_max:
             ytick_positions.insert(1, 0)
         self.ax_gauss_f.set_yticks(ytick_positions)
+        self.ax_gauss_f.ticklabel_format(axis='y', style='scientific', scilimits=(-3, 3))
 
         # Row 2: Resulting Wavelet Kernel Time Domain
+        y_data_min = np.min(np.real(self.kernels_t[i]))
+        y_data_max = np.max(np.real(self.kernels_t[i]))
+        y_range = y_data_max - y_data_min
         pad = 0.1
-        y_min = np.min(np.real(self.kernels_t[i]))
-        y_max = np.max(np.real(self.kernels_t[i]))
-        y_range = y_max - y_min
-        y_min = y_min - pad * y_range
-        y_max = y_max + pad * y_range
+        y_min = y_data_min - pad * y_range
+        y_max = y_data_max + pad * y_range
 
         self.kernel_sin_t_line.set_data(axis_t, self.sins_t[i])
         self.kernel_gaus_t_line.set_data(axis_t, self.gaussians_t[i])
         self.kernel_t_real_line.set_data(axis_t, np.real(self.kernels_t[i]))
         self.ax_kernel_t.set_ylim(y_min, y_max)
         self.ax_kernel_t.set_xlim(axis_t[0], axis_t[-1])
-        self.ax_kernel_t.autoscale(axis="y", tight=True)
         
         # Set x-ticks to range limits and zero
         self.ax_kernel_t.set_xticks([axis_t[0], 0, axis_t[-1]])
+        self.ax_kernel_t.ticklabel_format(axis='x', style='scientific', scilimits=(-3, 3))
         
-        # Set y-ticks: min, max, and 0 if in range
-        ytick_positions = [y_min, y_max]
-        if y_min < 0 < y_max:
+        # Set y-ticks: data min, max, and 0 if in range
+        ytick_positions = [y_data_min, y_data_max]
+        if y_data_min < 0 < y_data_max:
             ytick_positions.insert(1, 0)
         self.ax_kernel_t.set_yticks(ytick_positions)
+        self.ax_kernel_t.ticklabel_format(axis='y', style='scientific', scilimits=(-3, 3))
 
         # Row 2: Resulting Wavelet Kernel Frequency Domain
         kernel_f_shifted = np.fft.fftshift(kernel_f)
@@ -430,11 +517,15 @@ class KernelNavigator(NavigatorBase):
         self.kernel_gaus_f_line.set_data(axis_f_zoomed, gaus_f_mag_zoomed)
         self.kernel_f_line.set_data(axis_f_zoomed, kernel_f_mag_zoomed)
 
-        y_min = 0
-        y_max = np.max([np.max(sin_f_mag_zoomed), np.max(gaus_f_mag_zoomed), np.max(kernel_f_mag_zoomed)])
+        y_data_min = 0
+        y_data_max = np.max([np.max(sin_f_mag_zoomed), np.max(gaus_f_mag_zoomed), np.max(kernel_f_mag_zoomed)])
+        pad = 0.05
+        y_min = y_data_min
+        y_max = y_data_max * (1 + pad)
+        
         self.ax_kernel_f.set_xscale('log' if self.freq_axis_mode == 'log_positive' else 'linear')
         self.ax_kernel_f.set_xlim(range_f[0], range_f[1])
-        self.ax_kernel_f.set_ylim(y_min, y_max * 1.05)
+        self.ax_kernel_f.set_ylim(y_min, y_max)
         
         # Clear previous peak lines and draw new ones at kernel frequency peaks
         for line in self.kernel_peak_vlines:
@@ -452,19 +543,30 @@ class KernelNavigator(NavigatorBase):
             self.kernel_peak_vlines.append(vline)
             peak_freqs.append(center_f)
         
-        # Set ticks: range limits, zero (if in range), and peak positions
-        xtick_positions = [range_f[0], range_f[1]]
-        if range_f[0] <= 0 <= range_f[1]:
-            xtick_positions.append(0)
-        xtick_positions.extend(peak_freqs)
-        self.ax_kernel_f.set_xticks(sorted(set(xtick_positions)))
+        # Set x-ticks: include peak frequencies in both modes
+        if self.freq_axis_mode == 'log_positive':
+            # In log mode: decade boundaries and positive peak frequencies
+            xtick_positions = []
+            # Add decade boundaries within range
+            for decade in [20, 100, 1000, 10000, 20000]:
+                if range_f[0] <= decade <= range_f[1]:
+                    xtick_positions.append(decade)
+            # Add positive peak frequencies
+            xtick_positions.extend([f for f in peak_freqs if f > 0 and range_f[0] <= f <= range_f[1]])
+            self.ax_kernel_f.set_xticks(sorted(set(xtick_positions)))
+        else:
+            # In linear mode: range limits, zero, and all peak frequencies
+            xtick_positions = [range_f[0], range_f[1]]
+            if range_f[0] < 0 < range_f[1]:
+                xtick_positions.append(0)
+            xtick_positions.extend(peak_freqs)
+            self.ax_kernel_f.set_xticks(sorted(set(xtick_positions)))
+            self.ax_kernel_f.ticklabel_format(axis='x', style='plain', useOffset=False)
         
-        # Set y-ticks: min, max, and 0 if in range
-        y_max_tick = y_max * 1.05
-        ytick_positions = [y_min, y_max_tick]
-        if y_min < 0 < y_max_tick:
-            ytick_positions.insert(1, 0)
+        # Set y-ticks: data min and max
+        ytick_positions = [y_data_min, y_data_max]
         self.ax_kernel_f.set_yticks(ytick_positions)
+        self.ax_kernel_f.ticklabel_format(axis='y', style='scientific', scilimits=(-3, 3))
 
         self.fig.suptitle(f'Wavelet Components - Center Frequency {self.center_freqs_hz[i]:.1f} Hz ({i+1}/{self.num_kernels})', fontsize=12)
         self.fig.canvas.draw_idle()

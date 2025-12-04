@@ -563,9 +563,9 @@ class NumPyWavelet(AntsWavelet):
         # Perform convolution per row as frequency domain multiplication
         conv_f = input_f * self.kernel_f_bank
 
-        conv_t = ifft(conv_f, axis=1)
+        conv_tf = ifft(conv_f, axis=1)
 
-        return conv_t[:, :self.input_n]
+        return conv_tf[:, :self.input_n]
 
     def cleanup(self) -> None:
         return None
@@ -605,12 +605,12 @@ class CuPyWavelet(AntsWavelet):
         # Perform convolution via broadcasting frequency domain multiplication per row 
         conv_f_gpu = self.input_f_gpu * self.kernel_f_bank_gpu
 
-        log.info(f"GPU→CPU: Downloading convolution result of size {conv_f_gpu.shape} to CPU")
+        log.info(f"GPU→CPU: Convolution result of size {conv_f_gpu.shape} to CPU")
         conv_f_cpu = cp.asnumpy(conv_f_gpu)
 
-        conv_t_cpu = ifft(conv_f_cpu, axis=1)
+        conv_tf_cpu = ifft(conv_f_cpu, axis=1)
 
-        return conv_t_cpu[:, :self.input_n]
+        return conv_tf_cpu[:, :self.input_n]
 
     def cleanup(self) -> None:
         try:
