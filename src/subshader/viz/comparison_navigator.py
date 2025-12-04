@@ -71,56 +71,110 @@ class NavigatorBase(ABC):
 class AudioNavigator(NavigatorBase):
     """
     Plot Navigator for audio analysis:
-      - Plots the audio time series
+      - Left: Full audio with chunk highlight box
+      - Right: 4 stacked plots showing individual chunks
     """
+    NUM_CHUNK_PLOTS = 4
+    CHUNK_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+    
     def __init__(self, audio_input, title=None):
         self.audio_input = audio_input
         super().__init__(title)
         
     def _init_plots(self):
-        """Initialize audio time series plot"""
-        self.ax_audio_t = self.fig.add_subplot(1, 1, 1)
-        self.ax_audio_t.set_title("Audio Time Series")
-        self.ax_audio_t.set_xlabel("Samples")
-        self.ax_audio_t.set_ylabel("Amplitude")
-        
-        (self.line_audio_t,) = self.ax_audio_t.plot([], [])
-        self.ax_audio_t.margins(x=0, y=0)
-        self.ax_audio_t.grid(True, alpha=0.15)
-        
+        """Initialize audio time series plot with chunk subplots"""
         # Store chunk parameters
         self.chunk_size = self.audio_input.get_chunk_size()
         self.hop_size = self.audio_input.hop_size
         
-        # Chunk highlight box (will be recreated in _update)
-        self.chunk_span = None
-        
-    def _update(self):
-        """Update audio time series plot"""
+        # Load entire audio once
         self.entire_audio = self.audio_input.get_entire_audio()
         self.total_samples = len(self.entire_audio)
-        self.line_audio_t.set_data(np.arange(self.total_samples), self.entire_audio)
-
-        self.ax_audio_t.set_xlim(0, self.total_samples)
-        self.ax_audio_t.relim()
-        self.ax_audio_t.autoscale(axis="y", tight=True)
         
-        # Update chunk highlight position (remove old, create new)
+        # Create grid: left side full audio, right side 4 chunk plots
+        self.gs = gridspec.GridSpec(self.NUM_CHUNK_PLOTS, 2, figure=self.fig, width_ratios=[2, 1])
+        self.fig.subplots_adjust(left=0.06, right=0.98, bottom=0.12, top=0.93, wspace=0.15, hspace=0.3)
+        
+        # Left: Full audio plot (spans all rows)
+        self.ax_full = self.fig.add_subplot(self.gs[:, 0])
+        self.ax_full.set_title("Full Audio")
+        self.ax_full.set_xlabel("Samples")
+        self.ax_full.set_ylabel("Amplitude")
+        self.ax_full.grid(True, alpha=0.15)
+        
+        # Plot entire audio
+        (self.line_full,) = self.ax_full.plot(np.arange(self.total_samples), self.entire_audio, 
+                                               color='steelblue', linewidth=0.5)
+        self.ax_full.set_xlim(0, self.total_samples)
+        self.ax_full.margins(y=0.1)
+        
+        # Chunk highlight boxes (one for current, faded ones for previous)
+        self.chunk_spans = []
+        
+        # Right: 4 chunk plots
+        self.ax_chunks = []
+        self.line_chunks = []
+        self.chunk_data = [None] * self.NUM_CHUNK_PLOTS  # Store which chunk index is in each plot
+        
+        for idx in range(self.NUM_CHUNK_PLOTS):
+            ax = self.fig.add_subplot(self.gs[idx, 1])
+            ax.set_ylabel("Amp")
+            ax.grid(True, alpha=0.15)
+            if idx == self.NUM_CHUNK_PLOTS - 1:
+                ax.set_xlabel("Samples")
+            (line,) = ax.plot([], [], color=self.CHUNK_COLORS[idx], linewidth=0.8)
+            self.ax_chunks.append(ax)
+            self.line_chunks.append(line)
+        
+    def _update(self):
+        """Update plots - fill chunk plots one by one"""
+        # Determine which plot slot to fill (0-3)
+        plot_idx = self.i % self.NUM_CHUNK_PLOTS
+        
+        # Get chunk data
         chunk_start = self.i * self.hop_size
         chunk_end = chunk_start + self.chunk_size
-        if self.chunk_span is not None:
-            self.chunk_span.remove()
-        self.chunk_span = self.ax_audio_t.axvspan(chunk_start, chunk_end, alpha=0.3, color='orange')
         
-        self.fig.suptitle(f"Audio Analysis - Chunk {self.i + 1}/{self._get_num_items()} (samples {chunk_start}-{chunk_end})")
+        # Handle case where chunk extends beyond audio
+        if chunk_end > self.total_samples:
+            chunk_end = self.total_samples
+        
+        chunk_audio = self.entire_audio[chunk_start:chunk_end]
+        
+        # Update the chunk plot
+        x_data = np.arange(len(chunk_audio))
+        self.line_chunks[plot_idx].set_data(x_data, chunk_audio)
+        self.ax_chunks[plot_idx].set_xlim(0, len(chunk_audio))
+        self.ax_chunks[plot_idx].set_ylim(np.min(chunk_audio) * 1.1, np.max(chunk_audio) * 1.1)
+        self.ax_chunks[plot_idx].set_title(f"Chunk {self.i + 1} (samples {chunk_start}-{chunk_end})")
+        self.chunk_data[plot_idx] = self.i
+        
+        # Clear old highlight boxes
+        for span in self.chunk_spans:
+            span.remove()
+        self.chunk_spans.clear()
+        
+        # Draw highlight boxes for all visible chunks (faded for old, bright for current)
+        for idx in range(self.NUM_CHUNK_PLOTS):
+            if self.chunk_data[idx] is not None:
+                chunk_i = self.chunk_data[idx]
+                c_start = chunk_i * self.hop_size
+                c_end = c_start + self.chunk_size
+                
+                # Current chunk is bright, others are faded
+                is_current = (idx == plot_idx)
+                alpha = 0.4 if is_current else 0.15
+                color = self.CHUNK_COLORS[idx]
+                
+                span = self.ax_full.axvspan(c_start, c_end, alpha=alpha, color=color)
+                self.chunk_spans.append(span)
+        
+        self.fig.suptitle(f"Audio Analysis - Step {self.i + 1}/{self._get_num_items()}")
         self.fig.canvas.draw_idle()
 
     def _get_num_items(self):
         """Return number of chunks that fit in the audio"""
-        total_samples = self.audio_input.get_total_samples()
-        chunk_size = self.audio_input.get_chunk_size()
-        hop_size = self.audio_input.hop_size
-        return max(1, (total_samples - chunk_size) // hop_size + 1)
+        return max(1, (self.total_samples - self.chunk_size) // self.hop_size + 1)
 
 class KernelNavigator(NavigatorBase):
     """
