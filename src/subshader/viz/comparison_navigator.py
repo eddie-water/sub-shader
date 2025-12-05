@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Button
+from matplotlib.ticker import FuncFormatter, MultipleLocator
 from abc import ABC, abstractmethod
 
 class NavigatorBase(ABC):
@@ -70,68 +71,116 @@ class NavigatorBase(ABC):
 
 class AudioNavigator(NavigatorBase):
     """
-    Plot Navigator for audio analysis:
-      - Left: Overview showing 16 chunks worth of audio with highlight boxes
-      - Right: 4 stacked plots showing individual chunks
+    Plot Navigator for audio overlap analysis:
+      - Plot 1: Global view of original audio (~8 chunks)
+      - Plot 2: Even-indexed chunks (lane A) showing staggered positions
+      - Plot 3: Odd-indexed chunks (lane B) showing staggered positions  
+      - Plot 4: Composite where each new chunk overwrites the overlap region
     """
-    NUM_CHUNK_PLOTS = 4
-    OVERVIEW_CHUNKS = 2 * NUM_CHUNK_PLOTS
-    CHUNK_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+    VISIBLE_CHUNKS = 8  # Number of chunks visible in the window
+    EVEN_COLOR = 'mediumslateblue'  # Even chunks
+    ODD_COLOR = 'orange'        # Odd chunks
     
     def __init__(self, audio_input, title=None):
         self.audio_input = audio_input
         super().__init__(title)
         
     def _init_plots(self):
-        """Initialize audio time series plot with chunk subplots"""
+        """Initialize 4-plot layout for overlap visualization"""
         # Store chunk parameters
         self.chunk_size = self.audio_input.get_chunk_size()
         self.hop_size = self.audio_input.hop_size
+        self.overlap = self.chunk_size - self.hop_size
+        self.sample_rate = self.audio_input.sample_rate
+        
+        # Create time formatter for x-axis (converts samples to seconds)
+        self.time_formatter = FuncFormatter(lambda x, pos: f'{x / self.sample_rate:.3f}')
         
         # Load entire audio once
         self.entire_audio = self.audio_input.get_entire_audio()
         self.total_samples = len(self.entire_audio)
         
-        # Calculate overview window size (16 chunks worth)
-        self.overview_window = self.OVERVIEW_CHUNKS * self.hop_size + self.chunk_size
+        # Calculate window size (visible chunks worth of samples)
+        self.window_size = self.VISIBLE_CHUNKS * self.hop_size + self.chunk_size
         
-        # Create grid: left side overview, right side 4 chunk plots
-        self.gs = gridspec.GridSpec(self.NUM_CHUNK_PLOTS, 2, figure=self.fig, width_ratios=[2, 3])
-        self.fig.subplots_adjust(left=0.06, right=0.98, bottom=0.12, top=0.93, wspace=0.15, hspace=0.3)
+        # Track current window boundaries (only update when we cycle through visible chunks)
+        self.window_start = 0
+        self.window_end = min(self.window_size, self.total_samples)
+        self.window_base_chunk = 0  # First chunk index in current window
         
-        # Left: Overview plot (spans all rows)
-        self.ax_full = self.fig.add_subplot(self.gs[1:3, 0])
-        self.ax_full.set_title("Global View")
-        self.ax_full.set_xlabel("Samples")
-        self.ax_full.set_ylabel("Amplitude")
-        self.ax_full.grid(True, alpha=0.15)
+        # Create 4-row grid
+        self.gs = gridspec.GridSpec(4, 1, figure=self.fig, height_ratios=[1, 1, 1, 1])
+        self.fig.subplots_adjust(left=0.08, right=0.98, bottom=0.10, top=0.93, hspace=0.35)
         
-        # Initialize overview line (will be updated with windowed data)
-        (self.line_full,) = self.ax_full.plot([], [], color='steelblue', linewidth=0.5)
+        # Get initial global audio for y-limits
+        global_audio = self.entire_audio[self.window_start:self.window_end]
+        global_x = np.arange(self.window_start, self.window_start + len(global_audio))
+        y_min, y_max = np.min(global_audio), np.max(global_audio)
+        y_pad = (y_max - y_min) * 0.1 if y_max != y_min else 0.1
         
-        # Chunk highlight boxes
-        self.chunk_spans = []
+        # Plot 1: Global view of original audio - populate immediately
+        self.ax_global = self.fig.add_subplot(self.gs[0])
+        self.ax_global.set_title("Original Audio (Global View)")
+        self.ax_global.set_ylabel("Amplitude")
+        self.ax_global.grid(True, alpha=0.15)
+        self.ax_global.xaxis.set_major_formatter(self.time_formatter)
+        self.ax_global.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
+        (self.line_global,) = self.ax_global.plot(global_x, global_audio, color='black', linewidth=1)
+        self.ax_global.set_xlim(self.window_start, self.window_end)
+        self.ax_global.set_ylim(y_min - y_pad, y_max + y_pad)
+        # Only keep most recent highlight for each lane on global view
+        self.global_even_highlight = None  # Single span for most recent even chunk
+        self.global_odd_highlight = None   # Single span for most recent odd chunk
         
-        # Right: 4 chunk plots
-        self.ax_chunks = []
-        self.line_chunks = []
-        self.chunk_data = [None] * self.NUM_CHUNK_PLOTS  # Store which chunk index is in each plot
+        # Plot 2: Even chunks (Lane A)
+        self.ax_even = self.fig.add_subplot(self.gs[1])
+        self.ax_even.set_title("Lane A - Even Chunks (0, 2, 4, ...)")
+        self.ax_even.set_ylabel("Amplitude")
+        self.ax_even.grid(True, alpha=0.15)
+        self.ax_even.xaxis.set_major_formatter(self.time_formatter)
+        self.ax_even.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
+        self.ax_even.set_xlim(self.window_start, self.window_end)
+        self.ax_even.set_ylim(y_min - y_pad, y_max + y_pad)
+        self.even_lines = []  # List of line objects for even chunks
+        self.even_chunks = {}  # chunk_index -> line object
+        self.even_highlight = None  # Highlight only when even chunk is most recent
         
-        for idx in range(self.NUM_CHUNK_PLOTS):
-            ax = self.fig.add_subplot(self.gs[idx, 1])
-            ax.set_ylabel("Amp")
-            ax.grid(True, alpha=0.15)
-            if idx == self.NUM_CHUNK_PLOTS - 1:
-                ax.set_xlabel("Samples")
-            (line,) = ax.plot([], [], color=self.CHUNK_COLORS[idx], linewidth=0.8)
-            self.ax_chunks.append(ax)
-            self.line_chunks.append(line)
+        # Plot 3: Odd chunks (Lane B)
+        self.ax_odd = self.fig.add_subplot(self.gs[2])
+        self.ax_odd.set_title("Lane B - Odd Chunks (1, 3, 5, ...)")
+        self.ax_odd.set_ylabel("Amplitude")
+        self.ax_odd.grid(True, alpha=0.15)
+        self.ax_odd.xaxis.set_major_formatter(self.time_formatter)
+        self.ax_odd.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
+        self.ax_odd.set_xlim(self.window_start, self.window_end)
+        self.ax_odd.set_ylim(y_min - y_pad, y_max + y_pad)
+        self.odd_lines = []  # List of line objects for odd chunks
+        self.odd_chunks = {}  # chunk_index -> line object
+        self.odd_highlight = None  # Highlight only when odd chunk is most recent
+        
+        # Plot 4: Composite - maintains running composite with overwriting
+        self.ax_composite = self.fig.add_subplot(self.gs[3])
+        self.ax_composite.set_title("Composite (New Chunks Overwrite Overlap)")
+        self.ax_composite.set_xlabel("Time (s)")
+        self.ax_composite.set_ylabel("Amplitude")
+        self.ax_composite.grid(True, alpha=0.15)
+        self.ax_composite.xaxis.set_major_formatter(self.time_formatter)
+        self.ax_composite.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
+        self.ax_composite.set_xlim(self.window_start, self.window_end)
+        self.ax_composite.set_ylim(y_min - y_pad, y_max + y_pad)
+        
+        # Initialize composite buffer with NaN (will be filled as chunks come in)
+        self.composite_buffer = np.full(self.window_size, np.nan)
+        self.composite_colors = [''] * self.window_size  # Track which lane contributed each sample
+        (self.line_composite,) = self.ax_composite.plot([], [], color='gray', linewidth=0.8)
+        self.composite_even_line = None
+        self.composite_odd_line = None
+        # Only keep most recent highlight for each lane on composite view
+        self.composite_even_highlight = None  # Single span for most recent even chunk
+        self.composite_odd_highlight = None   # Single span for most recent odd chunk
         
     def _update(self):
-        """Update plots - fill chunk plots one by one"""
-        # Determine which plot slot to fill (0-3)
-        plot_idx = self.i % self.NUM_CHUNK_PLOTS
-        
+        """Update plots showing staggered overlap effect with overwriting composite"""
         # Get chunk data
         chunk_start = self.i * self.hop_size
         chunk_end = chunk_start + self.chunk_size
@@ -142,59 +191,191 @@ class AudioNavigator(NavigatorBase):
         
         chunk_audio = self.entire_audio[chunk_start:chunk_end]
         
-        # Calculate overview window (centered on current chunk area) - do this first
-        window_center = chunk_start + self.chunk_size // 2
-        window_start = max(0, window_center - self.overview_window // 2)
-        window_end = window_start + self.overview_window
+        # Check if we need to advance the window
+        chunks_since_base = self.i - self.window_base_chunk
+        if chunks_since_base >= self.VISIBLE_CHUNKS:
+            # Advance window by VISIBLE_CHUNKS
+            self.window_base_chunk += self.VISIBLE_CHUNKS
+            self.window_start = self.window_base_chunk * self.hop_size
+            self.window_end = min(self.window_start + self.window_size, self.total_samples)
+            
+            # Clear old chunk lines when window advances
+            for line in self.even_lines:
+                line.remove()
+            for line in self.odd_lines:
+                line.remove()
+            self.even_lines.clear()
+            self.odd_lines.clear()
+            self.even_chunks.clear()
+            self.odd_chunks.clear()
+            
+            # Clear highlights on global view
+            if self.global_even_highlight is not None:
+                self.global_even_highlight.remove()
+                self.global_even_highlight = None
+            if self.global_odd_highlight is not None:
+                self.global_odd_highlight.remove()
+                self.global_odd_highlight = None
+            
+            # Clear highlights on lane plots
+            if self.even_highlight is not None:
+                self.even_highlight.remove()
+                self.even_highlight = None
+            if self.odd_highlight is not None:
+                self.odd_highlight.remove()
+                self.odd_highlight = None
+            
+            # Clear highlights on composite view
+            if self.composite_even_highlight is not None:
+                self.composite_even_highlight.remove()
+                self.composite_even_highlight = None
+            if self.composite_odd_highlight is not None:
+                self.composite_odd_highlight.remove()
+                self.composite_odd_highlight = None
+            
+            # Reset composite buffer
+            self.composite_buffer = np.full(self.window_end - self.window_start, np.nan)
+            self.composite_colors = [''] * (self.window_end - self.window_start)
+            
+            # Update global view for new window
+            global_audio = self.entire_audio[self.window_start:self.window_end]
+            global_x = np.arange(self.window_start, self.window_start + len(global_audio))
+            self.line_global.set_data(global_x, global_audio)
+            
+            y_min, y_max = np.min(global_audio), np.max(global_audio)
+            y_pad = (y_max - y_min) * 0.1 if y_max != y_min else 0.1
+            
+            # Update all axis limits
+            self.ax_global.set_xlim(self.window_start, self.window_end)
+            self.ax_global.set_ylim(y_min - y_pad, y_max + y_pad)
+            self.ax_even.set_xlim(self.window_start, self.window_end)
+            self.ax_even.set_ylim(y_min - y_pad, y_max + y_pad)
+            self.ax_odd.set_xlim(self.window_start, self.window_end)
+            self.ax_odd.set_ylim(y_min - y_pad, y_max + y_pad)
+            self.ax_composite.set_xlim(self.window_start, self.window_end)
+            self.ax_composite.set_ylim(y_min - y_pad, y_max + y_pad)
         
-        # Clamp to audio bounds
-        if window_end > self.total_samples:
-            window_end = self.total_samples
-            window_start = max(0, window_end - self.overview_window)
+        is_even = (self.i % 2 == 0)
         
-        # Update the chunk plot - position at actual sample location to show staggered overlap
+        # Add chunk to appropriate lane (Plot 2 or 3)
         x_data = np.arange(chunk_start, chunk_start + len(chunk_audio))
-        self.line_chunks[plot_idx].set_data(x_data, chunk_audio)
-        self.ax_chunks[plot_idx].set_xlim(window_start, window_end)
-        self.ax_chunks[plot_idx].set_ylim(np.min(chunk_audio) * 1.1, np.max(chunk_audio) * 1.1)
-        self.ax_chunks[plot_idx].set_title(f"Chunk {self.i + 1} (samples {chunk_start}-{chunk_end})")
-        self.chunk_data[plot_idx] = self.i
         
-        # Update xlim for all other visible chunk plots to match the overview window
-        for idx in range(self.NUM_CHUNK_PLOTS):
-            if idx != plot_idx and self.chunk_data[idx] is not None:
-                self.ax_chunks[idx].set_xlim(window_start, window_end)
+        if is_even:
+            # Add to even lane (Plot 2)
+            if self.i not in self.even_chunks:
+                (line,) = self.ax_even.plot(x_data, chunk_audio, color=self.EVEN_COLOR, linewidth=0.8, alpha=0.7)
+                self.even_lines.append(line)
+                self.even_chunks[self.i] = line
+            # Highlight current chunk lines
+            for chunk_i, line in self.even_chunks.items():
+                line.set_alpha(1.0 if chunk_i == self.i else 1.0)
+                line.set_linewidth(1.0 if chunk_i == self.i else 1.0)
+            
+            # Plot 2: Show highlight for most recent even chunk
+            if self.even_highlight is not None:
+                self.even_highlight.remove()
+            self.even_highlight = self.ax_even.axvspan(
+                chunk_start, chunk_end, alpha=0.3, color=self.EVEN_COLOR
+            )
+            
+            # Plot 1: Replace most recent even highlight (only keep one)
+            if self.global_even_highlight is not None:
+                self.global_even_highlight.remove()
+            self.global_even_highlight = self.ax_global.axvspan(
+                chunk_start, chunk_end, alpha=0.3, color=self.EVEN_COLOR
+            )
+            
+            # Plot 4: Replace most recent even highlight (only keep one)
+            if self.composite_even_highlight is not None:
+                self.composite_even_highlight.remove()
+            self.composite_even_highlight = self.ax_composite.axvspan(
+                chunk_start, chunk_end, alpha=0.3, color=self.EVEN_COLOR
+            )
+        else:
+            # Add to odd lane (Plot 3)
+            if self.i not in self.odd_chunks:
+                (line,) = self.ax_odd.plot(x_data, chunk_audio, color=self.ODD_COLOR, linewidth=0.8, alpha=0.7)
+                self.odd_lines.append(line)
+                self.odd_chunks[self.i] = line
+            # Highlight current chunk lines
+            for chunk_i, line in self.odd_chunks.items():
+                line.set_alpha(1.0 if chunk_i == self.i else 1.0)
+                line.set_linewidth(1.0 if chunk_i == self.i else 1.0)
+            
+            # Plot 3: Show highlight for most recent odd chunk
+            if self.odd_highlight is not None:
+                self.odd_highlight.remove()
+            self.odd_highlight = self.ax_odd.axvspan(
+                chunk_start, chunk_end, alpha=0.3, color=self.ODD_COLOR
+            )
+            
+            # Plot 1: Replace most recent odd highlight (only keep one)
+            if self.global_odd_highlight is not None:
+                self.global_odd_highlight.remove()
+            self.global_odd_highlight = self.ax_global.axvspan(
+                chunk_start, chunk_end, alpha=0.3, color=self.ODD_COLOR
+            )
+            
+            # Plot 4: Replace most recent odd highlight (only keep one)
+            if self.composite_odd_highlight is not None:
+                self.composite_odd_highlight.remove()
+            self.composite_odd_highlight = self.ax_composite.axvspan(
+                chunk_start, chunk_end, alpha=0.3, color=self.ODD_COLOR
+            )
         
-        # Update overview plot with windowed audio
-        overview_audio = self.entire_audio[window_start:window_end]
-        overview_x = np.arange(window_start, window_start + len(overview_audio))
-        self.line_full.set_data(overview_x, overview_audio)
-        self.ax_full.set_xlim(window_start, window_start + len(overview_audio))
-        self.ax_full.set_ylim(np.min(overview_audio) * 1.1, np.max(overview_audio) * 1.1)
+        # Update Plot 4: Composite with overwriting
+        # New chunk overwrites whatever was there before in its region
+        buffer_start = chunk_start - self.window_start
+        buffer_end = buffer_start + len(chunk_audio)
         
-        # Clear old highlight boxes
-        for span in self.chunk_spans:
-            span.remove()
-        self.chunk_spans.clear()
+        # Clamp to buffer bounds
+        buffer_start = max(0, buffer_start)
+        buffer_end = min(len(self.composite_buffer), buffer_end)
+        audio_offset = max(0, self.window_start - chunk_start)
         
-        # Draw highlight boxes for all visible chunks (faded for old, bright for current)
-        for idx in range(self.NUM_CHUNK_PLOTS):
-            if self.chunk_data[idx] is not None:
-                chunk_i = self.chunk_data[idx]
-                c_start = chunk_i * self.hop_size
-                c_end = c_start + self.chunk_size
-                
-                # Only draw if chunk is within the overview window
-                if c_end >= window_start and c_start <= window_end:
-                    is_current = (idx == plot_idx)
-                    alpha = 0.4 if is_current else 0.15
-                    color = self.CHUNK_COLORS[idx]
-                    
-                    span = self.ax_full.axvspan(c_start, c_end, alpha=alpha, color=color)
-                    self.chunk_spans.append(span)
+        # Overwrite the composite buffer with new chunk data
+        chunk_len = buffer_end - buffer_start
+        self.composite_buffer[buffer_start:buffer_end] = chunk_audio[audio_offset:audio_offset + chunk_len]
         
-        self.fig.suptitle(f"Overlap Analysis - Step {self.i + 1}/{self._get_num_items()}")
+        # Track which lane contributed each sample
+        for idx in range(buffer_start, buffer_end):
+            self.composite_colors[idx] = 'even' if is_even else 'odd'
+        
+        # Redraw composite with colored segments
+        self._update_composite_plot()
+        
+        # Update title
+        lane_str = "Lane A (Even)" if is_even else "Lane B (Odd)"
+        self.fig.suptitle(
+            f"Overlap Analysis - Chunk {self.i + 1}/{self._get_num_items()} → {lane_str} | "
+            f"Overlap: {self.overlap} samples ({100*self.overlap/self.chunk_size:.0f}%)"
+        )
         self.fig.canvas.draw_idle()
+    
+    def _update_composite_plot(self):
+        """Redraw composite plot with segments colored by source lane"""
+        # Remove old composite lines
+        if self.composite_even_line is not None:
+            self.composite_even_line.remove()
+            self.composite_even_line = None
+        if self.composite_odd_line is not None:
+            self.composite_odd_line.remove()
+            self.composite_odd_line = None
+        
+        # Build separate arrays for even and odd contributions
+        x_all = np.arange(self.window_start, self.window_start + len(self.composite_buffer))
+        even_y = np.where([c == 'even' for c in self.composite_colors], self.composite_buffer, np.nan)
+        odd_y = np.where([c == 'odd' for c in self.composite_colors], self.composite_buffer, np.nan)
+        
+        # Plot each lane's contribution
+        if not np.all(np.isnan(even_y)):
+            (self.composite_even_line,) = self.ax_composite.plot(
+                x_all, even_y, color=self.EVEN_COLOR, linewidth=1.0
+            )
+        if not np.all(np.isnan(odd_y)):
+            (self.composite_odd_line,) = self.ax_composite.plot(
+                x_all, odd_y, color=self.ODD_COLOR, linewidth=1.0
+            )
 
     def _get_num_items(self):
         """Return number of chunks that fit in the audio"""
