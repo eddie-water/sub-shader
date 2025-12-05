@@ -71,10 +71,11 @@ class NavigatorBase(ABC):
 class AudioNavigator(NavigatorBase):
     """
     Plot Navigator for audio analysis:
-      - Left: Full audio with chunk highlight box
+      - Left: Overview showing 16 chunks worth of audio with highlight boxes
       - Right: 4 stacked plots showing individual chunks
     """
     NUM_CHUNK_PLOTS = 4
+    OVERVIEW_CHUNKS = 2 * NUM_CHUNK_PLOTS
     CHUNK_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
     
     def __init__(self, audio_input, title=None):
@@ -91,24 +92,24 @@ class AudioNavigator(NavigatorBase):
         self.entire_audio = self.audio_input.get_entire_audio()
         self.total_samples = len(self.entire_audio)
         
-        # Create grid: left side full audio, right side 4 chunk plots
-        self.gs = gridspec.GridSpec(self.NUM_CHUNK_PLOTS, 2, figure=self.fig, width_ratios=[2, 1])
+        # Calculate overview window size (16 chunks worth)
+        self.overview_window = self.OVERVIEW_CHUNKS * self.hop_size + self.chunk_size
+        
+        # Create grid: left side overview, right side 4 chunk plots
+        self.gs = gridspec.GridSpec(self.NUM_CHUNK_PLOTS, 2, figure=self.fig, width_ratios=[2, 3])
         self.fig.subplots_adjust(left=0.06, right=0.98, bottom=0.12, top=0.93, wspace=0.15, hspace=0.3)
         
-        # Left: Full audio plot (spans all rows)
-        self.ax_full = self.fig.add_subplot(self.gs[:, 0])
-        self.ax_full.set_title("Full Audio")
+        # Left: Overview plot (spans all rows)
+        self.ax_full = self.fig.add_subplot(self.gs[1:3, 0])
+        self.ax_full.set_title("Global View")
         self.ax_full.set_xlabel("Samples")
         self.ax_full.set_ylabel("Amplitude")
         self.ax_full.grid(True, alpha=0.15)
         
-        # Plot entire audio
-        (self.line_full,) = self.ax_full.plot(np.arange(self.total_samples), self.entire_audio, 
-                                               color='steelblue', linewidth=0.5)
-        self.ax_full.set_xlim(0, self.total_samples)
-        self.ax_full.margins(y=0.1)
+        # Initialize overview line (will be updated with windowed data)
+        (self.line_full,) = self.ax_full.plot([], [], color='steelblue', linewidth=0.5)
         
-        # Chunk highlight boxes (one for current, faded ones for previous)
+        # Chunk highlight boxes
         self.chunk_spans = []
         
         # Right: 4 chunk plots
@@ -141,13 +142,35 @@ class AudioNavigator(NavigatorBase):
         
         chunk_audio = self.entire_audio[chunk_start:chunk_end]
         
-        # Update the chunk plot
-        x_data = np.arange(len(chunk_audio))
+        # Calculate overview window (centered on current chunk area) - do this first
+        window_center = chunk_start + self.chunk_size // 2
+        window_start = max(0, window_center - self.overview_window // 2)
+        window_end = window_start + self.overview_window
+        
+        # Clamp to audio bounds
+        if window_end > self.total_samples:
+            window_end = self.total_samples
+            window_start = max(0, window_end - self.overview_window)
+        
+        # Update the chunk plot - position at actual sample location to show staggered overlap
+        x_data = np.arange(chunk_start, chunk_start + len(chunk_audio))
         self.line_chunks[plot_idx].set_data(x_data, chunk_audio)
-        self.ax_chunks[plot_idx].set_xlim(0, len(chunk_audio))
+        self.ax_chunks[plot_idx].set_xlim(window_start, window_end)
         self.ax_chunks[plot_idx].set_ylim(np.min(chunk_audio) * 1.1, np.max(chunk_audio) * 1.1)
         self.ax_chunks[plot_idx].set_title(f"Chunk {self.i + 1} (samples {chunk_start}-{chunk_end})")
         self.chunk_data[plot_idx] = self.i
+        
+        # Update xlim for all other visible chunk plots to match the overview window
+        for idx in range(self.NUM_CHUNK_PLOTS):
+            if idx != plot_idx and self.chunk_data[idx] is not None:
+                self.ax_chunks[idx].set_xlim(window_start, window_end)
+        
+        # Update overview plot with windowed audio
+        overview_audio = self.entire_audio[window_start:window_end]
+        overview_x = np.arange(window_start, window_start + len(overview_audio))
+        self.line_full.set_data(overview_x, overview_audio)
+        self.ax_full.set_xlim(window_start, window_start + len(overview_audio))
+        self.ax_full.set_ylim(np.min(overview_audio) * 1.1, np.max(overview_audio) * 1.1)
         
         # Clear old highlight boxes
         for span in self.chunk_spans:
@@ -161,15 +184,16 @@ class AudioNavigator(NavigatorBase):
                 c_start = chunk_i * self.hop_size
                 c_end = c_start + self.chunk_size
                 
-                # Current chunk is bright, others are faded
-                is_current = (idx == plot_idx)
-                alpha = 0.4 if is_current else 0.15
-                color = self.CHUNK_COLORS[idx]
-                
-                span = self.ax_full.axvspan(c_start, c_end, alpha=alpha, color=color)
-                self.chunk_spans.append(span)
+                # Only draw if chunk is within the overview window
+                if c_end >= window_start and c_start <= window_end:
+                    is_current = (idx == plot_idx)
+                    alpha = 0.4 if is_current else 0.15
+                    color = self.CHUNK_COLORS[idx]
+                    
+                    span = self.ax_full.axvspan(c_start, c_end, alpha=alpha, color=color)
+                    self.chunk_spans.append(span)
         
-        self.fig.suptitle(f"Audio Analysis - Step {self.i + 1}/{self._get_num_items()}")
+        self.fig.suptitle(f"Overlap Analysis - Step {self.i + 1}/{self._get_num_items()}")
         self.fig.canvas.draw_idle()
 
     def _get_num_items(self):
