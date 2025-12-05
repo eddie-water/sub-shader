@@ -120,8 +120,7 @@ class AudioNavigator(NavigatorBase):
         
         # Plot 1: Global view of original audio - populate immediately
         self.ax_global = self.fig.add_subplot(self.gs[0])
-        self.ax_global.set_title("Original Audio (Global View)")
-        self.ax_global.set_ylabel("Amplitude")
+        self.ax_global.set_title("Original Audio")
         self.ax_global.grid(True, alpha=0.15)
         self.ax_global.xaxis.set_major_formatter(self.time_formatter)
         self.ax_global.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
@@ -134,8 +133,7 @@ class AudioNavigator(NavigatorBase):
         
         # Plot 2: Even chunks (Lane A)
         self.ax_even = self.fig.add_subplot(self.gs[1])
-        self.ax_even.set_title("Lane A - Even Chunks (0, 2, 4, ...)")
-        self.ax_even.set_ylabel("Amplitude")
+        self.ax_even.set_title("Even")
         self.ax_even.grid(True, alpha=0.15)
         self.ax_even.xaxis.set_major_formatter(self.time_formatter)
         self.ax_even.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
@@ -147,8 +145,7 @@ class AudioNavigator(NavigatorBase):
         
         # Plot 3: Odd chunks (Lane B)
         self.ax_odd = self.fig.add_subplot(self.gs[2])
-        self.ax_odd.set_title("Lane B - Odd Chunks (1, 3, 5, ...)")
-        self.ax_odd.set_ylabel("Amplitude")
+        self.ax_odd.set_title("Odd")
         self.ax_odd.grid(True, alpha=0.15)
         self.ax_odd.xaxis.set_major_formatter(self.time_formatter)
         self.ax_odd.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
@@ -160,9 +157,8 @@ class AudioNavigator(NavigatorBase):
         
         # Plot 4: Composite - maintains running composite with overwriting
         self.ax_composite = self.fig.add_subplot(self.gs[3])
-        self.ax_composite.set_title("Composite (New Chunks Overwrite Overlap)")
+        self.ax_composite.set_title("Composite (Overwrite Overlapping Regions)")
         self.ax_composite.set_xlabel("Time (s)")
-        self.ax_composite.set_ylabel("Amplitude")
         self.ax_composite.grid(True, alpha=0.15)
         self.ax_composite.xaxis.set_major_formatter(self.time_formatter)
         self.ax_composite.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
