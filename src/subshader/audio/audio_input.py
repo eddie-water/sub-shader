@@ -50,7 +50,7 @@ class EndOfAudioException(Exception):
 # =============================================================================
 
 class AudioInput:
-    def __init__(self, path: str, chunk_size: int, overlap_factor: float = 0.5) -> None:
+    def __init__(self, path: str, chunk_size: int = 4096, overlap_factor: float = 0.5) -> None:
         """
         Audio Input Initialization
 

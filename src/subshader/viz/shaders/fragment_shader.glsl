@@ -4,12 +4,13 @@
  * Determines the color of each pixel by reading the values from the source
  * data texture. The texture contains coefficient frames stacked
  * side-by-side in a scrolling buffer. Each pixel samples one coefficient
- * value (already normalized to [0,1] range) and maps it to a color
- * using matplotlib's inferno colormap for accurate data representation.
+ * value and normalizes it using the tracked intensity max, then maps it
+ * to a color using matplotlib's inferno colormap.
  * 
  * Inputs:
  *   texCoord (vec2): Which coefficient to read from the texture
- *   texture_sampler (sampler2D): Texture containing globally normalized coefficient frames
+ *   texture_sampler (sampler2D): Texture containing raw coefficient frames
+ *   intensity_max (float): Tracked global max for consistent colormap scaling
  *   gamma (float): Gamma correction factor for perceptual enhancement
  * 
  * Outputs:
@@ -20,6 +21,7 @@
 in vec2 texCoord;
 out vec4 fragColor;
 uniform sampler2D texture_sampler;
+uniform float intensity_max;
 uniform float gamma;
 
 vec3 inferno_colormap(float t) {
@@ -61,10 +63,11 @@ vec3 inferno_colormap(float t) {
 }
 
 void main() {
-    // Read the value from the texture data at the given texture coordinate
+    // Read the raw value from the texture data at the given texture coordinate
     float value = texture(texture_sampler, texCoord).r;
     
-    float normalized = clamp(value, 0.0, 1.0);
+    // Normalize using the tracked intensity max for consistent colormap scaling
+    float normalized = clamp(value / intensity_max, 0.0, 1.0);
     normalized = pow(normalized, gamma);
     
     // Grab the color from matplotlib inferno colormap using the normalized value

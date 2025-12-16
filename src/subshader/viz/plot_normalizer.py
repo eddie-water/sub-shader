@@ -1,7 +1,7 @@
-"""Global Normalization Utility for SubShader"""
+"""Intensity Tracking Utility for SubShader"""
 
 import numpy as np
-from typing import Optional, Union
+from typing import Union
 
 try:
     import cupy as cp
@@ -10,9 +10,9 @@ except ImportError:
     cp = None
     CUPY_AVAILABLE = False
 
-# TODO 36 Rename this. The result of the CWT is "normalized" this more like a "max tracker" as a reference point for the shader color map
-class PlotNormalizer:
-    """Tracks global normalization factor across frames for stable scaling."""
+
+class IntensityTracker:
+    """Tracks global max intensity across frames for consistent colormap scaling."""
     
     def __init__(
         self,
@@ -20,74 +20,42 @@ class PlotNormalizer:
         decay_rate: float = 0.001,
         floor_value: float = 1e-8,
         warmup_frames: int = 10,
-        log_mapping: bool = False
     ):
         self.percentile = percentile
         self.decay_rate = decay_rate
         self.floor_value = floor_value
         self.warmup_frames = warmup_frames
-        self.log_mapping = log_mapping
         
-        self.global_factor = 0.0
+        self.global_max = 0.0
         self.frame_count = 0
         self.is_ready = False
 
-    def process(self, frame: Union[np.ndarray, 'cp.ndarray']) -> Union[np.ndarray, 'cp.ndarray']:
-        """
-        Process the frame and return the normalized frame.
-
-        Args:
-            frame (Union[np.ndarray, 'cp.ndarray']): The frame to process.
-
-        Returns:
-            Union[np.ndarray, 'cp.ndarray']: The normalized frame.
-        """
-        self.global_factor = self.update(frame)
-        return self.apply_normalization(frame, self.global_factor)
-    
     def update(self, frame: Union[np.ndarray, 'cp.ndarray']) -> float:
         """
-        Update the global factor with a new frame.
+        Update the global max with a new frame.
 
         Args:
-            frame (Union[np.ndarray, 'cp.ndarray']): The frame to update the global factor with.
+            frame: The frame to update the global max with.
 
         Returns:
-            float: The updated global factor.
+            The current global max value (for use as vmax in colormap).
         """
         flat_data = frame.flatten()
-        frame_stat = float(np.percentile(flat_data, self.percentile))
+        frame_max = float(np.percentile(flat_data, self.percentile))
 
-        self.global_factor = (1.0 - self.decay_rate) * self.global_factor
-        self.global_factor = max(self.global_factor, self.floor_value)
-        self.global_factor = max(self.global_factor, frame_stat)
+        # Slow decay allows max to decrease over time if intensity drops
+        self.global_max = (1.0 - self.decay_rate) * self.global_max
+        self.global_max = max(self.global_max, self.floor_value)
+        self.global_max = max(self.global_max, frame_max)
 
         self.frame_count += 1
         if self.frame_count >= self.warmup_frames:
             self.is_ready = True
 
-        return self.global_factor
+        return self.global_max
 
-    def apply_normalization(self, data: Union[np.ndarray, 'cp.ndarray'], norm_factor: float) -> Union[np.ndarray, 'cp.ndarray']:
-        """
-        Normalize the data with the normalization factor.
-
-        Args:
-            data (Union[np.ndarray, 'cp.ndarray']): The data to normalize.
-            norm_factor (float): The normalization factor to apply to the frame.
-        Returns:
-            Union[np.ndarray, 'cp.ndarray']: The normalized data.
-        """
-        is_cupy = CUPY_AVAILABLE and isinstance(data, cp.ndarray)
-        xp = cp if is_cupy else np
-
-        if norm_factor <= 0:
-            return xp.zeros_like(data)
-
-        normalized = data / norm_factor
-        normalized = xp.clip(normalized, 0.0, 1.0)
-
-        if self.log_mapping:
-            normalized = xp.log1p(normalized) / xp.log1p(1.0)
-
-        return normalized
+    def reset(self) -> None:
+        """Reset the tracker state."""
+        self.global_max = 0.0
+        self.frame_count = 0
+        self.is_ready = False

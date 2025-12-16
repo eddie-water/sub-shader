@@ -169,7 +169,7 @@ class VisualizationConfig:
     """Configuration for visualization rendering."""
     
     # Number of frames in Circular Plot Buffer
-    num_frames: int = 16
+    num_frames: int = 32
 
     # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
     gamma: float = 0.5

@@ -18,6 +18,10 @@ components:
 import os
 import time
 import numpy as np
+
+# Force TkAgg backend for WSL compatibility (must be before pyplot import)
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 
@@ -25,7 +29,7 @@ from subshader.config import get_default_config
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumPyWavelet, CuPyWavelet
 from subshader.viz.plotter import PyQtPlotter, ShaderPlot
-from subshader.viz.comparison_navigator import AudioNavigator, KernelNavigator, DspStageNavigator, TransformNavigator
+from subshader.viz.comparison_navigator import AudioNavigator, KernelNavigator, DspStageNavigator, TransformNavigator, TopLevelComparisonNavigator
 
 # =============================================================================
 # CONFIGURATION
@@ -35,7 +39,8 @@ from subshader.viz.comparison_navigator import AudioNavigator, KernelNavigator, 
 config = get_default_config()
 
 # Override benchmark-specific configs (ensure string, not Path)
-config.audio.file_path = str("assets/audio/daw/a2a3_a4_minor_scale.wav")
+# config.audio.file_path = str("assets/audio/daw/a2a3_a4_minor_scale.wav")
+config.audio.file_path = str("assets/audio/daw/a3b3c4d4_a5arp_16bars.wav")
 
 # =============================================================================
 # TEST PARAMS
@@ -66,46 +71,53 @@ class Benchmark():
         self.sample_rate = self.audio_input.get_sample_rate()
 
         # Wavelet Implementations
-        self.np_wavelet = NumPyWavelet(
+
+        self.pywt = PyWavelet(
             sample_rate=self.sample_rate, 
             input_n=config.audio.chunk_size,
             config=config.wavelet
         )
 
-        self.np_coefs = self.np_wavelet.cwt(self.audio_data)
-
-        self.cp_wavelet = CuPyWavelet(
+        self.npwt = NumPyWavelet(
             sample_rate=self.sample_rate, 
             input_n=config.audio.chunk_size,
             config=config.wavelet
         )
 
-        self.cp_coefs = self.cp_wavelet.cwt(self.audio_data)
+        self.npwt_coefs = self.npwt.cwt(self.audio_data)
+
+        self.cpwt = CuPyWavelet(
+            sample_rate=self.sample_rate, 
+            input_n=config.audio.chunk_size,
+            config=config.wavelet
+        )
+
+        self.cpwt_coefs = self.cpwt.cwt(self.audio_data)
 
         # Plotter Implementations
-        self.plot_shape = self.np_wavelet.get_output_shape()
+        self.plot_shape = self.npwt.get_output_shape()
 
-        self.pyqtg = PyQtPlotter(
-            file_path=config.audio.file_path,
-            frame_shape=self.plot_shape
-        )
+        # self.pyqtg = PyQtPlotter(
+        #     file_path=config.audio.file_path,
+        #     frame_shape=self.plot_shape
+        # )
 
-        self.shader = ShaderPlot(
-            file_path=config.audio.file_path,
-            frame_shape=self.plot_shape,
-            config=config.viz
-        )
+        # self.shader = ShaderPlot(
+        #     file_path=config.audio.file_path,
+        #     frame_shape=self.plot_shape,
+        #     config=config.viz
+        # )
 
-        # Function List and Dummy Args 
-        self.func_list = [
-            (self.audio_input.get_chunk,    ()),
-            (self.np_wavelet.cwt,           (self.audio_data,)),
-            (self.cp_wavelet.cwt,           (self.audio_data,)),
-            (self.shader.update_plot,       (self.cp_coefs,))
-        ]
+        # # Function List and Dummy Args 
+        # self.func_list = [
+        #     (self.audio_input.get_chunk,    ()),
+        #     (self.npwt.cwt,           (self.audio_data,)),
+        #     (self.cpwt.cwt,           (self.audio_data,)),
+        #     (self.shader.update_plot,       (self.cpwt_coefs,))
+        # ]
 
-        # Tracks the run time of each function
-        self.func_times = np.zeros(len(self.func_list))
+        # # Tracks the run time of each function
+        # self.func_times = np.zeros(len(self.func_list))
 
     # =========================================================================
     # STATIC PLOT ANALYSIS - PLOT INTERMEDIATE STEPS OF CWT
@@ -115,28 +127,41 @@ class Benchmark():
         """
         Static Plot Analysis and Comparisons
         """
+        try:
+            TopLevelComparisonNavigator(
+                audio_input=self.audio_input,
+                pywt=self.pywt,
+                cpwt=self.cpwt,
+                title="Side by Side Comparison",
+                midi_img_path="assets/images/a3b3c4d4_a5arp_13p25_bars.png"
+            )
+        except Exception as e:
+            print(f"[ERROR] Navigator failed: {e}")
+            import traceback
+            traceback.print_exc()
+
         # Static Wavelet Kernel Analysis: Time vs Frequency Domain
-        AudioNavigator(
-            audio_input=self.audio_input,
-            title="Static Audio Analysis"
-        )
+        # AudioNavigator(
+        #     audio_input=self.audio_input,
+        #     title="Static Audio Overlap Analysis"
+        # )
 
-        KernelNavigator(
-            wavelet=self.np_wavelet,
-            title="Static Wavelet Kernel Analysis"
-        )
+        # KernelNavigator(
+        #     wavelet=self.npwt,
+        #     title="Static Wavelet Kernel Analysis"
+        # )
 
-        DspStageNavigator(
-            audio_input=self.audio_input,
-            wavelet=self.np_wavelet,
-            title="Static DSP Stage Analysis"
-        )
+        # DspStageNavigator(
+        #     audio_input=self.audio_input,
+        #     wavelet=self.npwt,
+        #     title="Static DSP Stage Analysis"
+        # )
 
         # # Static CWT Analysis: Audio Time Series vs CWT Time-Freq Coefficients
         # TransformNavigator(
         #     audio_input=self.audio_input,
-        #     py_wavelet=self.py_wavelet,
-        #     cp_wavelet=self.cp_wavelet,
+        #     py_wavelet=self.pywt,
+        #     cp_wavelet=self.cpwt,
         #     cwt_function=lambda wavelet, data: wavelet.class_specific_cwt(data),
         #     title=f"Static Class-Specific CWT Plot Analysis and Comparison — {os.path.basename(config.audio.file_path)}"
         # )
@@ -169,6 +194,13 @@ class Benchmark():
 
         self._print_results()
  
+    def plot_side_by_side(self):
+        TopLevelComparisonNavigator(
+            audio_input=self.audio_input,
+            wavelet=self.npwt,
+            title="Side by Side Comparison"
+        )
+
     def _print_results(self):
         # Average the runtimes
         self.avg_func_times = self.func_times / int(NUM_ITERATIONS)
@@ -188,6 +220,7 @@ class Benchmark():
     def run_tests(self):
         self.static_plot_analysis()
         # self.dynamic_plot_analysis()
+        input("Press Enter to exit...")
 
 if __name__ == '__main__':
     benchmark = Benchmark()

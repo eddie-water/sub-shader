@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Button
 from matplotlib.ticker import FuncFormatter, MultipleLocator
+from matplotlib.patches import Rectangle, FancyArrowPatch
 from abc import ABC, abstractmethod
+
+from subshader.viz.plotter import CircularFrameBuffer, AudioFrameBuffer
+from subshader.config import ColorNormalizationConfig
 
 class NavigatorBase(ABC):
     """
@@ -21,7 +25,7 @@ class NavigatorBase(ABC):
         self._init_buttons()
         self._init_plots()
         self._update()
-        plt.show()
+        plt.show(block=True)
 
     # Public - Base Setup
 
@@ -77,9 +81,10 @@ class AudioNavigator(NavigatorBase):
       - Plot 3: Odd-indexed chunks (lane B) showing staggered positions  
       - Plot 4: Composite where each new chunk overwrites the overlap region
     """
-    VISIBLE_CHUNKS = 8  # Number of chunks visible in the window
-    EVEN_COLOR = 'mediumslateblue'  # Even chunks
-    ODD_COLOR = 'orange'        # Odd chunks
+    VISIBLE_CHUNKS = 6  # Number of chunks visible in the window
+    AUDIO_COLOR = '#1A1A1A'  # Near-black for audio waveforms
+    EVEN_COLOR = '#6B7FDB'   # Even chunks
+    ODD_COLOR = '#FC8961'    # Odd chunks
     
     def __init__(self, audio_input, title=None):
         self.audio_input = audio_input
@@ -110,7 +115,7 @@ class AudioNavigator(NavigatorBase):
         
         # Create 4-row grid
         self.gs = gridspec.GridSpec(4, 1, figure=self.fig, height_ratios=[1, 1, 1, 1])
-        self.fig.subplots_adjust(left=0.08, right=0.98, bottom=0.10, top=0.93, hspace=0.35)
+        self.fig.subplots_adjust(left=0.03, right=0.97, bottom=0.10, top=0.93, hspace=0.35)
         
         # Get initial global audio for y-limits
         global_audio = self.entire_audio[self.window_start:self.window_end]
@@ -120,11 +125,12 @@ class AudioNavigator(NavigatorBase):
         
         # Plot 1: Global view of original audio - populate immediately
         self.ax_global = self.fig.add_subplot(self.gs[0])
-        self.ax_global.set_title("Original Audio")
+        self.ax_global.set_title("Original")
         self.ax_global.grid(True, alpha=0.15)
         self.ax_global.xaxis.set_major_formatter(self.time_formatter)
         self.ax_global.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
-        (self.line_global,) = self.ax_global.plot(global_x, global_audio, color='black', linewidth=1)
+        self.ax_global.set_yticks([])
+        (self.line_global,) = self.ax_global.plot(global_x, global_audio, color=self.AUDIO_COLOR, linewidth=1)
         self.ax_global.set_xlim(self.window_start, self.window_end)
         self.ax_global.set_ylim(y_min - y_pad, y_max + y_pad)
         # Only keep most recent highlight for each lane on global view
@@ -137,6 +143,7 @@ class AudioNavigator(NavigatorBase):
         self.ax_even.grid(True, alpha=0.15)
         self.ax_even.xaxis.set_major_formatter(self.time_formatter)
         self.ax_even.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
+        self.ax_even.set_yticks([])
         self.ax_even.set_xlim(self.window_start, self.window_end)
         self.ax_even.set_ylim(y_min - y_pad, y_max + y_pad)
         self.even_lines = []  # List of line objects for even chunks
@@ -149,6 +156,7 @@ class AudioNavigator(NavigatorBase):
         self.ax_odd.grid(True, alpha=0.15)
         self.ax_odd.xaxis.set_major_formatter(self.time_formatter)
         self.ax_odd.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
+        self.ax_odd.set_yticks([])
         self.ax_odd.set_xlim(self.window_start, self.window_end)
         self.ax_odd.set_ylim(y_min - y_pad, y_max + y_pad)
         self.odd_lines = []  # List of line objects for odd chunks
@@ -162,6 +170,7 @@ class AudioNavigator(NavigatorBase):
         self.ax_composite.grid(True, alpha=0.15)
         self.ax_composite.xaxis.set_major_formatter(self.time_formatter)
         self.ax_composite.xaxis.set_major_locator(MultipleLocator(int(0.1 * self.sample_rate)))
+        self.ax_composite.set_yticks([])
         self.ax_composite.set_xlim(self.window_start, self.window_end)
         self.ax_composite.set_ylim(y_min - y_pad, y_max + y_pad)
         
@@ -172,8 +181,95 @@ class AudioNavigator(NavigatorBase):
         self.composite_even_line = None
         self.composite_odd_line = None
         # Only keep most recent highlight for each lane on composite view
+        
+        # Arrow tracking
+        self.arrow_objects = []  # Track all arrow patches for cleanup
         self.composite_even_highlight = None  # Single span for most recent even chunk
         self.composite_odd_highlight = None   # Single span for most recent odd chunk
+    
+    def _clear_arrows(self):
+        """Remove all existing arrow annotations"""
+        for arrow in self.arrow_objects:
+            arrow.remove()
+        self.arrow_objects.clear()
+    
+    def _add_windowing_arrows(self, chunk_idx, chunk_start):
+        """
+        Add arrows to show windowing flow for current chunk.
+        Shows arrows on every update to indicate the current operation.
+        """
+        # Convert sample positions to data coordinates
+        hop_samples = self.hop_size
+        chunk_samples = self.chunk_size
+        chunk_end = chunk_start + chunk_samples
+        
+        # Determine vertical positions (middle of y-axis range)
+        ylim = self.ax_global.get_ylim()
+        y_range = ylim[1] - ylim[0]
+        y_mid = (ylim[0] + ylim[1]) / 2
+        
+        # Arrow styling - made bigger and more visible
+        arrow_style = dict(
+            arrowstyle='-|>',
+            lw=4,
+            mutation_scale=25,
+            alpha=1.0
+        )
+        
+        is_even = (chunk_idx % 2 == 0)
+        target_ax = self.ax_even if is_even else self.ax_odd
+        lane_color = self.EVEN_COLOR if is_even else self.ODD_COLOR
+        
+        # 1. Overlap indicator on composite (shows overwrite region)
+        if chunk_idx > 0 and self.overlap > 0:
+            overlap_start = chunk_start
+            overlap_end = chunk_start + self.overlap
+            
+            # Draw bracket showing overlap region - bigger and more visible
+            bracket_y = ylim[1] - y_range * 0.15
+            bracket_height = y_range * 0.08
+            
+            # Vertical lines of bracket
+            left_line = self.ax_composite.plot(
+                [overlap_start, overlap_start],
+                [bracket_y - bracket_height, bracket_y + bracket_height],
+                color='#FF0000',
+                lw=3,
+                alpha=1.0,
+                zorder=100
+            )[0]
+            right_line = self.ax_composite.plot(
+                [overlap_end, overlap_end],
+                [bracket_y - bracket_height, bracket_y + bracket_height],
+                color='#FF0000',
+                lw=3,
+                alpha=1.0,
+                zorder=100
+            )[0]
+            horizontal_line = self.ax_composite.plot(
+                [overlap_start, overlap_end],
+                [bracket_y, bracket_y],
+                color='#FF0000',
+                lw=3,
+                alpha=1.0,
+                zorder=100
+            )[0]
+            
+            self.arrow_objects.extend([left_line, right_line, horizontal_line])
+            
+            # Label overlap amount - bigger font
+            overlap_text = self.ax_composite.text(
+                (overlap_start + overlap_end) / 2,
+                bracket_y + bracket_height * 1.5,
+                f'OVERWRITE\n{self.overlap} samples',
+                ha='center',
+                va='bottom',
+                fontsize=10,
+                color='#FF0000',
+                weight='bold',
+                zorder=101
+            )
+            self.arrow_objects.append(overlap_text)
         
     def _update(self):
         """Update plots showing staggered overlap effect with overwriting composite"""
@@ -229,6 +325,9 @@ class AudioNavigator(NavigatorBase):
                 self.composite_odd_highlight.remove()
                 self.composite_odd_highlight = None
             
+            # Clear arrows when advancing window
+            self._clear_arrows()
+            
             # Reset composite buffer
             self.composite_buffer = np.full(self.window_end - self.window_start, np.nan)
             self.composite_colors = [''] * (self.window_end - self.window_start)
@@ -270,23 +369,17 @@ class AudioNavigator(NavigatorBase):
             # Plot 2: Show highlight for most recent even chunk
             if self.even_highlight is not None:
                 self.even_highlight.remove()
-            self.even_highlight = self.ax_even.axvspan(
-                chunk_start, chunk_end, alpha=0.3, color=self.EVEN_COLOR
-            )
+            self.even_highlight = self._add_outline_box(self.ax_even, chunk_start, chunk_end, self.EVEN_COLOR)
             
             # Plot 1: Replace most recent even highlight (only keep one)
             if self.global_even_highlight is not None:
                 self.global_even_highlight.remove()
-            self.global_even_highlight = self.ax_global.axvspan(
-                chunk_start, chunk_end, alpha=0.3, color=self.EVEN_COLOR
-            )
+            self.global_even_highlight = self._add_outline_box(self.ax_global, chunk_start, chunk_end, self.EVEN_COLOR)
             
             # Plot 4: Replace most recent even highlight (only keep one)
             if self.composite_even_highlight is not None:
                 self.composite_even_highlight.remove()
-            self.composite_even_highlight = self.ax_composite.axvspan(
-                chunk_start, chunk_end, alpha=0.3, color=self.EVEN_COLOR
-            )
+            self.composite_even_highlight = self._add_outline_box(self.ax_composite, chunk_start, chunk_end, self.EVEN_COLOR)
         else:
             # Add to odd lane (Plot 3)
             if self.i not in self.odd_chunks:
@@ -301,23 +394,17 @@ class AudioNavigator(NavigatorBase):
             # Plot 3: Show highlight for most recent odd chunk
             if self.odd_highlight is not None:
                 self.odd_highlight.remove()
-            self.odd_highlight = self.ax_odd.axvspan(
-                chunk_start, chunk_end, alpha=0.3, color=self.ODD_COLOR
-            )
+            self.odd_highlight = self._add_outline_box(self.ax_odd, chunk_start, chunk_end, self.ODD_COLOR)
             
             # Plot 1: Replace most recent odd highlight (only keep one)
             if self.global_odd_highlight is not None:
                 self.global_odd_highlight.remove()
-            self.global_odd_highlight = self.ax_global.axvspan(
-                chunk_start, chunk_end, alpha=0.3, color=self.ODD_COLOR
-            )
+            self.global_odd_highlight = self._add_outline_box(self.ax_global, chunk_start, chunk_end, self.ODD_COLOR)
             
             # Plot 4: Replace most recent odd highlight (only keep one)
             if self.composite_odd_highlight is not None:
                 self.composite_odd_highlight.remove()
-            self.composite_odd_highlight = self.ax_composite.axvspan(
-                chunk_start, chunk_end, alpha=0.3, color=self.ODD_COLOR
-            )
+            self.composite_odd_highlight = self._add_outline_box(self.ax_composite, chunk_start, chunk_end, self.ODD_COLOR)
         
         # Update Plot 4: Composite with overwriting
         # New chunk overwrites whatever was there before in its region
@@ -342,10 +429,7 @@ class AudioNavigator(NavigatorBase):
         
         # Update title
         lane_str = "Lane A (Even)" if is_even else "Lane B (Odd)"
-        self.fig.suptitle(
-            f"Overlap Analysis - Chunk {self.i + 1}/{self._get_num_items()} → {lane_str} | "
-            f"Overlap: {self.overlap} samples ({100*self.overlap/self.chunk_size:.0f}%)"
-        )
+        self.fig.suptitle(f"Signal Overlap | {100*self.overlap/self.chunk_size:.0f}% Overlap | {self.i + 1} out of {self._get_num_items()}")
         self.fig.canvas.draw_idle()
     
     def _update_composite_plot(self):
@@ -372,6 +456,20 @@ class AudioNavigator(NavigatorBase):
             (self.composite_odd_line,) = self.ax_composite.plot(
                 x_all, odd_y, color=self.ODD_COLOR, linewidth=1.0
             )
+        
+        # Add windowing arrows for first few chunks to show the pattern
+        self._clear_arrows()
+        self._add_windowing_arrows(self.i, self.i * self.hop_size)
+
+    def _add_outline_box(self, ax, x_start, x_end, color, linewidth=3):
+        """Add a rectangle outline (no fill) spanning the full y-range of the axis"""
+        y_min, y_max = ax.get_ylim()
+        rect = Rectangle(
+            (x_start, y_min), x_end - x_start, y_max - y_min,
+            fill=False, edgecolor=color, linewidth=linewidth, zorder=10
+        )
+        ax.add_patch(rect)
+        return rect
 
     def _get_num_items(self):
         """Return number of chunks that fit in the audio"""
@@ -384,8 +482,8 @@ class KernelNavigator(NavigatorBase):
         and the frequency domain (R)
       - Plots three different time ranges / zoom levels for each kernel
     """
-    SINUSOID_COLOR = 'black'
-    PERIOD_COLOR = 'black'
+    SINUSOID_COLOR = '#1A1A1A'  # Near-black
+    PERIOD_COLOR = '#1A1A1A'    # Near-black
     GAUSSIAN_COLOR = 'mediumslateblue'
     WAVELET_COLOR = 'darkorange'
     FWHM_COLOR = 'red'
@@ -830,7 +928,6 @@ class KernelNavigator(NavigatorBase):
         """Return number of kernels"""
         return self.num_kernels
 
-
 class DspStageNavigator(NavigatorBase):
     """
     Plot Navigator for DSP stage analysis:
@@ -937,7 +1034,6 @@ class DspStageNavigator(NavigatorBase):
         """Return infinite items for continuous audio stream"""
         return float('inf')
 
-
 class TransformNavigator(NavigatorBase):
     """
     Plot Navigator for transform analysis:
@@ -1016,3 +1112,109 @@ class TransformNavigator(NavigatorBase):
     def _get_num_items(self):
         """Return infinite items for continuous audio stream"""
         return float('inf')
+
+class TopLevelComparisonNavigator(NavigatorBase):
+    """
+    Plot Navigator for top level comparison:
+      - Plots the audio time series (L) and the CWT coefficients (R)
+    """
+    def __init__(self, title = "Top Level Comparison", audio_input = None, pywt = None, cpwt = None, midi_img_path = None, num_frames = 128):
+        self.audio_input = audio_input
+        self.num_frames = num_frames
+        
+        # Circular buffer for 1D audio chunks
+        self.audio_buffer = AudioFrameBuffer(
+            chunk_size=self.audio_input.chunk_size,
+            num_chunks=num_frames
+        )
+
+        self.pywt = pywt
+        self.cpwt = cpwt
+
+        # Circular buffers for 2D CWT frames
+        color_norm_config = ColorNormalizationConfig()
+        self.pywt_frames = CircularFrameBuffer(
+            frame_shape=self.pywt.get_output_shape(),
+            num_frames=num_frames,
+            color_norm_config=color_norm_config
+        )
+        self.cpwt_frames = CircularFrameBuffer(
+            frame_shape=self.cpwt.get_output_shape(),
+            num_frames=num_frames,
+            color_norm_config=color_norm_config
+        )
+
+        self.midi_img = plt.imread(midi_img_path) if midi_img_path else None
+        self.chunk_i = 0
+
+        num_bars = 16
+        beats_per_bar = 4
+        beats_per_min = 128
+        sample_rate = audio_input.get_sample_rate()
+
+        num_samples = num_bars * beats_per_bar / beats_per_min * 60 * sample_rate
+        
+        super().__init__(title, cmap="magma")
+
+    def _init_plots(self):
+        """Initialize top level comparison plots"""
+        # Create 4x3 grid, use middle column for plots (centered layout with padding)
+        gs = gridspec.GridSpec(4, 3, figure=self.fig, 
+                               width_ratios=[1, 1, 1],  # Narrow side columns
+                               height_ratios=[1, 1, 1, 1])  # Taller spectrograms
+        self.fig.subplots_adjust(left=0.02, right=0.98, bottom=0.08, top=0.95, hspace=0.3)
+        
+        # All plots in middle column (column index 1)
+        self.ax_image = self.fig.add_subplot(gs[0, 1])
+        self.ax_image.imshow(self.midi_img, aspect="auto", origin="upper")
+        self.ax_image.set_title("MIDI Reference")
+        self.ax_image.axis('off')
+
+        self.ax_audio_t = self.fig.add_subplot(gs[1, 1])
+        self.ax_audio_t.set_title("Audio Waveform")
+        self.ax_audio_t.set_ylabel("Amplitude")
+
+        self.ax_pywt_spec = self.fig.add_subplot(gs[2, 1])
+        self.ax_pywt_spec.set_title("PyWavelet CWT")
+        self.ax_pywt_spec.set_ylabel("Frequency Bin")
+
+        self.ax_cpwt_spec = self.fig.add_subplot(gs[3, 1])
+        self.ax_cpwt_spec.set_title("CuPy CWT")
+        self.ax_cpwt_spec.set_ylabel("Frequency Bin")
+        self.ax_cpwt_spec.set_xlabel("Time")
+
+    def _update(self):
+        """Update top level comparison visualization"""
+
+        for i in range(self.num_frames):
+            audio_chunk = self.audio_input.get_chunk()
+            
+            # Push audio to 1D buffer
+            self.audio_buffer.push_chunk(audio_chunk)
+            
+            # Compute CWT and push to 2D buffers
+            pywt_coefs = self.pywt.cwt(audio_chunk)
+            cpwt_coefs = self.cpwt.cwt(audio_chunk)
+            self.pywt_frames.push_frame(pywt_coefs)
+            self.cpwt_frames.push_frame(cpwt_coefs)
+
+        # Get all data in chronological order
+        pywt_spectrogram = self.pywt_frames.get_flattened_buffer()
+        cpwt_spectrogram = self.cpwt_frames.get_flattened_buffer()
+        
+        # Downsample audio to match spectrogram width for aligned visualization
+        spectrogram_width = pywt_spectrogram.shape[1]
+        x, y_min, y_max = self.audio_buffer.get_downsampled(spectrogram_width)
+
+        # Plot everything
+        self.ax_image.imshow(self.midi_img, aspect="auto", origin="upper")
+        
+        # Plot audio as min/max envelope (shows waveform shape clearly)
+        self.ax_audio_t.fill_between(x, y_min, y_max, color='#1A1A1A', alpha=0.7)
+        self.ax_audio_t.set_xlim(0, self.audio_buffer.total_samples)
+        self.ax_audio_t.set_ylim(y_min.min() * 1.1, y_max.max() * 1.1)
+        
+        self.ax_pywt_spec.imshow(pywt_spectrogram, cmap=self.cmap, aspect="auto", origin="lower", vmin=0, vmax=self.pywt_frames.get_intensity_max())
+        self.ax_cpwt_spec.imshow(cpwt_spectrogram, cmap=self.cmap, aspect="auto", origin="lower", vmin=0, vmax=self.cpwt_frames.get_intensity_max())
+
+    

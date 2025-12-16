@@ -317,20 +317,14 @@ class PyWavelet(Wavelet):
         Returns:
             Scale-normalized complex CWT coefficients.
         """
-        pass    
+        return cwt_coefs
 
     def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
-        """
-        Discards the unreliable coefficients outside the reliable region of the
-        CWT output.
-
-        Args:
-            coefs: Result time-frequency coefficients from the CWT.
-
-        Returns:
-            The reliable time-frequency coefficients.
-        """
-        pass
+        # stub
+        keep = 8192
+        slice_start: int = (self.input_n - keep) // 2
+        slice_end: int = slice_start + keep
+        return coefs[:, slice_start:slice_end]
     
     def cleanup(self) -> None:
         """PyWavelet doesn't allocate significant resources, so this is a no-op."""
