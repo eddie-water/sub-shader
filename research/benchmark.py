@@ -197,7 +197,8 @@ class Benchmark():
     def plot_side_by_side(self):
         TopLevelComparisonNavigator(
             audio_input=self.audio_input,
-            wavelet=self.npwt,
+            pywt=self.pywt,
+            cpwt=self.cpwt,
             title="Side by Side Comparison"
         )
 

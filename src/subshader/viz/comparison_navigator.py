@@ -83,7 +83,9 @@ class AudioNavigator(NavigatorBase):
     """
     VISIBLE_CHUNKS = 6  # Number of chunks visible in the window
     AUDIO_COLOR = '#1A1A1A'  # Near-black for audio waveforms
-    EVEN_COLOR = '#6B7FDB'   # Even chunks
+    # EVEN_COLOR = '#6B7FDB'   # Even chunks
+    # ODD_COLOR = '#FC8961'    # Odd chunks
+    EVEN_COLOR = 'orangwe'   # Even chunks
     ODD_COLOR = '#FC8961'    # Odd chunks
     
     def __init__(self, audio_input, title=None):

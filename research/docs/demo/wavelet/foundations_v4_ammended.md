@@ -1,116 +1,91 @@
-# Foundations: Wavelet Transform
+# DSP Documentation Structure v4
 
-## Motivation
-- We want to analyze audio signals 
+## 1. Motivation
+- We want to analyze audio signals
 - Need to know **what** frequencies are present and **when** they occur - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
-- The standard approach is to use the **Fourier Transform**, but it has limitations in this context
-- The **Wavelet Transform** is much better suited for this kind of task
-- Both are built upon the same foundation - **signal decomposition** 
-- Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of how the Fourier and Wavelet Transform are used to decompose signals, and explore the different areas where each transform excels and falls short
+- The standard approach is to use the Fourier Transform, but it has limitations in this conext
+- After much research, it turns out the Wavelet Transform is much better suited for this kind of task
+- To understand *why*, we need to look at what these transforms are actually doing under the hood 
+- Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of why the Wavelet Transform excels in the specific areas where the Fourier Transform falls short 
+- A good starting point is brushing up on basic vector operations
 
-## 2. Signal Decomposition
-- The goal is to take a composite signal and decompose it into its **fundamental components**
-- In simpler terms, we want to break down an arbitrary signal into its basic **building blocks** and determine how much of each exists in the overall signal 
-- It's like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
-- This type of problem motivates us to find a way to do two things:
-    1. **Define what a signal's fundamental components are** 
-    2. **Measure how much of each component is present in the signal** 
-- This is where the **Inner Product** comes into play - it's a general-purpose tool for measuring components present in a signal, and we will explore these two motivations in different contexts
- 
-### 2.1 Inner Product 
-- Accomplishing signal decomposition really depends on the signal in question and the type of properties present in the signal we are interested in discovering 
-- The **Inner Product** gives us a quantitative way to measure a "similarity score" between a **function** and another **basis function** or reference function 
-- The Inner Product measures the alignment of a function and a base, producing a result that quantifies their resemblence which we will say contributes to their "similarity" 
-- Eventually we will bridge the gap for audio contexts on how the function is the signal and its bases are different frequency sine waves 
-- First, we will start with the **Dot Product**: the simplest form of the Inner Product, which has a nice geometric visualization 
+---
 
+## 2. Foundations: The Inner Product
 
-### 2.2 Dot Product and Vectors
+### 2.1 Signal Decomposition 
+- The goal is to take a composite signal and decompose it into its fundamental components
+    <!-- wait why is that the goal? we said we're starting with basic vector operations but start with signal decomposition - maybe this goes in the motivation section, -->
+    <!-- or we need a bridge to get here from the previous section, and then go to the Dot Product -->
+- In simpler terms, we want to break down the signal into its building blocks
+- Like unmixing a can of paint to determine how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
+- This type of problem motivates us to do explore two high level ideas
+    - Finding a way to define what a signal's fundamental components are
+    - Finding a way to measure how much of each component is present in the signal we are analyzing
+- Accomplishing this effectively depends on the kind of signal we are analyzing, and the type of properties we are interested in discovering that are present in the signal
+- In the context of signal decomposition, this is what the Inner Product allows us to do - it's a mathematical tool that produces a similarity score between a signal and its fundamental components 
+- In the following sections, we will explore these two ideas in different different contexts - starting with the Dot Product, the simplest form of the Inner Product, which has a nice geometric visualization
 
-- The **Dot Product** is typically taught in the early chapters of 3D Vector Calculus, which sounds a little daunting, but as long as you know how to basic multiplication and addition, it's really not too bad
-- The Inner Product is a generalization of what the Dot Product does to **vectors** in **_R_**
-    - **_R_** just means the domain for all **R**eal Numbers
-    - For now, we will stick to just regular numbers - none of those imaginary numbers (yet) or weird abstract numbers in weird abstract math domains
+### 2.2 Dot Product 
 
-    *[Graphic: Inner Product Notation vs The Dot Product Notation]*
+*[Graphic: Inner Product Notation vs The Dot Product Notation]*
 
+- The Inner Product is a generalization of what the Dot Product does to vectors $ in **R**
+    <!-- **R** just means the domain for all real numbers So none of those imaginary numbers or weird abstract numbers in weird abstract math domains -->
+- Every vector has a
+    - **magnitude** - its value
+    - **direction** - its ___ 
+    <!-- previously I said sign, but thats misleading because its not a sign, its just the negation of the magnitude, and doesn't really imply the direction, it just means in the opposite intensity of what the positive one would suggest
+    dimension? direction? sign? -->
+- Dot Product
+    - Takes a pair of vectors
+    - Performs a set of operations on them, using each magnitude and direction
+    - Produces a scalar result, which is just a singular value
+    - Geometrically this represents how parallel the two of them are
+    - We can all agree that a pair of parallel vectors appear more similar than a non-parallel pair
+    - Even if the lengths are different, the result still implies these vectors are aligned in the same dimensions $ or should I say direction here?
 
-- W'll be using these terms a lot so to brush up on our basic calculus, every **vector** looks something like an **arrow**, each having a 
-    - **magnitude** - how long it is (a single / scalar value, always positive)
-    - **direction** - where it points (its angle / orientation in space)
-    
-    ![Vectors illustration](figures/four_basic_vectors.png)
+- Geometric interpretation 
 
-    *Figure: Show some vectors, big, small, and tall in different directions*
+*[Example: Visualize Parallel Same Sign, Parallel Opposite Sign, Perpindicular Same Sign, Peripindicular Opposite Sign]*
 
-- What does the Dot Product do?
-    1. Takes a pair of vectors
-    2. Performs a set of operations on them, using their fundamental components (magnitudes and directions)
-    3. Produces a scalar result, which again, is just a singular value
-
-- Geometric Interpretation 
-    - Geometrically, the Dot Product tells us how parallel the two vectors are
-    - We can all agree that a pair of **parallel** vectors appear more **similar** than a **non-parallel** pair
-    - Even if the parallel vectors' lengths (magnitudes) are different, the result still implies these vectors are aligned in the same direction, reflecting their alikeness
-
-    - Say we have two vectors **u** and **v**
-        - parallel + same direction = strongly similar = positive result
-        - parallel + opposite direction = strongly opposite = negative result
-        - perpendicular / perfectly un-parallel = no similarity / unrelated = zero result
-
-        *[Graphic: Visualize Parallel Same Direction, Parallel Opposite Direction, and Perpindicular Vectors]*
-
-    - What if these vectors were **oblique** (neither completely parallel nor completely perpindicular)?
-        - oblique + any direction = potentially kind of similar or not that similar
-
-        *[Graphic: Oblique Vectors - one kind of similar, one not so similar]*
-
-    - So how does it do that exactly? 
-        - Well if we took one vector's orientation, and composed the other vector using the dimensions of the first, we can see that the second vector can be composed of two basic vectors, one of them being largely parallel with the other, visually showing us why we can say the second vector is very similar to the first one, but the third one is not so similar
-    - This is the heart of the Dot Product and is formally called Vector Projection
+- Say we have two vectors **a** and **b**
+    - parallel + same direction  = strongly similar = large positive result
+    - parallel + opposite direction = strongly opposite = large negative result
+    - perpendicular + same direction = no similarity / unrelated = result is zero
 
 ### 2.3 Vector Projection
-- There's are many ways to look at it, but through the lens of Vector Projection, we can see how a vector's components contribute values in the same direction as the other 
-- The more a vector's component contributes 
-    - **Values** in the **same direction** as the other  **increases the similarity score** 
-    - **Values** in the **opposite direction** as the other **decrease the similarity score**
-    - **No values** in the **direction** as the other **do not affect the similarity score** 
-- In all of these cases, the magnitudes of each vector will scale the Dot Product's result to be bigger or smaller (hence the name *scalar*)
-- Geometrically, the Dot Product tells us how one vector is 'projected' onto the other
-- This is another way saying 'How much of one vector is present in the other'
-- More specifically, it tells us which of the first vector's **basic components** are **aligned** in the same direction of the other
-- It shows us which component of the first vector is parallel with the othe
-- Almost like how much of one vector "casts its shadow" onto the other 
-- Here you can see we get the equation a dot b = a * b * cos(theta) https://www.youtube.com/watch?v=PnJoKGynu_U 
+- Geometrically, the Dot Product describes how one vector is 'projected' onto the other
+- How much of one vector is present in the other 
+- More specifically, which basic components of one vector are aligned with direction of the other 
+- Kinda like how much of one vector casts its shadow onto the other 
 
-#### 2.3.1 Defining the Fundamental Components of Simple Vectors
-- At this point, we've been saying we need a way to define the fundamental components of the *thing* we're analyzing
-- What are the fundamental components of vectors? In a coordinate system like the xy plane, the components of a vector are its dimension components - the x dimension (the x axis) and the y dimension (the y axis)
-- Before getting too crazy with it, we'll start with the basics: vectors with two dimensions
 
 #### 2.3.1 2D Vectors
 
+Going from components to dimensions
+- Another way of saying fundamental component is basis component - what are bases of our vector? dimensions.
+- x dimension component, y dimension component
 - Simplest case: **a** · **b** = a₁b₁ + a₂b₂
-- The components that make up these vectors are its **basis vectors** - the values along each dimension (the x and y axes)
-- The dot product compares how much the each component is aligned with the other
+- Each vector has **components** - the values along each **basis vector** (the x and y axes)
+- The dot product compares how much the components align
 
-    *[Visual: 2D projection]*
-
-- Here we see ___
+*[Visual: 2D projection]*
 
 #### 2.3.2 3D Vectors
 
-- The Dot Product still works if you add a third dimension, you just continue the pattern
+Going from components to dimensions
+- x dimension component, y dimension component, z dimension component
+- 
 - Direct extension: **a** · **b** = a₁b₁ + a₂b₂ + a₃b₃
 - Now three **basis vectors** (x, y, z axes), three **components** per vector
 
 *[Visual: 3D projection]*
 
 #### 2.3.3 ND Vectors - Going From  Dimension to Elements (Vectors → Sequences)
-- Yep, still works if you add a bunch more dimensions, even 100 for example
-- It's hard to think what a 100D Vector looks like because we don't really have a way to visualize 100 dimensions
-- Drop "dimension" language - think "**elements**" ordered by some kind of **index**
-- Instead of the x-dimension in Element 1 pairs with element 1, element 99 pairs with element 99
+- Math works for any N
+- Drop "dimension" language - think "elements" ordered by index
+- Element 1 pairs with element 1, element 99 pairs with element 99
 - At this point, we stop calling them "components" and start calling them **elements** or **samples**
 - The vector becomes a **sequence** or **array**
 

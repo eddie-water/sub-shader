@@ -147,12 +147,12 @@ class GLContext:
             title (str): Window title
         """
         self.window: object | None = None
-        self.width: int = 0
-        self.height: int = 0
         self.ctx: moderngl.Context | None = None
 
-        self.window, self.width, self.height = self._init_window(title)
-        self.ctx = self._init_opengl_context(self.width, self.height)
+        self.window, width, height = self._init_window(title)
+
+        # TODO-36 : self.ctx #3?
+        self.ctx = self._init_opengl_context(width, height)
 
     # =========================================================================
     # PUBLIC METHODS - External interface
@@ -343,6 +343,7 @@ class Renderer:
         fragment_shader = get_fragment_shader_source()
 
         log.info("Compiling shaders...")
+        # Why isn't context passed in as an arg?
         shader = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
         log.info("Shader compilation successful!")
 
@@ -519,7 +520,7 @@ class CircularFrameBuffer:
             height (int): Height of each frame (frequency bins)
             width (int): Width of each frame (time samples)
         """
-        self.num_frames = num_frames 
+        self.num_frames = num_frames
         self.height, self.width = frame_shape
 
         log.info(f"Plotting {self.num_frames} {frame_shape} sized frames")
