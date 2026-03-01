@@ -2,7 +2,7 @@
 
 ## 1. Motivation
 
-- We want to accurately analyze audio signals 
+- We want to analyze audio signals with precision 
 - Need to know **what** frequencies are present and **when** they occur - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
 - The standard approach is to use the **Fourier Transform**, but it has limitations in this context
 - The **Wavelet Transform** is much better suited for this kind of task

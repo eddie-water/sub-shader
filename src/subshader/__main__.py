@@ -25,6 +25,8 @@ from subshader.viz.plotter import ShaderPlot
 
 from subshader import exceptions
 
+import time 
+
 # =============================================================================
 # LOGGING
 # =============================================================================
@@ -102,6 +104,8 @@ class SubShader:
 
             # End loop timing 
             self.loop_timer.end_loop_and_report(loop_start)
+
+            time.sleep(0.1)
 
         raise exceptions.WindowCloseException("Window closed by user")
 
