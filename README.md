@@ -1,69 +1,92 @@
 # Sub Shader
-What is subshader? How does it work? Why is it designed this way?
 
-# Overview
-Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline designed to analyze and convert audio into a visual representation in real time. 
+Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline that analyzes and converts audio into a visual representation using modern techniques in digital signal processing and parallel computing.
 
-TODO Insert Demo Clip
+This project is a showcase of my skills and interests in DSP and GPU acceleration. It's given me a deeper understanding of the foundations of signal processing and how they can be generalized and used in other contexts beyond monitoring audio. It also serves as an exercise on offloading parallel operations onto a GPU. The top-level design and performance of Sub Shader are detailed in this document. 
 
-# Design Goals
-The goal is to create an accurate and highly responsive visualization that looks like what the audio sounds like. To acheive this, the overall processing needs to be accurate and fast enough to keep up with the audio playback. 
+*[Insert Demo Clip]*
 
-# Flowchart
-![SubShader Main Loop Flowchart](assets/diagrams/subshader_main_loop.drawio.png)
+---
 
-# Software Modules
+## Design
 
-## Audio
-The Audio module delivers raw audio samples to the DSP module using a simple overlap-add windowing scheme. On init, it determines the audio's metadata (sample rate, mono vs stereo, etc) and during runtime retrieves a consistent number of audio samples each call. The overlap mechanism ensures that each audio window overlaps a portion of its samples, smoothing continuity in the time axis by reducing artifacts at the window's edges.
-
-TODO Insert example of audio overlap
-
-Currently, the input stream of audio data comes from file IO, but will soon support a live source of audio.
-
-## DSP
-The purpose of the DSP module is to analyze the input audio signal for its time-frequency content - want to know when in time which frequencies are present. The Continuous Wavelet Transform (CWT) is used to convert the input audio from the time domain and transform it to the time-frequency domain, which allows us to see which frequencies are present at specific points in time. The result is a 2D scalogram where the value of every point at each time-frequency coordinate is the relative strength of that frequency's activity at that particular time.
-
-After the computing the CWT, the results are normalized to account for energy bias introduced in the CWT. A small portion of the CWT results are discarded to reduce edge effects produced by the CWT and the overlapping audio scheme. Finally the output is downsampled to help performance, reducing the total number of samples being handled. 
-
-To read an in-depth explanation of the CWT and its specific design decisions, click here: TODO Insert link
-
-## Plot
-The Plot is a 2D grid with two axes: frequency vs time. It displays the chronologically-ordered CWT results in a continuous reel. The values of each point are mapped to a color spectrum, visualizing the relative strength of each time-frequency coordinate. 
-
-Real-time plotting is a little challenging, mainly because of the large quantity of points that need to be displayed and updated quickly. Most Python plotting libraries struggle to render very large quantities of points in real-time. To help speed things up, a GPU-based shader is used to plot the 2D data efficiently using graphics hardware. This alleviates a huge performance bottleneck in the pipeline but soon there will be an alternative method of plotting that is GPU-independent.
-
-# Benchmark
-Here is where we discuss the performance of Sub Shader
-
-![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
-
-**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(8:22 - 8:31)
-
-![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
-
-**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
-
-# Installation
-
-## Setup
-```bash
-# Create virtual environment
-python3 -m venv venv
-
-# Activate (Linux/WSL)
-source venv/bin/activate
-
-# Install dependencies
-pip install -e .
+```
+Audio Source → DSP Block → Renderer
 ```
 
-## Run
-```bash
-python -m subshader
+Sub Shader splits the pipeline into three modules:
+
+### Audio Source
+
+Loads audio from file and delivers overlapping window frames of audio samples to the DSP Stage. The overlap reduces edge artifacts at window boundaries.
+
+For more details → [Audio README](AUDIO_README.md)
+
+### DSP Stage
+
+Performs the Continuous Wavelet Transform using CUDA on the raw audio samples across the chromatic scale. Post-procesing includes scale normalization, discarding of edge-contaminated results, and downsampling.
+
+For a comprehensive and intuitive explanation → [DSP README](DSP_README.md)
+
+### Renderer
+
+Stores each result chronologically in a circular buffer, and uploads the entire buffer as a single GPU texture. The renderer feeds the texture data to a fragment shader that colormaps the results into a scale vs time plot.
+
+For specific details → [Renderer README](RENDERER_README.md)
+
+<!-- Placeholder: init flowchart -->
+
+<!-- Placeholder: runtime flowchart -->
+
+---
+<!-- TODO Pick ip from here -->
+## Performance
+
+The CWT trades compute cost for better time-frequency resolution. Below is a comparison of Fast Fourier Transform (FFT), Short-Time Fourier Transform (STFT), and the Continous Wavelet Transform (CWT) on a few example audio signals.
+
+### Chirp (frequency sweep)
+
+<!-- Placeholder: chirp FFT vs STFT vs CWT comparison figure -->
+
+A linearly swept frequency is the clearest demonstration of the resolution tradeoff. FFT collapses the whole sweep into a smeared spectrum. The STFT gets closer but its fixed window size gives it poor low-end resolution. CWT tracks the sweep continuously because its window width adapts to the frequency being analyzed.
+
+### MIDI Synth
+
+<!-- Placeholder: MIDI FFT vs STFT vs CWT comparison figure -->
+
+Harmonic structure from a synthesized source is where CWT's logarithmic frequency spacing shows its value. Each overtone resolves cleanly at its correct frequency and time.
+
+### Music (percussion + sustained bass)
+
+*[House Music Beat]*
+
+Here we can see the classic four-on-the-floor house rhythm come in and come out. From the *[link source]*. Compare the shitty fft vs stft vs pywt vs good cwt
+
+---
+
+## Benchmark
+
+*[Placeholder: full timing comparison STFT, PYWT, CWT from research/benchmark.py]*
+
+*[Placeholder: full timing breakdown of Sub Shader using fastest DSP block from research/benchmark.py — runtime per block and end-to-end]*
+
+*[Placeholder: compare numpy vs cupy from research/benchmark.py — runtime per block and end-to-end]*
+
+---
+
+## Installation
+
+*[Insert instructions on how to install using venv and link to requirements]*
+
 ```
 
-## Requirements
+### Requirements
+
 - Python 3.8+
-- CUDA-capable GPU 
-- OpenGL 3.3+ support
+- CUDA-capable GPU
+- OpenGL 3.3+
+
+## Future Improvements
+This project has given me a deeper understanding of the foundational concepts in real-time signal processing. There are DSP fundamentals that can be generalized, allowing for higher level pattern detection and feature extraction beyond audio contexts. Higher precision results require higher compute, so we explore why off-loading some of the work  This project goes into the details of the why I made these design decisions 
+
+*[List future improvements]*
