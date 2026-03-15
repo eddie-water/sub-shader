@@ -48,12 +48,12 @@ For specifics → [Renderer README](RENDERER_README.md)
 
 <!-- PyWavelet ([PyWt](link)) is the most prominent Python library for wavelet-based analysis. The CWT is able to produce more accurate* results because its time-frequency resolution adapts itself proportionally to the frequency being measured. However, this added overhead costs more to process. Also, the library requires a lot of effort to configure it for the specific signal properties we are interested in measuring. -->
 
-To assess the accuracy and performance of Sub Shader, we will compare itself to other commonly used signal analysis techniques. Here we compare the accuracy, speed, and compute cost for each method
-- Short-Time Fourier Transform - the [STFT](link) is the typical approach 
-- PyWavelet - [PyWt](link) is the most prominent Python library for wavelet-based signal analysis but TODO declare drawbak
-- Sub Shader - an implementation of the CWT based off the course Analyzing Neural Time-Series ([ANTS](link)) 
+Here we comare the performance of Sub Shader to other commonly used signal analysis techniques. The benchmark is performed against accuracy and speed for each of the following methods
+- [Short-Time Fourier Transform](link) - the typical approach 
+- [PyWavelet](link) - the most prominent Python library for wavelet-based signal analysis but TODO is slow / not tunable?
+- [ANTS](link) - an implementation of the CWT based off the course Analyzing Neural Time-Series by Mike Cohen 
 
-The example signals have been hand-selected to highlight the scenarios where the CWT 
+The audio signals used have been hand-selected to emphasize the advantages of using Sub Shader 
 
 
 ### Chirp Signal (Frequency Sweep)
@@ -62,26 +62,42 @@ In this non-stationary signal, the frequency of the audio signal is linearly swe
 
 *[Chirp Signal - STFT vs PyWt vs CWT Comparison Figure]*
 
-The STFT's fixed time-frequency resolution struggles to measure low-end frequencies, producing a jagged representation of the signal. Energy from neighboring frequencies are bucketed into nearby frequency bins smearing the result. It does an okay job of resembling the original signal. 
-
-The PyWavelet implementation of the CWT produces a much smoother result. However, [TODO more discussion]
-
-Sub Shader's CWT tracks the sweep continuously because its window width adapts to the frequency being analyzed. This produces a smoother result at the cost of greater compute cost.
 
 ### Polyphonic Signal (MIDI Audio)
 
-In this signal, a simple MIDI composition and stock VST were used to generate a polyphonic audio signal. A variety of frequencies and note-lengths are played on top of each other. Here, the audio has sustained and abrupt changes in frequencies, showcasing the strengths of the CWT ability to measure non-
+In this signal, a MIDI composition for a simple sine wave generator was used to create a polyphonic audio signal. A variety of frequencies and note-lengths are played on top of each other. The audio has sustained and abrupt changes in frequencies
 
 *[Polyphonic Audio - STFT vs PyWt vs CWT Comparison Figure]*
 
-Harmonic structure from a synthesized source is where CWT's logarithmic frequency spacing shows its value. Each overtone resolves cleanly at its correct frequency and time.
-
 ### Musical Signal (percussion + sustained bass)
 
-*[Musical Audio - STFT vs PyWt vs CWT Comparison Figure]*
-*[House Music Beat]*
+*[Beltran Soundcloud - STFT vs PyWt vs CWT Comparison Figure]*
 
 Here we can see the classic four-on-the-floor house rhythm come in and come out. From the *[link source]*. Compare the shitty fft vs stft vs pywt vs good cwt
+
+STFT
+- Accuracy
+    - Fixed time-frequency resolution struggles to measure low-end frequencies
+    - Produces jagged representation of the signal
+    - Energy from neighboring frequencies are bucketed into nearby frequency bins smearing the result
+    - Does an okay job of resembling the original signal
+- Speed
+    - TODO ms
+
+PYWT CWT
+- Accuracy
+    - CWT's variable time-frequency resolution adapts proportionally to the scale of the frequency being measured
+    - TODO untunable resolution?
+- Speed
+    - TODO Takes forever
+
+Sub Shader CWT
+- Accuracy
+    - Fine-tuned variable time-frequency resolution
+    - TODO
+- Speed
+    - TODO ms
+    - The compute cost of the CWT is off-loaded to GPU
 
 Comparing the Fourier Transform to the CWT is like comparing apples to oranges. The STFT is like an apple that colored itself orange. The main point of comparison is the time-frequency resolution in each method. The FFT has a fixed resolution, and can only be configured to efficiently
  examples have been hand-selected to showcase the advantages and disadvantages of using each. The 
