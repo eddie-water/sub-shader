@@ -17,7 +17,8 @@ dependencies = [
     "pyqtgraph",
     "PyQt5",
     "moderngl>5.6.4",
-    "matplotlib",]
+    "matplotlib",
+    "scipy",]
 requires-python = ">=3.9"
 
 [tool.setuptools]

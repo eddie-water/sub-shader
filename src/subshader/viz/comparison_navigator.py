@@ -6,6 +6,7 @@ from matplotlib.widgets import Button
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 from matplotlib.patches import Rectangle, FancyArrowPatch
 from abc import ABC, abstractmethod
+from scipy.signal import stft as scipy_stft, resample as scipy_resample
 
 from subshader.viz.plotter import CircularFrameBuffer, AudioFrameBuffer
 from subshader.config import ColorNormalizationConfig
@@ -1132,9 +1133,24 @@ class TopLevelComparisonNavigator(NavigatorBase):
 
         self.pywt = pywt
         self.cpwt = cpwt
+        self.sample_rate = audio_input.get_sample_rate()
+
+        # STFT setup — crop to the same freq range as the chromatic scale
+        self.stft_nperseg = 1024
+        stft_freqs = np.fft.rfftfreq(self.stft_nperseg, d=1.0 / self.sample_rate)
+        freq_min = self.pywt.freqs[0]
+        freq_max = self.pywt.freqs[-1]
+        self.stft_freq_mask = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
+        stft_num_freqs = int(self.stft_freq_mask.sum())
+        self.stft_target_width = self.pywt.output_n
 
         # Circular buffers for 2D CWT frames
         color_norm_config = ColorNormalizationConfig()
+        self.stft_frames = CircularFrameBuffer(
+            frame_shape=(stft_num_freqs, self.stft_target_width),
+            num_frames=num_frames,
+            color_norm_config=color_norm_config
+        )
         self.pywt_frames = CircularFrameBuffer(
             frame_shape=self.pywt.get_output_shape(),
             num_frames=num_frames,
@@ -1152,70 +1168,84 @@ class TopLevelComparisonNavigator(NavigatorBase):
         num_bars = 16
         beats_per_bar = 4
         beats_per_min = 128
-        sample_rate = audio_input.get_sample_rate()
 
-        num_samples = num_bars * beats_per_bar / beats_per_min * 60 * sample_rate
+        num_samples = num_bars * beats_per_bar / beats_per_min * 60 * self.sample_rate
         
         super().__init__(title, cmap="magma")
 
     def _init_plots(self):
         """Initialize top level comparison plots"""
-        # Create 4x3 grid, use middle column for plots (centered layout with padding)
-        gs = gridspec.GridSpec(4, 3, figure=self.fig, 
-                               width_ratios=[1, 1, 1],  # Narrow side columns
-                               height_ratios=[1, 1, 1, 1])  # Taller spectrograms
-        self.fig.subplots_adjust(left=0.02, right=0.98, bottom=0.08, top=0.95, hspace=0.3)
-        
-        # All plots in middle column (column index 1)
+        # Row 0: MIDI reference image (center)
+        # Row 1: Audio waveform (full width)
+        # Row 2: STFT | PyWt | CuPy side by side
+        gs = gridspec.GridSpec(3, 3, figure=self.fig,
+                               height_ratios=[1, 0.5, 2])
+        self.fig.subplots_adjust(left=0.05, right=0.98, bottom=0.08, top=0.95, hspace=0.4, wspace=0.3)
+
         self.ax_image = self.fig.add_subplot(gs[0, 1])
-        self.ax_image.imshow(self.midi_img, aspect="auto", origin="upper")
+        if self.midi_img is not None:
+            self.ax_image.imshow(self.midi_img, aspect="auto", origin="upper")
         self.ax_image.set_title("MIDI Reference")
         self.ax_image.axis('off')
 
-        self.ax_audio_t = self.fig.add_subplot(gs[1, 1])
+        self.ax_audio_t = self.fig.add_subplot(gs[1, :])
         self.ax_audio_t.set_title("Audio Waveform")
         self.ax_audio_t.set_ylabel("Amplitude")
 
+        self.ax_stft_spec = self.fig.add_subplot(gs[2, 0])
+        self.ax_stft_spec.set_title("STFT")
+        self.ax_stft_spec.set_ylabel("Frequency Bin")
+        self.ax_stft_spec.set_xlabel("Time")
+
         self.ax_pywt_spec = self.fig.add_subplot(gs[2, 1])
         self.ax_pywt_spec.set_title("PyWavelet CWT")
-        self.ax_pywt_spec.set_ylabel("Frequency Bin")
+        self.ax_pywt_spec.set_xlabel("Time")
 
-        self.ax_cpwt_spec = self.fig.add_subplot(gs[3, 1])
+        self.ax_cpwt_spec = self.fig.add_subplot(gs[2, 2])
         self.ax_cpwt_spec.set_title("CuPy CWT")
-        self.ax_cpwt_spec.set_ylabel("Frequency Bin")
         self.ax_cpwt_spec.set_xlabel("Time")
 
     def _update(self):
         """Update top level comparison visualization"""
 
-        for i in range(self.num_frames):
+        for _ in range(self.num_frames):
             audio_chunk = self.audio_input.get_chunk()
-            
+
+            if audio_chunk is None:
+                break
+
             # Push audio to 1D buffer
             self.audio_buffer.push_chunk(audio_chunk)
-            
-            # Compute CWT and push to 2D buffers
+
+            # STFT
+            _, _, Zxx = scipy_stft(audio_chunk, fs=self.sample_rate, nperseg=self.stft_nperseg)
+            stft_mag = np.abs(Zxx)[self.stft_freq_mask, :]
+            stft_resampled = scipy_resample(stft_mag, self.stft_target_width, axis=1)
+            stft_resampled = np.clip(stft_resampled, 0, None)
+            self.stft_frames.push_frame(stft_resampled)
+
+            # CWT
             pywt_coefs = self.pywt.cwt(audio_chunk)
             cpwt_coefs = self.cpwt.cwt(audio_chunk)
             self.pywt_frames.push_frame(pywt_coefs)
             self.cpwt_frames.push_frame(cpwt_coefs)
 
         # Get all data in chronological order
+        stft_spectrogram = self.stft_frames.get_flattened_buffer()
         pywt_spectrogram = self.pywt_frames.get_flattened_buffer()
         cpwt_spectrogram = self.cpwt_frames.get_flattened_buffer()
-        
+
         # Downsample audio to match spectrogram width for aligned visualization
         spectrogram_width = pywt_spectrogram.shape[1]
         x, y_min, y_max = self.audio_buffer.get_downsampled(spectrogram_width)
 
-        # Plot everything
-        self.ax_image.imshow(self.midi_img, aspect="auto", origin="upper")
-        
-        # Plot audio as min/max envelope (shows waveform shape clearly)
+        # Plot audio waveform envelope
         self.ax_audio_t.fill_between(x, y_min, y_max, color='#1A1A1A', alpha=0.7)
         self.ax_audio_t.set_xlim(0, self.audio_buffer.total_samples)
         self.ax_audio_t.set_ylim(y_min.min() * 1.1, y_max.max() * 1.1)
-        
+
+        # Plot spectrograms side by side
+        self.ax_stft_spec.imshow(stft_spectrogram, cmap=self.cmap, aspect="auto", origin="lower", vmin=0, vmax=self.stft_frames.get_intensity_max())
         self.ax_pywt_spec.imshow(pywt_spectrogram, cmap=self.cmap, aspect="auto", origin="lower", vmin=0, vmax=self.pywt_frames.get_intensity_max())
         self.ax_cpwt_spec.imshow(cpwt_spectrogram, cmap=self.cmap, aspect="auto", origin="lower", vmin=0, vmax=self.cpwt_frames.get_intensity_max())
 
