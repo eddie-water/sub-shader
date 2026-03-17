@@ -9,15 +9,13 @@ import numpy as np
 # =============================================================================
 # LIVE TABLE DISPLAY
 # =============================================================================
-NEW_LINE = "\n"
-BAR_WIDTH = 12
-TABLE_HEADER = f"{'Function':<32}   {'Progress':<{BAR_WIDTH}}   {'Iterations':>10}   {'Avg (ms)':>10}   {'Min (ms)':>10}   {'Max (ms)':>10}"
-TABLE_SEP    = "-" * len(TABLE_HEADER)
+BAR_WIDTH = 24
+TABLE_WIDTH = 80
 
 
 def _mini_bar(current: int, total: int) -> str:
     filled = int(BAR_WIDTH * current / total)
-    return "█" * filled + "░" * (BAR_WIDTH - filled)
+    return "\u2588" * filled + "\u2591" * (BAR_WIDTH - filled)
 
 
 def _format_row(label: str, iteration: int, total: int, times_so_far) -> str:
@@ -29,7 +27,7 @@ def _format_row(label: str, iteration: int, total: int, times_so_far) -> str:
     else:
         avg = mn = mx = 0.0
     return (
-        f"{label:<32}   "
+        f"{label:<12}   "
         f"{_mini_bar(iteration, total)}   "
         f"{iteration:>5}/{total:<4}   "
         f"{avg:>10.2f}   "
@@ -46,14 +44,87 @@ def live_row(label: str, iteration: int, total: int, times_so_far):
     sys.stdout.flush()
 
 
-def live_rows(labels: list, iteration: int, total: int,
-              times_list: list, num_rows: int):
-    """Overwrite multiple terminal lines with live table rows."""
-    if iteration > 1:
-        sys.stdout.write(f"\033[{num_rows}A")
-    for i in range(num_rows):
-        sys.stdout.write(f"\r{_format_row(labels[i], iteration, total, times_list[i])}\n")
+def live_progress(iteration: int, total: int):
+    """Single-line progress update using \\r. Print results table after loop."""
+    bar = _mini_bar(iteration, total)
+    sys.stdout.write(f"\r{bar}    {iteration:>5}/{total}")
     sys.stdout.flush()
+
+
+def print_figure_header(title: str):
+    """Print the title block before processing begins.
+
+    ================================================================================
+    Chirp Signal Comparison
+    --------------------------------------------------------------------------------
+    """
+    sep_heavy = "=" * TABLE_WIDTH
+    sep_light = "-" * TABLE_WIDTH
+    print(sep_heavy)
+    print(title)
+    print(sep_light)
+
+
+def print_figure_results(num_frames: int, labels: list,
+                         times_list: list, total_s: float, save_path: str):
+    """Print the results block after processing completes.
+
+    --------------------------------------------------------------------------------
+    Function          Avg (ms)     Min (ms)     Max (ms)
+    --------------------------------------------------------------------------------
+    STFT                  1.44         1.29         4.45
+    PyWavelet CWT       994.02       944.49      1189.25
+    SubShader CWT        79.45        63.53       101.64
+    --------------------------------------------------------------------------------
+    Total Time: XXXX ms (Y s)
+    --------------------------------------------------------------------------------
+    Saved → path/to/file.png
+    ================================================================================
+    """
+    sep_heavy = "=" * TABLE_WIDTH
+    sep_light = "-" * TABLE_WIDTH
+
+    print(sep_light)
+    print(f"{'Function':<18}{'Avg (ms)':>12}{'Min (ms)':>12}{'Max (ms)':>12}")
+    print(sep_light)
+    for label, times in zip(labels, times_list):
+        avg = float(np.mean(times))
+        mn  = float(np.min(times))
+        mx  = float(np.max(times))
+        print(f"{label:<18}{avg:>12.2f}{mn:>12.2f}{mx:>12.2f}")
+    print(sep_light)
+    print(f"Total Time: {total_s * 1000:.2f} ms ({total_s:.2f} s)")
+    print(sep_light)
+    print(f"Saved \u2192 {save_path}")
+    print(sep_heavy)
+
+
+# -- Legacy helpers used by TimedSubShader --
+
+TABLE_HEADER = f"{'Function':<12} {'Progress':<{BAR_WIDTH}} {'Iterations':>10} {'Avg (ms)':>10} {'Min (ms)':>10} {'Max (ms)':>10}"
+TABLE_SEP    = "-" * len(TABLE_HEADER)
+
+
+def print_results_table(labels: list, times_list: list):
+    """Print final results table after benchmarking completes."""
+    print_header()
+    for label, times in zip(labels, times_list):
+        n = len(times)
+        avg = float(np.mean(times))
+        mn  = float(np.min(times))
+        mx  = float(np.max(times))
+        print(
+            f"{label:<16}"
+            f"{avg:>10.2f}   "
+            f"{mn:>10.2f}   "
+            f"{mx:>10.2f}   "
+            f"({n} iterations)"
+        )
+    print_separator()
+
+
+def print_separator():
+    print(TABLE_SEP)
 
 
 def print_header():

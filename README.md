@@ -60,18 +60,18 @@ The audio signals used have been hand-selected to emphasize the advantages of us
 
 In this non-stationary signal, the frequency of the audio signal is linearly swept from 100 to 10k Hz. This is the clearest demonstration of the time-frequency resolution advantages of the CWT.
 
-<p align="center"><img src="assets/images/benchmarks/chirp_signal_comparison.png" width="50%"></p>
+<p><img src="assets/images/benchmarks/chirp_signal_comparison.png" width="50%"></p>
 
 
 ### Polyphonic Signal (MIDI Audio)
 
 In this signal, a MIDI composition for a simple sine wave generator was used to create a polyphonic audio signal. A variety of frequencies and note-lengths are played on top of each other. The audio has sustained and abrupt changes in frequencies
 
-<p align="center"><img src="assets/images/benchmarks/polyphonic_signal_comparison.png" width="50%"></p>
+<p><img src="assets/images/benchmarks/polyphonic_signal_comparison.png" width="50%"></p>
 
 ### Musical Signal (percussion + sustained bass)
 
-<p align="center"><img src="assets/images/benchmarks/musical_signal_comparison.png" width="50%"></p>
+<p><img src="assets/images/benchmarks/musical_signal_comparison.png" width="50%"></p>
 
 Here we can see the classic four-on-the-floor house rhythm come in and come out. From the *[link source]*. Compare the shitty fft vs stft vs pywt vs good cwt
 
