@@ -367,7 +367,7 @@ class AntsWavelet(Wavelet):
         self.kernel_f_bank: np.ndarray[np.complex64] = np.zeros((self.num_wavelets, self.max_conv_n), dtype=np.complex64)
 
         for i, w in enumerate(self.wavelets):
-            self.kernel_f_bank[i, :w.get_conv_n()] = w.kernel_f
+            self.kernel_f_bank[i] = fft(w.kernel_t, self.max_conv_n)
 
         # Assess the reliable regions of the CWT output
         # self.coi_mask: np.ndarray[bool] = self._create_coi_mask(self.wavelets)
