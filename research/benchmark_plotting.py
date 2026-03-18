@@ -2,8 +2,9 @@
 Reusable rendering helpers for the benchmark suite.
 
 All figure layout, spectrogram rendering, and top-row rendering logic
-lives here so that stub_layouts(), _generate_comparison_figure(), and
-_generate_seaborn_figure() share a single code path.
+lives here so that stub_layouts() and _generate_comparison_figure()
+share a single code path. Backend dispatch (matplotlib vs seaborn)
+is handled via set_backend() / get_backend().
 """
 
 import os
@@ -75,6 +76,44 @@ SEABORN_STYLE = {
 HEATMAP_MAX_ROWS = 128
 HEATMAP_MAX_COLS = 512
 
+# =============================================================================
+# BACKEND DISPATCH
+# =============================================================================
+
+_BACKEND = "matplotlib"
+
+
+def set_backend(backend):
+    """Set the active plot backend: 'matplotlib' or 'seaborn'."""
+    global _BACKEND
+    if backend not in ("matplotlib", "seaborn"):
+        raise ValueError(f"Unknown backend: {backend!r}")
+    _BACKEND = backend
+    if backend == "seaborn":
+        if not SEABORN_AVAILABLE:
+            raise RuntimeError("seaborn is not installed")
+        sns.set_theme(style="dark", rc={
+            "axes.facecolor": "#0D1117",
+            "figure.facecolor": "#0D1117",
+            "text.color": "#C9D1D9",
+            "axes.labelcolor": "#C9D1D9",
+            "xtick.color": "#8B949E",
+            "ytick.color": "#8B949E",
+        })
+    else:
+        if SEABORN_AVAILABLE:
+            sns.reset_orig()
+
+
+def get_backend():
+    """Return the current backend name."""
+    return _BACKEND
+
+
+def get_active_style():
+    """Return SEABORN_STYLE when seaborn backend is active, else DEFAULT_STYLE."""
+    return SEABORN_STYLE if _BACKEND == "seaborn" else DEFAULT_STYLE
+
 
 # =============================================================================
 # HELPERS
@@ -112,7 +151,9 @@ def create_figure_scaffold(title, subtitle, n_top_rows, style=None):
 
     Returns (fig, gs, ax_stft, ax_pywt, ax_npwt).
     """
-    s = {**DEFAULT_STYLE, **(style or {})}
+    if style is None:
+        style = get_active_style()
+    s = {**DEFAULT_STYLE, **style}
     n_total = n_top_rows + 3
 
     fig = plt.figure(figsize=(s["figsize_w"], s["row_height"] * n_total))
@@ -137,7 +178,9 @@ def render_top_row(fig, gs, idx, row, ax_stft, *,
                    t_audio, y_min, y_max, cwt_freqs, duration_s,
                    ytick_bins, ytick_labels, style=None):
     """Render one top row (waveform / freq_line / image) into gs[idx]."""
-    s = {**DEFAULT_STYLE, **(style or {})}
+    if style is None:
+        style = get_active_style()
+    s = {**DEFAULT_STYLE, **style}
     rtype = row["type"]
     n_cwt_freqs = len(cwt_freqs)
 
@@ -188,7 +231,29 @@ def render_top_row(fig, gs, idx, row, ax_stft, *,
 
 def render_spectrogram_row(ax, data, *, title, extent, vmax,
                            ytick_bins, ytick_labels,
-                           is_bottom=False, cmap="inferno"):
+                           is_bottom=False, cmap="inferno",
+                           n_cwt_freqs=None, duration_s=None):
+    """Render one spectrogram row, dispatching to the active backend.
+
+    n_cwt_freqs and duration_s are required by the seaborn backend for tick
+    scaling; matplotlib ignores them.
+    """
+    if _BACKEND == "seaborn":
+        _render_spectrogram_seaborn(
+            ax, data, title=title, vmax=vmax,
+            ytick_bins=ytick_bins, ytick_labels=ytick_labels,
+            is_bottom=is_bottom, cmap=cmap,
+            n_cwt_freqs=n_cwt_freqs, duration_s=duration_s)
+    else:
+        _render_spectrogram_matplotlib(
+            ax, data, title=title, extent=extent, vmax=vmax,
+            ytick_bins=ytick_bins, ytick_labels=ytick_labels,
+            is_bottom=is_bottom, cmap=cmap)
+
+
+def _render_spectrogram_matplotlib(ax, data, *, title, extent, vmax,
+                                    ytick_bins, ytick_labels,
+                                    is_bottom=False, cmap="inferno"):
     """Render one spectrogram row with imshow + labels + yticks."""
     ax.imshow(data, cmap=cmap, aspect="auto", origin="lower",
               extent=extent, vmin=0, vmax=vmax)
@@ -200,6 +265,36 @@ def render_spectrogram_row(ax, data, *, title, extent, vmax,
     if is_bottom:
         ax.set_xlabel("Time (s)", fontsize=14)
     else:
+        plt.setp(ax.get_xticklabels(), visible=False)
+
+
+def _render_spectrogram_seaborn(ax, data, *, title, vmax,
+                                 ytick_bins, ytick_labels,
+                                 is_bottom=False, cmap="inferno",
+                                 n_cwt_freqs=None, duration_s=None):
+    """Render one spectrogram row as a seaborn heatmap."""
+    ds = downsample_spec(data)
+    sns.heatmap(ds, ax=ax, cmap=cmap, vmin=0, vmax=vmax,
+                xticklabels=False, yticklabels=False,
+                cbar=True, cbar_kws={"shrink": 0.8, "pad": 0.01,
+                                     "label": "Intensity"})
+    ax.invert_yaxis()
+    if duration_s is not None:
+        ax.set_xlim([0, duration_s])
+    if n_cwt_freqs is not None:
+        scale = ds.shape[0] / n_cwt_freqs
+        ax.set_yticks([b * scale for b in ytick_bins])
+    else:
+        ax.set_yticks(ytick_bins)
+    ax.set_yticklabels(ytick_labels, fontsize=16)
+    ax.set_title(title, fontsize=24, loc="left")
+
+    if is_bottom and duration_s is not None:
+        desired_s = np.linspace(0, duration_s, 6)
+        ax.set_xticks(desired_s)
+        ax.set_xticklabels([f"{t:.1f}" for t in desired_s], fontsize=8)
+        ax.set_xlabel("Time (s)", fontsize=9)
+    elif not is_bottom:
         plt.setp(ax.get_xticklabels(), visible=False)
 
 
@@ -215,31 +310,3 @@ def downsample_spec(arr, max_rows=HEATMAP_MAX_ROWS, max_cols=HEATMAP_MAX_COLS):
     return np.clip(arr, 0, None).astype(np.float32)
 
 
-def render_seaborn_spectrograms(fig, gs, n_top, specs, *,
-                                n_cwt_freqs, duration_s,
-                                ytick_bins, ytick_labels):
-    """Render seaborn heatmap spectrogram rows.
-
-    specs: list of (data_2d, vmax, title_str)
-    """
-    for j, (spec, vmax, spec_title) in enumerate(specs):
-        ax = fig.add_subplot(gs[n_top + j])
-        ds = downsample_spec(spec)
-        sns.heatmap(ds, ax=ax, cmap="inferno", vmin=0, vmax=vmax,
-                    xticklabels=False, yticklabels=False,
-                    cbar=True, cbar_kws={"shrink": 0.8, "pad": 0.01,
-                                         "label": "Intensity"})
-        ax.invert_yaxis()
-        ax.set_xlim([0, duration_s])
-        scale = ds.shape[0] / n_cwt_freqs
-        ax.set_yticks([b * scale for b in ytick_bins])
-        ax.set_yticklabels(ytick_labels, fontsize=16)
-        ax.set_title(spec_title, fontsize=24, loc="left")
-
-        if j < len(specs) - 1:
-            plt.setp(ax.get_xticklabels(), visible=False)
-        else:
-            desired_s = np.linspace(0, duration_s, 6)
-            ax.set_xticks(desired_s)
-            ax.set_xticklabels([f"{t:.1f}" for t in desired_s], fontsize=8)
-            ax.set_xlabel("Time (s)", fontsize=9)
