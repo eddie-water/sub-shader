@@ -28,7 +28,6 @@ matplotlib.rcParams['axes.unicode_minus'] = False
 matplotlib.rcParams['mathtext.fontset'] = 'cm'
 matplotlib.rcParams['axes.formatter.use_mathtext'] = True
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 from scipy.signal import stft as scipy_stft, resample as scipy_resample
 
 try:
@@ -36,6 +35,7 @@ try:
     SEABORN_AVAILABLE = True
 except ImportError:
     SEABORN_AVAILABLE = False
+    sns = None
     print("[benchmark] seaborn not installed -- --seaborn flag will be ignored.\n")
 
 from subshader.config import get_default_config, ColorNormalizationConfig
@@ -48,6 +48,11 @@ from benchmark_utilities import (
     print_figure_header, print_figure_results,
     print_results_table, print_header, print_total,
     compute_timing_stats,
+)
+from benchmark_plotting import (
+    compute_freq_yticks, create_figure_scaffold,
+    render_top_row, render_spectrogram_row,
+    render_seaborn_spectrograms, SEABORN_STYLE,
 )
 
 # =============================================================================
@@ -88,10 +93,10 @@ DAW_POLYPHONIC   = "assets/images/polyphonic-signal-example-edison-spectrogram.p
 DAW_MUSICAL      = "assets/images/musical-signal-example-edison-spectrogram.png"
 
 STFT_NPERSEG     = 1024
-NUM_FRAMES       = 128   # frames to accumulate for figure snapshots
+NUM_FRAMES       = 128      # frames to accumulate for figure snapshots
 
-CHIRP_F0         = 200    # Hz -- chirp start frequency
-CHIRP_F1         = 20_000  # Hz -- chirp end frequency
+CHIRP_F0         = 200      # Hz -- chirp start frequency
+CHIRP_F1         = 20_000   # Hz -- chirp end frequency
 
 
 # =============================================================================
@@ -356,90 +361,37 @@ class ReadmeFigures:
         duration_s   = 30.0
         n_cwt_freqs  = 116
         n_time_bins  = 512
+        subtitle     = "STFT  |  PyWavelet CWT  |  SubShader CWT"
 
-        # Fake frequency axis and y-ticks
         cwt_freqs = np.logspace(np.log10(27.5), np.log10(21500), n_cwt_freqs)
-        freq_min, freq_max = cwt_freqs[0], cwt_freqs[-1]
-        freq_ticks = [20, 200, 2000, 20000]
-        spec_ytick_bins, spec_ytick_labels = [], []
-        for f in freq_ticks:
-            if freq_min <= f <= freq_max:
-                spec_ytick_bins.append(float(np.interp(f, cwt_freqs, np.arange(n_cwt_freqs))))
-                spec_ytick_labels.append(f'{f/1000:.0f}k' if f >= 1000 else f'{int(f)}')
-
+        ytick_bins, ytick_labels = compute_freq_yticks(cwt_freqs)
         extent_spec = [0, duration_s, 0, n_cwt_freqs]
         t_audio = np.linspace(0, duration_s, n_time_bins)
+        y_stub = np.random.randn(n_time_bins) * 0.3
 
         for cfg in configs:
             top_rows = cfg["top_rows"]
-            n_top    = len(top_rows)
-            n_total  = n_top + 3
-            cmap     = "inferno"
+            fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
+                cfg["title"], subtitle, len(top_rows))
 
-            fig = plt.figure(figsize=(20, 4 * n_total))
-            fig.suptitle(cfg["title"], fontsize=32, y=0.975)
-            fig.text(0.5, 0.925, "STFT  |  PyWavelet CWT  |  SubShader CWT",
-                     ha='center', fontsize=24, color='black')
-            gs = gridspec.GridSpec(n_total, 1, figure=fig,
-                                  height_ratios=[1] * n_total, hspace=0.22)
-            fig.subplots_adjust(left=0.06, right=0.94, bottom=0.04, top=0.90)
-
-            # Spectrogram axes
-            ax_stft = fig.add_subplot(gs[n_top])
-            ax_pywt = fig.add_subplot(gs[n_top + 1], sharex=ax_stft, sharey=ax_stft)
-            ax_npwt = fig.add_subplot(gs[n_top + 2], sharex=ax_stft, sharey=ax_stft)
-
-            # Top rows
             for idx, row in enumerate(top_rows):
-                rtype = row["type"]
-                if rtype == "waveform":
-                    ax = fig.add_subplot(gs[idx], sharex=ax_stft)
-                    y_stub = np.random.randn(n_time_bins) * 0.3
-                    ax.fill_between(t_audio, -np.abs(y_stub), np.abs(y_stub),
-                                    color="#606060", alpha=0.75)
-                    ax.set_ylabel("Amplitude", fontsize=14)
-                    ax.set_title(row["title"], fontsize=24, loc="left")
-                    ax.tick_params(labelsize=12)
-                    plt.setp(ax.get_xticklabels(), visible=False)
-                elif rtype == "freq_line":
-                    ax = fig.add_subplot(gs[idx], sharex=ax_stft, sharey=ax_stft)
-                    t_curve = np.linspace(0, duration_s, 500)
-                    f_curve = row['f0'] + (row['f1'] - row['f0']) * t_curve / duration_s
-                    bin_curve = np.interp(f_curve, cwt_freqs, np.arange(n_cwt_freqs))
-                    ax.plot(t_curve, bin_curve, color='#AAAAAA', linewidth=2)
-                    ax.set_facecolor('#1A1A1A')
-                    ax.set_title(row["title"], fontsize=24, loc="left")
-                    ax.set_yticks(spec_ytick_bins)
-                    ax.set_yticklabels(spec_ytick_labels)
-                    ax.tick_params(labelsize=12)
-                    plt.setp(ax.get_xticklabels(), visible=False)
-                elif rtype == "image":
-                    ax = fig.add_subplot(gs[idx])
-                    img_path = row.get("path")
-                    if img_path and os.path.exists(img_path):
-                        img = plt.imread(img_path)
-                        ax.imshow(img, aspect="auto", origin="upper", cmap='gray')
-                        ax.set_title(row["title"], fontsize=24, loc="left")
-                        ax.axis("off")
-                    else:
-                        self._placeholder_ax(ax)
-                        ax.set_title(row["title"], fontsize=24, loc="left")
+                render_top_row(fig, gs, idx, row, ax_stft,
+                               t_audio=t_audio,
+                               y_min=-np.abs(y_stub), y_max=np.abs(y_stub),
+                               cwt_freqs=cwt_freqs, duration_s=duration_s,
+                               ytick_bins=ytick_bins, ytick_labels=ytick_labels)
 
-            # Stub spectrograms -- random noise with shared vmax
             noise = np.random.rand(n_cwt_freqs, n_time_bins)
             stub_vmax = noise.max()
-            for ax, label in [(ax_stft, "STFT"), (ax_pywt, "PyWavelet CWT"),
-                               (ax_npwt, "SubShader CWT")]:
-                ax.imshow(noise, cmap=cmap, aspect="auto", origin="lower",
-                          extent=extent_spec, vmin=0, vmax=stub_vmax)
-                ax.set_title(f"{label} -- avg XX.XX ms/frame", fontsize=24, loc="left")
-                ax.set_yticks(spec_ytick_bins)
-                ax.set_yticklabels(spec_ytick_labels)
-                ax.tick_params(labelsize=12)
-                if ax is not ax_npwt:
-                    plt.setp(ax.get_xticklabels(), visible=False)
-                else:
-                    ax.set_xlabel("Time (s)", fontsize=14)
+            for ax, label, bottom in [(ax_stft, "STFT", False),
+                                      (ax_pywt, "PyWavelet CWT", False),
+                                      (ax_npwt, "SubShader CWT", True)]:
+                render_spectrogram_row(
+                    ax, noise,
+                    title=f"{label} -- avg XX.XX ms/frame",
+                    extent=extent_spec, vmax=stub_vmax,
+                    ytick_bins=ytick_bins, ytick_labels=ytick_labels,
+                    is_bottom=bottom)
 
             path = os.path.join(stub_dir, cfg["filename"])
             fig.savefig(path, dpi=100)
@@ -451,30 +403,6 @@ class ReadmeFigures:
     # -------------------------------------------------------------------------
     # Internal: comparison figure pipeline
     # -------------------------------------------------------------------------
-
-    @staticmethod
-    def _placeholder_ax(ax, label="reference not available"):
-        """Render a polished placeholder for missing reference images."""
-        ax.set_facecolor("#1A1A1A")
-        for x in np.linspace(0, 1, 20):
-            ax.axline((x, 0), slope=1, color="#333333", linewidth=0.5,
-                     transform=ax.transAxes)
-        ax.text(0.5, 0.5, f"[ {label} ]",
-                ha="center", va="center", color="#555555",
-                fontsize=11, transform=ax.transAxes)
-        ax.axis("off")
-
-    @staticmethod
-    def _downsample_spec(arr, max_rows=HEATMAP_MAX_ROWS, max_cols=HEATMAP_MAX_COLS):
-        """Downsample spectrogram to fit heatmap constraints."""
-        h, w = arr.shape
-        target_w = min(w, max_cols)
-        target_h = min(h, max_rows)
-        if w != target_w:
-            arr = scipy_resample(arr, target_w, axis=1)
-        if h != target_h:
-            arr = scipy_resample(arr, target_h, axis=0)
-        return np.clip(arr, 0, None).astype(np.float32)
 
     def _generate_comparison_figure(self, title, display_title, filename,
                                      top_rows, audio_path=None,
@@ -604,107 +532,39 @@ class ReadmeFigures:
         extent_spec = [0, duration_s, 0, n_cwt_freqs]
         t_audio     = np.linspace(0, duration_s, len(x))
 
-        # Y-tick positions at log-spaced frequencies
-        freq_ticks = [20, 200, 2000, 20000]
-        spec_ytick_bins   = []
-        spec_ytick_labels = []
-        for f in freq_ticks:
-            if freq_min <= f <= freq_max:
-                spec_ytick_bins.append(float(np.interp(f, cwt_freqs, np.arange(n_cwt_freqs))))
-                spec_ytick_labels.append(f'{f/1000:.0f}k' if f >= 1000 else f'{int(f)}')
+        spec_ytick_bins, spec_ytick_labels = compute_freq_yticks(cwt_freqs)
 
         # ── Figure layout ─────────────────────────────────────────────────────
-        n_top   = len(top_rows)
-        n_total = n_top + 3   # 3 spectrogram rows always
-        cmap    = "inferno"
+        subtitle = "STFT  |  PyWavelet CWT  |  SubShader CWT"
+        n_top = len(top_rows)
+        fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
+            title, subtitle, n_top)
 
-        fig = plt.figure(figsize=(20, 4 * n_total))
-        fig.suptitle(title, fontsize=32, y=0.975)
-        fig.text(0.5, 0.925, "STFT  |  PyWavelet CWT  |  SubShader CWT",
-                 ha='center', fontsize=24, color='black')
-        gs  = gridspec.GridSpec(n_total, 1, figure=fig,
-                                height_ratios=[1] * n_total,
-                                hspace=0.22)
-        fig.subplots_adjust(left=0.06, right=0.94, bottom=0.04, top=0.90)
-
-        # Create spectrogram axes first (so top rows can share axes)
-        ax_stft = fig.add_subplot(gs[n_top])
-        ax_pywt = fig.add_subplot(gs[n_top + 1], sharex=ax_stft, sharey=ax_stft)
-        ax_npwt = fig.add_subplot(gs[n_top + 2], sharex=ax_stft, sharey=ax_stft)
-
-        # ── Top rows (variable per figure) ────────────────────────────────────
         for idx, row in enumerate(top_rows):
-            rtype = row["type"]
-
-            if rtype == "waveform":
-                ax = fig.add_subplot(gs[idx], sharex=ax_stft)
-                ax.fill_between(t_audio, y_min, y_max, color="#606060", alpha=0.75)
-                ax.set_ylabel("Amplitude", fontsize=14)
-                ax.set_title(row["title"], fontsize=24, loc="left")
-                ax.tick_params(labelsize=12)
-                plt.setp(ax.get_xticklabels(), visible=False)
-
-            elif rtype == "freq_line":
-                ax = fig.add_subplot(gs[idx], sharex=ax_stft, sharey=ax_stft)
-                t_curve   = np.linspace(0, duration_s, 500)
-                f_curve   = row['f0'] + (row['f1'] - row['f0']) * t_curve / duration_s
-                bin_curve = np.interp(f_curve, cwt_freqs, np.arange(n_cwt_freqs))
-                ax.plot(t_curve, bin_curve, color='#AAAAAA', linewidth=2)
-                ax.set_facecolor('#1A1A1A')
-                ax.set_title(row["title"], fontsize=24, loc="left")
-                ax.set_yticks(spec_ytick_bins)
-                ax.set_yticklabels(spec_ytick_labels)
-                ax.tick_params(labelsize=12)
-                plt.setp(ax.get_xticklabels(), visible=False)
-
-            elif rtype == "image":
-                ax = fig.add_subplot(gs[idx])
-                img_path = row.get("path")
-                if img_path and os.path.exists(img_path):
-                    img = plt.imread(img_path)
-                    ax.imshow(img, aspect="auto", origin="upper", cmap='gray')
-                    ax.set_title(row["title"], fontsize=24, loc="left")
-                    ax.axis("off")
-                else:
-                    self._placeholder_ax(ax)
-                    ax.set_title(row["title"], fontsize=24, loc="left")
+            render_top_row(fig, gs, idx, row, ax_stft,
+                           t_audio=t_audio, y_min=y_min, y_max=y_max,
+                           cwt_freqs=cwt_freqs, duration_s=duration_s,
+                           ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels)
 
         # ── Spectrogram rows ──────────────────────────────────────────────────
         shared_vmax = max(stft_buf.get_intensity_max(),
                          pywt_buf.get_intensity_max(),
                          npwt_buf.get_intensity_max())
 
-        # STFT
-        ax_stft.imshow(stft_spec, cmap=cmap, aspect="auto", origin="lower",
-                       extent=extent_spec, vmin=0, vmax=shared_vmax)
-        ax_stft.set_title(f"STFT -- avg {timing['STFT']['avg_ms']:.2f} ms/frame", fontsize=24, loc="left")
-        ax_stft.set_ylabel("Freq", fontsize=14)
-        ax_stft.set_yticks(spec_ytick_bins)
-        ax_stft.set_yticklabels(spec_ytick_labels)
-        ax_stft.tick_params(labelsize=12)
-        plt.setp(ax_stft.get_xticklabels(), visible=False)
-
-        # PyWavelet CWT
-        ax_pywt.imshow(pywt_spec, cmap=cmap, aspect="auto", origin="lower",
-                       extent=extent_spec, vmin=0, vmax=shared_vmax)
-        ax_pywt.set_title(f"PyWavelet CWT -- avg {timing['PyWavelet CWT']['avg_ms']:.2f} ms/frame", fontsize=24, loc="left")
-        ax_pywt.set_ylabel("Freq", fontsize=14)
-        ax_pywt.set_yticks(spec_ytick_bins)
-        ax_pywt.set_yticklabels(spec_ytick_labels)
-        ax_pywt.tick_params(labelsize=12)
-        plt.setp(ax_pywt.get_xticklabels(), visible=False)
-
-        # SubShader CWT
-        subshader_base  = "SubShader CWT" if GPU_AVAILABLE else "SubShader CWT (NumPy)"
-        subshader_label = f"{subshader_base} -- avg {timing['SubShader CWT']['avg_ms']:.2f} ms/frame"
-        ax_npwt.imshow(npwt_spec, cmap=cmap, aspect="auto", origin="lower",
-                       extent=extent_spec, vmin=0, vmax=shared_vmax)
-        ax_npwt.set_title(subshader_label, fontsize=24, loc="left")
-        ax_npwt.set_ylabel("Freq", fontsize=14)
-        ax_npwt.set_yticks(spec_ytick_bins)
-        ax_npwt.set_yticklabels(spec_ytick_labels)
-        ax_npwt.set_xlabel("Time (s)", fontsize=14)
-        ax_npwt.tick_params(labelsize=12)
+        subshader_base = "SubShader CWT" if GPU_AVAILABLE else "SubShader CWT (NumPy)"
+        spec_rows = [
+            (ax_stft, stft_spec, "STFT", False),
+            (ax_pywt, pywt_spec, "PyWavelet CWT", False),
+            (ax_npwt, npwt_spec, subshader_base, True),
+        ]
+        for ax, data, label, bottom in spec_rows:
+            key = label.replace(" (NumPy)", "")
+            render_spectrogram_row(
+                ax, data,
+                title=f"{label} -- avg {timing[key]['avg_ms']:.2f} ms/frame",
+                extent=extent_spec, vmax=shared_vmax,
+                ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
+                is_bottom=bottom)
 
         fig.savefig(save_path, dpi=150)
         plt.close(fig)
@@ -732,10 +592,7 @@ class ReadmeFigures:
                                   timing, title, filename,
                                   stft_vmax, pywt_vmax, npwt_vmax,
                                   spec_ytick_bins, spec_ytick_labels):
-        """
-        Generate seaborn-styled heatmap figures with the same row layout
-        as the matplotlib figure.
-        """
+        """Generate seaborn-styled heatmap figures with the same row layout."""
         sns.set_theme(style="dark", rc={
             "axes.facecolor": "#0D1117",
             "figure.facecolor": "#0D1117",
@@ -751,87 +608,29 @@ class ReadmeFigures:
             f"SubShader {timing['SubShader CWT']['avg_ms']:.2f} ms"
         )
 
-        n_top   = len(top_rows)
-        n_total = n_top + 3
+        n_top = len(top_rows)
+        suptitle = f"{title}\n{timing_subtitle}"
+        fig, gs, ax_stft, _, _ = create_figure_scaffold(
+            suptitle, subtitle=None, n_top_rows=n_top, style=SEABORN_STYLE)
 
-        fig = plt.figure(figsize=(22, 4.5 * n_total))
-        fig.suptitle(f"{title}\n{timing_subtitle}", fontsize=13, y=0.99)
-        gs  = gridspec.GridSpec(n_total, 1, figure=fig,
-                                height_ratios=[1] * n_total, hspace=0.15)
-        fig.subplots_adjust(left=0.07, right=0.92, bottom=0.04, top=0.93)
-
-        # ── Top rows ─────────────────────────────────────────────────────────
         for idx, row in enumerate(top_rows):
-            ax = fig.add_subplot(gs[idx])
-            rtype = row["type"]
+            render_top_row(fig, gs, idx, row, ax_stft,
+                           t_audio=audio_x, y_min=audio_ymin, y_max=audio_ymax,
+                           cwt_freqs=cwt_freqs, duration_s=duration_s,
+                           ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
+                           style=SEABORN_STYLE)
 
-            if rtype == "waveform":
-                ax.set_facecolor("#0D1117")
-                ax.fill_between(audio_x, audio_ymin, audio_ymax,
-                                color="#FF8C42", alpha=0.85)
-                ax.set_ylim([np.min([audio_ymin, audio_ymax]),
-                             np.max([audio_ymin, audio_ymax])])
-                ax.set_xlim([0, duration_s])
-                ax.margins(x=0, y=0)
-                ax.set_ylabel("Amplitude", fontsize=9)
-                ax.set_title(row["title"], fontsize=24, loc="left")
-                ax.tick_params(labelsize=16)
-                plt.setp(ax.get_xticklabels(), visible=False)
-
-            elif rtype == "freq_line":
-                ax.set_facecolor("#2D1B4E")
-                t_curve   = np.linspace(0, duration_s, 500)
-                f_curve   = row['f0'] + (row['f1'] - row['f0']) * t_curve / duration_s
-                bin_curve = np.interp(f_curve, cwt_freqs, np.arange(n_cwt_freqs))
-                ax.plot(t_curve, bin_curve, color='#FFD700', linewidth=2.5)
-                ax.set_title(row["title"], fontsize=24, loc="left")
-                ax.set_yticks(spec_ytick_bins)
-                ax.set_yticklabels(spec_ytick_labels)
-                ax.tick_params(labelsize=8, colors="#C9D1D9")
-                plt.setp(ax.get_xticklabels(), visible=False)
-
-            elif rtype == "image":
-                img_path = row.get("path")
-                if img_path and os.path.exists(img_path):
-                    img = plt.imread(img_path)
-                    ax.imshow(img, aspect="auto", origin="upper")
-                    ax.set_title(row["title"], fontsize=24, loc="left")
-                    ax.axis("off")
-                else:
-                    self._placeholder_ax(ax)
-                    ax.set_title(row["title"], fontsize=24, loc="left")
-
-        # ── Spectrogram heatmaps ──────────────────────────────────────────────
+        subshader_base = "SubShader CWT" if GPU_AVAILABLE else "SubShader CWT (NumPy)"
         specs = [
             (stft_spec, stft_vmax, f"STFT -- avg {timing['STFT']['avg_ms']:.2f} ms/frame"),
             (pywt_spec, pywt_vmax, f"PyWavelet CWT -- avg {timing['PyWavelet CWT']['avg_ms']:.2f} ms/frame"),
+            (npwt_spec, npwt_vmax, f"{subshader_base} -- avg {timing['SubShader CWT']['avg_ms']:.2f} ms/frame"),
         ]
-        subshader_base = "SubShader CWT" if GPU_AVAILABLE else "SubShader CWT (NumPy)"
-        specs.append(
-            (npwt_spec, npwt_vmax, f"{subshader_base} -- avg {timing['SubShader CWT']['avg_ms']:.2f} ms/frame")
-        )
 
-        for j, (spec, vmax, spec_title) in enumerate(specs):
-            ax = fig.add_subplot(gs[n_top + j])
-            ds = self._downsample_spec(spec)
-            sns.heatmap(ds, ax=ax, cmap="inferno", vmin=0, vmax=vmax,
-                        xticklabels=False, yticklabels=False,
-                        cbar=True, cbar_kws={"shrink": 0.8, "pad": 0.01, "label": "Intensity"})
-            ax.invert_yaxis()
-            ax.set_xlim([0, duration_s])
-            scale = ds.shape[0] / n_cwt_freqs
-            ax.set_yticks([b * scale for b in spec_ytick_bins])
-            ax.set_yticklabels(spec_ytick_labels, fontsize=16)
-            ax.set_title(spec_title, fontsize=24, loc="left")
-            
-            if j < len(specs) - 1:
-                plt.setp(ax.get_xticklabels(), visible=False)
-            else:
-                # Bottom row time ticks
-                desired_s = np.linspace(0, duration_s, 6)
-                ax.set_xticks(desired_s)
-                ax.set_xticklabels([f"{t:.1f}" for t in desired_s], fontsize=8)
-                ax.set_xlabel("Time (s)", fontsize=9)
+        render_seaborn_spectrograms(
+            fig, gs, n_top, specs,
+            n_cwt_freqs=n_cwt_freqs, duration_s=duration_s,
+            ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels)
 
         path = os.path.join(BENCHMARKS_SEABORN_DIR, filename)
         fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
@@ -864,27 +663,34 @@ if __name__ == "__main__":
                         help="Generate stub layout figures with placeholder data (instant)")
     args = parser.parse_args()
 
-    any_flag = args.timing or args.figures or args.unit_tests or args.all or args.seaborn or args.stub
+    if args.all:
+        args.timing = args.figures = args.unit_tests = True
 
-    if args.seaborn and not args.figures and not args.all:
+    if args.seaborn and not args.figures:
         print("[benchmark] --seaborn has no effect without --figures or --all.\n")
 
-    if not any_flag:
+    ran_something = False
+
+    if args.timing:
+        TimedSubShader().run()
+        ran_something = True
+
+    if args.stub:
+        ReadmeFigures().stub_layouts()
+        ran_something = True
+
+    if args.figures:
+        use_seaborn = args.seaborn
+        if use_seaborn and not SEABORN_AVAILABLE:
+            print("[benchmark] --seaborn requested but seaborn is not installed. "
+                  "pip install seaborn\n")
+        ReadmeFigures(seaborn=use_seaborn).run_all()
+        ran_something = True
+
+    if args.unit_tests:
+        from unit_tests import run_all as run_unit_tests
+        run_unit_tests()
+        ran_something = True
+
+    if not ran_something:
         run_default()
-    else:
-        if args.timing or args.all:
-            TimedSubShader().run()
-
-        if args.stub:
-            ReadmeFigures().stub_layouts()
-
-        if args.figures or args.all:
-            use_seaborn = args.seaborn
-            if use_seaborn and not SEABORN_AVAILABLE:
-                print("[benchmark] --seaborn requested but seaborn is not installed. "
-                      "pip install seaborn\n")
-            ReadmeFigures(seaborn=use_seaborn).run_all()
-
-        if args.unit_tests or args.all:
-            from unit_tests import run_all as run_unit_tests
-            run_unit_tests()
