@@ -1,5 +1,9 @@
 """
 Benchmark utilities for live progress display and timing measurement.
+
+Output format follows the template in benchmark-timing-template.txt:
+structured sections with ====/---- separators, init timing tables,
+progress bars, and results tables with avg/max/min columns.
 """
 
 import sys
@@ -7,140 +11,147 @@ import sys
 import numpy as np
 
 # =============================================================================
-# LIVE TABLE DISPLAY
+# CONSTANTS
 # =============================================================================
-BAR_WIDTH = 24
-TABLE_WIDTH = 80
 
+TABLE_WIDTH = 80
+COL_LABEL = 28
+COL_VAL = 16
+BAR_WIDTH = 24
+
+
+# =============================================================================
+# PRIVATE HELPERS
+# =============================================================================
 
 def _mini_bar(current: int, total: int) -> str:
     filled = int(BAR_WIDTH * current / total)
     return "\u2588" * filled + "\u2591" * (BAR_WIDTH - filled)
 
 
-def _format_row(label: str, iteration: int, total: int, times_so_far) -> str:
-    n = iteration
-    if n > 0:
-        avg = float(np.mean(times_so_far[:n]))
-        mn  = float(np.min(times_so_far[:n]))
-        mx  = float(np.max(times_so_far[:n]))
-    else:
-        avg = mn = mx = 0.0
-    return (
-        f"{label:<12}   "
-        f"{_mini_bar(iteration, total)}   "
-        f"{iteration:>5}/{total:<4}   "
-        f"{avg:>10.2f}   "
-        f"{mn:>10.2f}   "
-        f"{mx:>10.2f}"
-    )
+def _sep_heavy():
+    return "=" * TABLE_WIDTH
 
 
-def live_row(label: str, iteration: int, total: int, times_so_far):
-    """Overwrite the current terminal line with a live table row."""
-    sys.stdout.write(f"\r{_format_row(label, iteration, total, times_so_far)}")
-    if iteration >= total:
-        sys.stdout.write("\n")
-    sys.stdout.flush()
+def _sep_light():
+    return "-" * TABLE_WIDTH
 
 
-def live_progress(iteration: int, total: int):
-    """Single-line progress update using \\r. Print results table after loop."""
-    bar = _mini_bar(iteration, total)
-    sys.stdout.write(f"\r{bar}    {iteration:>5}/{total}")
-    sys.stdout.flush()
+# =============================================================================
+# HUMAN-READABLE TIME
+# =============================================================================
+
+def format_time_human(ms: float) -> str:
+    """Convert milliseconds to human-readable: '2 min 30 s', '5 s 123 ms', '123 ms'."""
+    if ms < 1000:
+        return f"{ms:.0f} ms"
+    total_s = ms / 1000
+    mins = int(total_s // 60)
+    secs = int(total_s % 60)
+    remaining_ms = int(round(ms - (mins * 60000 + secs * 1000)))
+    if mins > 0:
+        return f"{mins} min {secs} s"
+    return f"{secs} s {remaining_ms} ms"
 
 
-def print_figure_header(title: str):
-    """Print the title block before processing begins.
+# =============================================================================
+# SECTION BOUNDARIES
+# =============================================================================
 
-    ================================================================================
-    Chirp Signal Comparison
-    --------------------------------------------------------------------------------
-    """
-    sep_heavy = "=" * TABLE_WIDTH
-    sep_light = "-" * TABLE_WIDTH
-    print(sep_heavy)
+def print_section_start(title: str):
+    """Print ===== / title / ----- to open a section."""
+    print(_sep_heavy())
     print(title)
-    print(sep_light)
+    print(_sep_light())
 
 
-def print_figure_results(num_frames: int, labels: list,
-                         times_list: list, total_s: float, save_path: str):
-    """Print the results block after processing completes.
-
-    --------------------------------------------------------------------------------
-    Function          Avg (ms)     Min (ms)     Max (ms)
-    --------------------------------------------------------------------------------
-    STFT                  1.44         1.29         4.45
-    PyWavelet CWT       994.02       944.49      1189.25
-    SubShader CWT        79.45        63.53       101.64
-    --------------------------------------------------------------------------------
-    Total Time: XXXX ms (Y s)
-    --------------------------------------------------------------------------------
-    Saved → path/to/file.png
-    ================================================================================
-    """
-    sep_heavy = "=" * TABLE_WIDTH
-    sep_light = "-" * TABLE_WIDTH
-
-    print(sep_light)
-    print(f"{'Function':<18}{'Avg (ms)':>12}{'Min (ms)':>12}{'Max (ms)':>12}")
-    print(sep_light)
-    for label, times in zip(labels, times_list):
-        avg = float(np.mean(times))
-        mn  = float(np.min(times))
-        mx  = float(np.max(times))
-        print(f"{label:<18}{avg:>12.2f}{mn:>12.2f}{mx:>12.2f}")
-    print(sep_light)
-    print(f"Total Time: {total_s * 1000:.2f} ms ({total_s:.2f} s)")
-    print(sep_light)
-    print(f"Saved \u2192 {save_path}")
-    print(sep_heavy)
-
-
-# -- Legacy helpers used by TimedSubShader --
-
-TABLE_HEADER = f"{'Function':<12} {'Progress':<{BAR_WIDTH}} {'Iterations':>10} {'Avg (ms)':>10} {'Min (ms)':>10} {'Max (ms)':>10}"
-TABLE_SEP    = "-" * len(TABLE_HEADER)
-
-
-def print_results_table(labels: list, times_list: list):
-    """Print final results table after benchmarking completes."""
-    print_header()
-    for label, times in zip(labels, times_list):
-        n = len(times)
-        avg = float(np.mean(times))
-        mn  = float(np.min(times))
-        mx  = float(np.max(times))
-        print(
-            f"{label:<16}"
-            f"{avg:>10.2f}   "
-            f"{mn:>10.2f}   "
-            f"{mx:>10.2f}   "
-            f"({n} iterations)"
-        )
-    print_separator()
+def print_section_end():
+    """Print ===== to close a section."""
+    print(_sep_heavy())
 
 
 def print_separator():
-    print(TABLE_SEP)
-
-
-def print_header():
-    print(TABLE_HEADER)
-    print(TABLE_SEP)
-
-
-def print_total(total_s: float):
-    print(TABLE_SEP)
-    print(f"{'Total Test Time':<32}{'':>{BAR_WIDTH + 16}}{total_s * 1000:>10.2f} ms  {total_s:>8.2f} s")
+    """Print a light separator line."""
+    print(_sep_light())
 
 
 # =============================================================================
-# TIMING
+# INIT TIMING TABLE (single-value column)
 # =============================================================================
 
+def print_init_header():
+    print(f"{'Function':<{COL_LABEL}}{'Time (ms)':>{COL_VAL}}")
+    print(_sep_light())
+
+
+def print_init_row(label: str, time_ms: float):
+    print(f"{label:<{COL_LABEL}}{time_ms:>{COL_VAL - 3}.2f} ms")
+
+
+def print_init_total(total_ms: float):
+    print(_sep_light())
+    print(f"{'Total Init Time':<{COL_LABEL}}{total_ms:>{COL_VAL - 3}.2f} ms")
+    print(f"{'':<{COL_LABEL}}{format_time_human(total_ms):>{COL_VAL}}")
+
+
+# =============================================================================
+# LIVE PROGRESS
+# =============================================================================
+
+def live_progress(current: int, total: int, unit: str = "frames"):
+    """Single-line progress bar using \\r."""
+    bar = _mini_bar(current, total)
+    sys.stdout.write(f"\rProgress: {bar}  {current:>5} / {total} {unit}")
+    sys.stdout.flush()
+
+
+def clear_progress():
+    """Clear the live progress line."""
+    sys.stdout.write('\r' + ' ' * TABLE_WIDTH + '\r')
+    sys.stdout.flush()
+
+
+# =============================================================================
+# RESULTS TABLE (three-value columns: avg / max / min)
+# =============================================================================
+
+def print_results_header():
+    """Print the results column header with surrounding separators."""
+    print(_sep_light())
+    print(f"{'Function':<{COL_LABEL}}{'Avg (ms)':>{COL_VAL}}{'Max (ms)':>{COL_VAL}}{'Min (ms)':>{COL_VAL}}")
+    print(_sep_light())
+
+
+def print_results_row(label: str, times: np.ndarray):
+    """Print one results row with avg/max/min computed from a timing array."""
+    avg = float(np.mean(times))
+    mx = float(np.max(times))
+    mn = float(np.min(times))
+    print(f"{label:<{COL_LABEL}}{avg:>{COL_VAL - 3}.2f} ms{mx:>{COL_VAL - 3}.2f} ms{mn:>{COL_VAL - 3}.2f} ms")
+
+
+def print_loop_summary(n_loops: int, total_times: np.ndarray):
+    """Print Total Loops count + Total Loop Time (avg/max/min) with human times."""
+    avg = float(np.mean(total_times))
+    mx = float(np.max(total_times))
+    mn = float(np.min(total_times))
+    print(_sep_light())
+    print(f"{'Total Loops':<{COL_LABEL}}{n_loops:>{COL_VAL}}")
+    print(_sep_light())
+    print(f"{'Total Loop Time':<{COL_LABEL}}{avg:>{COL_VAL - 3}.2f} ms{mx:>{COL_VAL - 3}.2f} ms{mn:>{COL_VAL - 3}.2f} ms")
+    print(f"{'':<{COL_LABEL}}{format_time_human(avg):>{COL_VAL}}{format_time_human(mx):>{COL_VAL}}{format_time_human(mn):>{COL_VAL}}")
+
+
+def print_total_time(total_ms: float):
+    """Print a single total time with human-readable line below."""
+    print(_sep_light())
+    print(f"{'Total Time':<{COL_LABEL}}{total_ms:>{COL_VAL - 3}.2f} ms")
+    print(f"{'':<{COL_LABEL}}{format_time_human(total_ms):>{COL_VAL}}")
+
+
+# =============================================================================
+# TIMING STATS
+# =============================================================================
 
 def compute_timing_stats(times: np.ndarray) -> dict:
     """Compute avg/min/max ms from a timing array."""
@@ -149,3 +160,23 @@ def compute_timing_stats(times: np.ndarray) -> dict:
         "min_ms": float(np.min(times)),
         "max_ms": float(np.max(times)),
     }
+
+
+# =============================================================================
+# MODE RUNNER
+# =============================================================================
+
+def run_modes(modes):
+    """Run a list of (name, fn) modes with top-level step tracking when > 1."""
+    n = len(modes)
+    show_steps = n > 1
+    for i, (name, fn) in enumerate(modes, 1):
+        if show_steps:
+            print(f"\n{'='*60}")
+            print(f"  Step {i}/{n}: {name}")
+            print(f"{'='*60}")
+        fn()
+    if show_steps:
+        print(f"\n{'='*60}")
+        print(f"  All {n} steps complete.")
+        print(f"{'='*60}\n")

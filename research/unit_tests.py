@@ -646,19 +646,24 @@ def run_all():
     """Run all unit tests."""
     print("\n=== Unit Tests ===\n")
 
-    results = {}
+    tests = [
+        ("Test 4: Kernel FFT Bank",     test_kernel_fft_bank_integrity),
+        ("Test 5: Impulse Response",    test_impulse_response_center_freq),
+        ("Test 8: Output Shape",        test_output_shape_regression),
+        ("Test 9: Kernel Energy",       test_kernel_energy_per_scale),
+        ("Test 10: Buffer Norm",        test_buffer_normalization),
+        ("Test 1: Pure Tone",           test_pure_tone_peak_accuracy),
+        ("Test 2: Cross-Impl",          test_cross_implementation_agreement),
+        ("Test 3: Chirp Monotonicity",  test_chirp_monotonicity),
+        ("Test 6: Normalization",       test_normalization_behavior),
+        ("Test 7: Reliable Region",     test_reliable_region_consistency),
+    ]
 
-    # Tests that don't require GPU or audio files
-    results["Test 4: Kernel FFT Bank"]     = test_kernel_fft_bank_integrity()
-    results["Test 5: Impulse Response"]    = test_impulse_response_center_freq()
-    results["Test 8: Output Shape"]        = test_output_shape_regression()
-    results["Test 9: Kernel Energy"]       = test_kernel_energy_per_scale()
-    results["Test 10: Buffer Norm"]        = test_buffer_normalization()
-    results["Test 1: Pure Tone"]           = test_pure_tone_peak_accuracy()
-    results["Test 2: Cross-Impl"]          = test_cross_implementation_agreement()
-    results["Test 3: Chirp Monotonicity"]  = test_chirp_monotonicity()
-    results["Test 6: Normalization"]       = test_normalization_behavior()
-    results["Test 7: Reliable Region"]     = test_reliable_region_consistency()
+    results = {}
+    n_tests = len(tests)
+    for i, (name, fn) in enumerate(tests, 1):
+        print(f"  [{i}/{n_tests}] {name}")
+        results[name] = fn()
 
     if GPU_AVAILABLE:
         verify_numpy_vs_cupy()

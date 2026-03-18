@@ -2,11 +2,13 @@
 SubShader Benchmark Suite.
 
 Modes:
-  (default)      Run SubShader with default config
-  --timing       Run SubShader with live per-stage timing instrumentation
-  --figures      Generate the 3 README comparison PNGs
+  (default)      Run all modes (same as --all)
+  --timing       STFT vs PyWavelet vs NumPy CWT vs CuPy CWT timing comparison
+  --figures      Generate 3 README comparison PNGs (matplotlib)
+  --figures --stub  Generate stub layouts instead of real DSP (fast iteration)
+  --seaborn      Generate 3 comparison PNGs (seaborn heatmap style)
   --unit-tests   Run unit tests (NumPy vs CuPy verification, etc.)
-  --all          All of the above
+  --all          Run timing, figures (matplotlib), figures (seaborn), unit tests
 """
 
 # =============================================================================
@@ -14,7 +16,6 @@ Modes:
 # =============================================================================
 
 import os
-import sys
 import time
 import argparse
 
@@ -31,11 +32,10 @@ import matplotlib.pyplot as plt
 from scipy.signal import stft as scipy_stft, resample as scipy_resample
 
 try:
-    import seaborn as sns
+    import seaborn  # noqa: F401
     SEABORN_AVAILABLE = True
 except ImportError:
     SEABORN_AVAILABLE = False
-    sns = None
     print("[benchmark] seaborn not installed -- --seaborn flag will be ignored.\n")
 
 from subshader.config import get_default_config, ColorNormalizationConfig
@@ -44,15 +44,17 @@ from subshader.dsp.wavelet import PyWavelet, NumPyWavelet
 from subshader.viz.plotter import CircularFrameBuffer, AudioFrameBuffer
 
 from benchmark_utilities import (
-    live_row, live_progress,
-    print_figure_header, print_figure_results,
-    print_results_table, print_header, print_total,
-    compute_timing_stats,
+    live_progress, clear_progress,
+    print_section_start, print_section_end, print_separator,
+    print_init_header, print_init_row, print_init_total,
+    print_results_header, print_results_row,
+    print_loop_summary, print_total_time,
+    compute_timing_stats, run_modes,
 )
 from benchmark_plotting import (
     compute_freq_yticks, create_figure_scaffold,
     render_top_row, render_spectrogram_row,
-    render_seaborn_spectrograms, SEABORN_STYLE,
+    set_backend,
 )
 
 # =============================================================================
@@ -117,16 +119,15 @@ class TimedSubShader:
 
     def run(self):
         """Run the timed pipeline: init timing, then runtime loop timing."""
-        print("\n=== SubShader Timed Pipeline ===\n")
+        print("\nSubShader Timing Benchmark\n")
 
-        # ----- Init timing -----
-        print("Init stage:")
-        print_header()
+        # ── Init timing ──────────────────────────────────────────────────────
+        print_section_start("Init Timing")
+        print_init_header()
 
         config = get_default_config()
         config.audio.file_path = self.audio_path
-
-        init_times = np.empty(1)
+        total_init_ms = 0.0
 
         t0 = time.perf_counter()
         audio_input = AudioInput(
@@ -134,12 +135,12 @@ class TimedSubShader:
             chunk_size=config.audio.chunk_size,
             overlap_factor=config.audio.overlap_factor,
         )
-        init_times[0] = (time.perf_counter() - t0) * 1000.0
-        live_row("AudioInput", 1, 1, init_times)
+        ms = (time.perf_counter() - t0) * 1000.0
+        print_init_row("AudioInput", ms)
+        total_init_ms += ms
 
         sr = audio_input.get_sample_rate()
 
-        init_times = np.empty(1)
         t0 = time.perf_counter()
         if GPU_AVAILABLE:
             from subshader.dsp.wavelet import CuWavelet
@@ -154,23 +155,22 @@ class TimedSubShader:
                 input_n=config.audio.chunk_size,
                 config=config.wavelet,
             )
-        init_times[0] = (time.perf_counter() - t0) * 1000.0
-        backend = "CuWavelet (GPU)" if GPU_AVAILABLE else "NumPyWavelet (CPU)"
-        live_row(backend, 1, 1, init_times)
+        ms = (time.perf_counter() - t0) * 1000.0
+        backend_name = "CuWavelet (GPU)" if GPU_AVAILABLE else "NumPyWavelet (CPU)"
+        print_init_row(backend_name, ms)
+        total_init_ms += ms
 
-        # ----- Runtime loop timing -----
-        print(f"\nRuntime loop ({self.num_frames} frames):")
-        print_header()
+        print_init_total(total_init_ms)
+        print_section_end()
+
+        # ── Runtime loop ─────────────────────────────────────────────────────
+        print_section_start(f"Runtime Loop ({self.num_frames} frames)")
 
         get_chunk_times = np.empty(self.num_frames)
         cwt_times       = np.empty(self.num_frames)
         total_times     = np.empty(self.num_frames)
 
-        live_labels = ["get_chunk()", "cwt()", "Total frame"]
-        live_time_arrays = [get_chunk_times, cwt_times, total_times]
-
         frames_processed = 0
-        t_total_start = time.perf_counter()
 
         for i in range(self.num_frames):
             t_frame = time.perf_counter()
@@ -191,14 +191,18 @@ class TimedSubShader:
             frames_processed = i + 1
             live_progress(frames_processed, self.num_frames)
 
-        total_s = time.perf_counter() - t_total_start
-        sys.stdout.write('\n')
-        sys.stdout.flush()
         get_chunk_times = get_chunk_times[:frames_processed]
         cwt_times = cwt_times[:frames_processed]
         total_times = total_times[:frames_processed]
-        print_results_table(live_labels, live_time_arrays)
-        print_total(total_s)
+
+        clear_progress()
+        print_separator()
+        print("Results:")
+        print_results_header()
+        print_results_row("get_chunk()", get_chunk_times)
+        print_results_row("cwt()", cwt_times)
+        print_loop_summary(frames_processed, total_times)
+        print_section_end()
 
 
 # =============================================================================
@@ -208,11 +212,11 @@ class TimedSubShader:
 class ReadmeFigures:
     """Generate the 3 README comparison PNGs with integrated timing."""
 
-    def __init__(self, num_frames: int = NUM_FRAMES, seaborn: bool = False):
+    def __init__(self, num_frames: int = NUM_FRAMES, backends=None):
         self.num_frames = num_frames
-        self.seaborn    = seaborn
+        self.backends   = backends or ["matplotlib"]
         os.makedirs(BENCHMARKS_DIR, exist_ok=True)
-        if seaborn:
+        if "seaborn" in self.backends:
             os.makedirs(BENCHMARKS_SEABORN_DIR, exist_ok=True)
 
     # -------------------------------------------------------------------------
@@ -308,13 +312,11 @@ class ReadmeFigures:
                 + "\n".join(f"  - {f}" for f in missing)
             )
 
-        print(f"\n=== Generating README Figures -> {BENCHMARKS_DIR}/ ===\n")
+        print(f"\nGenerating README Figures -> {BENCHMARKS_DIR}/\n")
 
         chirp_timing = self.chirp_signal_comparison()
         poly_timing = self.polyphonic_signal_comparison()
         music_timing = self.musical_signal_comparison()
-
-        print("\nAll figures saved.\n")
 
         return {
             "chirp": chirp_timing,
@@ -330,7 +332,7 @@ class ReadmeFigures:
         """Render all 3 figure layouts with random noise -- no DSP, instant."""
         stub_dir = os.path.join(BENCHMARKS_DIR, "stubs")
         os.makedirs(stub_dir, exist_ok=True)
-        print(f"\n=== Stub Layouts -> {stub_dir}/ ===\n")
+        print_section_start(f"Stub Layouts -> {stub_dir}/")
 
         configs = [
             {
@@ -398,7 +400,7 @@ class ReadmeFigures:
             plt.close(fig)
             print(f"Saved -> {path}")
 
-        print("\nDone.\n")
+        print_section_end()
 
     # -------------------------------------------------------------------------
     # Internal: comparison figure pipeline
@@ -463,9 +465,8 @@ class ReadmeFigures:
         pywt_times = np.empty(num_frames)
         npwt_times = np.empty(num_frames)
         frames_processed = 0
-        save_path = os.path.join(BENCHMARKS_DIR, filename)
 
-        print_figure_header(display_title)
+        print_section_start(display_title)
 
         t_total_start = time.perf_counter()
 
@@ -502,10 +503,6 @@ class ReadmeFigures:
 
         total_s = time.perf_counter() - t_total_start
 
-        # Clear the live progress line before printing results block
-        sys.stdout.write('\r' + ' ' * 50 + '\r')
-        sys.stdout.flush()
-
         # Trim timing arrays to actual frame count
         stft_times = stft_times[:frames_processed]
         pywt_times = pywt_times[:frames_processed]
@@ -518,8 +515,13 @@ class ReadmeFigures:
             "SubShader CWT":  compute_timing_stats(npwt_times),
         }
 
-        print_figure_results(frames_processed, labels,
-                             [stft_times, pywt_times, npwt_times], total_s, save_path)
+        clear_progress()
+        print_separator()
+        print("Results:")
+        print_results_header()
+        for label, times in zip(labels, [stft_times, pywt_times, npwt_times]):
+            print_results_row(label, times)
+        print_total_time(total_s * 1000)
 
         # Flatten buffers
         stft_spec = stft_buf.get_flattened_buffer()
@@ -534,109 +536,77 @@ class ReadmeFigures:
 
         spec_ytick_bins, spec_ytick_labels = compute_freq_yticks(cwt_freqs)
 
-        # ── Figure layout ─────────────────────────────────────────────────────
-        subtitle = "STFT  |  PyWavelet CWT  |  SubShader CWT"
-        n_top = len(top_rows)
-        fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
-            title, subtitle, n_top)
-
-        for idx, row in enumerate(top_rows):
-            render_top_row(fig, gs, idx, row, ax_stft,
-                           t_audio=t_audio, y_min=y_min, y_max=y_max,
-                           cwt_freqs=cwt_freqs, duration_s=duration_s,
-                           ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels)
-
-        # ── Spectrogram rows ──────────────────────────────────────────────────
-        shared_vmax = max(stft_buf.get_intensity_max(),
-                         pywt_buf.get_intensity_max(),
-                         npwt_buf.get_intensity_max())
-
+        # ── Render for each backend ───────────────────────────────────────────
         subshader_base = "SubShader CWT" if GPU_AVAILABLE else "SubShader CWT (NumPy)"
-        spec_rows = [
-            (ax_stft, stft_spec, "STFT", False),
-            (ax_pywt, pywt_spec, "PyWavelet CWT", False),
-            (ax_npwt, npwt_spec, subshader_base, True),
-        ]
-        for ax, data, label, bottom in spec_rows:
-            key = label.replace(" (NumPy)", "")
-            render_spectrogram_row(
-                ax, data,
-                title=f"{label} -- avg {timing[key]['avg_ms']:.2f} ms/frame",
-                extent=extent_spec, vmax=shared_vmax,
-                ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
-                is_bottom=bottom)
+        n_top = len(top_rows)
+        print_separator()
 
-        fig.savefig(save_path, dpi=150)
-        plt.close(fig)
+        for backend in self.backends:
+            set_backend(backend)
 
-        # ── Seaborn variant ───────────────────────────────────────────────────
-        if self.seaborn and SEABORN_AVAILABLE:
-            seaborn_filename = filename.replace(".png", "_seaborn.png")
-            self._generate_seaborn_figure(
-                stft_spec=stft_spec, pywt_spec=pywt_spec, npwt_spec=npwt_spec,
-                audio_x=t_audio, audio_ymin=y_min, audio_ymax=y_max,
-                top_rows=top_rows,
-                cwt_freqs=cwt_freqs, duration_s=duration_s, n_cwt_freqs=n_cwt_freqs,
-                timing=timing, title=title, filename=seaborn_filename,
-                stft_vmax=stft_buf.get_intensity_max(),
-                pywt_vmax=pywt_buf.get_intensity_max(),
-                npwt_vmax=npwt_buf.get_intensity_max(),
-                spec_ytick_bins=spec_ytick_bins, spec_ytick_labels=spec_ytick_labels,
-            )
+            if backend == "seaborn":
+                output_dir = BENCHMARKS_SEABORN_DIR
+                out_filename = filename.replace(".png", "_seaborn.png")
+                # Seaborn uses per-row vmax for richer contrast
+                stft_vmax = stft_buf.get_intensity_max()
+                pywt_vmax = pywt_buf.get_intensity_max()
+                npwt_vmax = npwt_buf.get_intensity_max()
+                timing_subtitle = (
+                    f"Avg per frame:  STFT {timing['STFT']['avg_ms']:.2f} ms  |  "
+                    f"PyWavelet {timing['PyWavelet CWT']['avg_ms']:.2f} ms  |  "
+                    f"SubShader {timing['SubShader CWT']['avg_ms']:.2f} ms"
+                )
+                suptitle = f"{title}\n{timing_subtitle}"
+                subtitle = None
+            else:
+                output_dir = BENCHMARKS_DIR
+                out_filename = filename
+                # Per-row vmax so each method's detail is visible
+                stft_vmax = stft_buf.get_intensity_max()
+                pywt_vmax = pywt_buf.get_intensity_max()
+                npwt_vmax = npwt_buf.get_intensity_max()
+                suptitle = title
+                subtitle = "STFT  |  PyWavelet CWT  |  SubShader CWT"
+
+            fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
+                suptitle, subtitle, n_top)
+
+            for idx, row in enumerate(top_rows):
+                render_top_row(fig, gs, idx, row, ax_stft,
+                               t_audio=t_audio, y_min=y_min, y_max=y_max,
+                               cwt_freqs=cwt_freqs, duration_s=duration_s,
+                               ytick_bins=spec_ytick_bins,
+                               ytick_labels=spec_ytick_labels)
+
+            spec_rows = [
+                (ax_stft, stft_spec, "STFT", stft_vmax, False),
+                (ax_pywt, pywt_spec, "PyWavelet CWT", pywt_vmax, False),
+                (ax_npwt, npwt_spec, subshader_base, npwt_vmax, True),
+            ]
+            for ax, data, label, vmax, bottom in spec_rows:
+                key = label.replace(" (NumPy)", "")
+                render_spectrogram_row(
+                    ax, data,
+                    title=f"{label} -- avg {timing[key]['avg_ms']:.2f} ms/frame",
+                    extent=extent_spec, vmax=vmax,
+                    ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
+                    is_bottom=bottom,
+                    n_cwt_freqs=n_cwt_freqs, duration_s=duration_s)
+
+            save_path_backend = os.path.join(output_dir, out_filename)
+            if backend == "seaborn":
+                fig.savefig(save_path_backend, dpi=150, bbox_inches="tight",
+                            facecolor=fig.get_facecolor())
+            else:
+                fig.savefig(save_path_backend, dpi=150)
+            plt.close(fig)
+            print(f"Saved {backend} -> {save_path_backend}")
+
+        # Reset to matplotlib when done
+        set_backend("matplotlib")
+        print_section_end()
 
         return timing
-
-    def _generate_seaborn_figure(self, stft_spec, pywt_spec, npwt_spec,
-                                  audio_x, audio_ymin, audio_ymax,
-                                  top_rows, cwt_freqs, duration_s, n_cwt_freqs,
-                                  timing, title, filename,
-                                  stft_vmax, pywt_vmax, npwt_vmax,
-                                  spec_ytick_bins, spec_ytick_labels):
-        """Generate seaborn-styled heatmap figures with the same row layout."""
-        sns.set_theme(style="dark", rc={
-            "axes.facecolor": "#0D1117",
-            "figure.facecolor": "#0D1117",
-            "text.color": "#C9D1D9",
-            "axes.labelcolor": "#C9D1D9",
-            "xtick.color": "#8B949E",
-            "ytick.color": "#8B949E",
-        })
-
-        timing_subtitle = (
-            f"Avg per frame:  STFT {timing['STFT']['avg_ms']:.2f} ms  |  "
-            f"PyWavelet {timing['PyWavelet CWT']['avg_ms']:.2f} ms  |  "
-            f"SubShader {timing['SubShader CWT']['avg_ms']:.2f} ms"
-        )
-
-        n_top = len(top_rows)
-        suptitle = f"{title}\n{timing_subtitle}"
-        fig, gs, ax_stft, _, _ = create_figure_scaffold(
-            suptitle, subtitle=None, n_top_rows=n_top, style=SEABORN_STYLE)
-
-        for idx, row in enumerate(top_rows):
-            render_top_row(fig, gs, idx, row, ax_stft,
-                           t_audio=audio_x, y_min=audio_ymin, y_max=audio_ymax,
-                           cwt_freqs=cwt_freqs, duration_s=duration_s,
-                           ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
-                           style=SEABORN_STYLE)
-
-        subshader_base = "SubShader CWT" if GPU_AVAILABLE else "SubShader CWT (NumPy)"
-        specs = [
-            (stft_spec, stft_vmax, f"STFT -- avg {timing['STFT']['avg_ms']:.2f} ms/frame"),
-            (pywt_spec, pywt_vmax, f"PyWavelet CWT -- avg {timing['PyWavelet CWT']['avg_ms']:.2f} ms/frame"),
-            (npwt_spec, npwt_vmax, f"{subshader_base} -- avg {timing['SubShader CWT']['avg_ms']:.2f} ms/frame"),
-        ]
-
-        render_seaborn_spectrograms(
-            fig, gs, n_top, specs,
-            n_cwt_freqs=n_cwt_freqs, duration_s=duration_s,
-            ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels)
-
-        path = os.path.join(BENCHMARKS_SEABORN_DIR, filename)
-        fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
-        plt.close(fig)
-        sns.reset_orig()
-        print(f"Saved seaborn figure -> {path}\n")
 
 
 # =============================================================================
@@ -653,44 +623,44 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="SubShader benchmark suite"
     )
-    parser.add_argument("--timing",     action="store_true", help="Run pipeline with live timing instrumentation")
-    parser.add_argument("--figures",    action="store_true", help="Generate the 3 README comparison PNGs")
+    parser.add_argument("--timing",     action="store_true", help="STFT vs PyWavelet vs CWT timing comparison")
+    parser.add_argument("--figures",    action="store_true", help="Generate 3 README comparison PNGs (matplotlib)")
+    parser.add_argument("--seaborn",    action="store_true", help="Generate 3 comparison PNGs (seaborn heatmap style)")
     parser.add_argument("--unit-tests", action="store_true", help="Run unit tests (NumPy vs CuPy, etc.)")
     parser.add_argument("--all",        action="store_true", help="Run all modes")
-    parser.add_argument("--seaborn",    action="store_true",
-                        help="With --figures: generate seaborn heatmap variants in benchmarks/seaborn/")
-    parser.add_argument("--stub",      action="store_true",
-                        help="Generate stub layout figures with placeholder data (instant)")
+    parser.add_argument("--stub",       action="store_true",
+                        help="With --figures: generate stub layouts instead of real DSP (fast iteration)")
     args = parser.parse_args()
 
-    if args.all:
-        args.timing = args.figures = args.unit_tests = True
+    any_flag = args.timing or args.figures or args.seaborn or args.unit_tests or args.stub
+    if args.all or not any_flag:
+        args.timing = args.figures = args.seaborn = args.unit_tests = True
 
-    if args.seaborn and not args.figures:
-        print("[benchmark] --seaborn has no effect without --figures or --all.\n")
+    if args.seaborn and not SEABORN_AVAILABLE:
+        print("[benchmark] --seaborn requested but seaborn is not installed. "
+              "pip install seaborn\n")
+        args.seaborn = False
 
-    ran_something = False
-
+    modes = []
     if args.timing:
-        TimedSubShader().run()
-        ran_something = True
-
-    if args.stub:
-        ReadmeFigures().stub_layouts()
-        ran_something = True
+        modes.append(("Timing Comparison", lambda: TimedSubShader().run()))
 
     if args.figures:
-        use_seaborn = args.seaborn
-        if use_seaborn and not SEABORN_AVAILABLE:
-            print("[benchmark] --seaborn requested but seaborn is not installed. "
-                  "pip install seaborn\n")
-        ReadmeFigures(seaborn=use_seaborn).run_all()
-        ran_something = True
+        backends = ["matplotlib"]
+        if args.seaborn:
+            backends.append("seaborn")
+        if args.stub:
+            modes.append(("Stub Layouts", lambda: ReadmeFigures().stub_layouts()))
+        else:
+            modes.append(("Figures", lambda b=backends: ReadmeFigures(backends=b).run_all()))
+    elif args.seaborn:
+        modes.append(("Seaborn Figures", lambda: ReadmeFigures(backends=["seaborn"]).run_all()))
 
     if args.unit_tests:
         from unit_tests import run_all as run_unit_tests
-        run_unit_tests()
-        ran_something = True
+        modes.append(("Unit Tests", run_unit_tests))
 
-    if not ran_something:
+    if modes:
+        run_modes(modes)
+    else:
         run_default()
