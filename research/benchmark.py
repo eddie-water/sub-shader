@@ -2,13 +2,15 @@
 SubShader Benchmark Suite.
 
 Modes:
-  (default)      Run all modes (same as --all)
-  --timing       STFT vs PyWavelet vs NumPy CWT vs CuPy CWT timing comparison
-  --figures      Generate 3 README comparison PNGs (matplotlib)
-  --figures --stub  Generate stub layouts instead of real DSP (fast iteration)
-  --seaborn      Generate 3 comparison PNGs (seaborn heatmap style)
-  --unit-tests   Run unit tests (NumPy vs CuPy verification, etc.)
-  --all          Run timing, figures (matplotlib), figures (seaborn), unit tests
+  (default)                   Run all modes (same as --all)
+  --timing                    STFT vs PyWavelet vs NumPy CWT vs CuPy CWT timing comparison
+  --figures                   Generate 3 README comparison PNGs (matplotlib)
+  --figures --stub            Generate stub layouts instead of real DSP (fast iteration)
+  --figures --stub-pywt       Skip PyWavelet, use random stubs, save to stub folder (faster)
+  --seaborn                   Generate 3 comparison PNGs (seaborn heatmap style)
+  --seaborn --stub-pywt       Seaborn with stubbed PyWavelet, save to stub folder
+  --unit-tests                Run unit tests (NumPy vs CuPy verification, etc.)
+  --all                       Run timing, figures (matplotlib), figures (seaborn), unit tests
 """
 
 # =============================================================================
@@ -19,17 +21,15 @@ import os
 import time
 import argparse
 
-import numpy as np
-
+# Configure matplotlib BEFORE any pyplot imports
 import matplotlib
 matplotlib.use('Agg')
-matplotlib.rcParams['font.family'] = 'serif'
-matplotlib.rcParams['font.serif'] = ['cmr10']
-matplotlib.rcParams['axes.unicode_minus'] = False
-matplotlib.rcParams['mathtext.fontset'] = 'cm'
-matplotlib.rcParams['axes.formatter.use_mathtext'] = True
+
+# Use matplotlib's default font configuration
+# (no custom font override)
+
+import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import stft as scipy_stft, resample as scipy_resample
 
 try:
     import seaborn  # noqa: F401
@@ -43,62 +43,55 @@ from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumPyWavelet
 from subshader.viz.plotter import CircularFrameBuffer, AudioFrameBuffer
 
-from benchmark_utilities import (
-    live_progress, clear_progress,
-    print_section_start, print_section_end, print_separator,
-    print_init_header, print_init_row, print_init_total,
-    print_results_header, print_results_row,
-    print_loop_summary, print_total_time,
-    compute_timing_stats, run_modes,
-)
-from benchmark_plotting import (
-    compute_freq_yticks, create_figure_scaffold,
-    render_top_row, render_spectrogram_row,
+from utilities import (
+    BENCHMARKS_DIR,
+    BENCHMARKS_SEABORN_DIR,
+    BENCHMARKS_STUBS_DIR,
+    AUDIO_DEFAULT,
+    AUDIO_POLYPHONIC,
+    AUDIO_MUSICAL,
+    MIDI_POLYPHONIC,
+    DAW_POLYPHONIC,
+    DAW_MUSICAL,
+    STFT_NPERSEG,
+    NUM_FRAMES,
+    CHIRP_F0,
+    CHIRP_F1,
+    gpu_available,
+    time_call,
+    TimingAccumulator,
+    live_progress,
+    clear_progress,
+    print_section_start,
+    print_section_end,
+    print_separator,
+    print_init_header,
+    print_init_row,
+    print_init_total,
+    print_results_header,
+    print_results_row,
+    print_loop_summary,
+    print_total_time,
+    compute_timing_stats,
+    run_modes,
+    compute_freq_yticks,
+    create_figure_scaffold,
+    render_top_row,
+    render_spectrogram_row,
     set_backend,
+    compute_stft_frame,
+    build_chirp_chunks,
 )
 
 # =============================================================================
 # GPU DETECTION
 # =============================================================================
 
-def _gpu_available() -> bool:
-    """Return True if a CUDA-capable GPU is accessible via CuPy."""
-    try:
-        import cupy as cp
-        cp.cuda.runtime.getDevice()
-        return True
-    except Exception:
-        return False
-
-GPU_AVAILABLE = _gpu_available()
+GPU_AVAILABLE = gpu_available()
 
 if not GPU_AVAILABLE:
     print("[benchmark] No GPU detected -- CuPy benchmarks will be skipped, "
           "figures will use NumPyWavelet as fallback.\n")
-
-# =============================================================================
-# CONSTANTS
-# =============================================================================
-
-BENCHMARKS_DIR   = "assets/images/benchmarks"
-BENCHMARKS_SEABORN_DIR = "assets/images/benchmarks/seaborn"
-HEATMAP_MAX_ROWS = 128
-HEATMAP_MAX_COLS = 512
-
-AUDIO_DEFAULT    = "assets/audio/daw/a2a3_a4_minor_scale.wav"
-AUDIO_CHIRP      = "assets/audio/daw/chirp_beat.wav"
-AUDIO_POLYPHONIC = "assets/audio/daw/polyphonic_audio_example.wav"
-AUDIO_MUSICAL    = "assets/audio/daw/musical_audio_example.wav"
-
-MIDI_POLYPHONIC  = "assets/images/polyphonic-signal-example-midi-notes.png"
-DAW_POLYPHONIC   = "assets/images/polyphonic-signal-example-edison-spectrogram.png"
-DAW_MUSICAL      = "assets/images/musical-signal-example-edison-spectrogram.png"
-
-STFT_NPERSEG     = 1024
-NUM_FRAMES       = 128      # frames to accumulate for figure snapshots
-
-CHIRP_F0         = 200      # Hz -- chirp start frequency
-CHIRP_F1         = 20_000   # Hz -- chirp end frequency
 
 
 # =============================================================================
@@ -129,34 +122,35 @@ class TimedSubShader:
         config.audio.file_path = self.audio_path
         total_init_ms = 0.0
 
-        t0 = time.perf_counter()
-        audio_input = AudioInput(
+        audio_input, ms = time_call(
+            AudioInput,
             path=config.audio.file_path,
             chunk_size=config.audio.chunk_size,
             overlap_factor=config.audio.overlap_factor,
         )
-        ms = (time.perf_counter() - t0) * 1000.0
         print_init_row("AudioInput", ms)
         total_init_ms += ms
 
         sr = audio_input.get_sample_rate()
 
-        t0 = time.perf_counter()
         if GPU_AVAILABLE:
             from subshader.dsp.wavelet import CuWavelet
-            wavelet = CuWavelet(
+            wavelet, ms = time_call(
+                CuWavelet,
                 sample_rate=sr,
                 input_n=config.audio.chunk_size,
                 config=config.wavelet,
             )
+            backend_name = "CuWavelet (GPU)"
         else:
-            wavelet = NumPyWavelet(
+            wavelet, ms = time_call(
+                NumPyWavelet,
                 sample_rate=sr,
                 input_n=config.audio.chunk_size,
                 config=config.wavelet,
             )
-        ms = (time.perf_counter() - t0) * 1000.0
-        backend_name = "CuWavelet (GPU)" if GPU_AVAILABLE else "NumPyWavelet (CPU)"
+            backend_name = "NumPyWavelet (CPU)"
+
         print_init_row(backend_name, ms)
         total_init_ms += ms
 
@@ -166,42 +160,30 @@ class TimedSubShader:
         # ── Runtime loop ─────────────────────────────────────────────────────
         print_section_start(f"Runtime Loop ({self.num_frames} frames)")
 
-        get_chunk_times = np.empty(self.num_frames)
-        cwt_times       = np.empty(self.num_frames)
-        total_times     = np.empty(self.num_frames)
-
-        frames_processed = 0
+        acc = TimingAccumulator(self.num_frames, ["get_chunk()", "cwt()"])
 
         for i in range(self.num_frames):
-            t_frame = time.perf_counter()
-
-            t0 = time.perf_counter()
-            audio_data = audio_input.get_chunk()
-            get_chunk_times[i] = (time.perf_counter() - t0) * 1000.0
+            audio_data, acc["get_chunk()"][i] = time_call(audio_input.get_chunk)
 
             if audio_data is None:
+                acc.current_idx = i
                 break
 
-            t0 = time.perf_counter()
-            wavelet.cwt(audio_data)
-            cwt_times[i] = (time.perf_counter() - t0) * 1000.0
+            _, acc["cwt()"][i] = time_call(wavelet.cwt, audio_data)
+            acc.current_idx = i + 1
+            live_progress(i + 1, self.num_frames)
 
-            total_times[i] = (time.perf_counter() - t_frame) * 1000.0
-
-            frames_processed = i + 1
-            live_progress(frames_processed, self.num_frames)
-
-        get_chunk_times = get_chunk_times[:frames_processed]
-        cwt_times = cwt_times[:frames_processed]
-        total_times = total_times[:frames_processed]
+        acc.trim()
 
         clear_progress()
         print_separator()
         print("Results:")
         print_results_header()
-        print_results_row("get_chunk()", get_chunk_times)
-        print_results_row("cwt()", cwt_times)
-        print_loop_summary(frames_processed, total_times)
+        print_results_row("get_chunk()", acc["get_chunk()"])
+        print_results_row("cwt()", acc["cwt()"])
+
+        total_times = acc["get_chunk()"] + acc["cwt()"]
+        print_loop_summary(len(total_times), total_times)
         print_section_end()
 
 
@@ -212,12 +194,16 @@ class TimedSubShader:
 class ReadmeFigures:
     """Generate the 3 README comparison PNGs with integrated timing."""
 
-    def __init__(self, num_frames: int = NUM_FRAMES, backends=None):
+    def __init__(self, num_frames: int = NUM_FRAMES, backends=None, stub_pywt: bool = False):
         self.num_frames = num_frames
         self.backends   = backends or ["matplotlib"]
+        self.stub_pywt  = stub_pywt
         os.makedirs(BENCHMARKS_DIR, exist_ok=True)
         if "seaborn" in self.backends:
             os.makedirs(BENCHMARKS_SEABORN_DIR, exist_ok=True)
+        # When stub_pywt is enabled, ensure stub dir exists for output
+        if stub_pywt:
+            os.makedirs(BENCHMARKS_STUBS_DIR, exist_ok=True)
 
     # -------------------------------------------------------------------------
     # Public figure generators
@@ -232,19 +218,18 @@ class ReadmeFigures:
           Row 2: PyWavelet CWT
           Row 3: SubShader CWT
         """
-        from scipy.signal import chirp as scipy_chirp
-
         config    = get_default_config()
         sr        = int(config.wavelet.typical_sampling_freq)
         chunk_size = config.audio.chunk_size
-        hop_size  = int(chunk_size * (1 - config.audio.overlap_factor))
 
-        total_samples = hop_size * self.num_frames + chunk_size
-        t      = np.linspace(0, total_samples / sr, total_samples, endpoint=False)
-        signal = scipy_chirp(t, f0=CHIRP_F0, f1=CHIRP_F1, t1=t[-1], method='linear').astype(np.float64)
-
-        chunks = [signal[i * hop_size: i * hop_size + chunk_size]
-                  for i in range(self.num_frames)]
+        chunks = build_chirp_chunks(
+            CHIRP_F0,
+            CHIRP_F1,
+            sr,
+            chunk_size,
+            config.audio.overlap_factor,
+            self.num_frames,
+        )
 
         return self._generate_comparison_figure(
             title=f"Chirp Signal ({CHIRP_F0} Hz to {CHIRP_F1 // 1000} kHz)",
@@ -390,7 +375,7 @@ class ReadmeFigures:
                                       (ax_npwt, "SubShader CWT", True)]:
                 render_spectrogram_row(
                     ax, noise,
-                    title=f"{label} -- avg XX.XX ms/frame",
+                    title=label,
                     extent=extent_spec, vmax=stub_vmax,
                     ytick_bins=ytick_bins, ytick_labels=ytick_labels,
                     is_bottom=bottom)
@@ -436,28 +421,34 @@ class ReadmeFigures:
             )
             sr = ai.get_sample_rate()
             chunk_iter = None
-            # Process entire audio file
-            num_frames = (ai.total_samples - config.audio.chunk_size) // ai.hop_size + 1
+            # Use NUM_FRAMES as the limit for file-based audio
+            num_frames = NUM_FRAMES
 
         wc = wavelet_config if wavelet_config is not None else config.wavelet
-        pywt = PyWavelet(  sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
+        if not self.stub_pywt:
+            pywt = PyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
+        else:
+            pywt = None
         npwt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
 
         # STFT setup -- crop to chromatic scale frequency range
         stft_freqs        = np.fft.rfftfreq(STFT_NPERSEG, d=1.0 / sr)
-        freq_min, freq_max = pywt.freqs[0], pywt.freqs[-1]
+        # Use pywt freqs if available, otherwise use npwt freqs
+        ref_freqs = pywt.freqs if pywt is not None else npwt.freqs
+        freq_min, freq_max = ref_freqs[0], ref_freqs[-1]
         stft_freq_mask    = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
         stft_cropped_freqs = stft_freqs[stft_freq_mask]
-        stft_target_w     = pywt.output_n
+        stft_target_w     = (pywt.output_n if pywt is not None else npwt.output_n)
 
-        cwt_freqs   = pywt.freqs
+        cwt_freqs   = ref_freqs
         n_cwt_freqs = len(cwt_freqs)
 
         # Circular buffers
         color_norm = ColorNormalizationConfig()
         audio_buf  = AudioFrameBuffer(chunk_size=config.audio.chunk_size, num_chunks=num_frames)
         stft_buf   = CircularFrameBuffer(frame_shape=(n_cwt_freqs, stft_target_w), num_frames=num_frames, color_norm_config=color_norm)
-        pywt_buf   = CircularFrameBuffer(frame_shape=pywt.get_output_shape(),       num_frames=num_frames, color_norm_config=color_norm)
+        # Use npwt shape for pywt_buf (they have the same output shape)
+        pywt_buf   = CircularFrameBuffer(frame_shape=npwt.get_output_shape(),       num_frames=num_frames, color_norm_config=color_norm)
         npwt_buf   = CircularFrameBuffer(frame_shape=npwt.get_output_shape(),       num_frames=num_frames, color_norm_config=color_norm)
 
         # Process frames -- with per-method timing and live progress
@@ -477,26 +468,29 @@ class ReadmeFigures:
 
             audio_buf.push_chunk(chunk)
 
-            t0 = time.perf_counter()
-            _, _, Zxx      = scipy_stft(chunk, fs=sr, nperseg=STFT_NPERSEG)
-            stft_mag       = np.abs(Zxx)[stft_freq_mask, :]
-            stft_resampled = scipy_resample(stft_mag, stft_target_w, axis=1)
-            stft_resampled = np.clip(stft_resampled, 0, None)
-
-            stft_log = np.zeros((n_cwt_freqs, stft_target_w))
-            for col in range(stft_target_w):
-                stft_log[:, col] = np.interp(cwt_freqs, stft_cropped_freqs,
-                                             stft_resampled[:, col], left=0.0, right=0.0)
-            stft_times[i] = (time.perf_counter() - t0) * 1000.0
+            stft_log, stft_times[i] = time_call(
+                compute_stft_frame,
+                chunk,
+                sr,
+                STFT_NPERSEG,
+                stft_freq_mask,
+                stft_cropped_freqs,
+                cwt_freqs,
+                stft_target_w,
+            )
             stft_buf.push_frame(stft_log)
 
-            t0 = time.perf_counter()
-            pywt_buf.push_frame(pywt.cwt(chunk))
-            pywt_times[i] = (time.perf_counter() - t0) * 1000.0
+            if self.stub_pywt:
+                # Generate random stub spectrogram instead of computing PyWavelet
+                pywt_times[i] = 0.0
+                pywt_stub = np.random.rand(n_cwt_freqs, stft_target_w).astype(np.float32)
+                pywt_buf.push_frame(pywt_stub)
+            else:
+                _, pywt_times[i] = time_call(pywt.cwt, chunk)
+                pywt_buf.push_frame(_)
 
-            t0 = time.perf_counter()
-            npwt_buf.push_frame(npwt.cwt(chunk))
-            npwt_times[i] = (time.perf_counter() - t0) * 1000.0
+            _, npwt_times[i] = time_call(npwt.cwt, chunk)
+            npwt_buf.push_frame(_)
 
             frames_processed = i + 1
             live_progress(frames_processed, num_frames)
@@ -508,10 +502,20 @@ class ReadmeFigures:
         pywt_times = pywt_times[:frames_processed]
         npwt_times = npwt_times[:frames_processed]
 
-        labels = ["STFT", "PyWavelet CWT", "SubShader CWT"]
+        # Guard against empty timing arrays (no frames processed)
+        if frames_processed == 0:
+            clear_progress()
+            print_separator()
+            print("Results:")
+            print("No frames processed - audio file may be missing or invalid.")
+            print_section_end()
+            return {}
+
+        pywt_label = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
+        labels = ["STFT", pywt_label, "SubShader CWT"]
         timing = {
             "STFT":           compute_timing_stats(stft_times),
-            "PyWavelet CWT":  compute_timing_stats(pywt_times),
+            pywt_label:       compute_timing_stats(pywt_times),
             "SubShader CWT":  compute_timing_stats(npwt_times),
         }
 
@@ -551,22 +555,22 @@ class ReadmeFigures:
                 stft_vmax = stft_buf.get_intensity_max()
                 pywt_vmax = pywt_buf.get_intensity_max()
                 npwt_vmax = npwt_buf.get_intensity_max()
-                timing_subtitle = (
-                    f"Avg per frame:  STFT {timing['STFT']['avg_ms']:.2f} ms  |  "
-                    f"PyWavelet {timing['PyWavelet CWT']['avg_ms']:.2f} ms  |  "
-                    f"SubShader {timing['SubShader CWT']['avg_ms']:.2f} ms"
-                )
-                suptitle = f"{title}\n{timing_subtitle}"
+                suptitle = title
                 subtitle = None
             else:
-                output_dir = BENCHMARKS_DIR
-                out_filename = filename
+                output_dir = BENCHMARKS_STUBS_DIR if self.stub_pywt else BENCHMARKS_DIR
+                # Add _STUB_PYWT suffix to filename when using stub_pywt
+                if self.stub_pywt:
+                    out_filename = filename.replace(".png", "_STUB_PYWT.png")
+                else:
+                    out_filename = filename
                 # Per-row vmax so each method's detail is visible
                 stft_vmax = stft_buf.get_intensity_max()
                 pywt_vmax = pywt_buf.get_intensity_max()
                 npwt_vmax = npwt_buf.get_intensity_max()
                 suptitle = title
-                subtitle = "STFT  |  PyWavelet CWT  |  SubShader CWT"
+                pywt_subtitle = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
+                subtitle = f"STFT  |  {pywt_subtitle}  |  SubShader CWT"
 
             fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
                 suptitle, subtitle, n_top)
@@ -578,16 +582,16 @@ class ReadmeFigures:
                                ytick_bins=spec_ytick_bins,
                                ytick_labels=spec_ytick_labels)
 
+            pywt_plot_label = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
             spec_rows = [
                 (ax_stft, stft_spec, "STFT", stft_vmax, False),
-                (ax_pywt, pywt_spec, "PyWavelet CWT", pywt_vmax, False),
+                (ax_pywt, pywt_spec, pywt_plot_label, pywt_vmax, False),
                 (ax_npwt, npwt_spec, subshader_base, npwt_vmax, True),
             ]
             for ax, data, label, vmax, bottom in spec_rows:
-                key = label.replace(" (NumPy)", "")
                 render_spectrogram_row(
                     ax, data,
-                    title=f"{label} -- avg {timing[key]['avg_ms']:.2f} ms/frame",
+                    title=label,
                     extent=extent_spec, vmax=vmax,
                     ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
                     is_bottom=bottom,
@@ -630,6 +634,8 @@ if __name__ == "__main__":
     parser.add_argument("--all",        action="store_true", help="Run all modes")
     parser.add_argument("--stub",       action="store_true",
                         help="With --figures: generate stub layouts instead of real DSP (fast iteration)")
+    parser.add_argument("--stub-pywt",  action="store_true",
+                        help="With --figures: skip PyWavelet computation, use random stub spectrograms (faster, saves to stub folder)")
     args = parser.parse_args()
 
     any_flag = args.timing or args.figures or args.seaborn or args.unit_tests or args.stub
@@ -652,12 +658,12 @@ if __name__ == "__main__":
         if args.stub:
             modes.append(("Stub Layouts", lambda: ReadmeFigures().stub_layouts()))
         else:
-            modes.append(("Figures", lambda b=backends: ReadmeFigures(backends=b).run_all()))
+            modes.append(("Figures", lambda b=backends, sp=args.stub_pywt: ReadmeFigures(backends=b, stub_pywt=sp).run_all()))
     elif args.seaborn:
-        modes.append(("Seaborn Figures", lambda: ReadmeFigures(backends=["seaborn"]).run_all()))
+        modes.append(("Seaborn Figures", lambda sp=args.stub_pywt: ReadmeFigures(backends=["seaborn"], stub_pywt=sp).run_all()))
 
     if args.unit_tests:
-        from unit_tests import run_all as run_unit_tests
+        from utilities.unit_tests import run_all as run_unit_tests
         modes.append(("Unit Tests", run_unit_tests))
 
     if modes:

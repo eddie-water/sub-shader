@@ -31,26 +31,7 @@ from subshader.dsp.wavelet import PyWavelet, NumPyWavelet
 from subshader.dsp.wavelet_kernel import WaveletKernel
 from subshader.viz.plotter import CircularFrameBuffer
 
-# =============================================================================
-# CONSTANTS
-# =============================================================================
-
-BENCHMARKS_DIR   = "assets/images/benchmarks"
-AUDIO_DEFAULT    = "assets/audio/daw/a2a3_a4_minor_scale.wav"
-
-# =============================================================================
-# GPU DETECTION
-# =============================================================================
-
-def _gpu_available() -> bool:
-    try:
-        import cupy as cp
-        cp.cuda.runtime.getDevice()
-        return True
-    except Exception:
-        return False
-
-GPU_AVAILABLE = _gpu_available()
+from . import constants
 
 # =============================================================================
 # HELPERS
@@ -100,14 +81,14 @@ def verify_numpy_vs_cupy(save_figure: bool = True):
 
     Requires a GPU -- exits early with a message if none is available.
     """
-    if not GPU_AVAILABLE:
+    if not constants.gpu_available():
         print("[verify] Skipped -- no GPU available. Reconnect GPU and re-run.")
         return
 
     from subshader.dsp.wavelet import CuPyWavelet
 
     config = get_default_config()
-    config.audio.file_path = AUDIO_DEFAULT
+    config.audio.file_path = constants.AUDIO_DEFAULT
 
     ai = AudioInput(
         path=config.audio.file_path,
@@ -156,7 +137,7 @@ def verify_numpy_vs_cupy(save_figure: bool = True):
 
 def _save_diff_figure(np_coefs, cp_coefs, diff):
     """Save 3-panel figure: NumPy | CuPy | abs(diff)."""
-    os.makedirs(BENCHMARKS_DIR, exist_ok=True)
+    os.makedirs(constants.BENCHMARKS_DIR, exist_ok=True)
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
     fig.suptitle("NumPy vs CuPy CWT -- correctness check", fontsize=12)
@@ -178,7 +159,7 @@ def _save_diff_figure(np_coefs, cp_coefs, diff):
     fig.colorbar(im, ax=axes[2], shrink=0.8, label="abs diff")
 
     fig.tight_layout()
-    path = os.path.join(BENCHMARKS_DIR, "numpy_vs_cupy_diff.png")
+    path = os.path.join(constants.BENCHMARKS_DIR, "numpy_vs_cupy_diff.png")
     fig.savefig(path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Diff figure saved -> {path}\n")
@@ -665,7 +646,7 @@ def run_all():
         print(f"  [{i}/{n_tests}] {name}")
         results[name] = fn()
 
-    if GPU_AVAILABLE:
+    if constants.gpu_available():
         verify_numpy_vs_cupy()
 
     # Summary
