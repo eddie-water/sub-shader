@@ -4,14 +4,14 @@
  * Determines the color of each pixel by reading the values from the source
  * data texture. The texture contains coefficient frames stacked
  * side-by-side in a scrolling buffer. Each pixel samples one coefficient
- * value, normalizes it using adaptive scaling, and maps it to a color
- * using a custom colormap that includes orange and white for maximum intensity.
+ * value and normalizes it using the tracked intensity max, then maps it
+ * to a color using matplotlib's inferno colormap.
  * 
  * Inputs:
  *   texCoord (vec2): Which coefficient to read from the texture
- *   scalogram (sampler2D): Texture containing stacked coefficient frames
- *   valueMin (float): Minimum value for normalization
- *   valueMax (float): Maximum value for normalization
+ *   texture_sampler (sampler2D): Texture containing raw coefficient frames
+ *   intensity_max (float): Tracked global max for consistent colormap scaling
+ *   gamma (float): Gamma correction factor for perceptual enhancement
  * 
  * Outputs:
  *   fragColor (vec4): Final color for this pixel
@@ -21,48 +21,56 @@
 in vec2 texCoord;
 out vec4 fragColor;
 uniform sampler2D texture_sampler;
-uniform float valueMin;
-uniform float valueMax;
+uniform float intensity_max;
+uniform float gamma;
 
-vec3 custom_colormap(float t) {
-    // Custom colormap that includes orange and white for maximum intensity
-    // Similar to professional DAW spectrum analyzers
+vec3 inferno_colormap(float t) {
+    // Matplotlib inferno colormap - continuous perceptually uniform colormap
+    // Data from matplotlib's inferno colormap lookup table
     t = clamp(t, 0.0, 1.0);
     
-    // Define color stops with their positions
-    vec3 color1 = vec3(0.0, 0.0, 0.3);   // Dark blue at 0.0
-    vec3 color2 = vec3(0.3, 0.0, 0.5);   // Purple at 0.3
-    vec3 color3 = vec3(1.0, 0.0, 0.0);   // Red at 0.6
-    vec3 color4 = vec3(1.0, 0.5, 0.0);   // Orange at 0.8
-    vec3 color5 = vec3(1.0, 1.0, 1.0);   // White at 1.0
+    // High-resolution inferno colormap control points (16 samples for smooth interpolation)
+    const vec3 colors[16] = vec3[](
+        vec3(0.001462, 0.000466, 0.013866),  // 0.0 - near black
+        vec3(0.087411, 0.044556, 0.224813),  // 0.067 - dark purple
+        vec3(0.258234, 0.038571, 0.406485),  // 0.133 - purple
+        vec3(0.416331, 0.090203, 0.432943),  // 0.2 - purple-red
+        vec3(0.562861, 0.156942, 0.359557),  // 0.267 - red-purple
+        vec3(0.692840, 0.165141, 0.207872),  // 0.333 - red
+        vec3(0.798216, 0.280197, 0.469538),  // 0.4 - red-orange
+        vec3(0.881443, 0.392529, 0.101718),  // 0.467 - orange-red
+        vec3(0.951546, 0.510943, 0.052167),  // 0.533 - orange
+        vec3(0.988362, 0.645450, 0.039886),  // 0.6 - yellow-orange
+        vec3(0.995380, 0.786264, 0.197138),  // 0.667 - yellow
+        vec3(0.992541, 0.917399, 0.472873),  // 0.733 - bright yellow
+        vec3(0.992357, 0.999825, 0.644924),  // 0.8 - yellow-white
+        vec3(0.998364, 0.998364, 0.745097),  // 0.867 - light yellow
+        vec3(0.999643, 0.999643, 0.899410),  // 0.933 - very light
+        vec3(1.000000, 1.000000, 1.000000)   // 1.0 - white
+    );
     
-    // Use smoothstep to create smooth transitions between segments
-    float segment1 = smoothstep(0.0, 0.3, t) * (1.0 - smoothstep(0.3, 0.6, t));
-    float segment2 = smoothstep(0.3, 0.6, t) * (1.0 - smoothstep(0.6, 0.8, t));
-    float segment3 = smoothstep(0.6, 0.8, t) * (1.0 - smoothstep(0.8, 1.0, t));
-    float segment4 = smoothstep(0.8, 1.0, t);
+    // Map t to array index range
+    float scaled = t * 15.0;  // 0-15 range
+    int index = int(floor(scaled));
+    float frac = scaled - float(index);
     
-    // Calculate interpolated colors for each segment
-    vec3 segment_color1 = mix(color1, color2, smoothstep(0.0, 0.3, t));
-    vec3 segment_color2 = mix(color2, color3, smoothstep(0.3, 0.6, t));
-    vec3 segment_color3 = mix(color3, color4, smoothstep(0.6, 0.8, t));
-    vec3 segment_color4 = mix(color4, color5, smoothstep(0.8, 1.0, t));
+    // Clamp index to valid range
+    index = clamp(index, 0, 14);
+    int next_index = min(index + 1, 15);
     
-    // Combine segments using smoothstep weights
-    return segment_color1 * segment1 + segment_color2 * segment2 + 
-           segment_color3 * segment3 + segment_color4 * segment4;
+    // Linear interpolation between adjacent colors
+    return mix(colors[index], colors[next_index], frac);
 }
 
 void main() {
-    // Read the value from the texture data at the given texture coordinate
+    // Read the raw value from the texture data at the given texture coordinate
     float value = texture(texture_sampler, texCoord).r;
     
-    // Since data is already normalized to [0,1], use a more reasonable scaling
-    // This should allow the brightest parts to reach orange/white colors
-    float normalized = clamp(value / 0.3, 0.0, 1.0);  // More reasonable scaling
-    normalized = pow(normalized, 0.4);  // Less gamma to preserve bright colors
+    // Normalize using the tracked intensity max for consistent colormap scaling
+    float normalized = clamp(value / intensity_max, 0.0, 1.0);
+    normalized = pow(normalized, gamma);
     
-    // Grab the color from our custom colormap using the normalized value
-    vec3 color = custom_colormap(normalized);
+    // Grab the color from matplotlib inferno colormap using the normalized value
+    vec3 color = inferno_colormap(normalized);
     fragColor = vec4(color, 1.0);
 } 

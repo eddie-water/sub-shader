@@ -16,7 +16,7 @@ def get_shader_source(filename: str) -> str:
         str: The shader source code as a string
     """
     shader_dir = Path(__file__).parent
-    shader_path = shader_dir / filename
+    shader_path = str(shader_dir / filename)
     
     with open(shader_path, 'r') as f:
         return f.read()

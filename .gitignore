@@ -3,6 +3,8 @@
 
 # Virtual Environment
 venv/*
+.venv/*
+venv311/*
 
 # Compiled Python
 __pycache__/

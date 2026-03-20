@@ -34,7 +34,7 @@ def logger_init(
     if log_file is None:
         log_dir = Path("logs")
         log_dir.mkdir(exist_ok=True)
-        log_file = log_dir / "subshader.log"
+        log_file = str(log_dir / "subshader.log")
     
     # Create formatter
     formatter = logging.Formatter(

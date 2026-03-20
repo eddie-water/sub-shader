@@ -1,66 +1,132 @@
-# SubShader
+# Sub Shader
 
-## Overview
+Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline that analyzes and converts audio into a visual representation using modern techniques in digital signal processing and parallel computing.
 
-SubShader is a real-time audio visualizer. It reads in an audio file, performs the Continuous Wavelet Transform using CuPy, and plots the results in real-time with a 2D shader. Currently getting around 40 FPS.
+This project is a technical showcase of my skills and interests in DSP and GPU acceleration. It's given me a deeper understanding of the foundations of signal processing and how they can be generalized into other contexts beyond monitoring audio. It also serves as an exercise for off-loading parallel operations onto a GPU and optimizing pipeline bottlenecks. 
 
-### Current Status
+The top-level design and performance of Sub Shader are detailed in this document. 
 
-![SubShader Visualization](assets/images/beltran_souncloud_wav_0m_8s_to_0m_25s.png)
+*[Insert Demo Clip]*
 
-**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(8:22 - 8:31)
+---
 
-![SubShader Visualization](https://github.com/user-attachments/assets/19f9c2a9-9964-4477-aa27-08e7447f6437)
+## Design
 
-**Source**: [Beltran Coachella Soundcloud Rip](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) ~(10:19 - 10:27)
+```
+Audio Source → DSP Block → Renderer
+```
 
-### Software Flow
-**Audio Input → Perform CWT → Update Plot**
-- **Audio Input**: Retrieves a chunk of audio from file.
+Sub Shader splits the pipeline into three modules:
 
-- **Perform CWT**: Run the CWT on the audio, accelerated with CuPy.
+### Audio Source
 
-- **Update**: Using a 2D shader to visualize the CWT results in a scrolling plot.
+Loads audio from file and delivers overlapping window frames of audio samples to the DSP Stage. The overlap reduces edge artifacts at window boundaries.
 
-### Performance
+For more details → [Audio README](AUDIO_README.md)
 
-Currently getting ~40 FPS.
+### DSP Stage
+
+Using CUDA, performs the Continuous Wavelet Transform ([CWT](link)) on the raw audio samples across the chromatic scale. Post-procesing includes scale normalization, discarding of edge-contaminated results, and downsampling.
+
+For design intuition and explanation → [DSP README](DSP_README.md)
+
+### Renderer
+
+Chronologically stores the processed results from the DSP Stage in a circular buffer, and uploads its entirety as a GPU texture. The renderer feeds the texture data to a fragment shader that colormaps the results into a 2D scale vs time plot.
+
+For specifics → [Renderer README](RENDERER_README.md)
+
+<!-- Placeholder: init flowchart -->
+
+<!-- Placeholder: runtime flowchart -->
+
+---
+
+## Performance
+
+<!-- The Fast Fourier Transform is an inexpensive, effective, and widely popular signal processing algorithm for frequency analysis. The Short-Time Fourier Transform ([STFT](link)) is the typical approach for general signal processing. However, it was determined to be insufficient for this particular application because of its rigid time-frequency resolution - it measures signals either too finely or too broadly. -->
+
+<!-- PyWavelet ([PyWt](link)) is the most prominent Python library for wavelet-based analysis. The CWT is able to produce more accurate* results because its time-frequency resolution adapts itself proportionally to the frequency being measured. However, this added overhead costs more to process. Also, the library requires a lot of effort to configure it for the specific signal properties we are interested in measuring. -->
+
+Here we comare the performance of Sub Shader to other commonly used signal analysis techniques. The benchmark is performed against accuracy and speed for each of the following methods
+- [Short-Time Fourier Transform](link) - the typical approach 
+- [PyWavelet](link) - the most prominent Python library for wavelet-based signal analysis but TODO is slow / not tunable?
+- [ANTS](link) - an implementation of the CWT based off the course Analyzing Neural Time-Series by Mike Cohen 
+
+The audio signals used have been hand-selected to emphasize the advantages of using Sub Shader 
 
 
-### What is the CWT and why use it?
+### Chirp Signal (Frequency Sweep)
 
-The Continuous Wavelet Transform (CWT) is a mathematical process that transforms time-domain data into its time-frequency representation. It's an expansion of the Fourier Transform where it uses wavelets  (time-localized sine waves) as its analyzing functions, instead of pure sinusoids. 
+In this non-stationary signal, the frequency of the audio signal is linearly swept from 100 to 10k Hz. This is the clearest demonstration of the time-frequency resolution advantages of the CWT.
 
-The key insight is that the FFT uses infinite sinusoids that are completely delocalized in time to filter their input signals - they have no "beginning" or "end", so they can't convey any timing information. The CWT solves this by multiplying the infinite sinusoids with a Gaussian bell curve, creating finite wavelets that are localized to specific time windows. This allows you to know both what frequencies are present AND when they occurred, making it ideal for musical audio analysis. In music, melodies glide across time and frequency, vocals ramp up and taper off, percussions are loud and quick, and grooves jump around natural frequencies.
+<p><img src="assets/images/benchmarks/chirp_signal_comparison.png" width="50%"></p>
 
-The Fast Fourier Transform (FFT), which is typically the go-to in DSP, has a fixed time-frequency resolution tradeoff: you can have good frequency resolution (accurate frequencies, blurry timing) or good time resolution (accurate timing, blurry frequencies), but not both. 
 
-The CWT overcomes this limitation by adapting the number of samples per transform: 
-- Uses more time samples for lower frequencies, since they tend to last longer in time like basslines and sustained melodic notes, which also gives us fine frequency resolution, which is advantageous because low frequencies are easily differentiable to the ear
-- Uses fewer time samples for higher frequencies, since short transient events like percussion don't last very long in time, which gives us precise timing for quick events, and is advantageous because the ear is bad at differentiating high frequencies
+### Polyphonic Signal (MIDI Audio)
 
-**Note**: After auditing the code, I realized the current implementation doesn't fully implement this adaptive behavior. All wavelets are generated using the same number of time samples, which means the time resolution is fixed and the frequency resolution is also fixed. This means we're not getting the full benefits of true CWT. I've created [this issue](https://github.com/users/eddie-water/projects/1/views/1?pane=issue&itemId=113509598&issue=eddie-water%7Csub-shader%7C36) to track fixing this.
+In this signal, a MIDI composition for a simple sine wave generator was used to create a polyphonic audio signal. A variety of frequencies and note-lengths are played on top of each other. The audio has sustained and abrupt changes in frequencies
+
+<p><img src="assets/images/benchmarks/polyphonic_signal_comparison.png" width="50%"></p>
+
+### Musical Signal (percussion + sustained bass)
+
+<p><img src="assets/images/benchmarks/musical_signal_comparison.png" width="50%"></p>
+
+Here we can see the classic four-on-the-floor house rhythm come in and come out. From the *[link source]*. Compare the shitty fft vs stft vs pywt vs good cwt
+
+STFT
+- Accuracy
+    - Fixed time-frequency resolution struggles to measure low-end frequencies
+    - Produces jagged representation of the signal
+    - Energy from neighboring frequencies are bucketed into nearby frequency bins smearing the result
+    - Does an okay job of resembling the original signal
+- Speed
+    - TODO ms
+
+PYWT CWT
+- Accuracy
+    - CWT's variable time-frequency resolution adapts proportionally to the scale of the frequency being measured
+    - TODO untunable resolution?
+- Speed
+    - TODO Takes forever
+
+Sub Shader CWT
+- Accuracy
+    - Fine-tuned variable time-frequency resolution
+    - TODO
+- Speed
+    - TODO ms
+    - The compute cost of the CWT is off-loaded to GPU
+
+Comparing the Fourier Transform to the CWT is like comparing apples to oranges. The STFT is like an apple that colored itself orange. The main point of comparison is the time-frequency resolution in each method. The FFT has a fixed resolution, and can only be configured to efficiently
+ examples have been hand-selected to showcase the advantages and disadvantages of using each. The 
+
+---
+
+## Benchmark
+
+<p align="center"><img src="assets/images/benchmarks/timing_bar_chart.png" width="50%"></p>
+
+*[Placeholder: full timing breakdown of Sub Shader using fastest DSP block from research/benchmark.py — runtime per block and end-to-end]*
+
+<p align="center"><img src="assets/images/benchmarks/numpy_vs_cupy.png" width="50%"></p>
+
+---
 
 ## Installation
 
-### Setup
-```bash
-# Create virtual environment
-python3 -m venv venv
+*[Insert instructions on how to install using venv and link to requirements]*
 
-# Activate (Linux/WSL)
-source venv/bin/activate
-
-# Install dependencies
-pip install -e .
-```
-
-### Run
-```bash
-python -m subshader
 ```
 
 ### Requirements
+
 - Python 3.8+
-- CUDA-capable GPU (recommended)
-- OpenGL 3.3+ support
+- CUDA-capable GPU
+- OpenGL 3.3+
+
+## Future Improvements
+This project has given me a deeper understanding of the foundational concepts in real-time signal processing. There are DSP fundamentals that can be generalized, allowing for higher level pattern detection and feature extraction beyond audio contexts. Higher precision results require higher compute, so we explore why off-loading some of the work  This project goes into the details of the why I made these design decisions 
+
+*[List future improvements]*
