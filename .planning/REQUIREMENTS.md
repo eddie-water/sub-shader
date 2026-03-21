@@ -10,8 +10,8 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 ### Pipeline Fixes
 
 - [ ] **PIPE-01**: CWT normalization produces consistent brightness across frequency bands (investigate low-frequency brightness bias)
-- [ ] **PIPE-02**: GPU fallback lives in DSP block instantiation, not benchmark code — auto-detects GPU failure and falls back to NumPy
-- [ ] **PIPE-03**: GPU availability checked at init — if unavailable, run on NumPy path for the session
+- [x] **PIPE-02**: GPU fallback lives in DSP block instantiation, not benchmark code — auto-detects GPU failure and falls back to NumPy
+- [x] **PIPE-03**: GPU availability checked at init — if unavailable, run on NumPy path for the session
 
 ### Audio Sync
 
@@ -82,8 +82,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PIPE-01 | Phase 2 | Pending |
-| PIPE-02 | Phase 1 | Pending |
-| PIPE-03 | Phase 1 | Pending |
+| PIPE-02 | Phase 1 | Complete |
+| PIPE-03 | Phase 1 | Complete |
 | AUDIO-01 | Phase 3 | Pending |
 | AUDIO-02 | Phase 3 | Pending |
 | DOCS-01 | Phase 5 | Pending |

@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 1/2 plans executed
 Plans:
 - [x] 01-01-PLAN.md — Consolidate exceptions, fix config, create gpu utility, set up tests
-- [ ] 01-02-PLAN.md — Wire GPU fallback, guard CuPy imports, fix silent failures
+- [x] 01-02-PLAN.md — Wire GPU fallback, guard CuPy imports, fix silent failures
 
 ### Phase 2: CWT Pipeline Polish
 **Goal**: CWT output looks visually correct across all frequency bands and the fix is covered by a test
