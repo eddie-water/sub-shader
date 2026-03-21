@@ -17,10 +17,11 @@ This module orchestrates the audio processing pipeline:
 from subshader.utils.logging import logger_init, get_logger
 from subshader.utils.loop_timer import LoopTimer
 
-from subshader.config import get_default_config
+from subshader.config import get_default_config, ProcessingConfig
 
 from subshader.audio.audio_input import AudioInput
-from subshader.dsp.wavelet import CuWavelet
+from subshader.dsp.wavelet import CuWavelet, NpWavelet
+from subshader.utils.gpu import gpu_available
 from subshader.viz.plotter import ShaderPlot
 
 from subshader import exceptions
@@ -31,7 +32,7 @@ import time
 # LOGGING
 # =============================================================================
 
-logger_init(log_level="INFO", console_output=False, file_output=True)
+logger_init(log_level="INFO", console_output=True, file_output=True)
 log = get_logger(__name__)
 
 # =============================================================================
@@ -41,9 +42,6 @@ log = get_logger(__name__)
 # Load default configuration
 config = get_default_config()
 
-# Override default configs
-config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
-
 # =============================================================================
 # MAIN APP
 # =============================================================================
@@ -51,28 +49,41 @@ config.audio.file_path = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 class SubShader:
     """Main class that orchestrates the audio visualization pipeline."""
 
-    def __init__(self):
+    def __init__(self, config: ProcessingConfig):
         """Initialize all high level modules."""
         log.info("Initializing modules...")
 
-        # Audio Input - handles file reading and audio getter 
-        self.audio_input = AudioInput(path=config.audio.file_path, 
-                                      chunk_size=config.audio.chunk_size,
-                                      overlap_factor=config.audio.overlap_factor)
+        # Audio Input - handles file reading and audio getter
+        self.audio_input = AudioInput(
+            path=config.audio.file_path,
+            chunk_size=config.audio.chunk_size,
+            overlap_factor=config.audio.overlap_factor,
+        )
 
-        # Wavelet Object - performs the Continuous Wavelet Transform using CuPy
-        self.wavelet = CuWavelet(sample_rate=self.audio_input.get_sample_rate(), 
-                                 input_n=self.audio_input.get_chunk_size(),
-                                 config=config.wavelet)
+        # GPU Detection - select wavelet implementation (per D-07, D-08, D-09)
+        if gpu_available():
+            wavelet_class = CuWavelet
+        else:
+            log.warning("GPU unavailable, running on NumPy — expect slower performance")
+            wavelet_class = NpWavelet
+
+        # Wavelet Object - performs the Continuous Wavelet Transform
+        self.wavelet = wavelet_class(
+            sample_rate=self.audio_input.get_sample_rate(),
+            input_n=self.audio_input.get_chunk_size(),
+            config=config.wavelet,
+        )
 
         # Plotter Object - GPU-accelerated shader plot of output results
-        self.plotter = ShaderPlot(file_path=config.audio.file_path, 
-                                  frame_shape=self.wavelet.get_output_shape(),
-                                  config=config.viz)
+        self.plotter = ShaderPlot(
+            file_path=config.audio.file_path,
+            frame_shape=self.wavelet.get_output_shape(),
+            config=config.viz,
+        )
 
         # Loop timer - performance monitoring
         self.loop_timer = LoopTimer()
-        
+
         log.info("Initialization complete")
     
     def loop(self):
@@ -113,23 +124,26 @@ class SubShader:
         """Idempotent cleanup: safe to call any time, even after partial init."""
         log.info("Cleaning up module resources")
 
-        if self.plotter:
+        if hasattr(self, 'plotter') and self.plotter:
             try:
                 self.plotter.cleanup()
             finally:
                 self.plotter = None
-        if self.wavelet:
+
+        if hasattr(self, 'wavelet') and self.wavelet:
             try:
                 self.wavelet.cleanup()
             finally:
                 self.wavelet = None
-        if self.audio_input:
+
+        if hasattr(self, 'audio_input') and self.audio_input:
             try:
                 self.audio_input.cleanup()
             finally:
                 self.audio_input = None
 
-        self.loop_timer = None
+        if hasattr(self, 'loop_timer'):
+            self.loop_timer = None
 
         log.info("Cleanup complete")
 
@@ -139,7 +153,7 @@ class SubShader:
 
 def main():
     """Main entry point for the SubShader application."""
-    subshader = SubShader()
+    subshader = SubShader(config)
 
     try:
         subshader.loop()

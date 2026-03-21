@@ -21,8 +21,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Final, Optional, Literal
 
-import cupy as cp
-from cupyx.scipy import fft as cp_fft
+try:
+    import cupy as cp
+    from cupyx.scipy import fft as cp_fft
+    _CUPY_AVAILABLE = True
+except Exception:
+    _CUPY_AVAILABLE = False
+
 import numpy as np
 from numpy.fft import fft, ifft
 import pywt
@@ -569,6 +574,11 @@ class CuPyWavelet(AntsWavelet):
                  sample_rate: int,
                  input_n: int,
                  config: WaveletConfig = None) -> None:
+        if not _CUPY_AVAILABLE:
+            raise RuntimeError(
+                "CuPy is not available — cannot create CuPyWavelet. "
+                "Use NpWavelet for CPU-only execution."
+            )
         super().__init__(sample_rate, input_n, config)
 
         log.info(f"CPU→GPU: Uploading {self.num_wavelets} wavelets to GPU")
@@ -608,16 +618,12 @@ class CuPyWavelet(AntsWavelet):
 
     def cleanup(self) -> None:
         try:
-            if hasattr(self, 'tf_gpu') and self.output_tf_cpu is not None:
-                del self.output_tf_cpu
-                self.output_tf_cpu = None  # type: ignore[assignment]
-            if hasattr(self, 'wavelet_kernels_f') and self.wavelet_kernels_f is not None:
-                del self.wavelet_kernels_f
-                self.wavelet_kernels_f = []  # type: ignore[assignment]
+            if hasattr(self, 'kernel_f_bank_gpu') and self.kernel_f_bank_gpu is not None:
+                del self.kernel_f_bank_gpu
             cp.get_default_memory_pool().free_all_blocks()
             cp.get_default_pinned_memory_pool().free_all_blocks()
         except Exception as e:  # pragma: no cover - defensive cleanup
-            print(f"Warning: Error during GPU cleanup: {e}")
+            log.warning(f"Error during GPU cleanup: {e}")
     
 
 class NpWavelet(NumPyWavelet):
