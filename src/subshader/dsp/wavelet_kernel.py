@@ -58,6 +58,12 @@ class WaveletKernel():
         self.gauss_t = self.gauss.gauss_t 
         self.kernel_t: np.ndarray[np.complex64] = self.sin_t * self.gauss_t
 
+        # Normalize to unit area: equalizes CWT response magnitude across frequencies.
+        # Without this, Gaussian width = num_fwhm_cycles / f, so L1 norm is proportional to 1/f.
+        # A 100 Hz kernel integrates ~100x more energy than a 10 kHz kernel,
+        # producing disproportionately bright low-frequency bands in the output.
+        self.kernel_t /= np.sum(np.abs(self.kernel_t))
+
         # Convolution length N
         self.conv_n: int = int(input_n + self.time_support_n - 1)
 

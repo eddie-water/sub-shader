@@ -184,10 +184,11 @@ class Wavelet(ABC):
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
         """
         Scale-Dependent Normalization to account for the energy bias introduced
-        by scaling each wavelet. At higher scales (lower frequencies), the 
-        wavelet physically gets wider so naturally it collects more energy. To 
-        compensate for that, we reduce the energy of the cwt's result by square 
-        root of the scale where s ≈ 1/f -> 1/sqrt(s) ≈ sqrt(f) 
+        by scaling each wavelet. At higher scales (lower frequencies), the
+        wavelet physically gets wider so naturally it collects more energy.
+
+        Subclasses may implement this as a no-op if kernel normalization handles
+        the energy bias at construction time (e.g. WaveletKernel L1 normalization).
 
         Args:
             cwt_coefs: Complex CWT coefficients.
@@ -423,13 +424,9 @@ class AntsWavelet(Wavelet):
 
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
         """
-        Scale-Dependent Normalization to account for the energy bias introduced
-        by scaling each wavelet. At higher scales (lower frequencies), the 
-        wavelet physically gets wider so naturally it collects more energy. To 
-        compensate for that, we reduce the energy of the cwt's result by square 
-        root of the scale where s ≈ 1/f -> 1/sqrt(s) ≈ sqrt(f) 
-        
-        TODO-37 explain the square root is because power is mag^2
+        Kernel normalization in WaveletKernel.__init__ corrects the energy bias
+        at the source. This method is retained for interface compatibility but is
+        now a no-op.
 
         Args:
             cwt_coefs: Complex CWT coefficients.
@@ -437,7 +434,7 @@ class AntsWavelet(Wavelet):
         Returns:
             Scale-normalized complex CWT coefficients.
         """
-        return cwt_coefs * np.sqrt(self.freqs[:, None])
+        return cwt_coefs
 
     def apply_coi_mask(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """

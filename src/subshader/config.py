@@ -102,10 +102,7 @@ class WaveletConfig:
     num_cycles: int = 6
     num_fwhm_cycles: int = 3
 
-    # Result of CWT is either its magnitude ("mag") or power ("pow")
-    cwt_out_type: str = "pow"
-
-    # Downsampling parameters - default for real-time rendering, reduce for better performance 
+    # Downsampling parameters - default for real-time rendering, reduce for better performance
     target_width: int = 256
     
     def validate(self) -> List[str]:
