@@ -52,10 +52,12 @@ class TestRenderGraphic:
 
         # Create a minimal renderer with mocked components
         renderer = MagicMock(spec=Renderer)
+        renderer.ctx = MagicMock()
         renderer._check_gl_error = MagicMock(return_value=True)
         renderer.texture = MagicMock()
         renderer.vao = MagicMock()
         renderer.vao.render = MagicMock(side_effect=RuntimeError("GPU error"))
+        renderer.TEXTURE_SLOT = 0
 
         # Bind the real render_graphic method
         renderer.render_graphic = Renderer.render_graphic.__get__(renderer)

@@ -23,6 +23,7 @@ import pyqtgraph as pg
 
 from subshader.utils.logging import get_logger
 from subshader.config import VisualizationConfig
+from subshader.exceptions import WindowCloseException
 
 from .shaders import get_vertex_shader_source, get_fragment_shader_source
 from .plot_normalizer import IntensityTracker
@@ -32,17 +33,6 @@ from .plot_normalizer import IntensityTracker
 # =============================================================================
 
 log = get_logger(__name__)
-
-# =============================================================================
-# EXCEPTIONS
-# =============================================================================
-
-class WindowCloseException(Exception):
-    """Raised when the window is closed."""
-    def __init__(self, message="Window closed"):
-        super().__init__(message)
-        self.log_level = "warning"
-        self.log_message = f"Graceful exit: {message}"
 
 # =============================================================================
 # PLOTTER CLASSES
@@ -400,39 +390,37 @@ class Renderer:
 
         return self.texture
 
-    def _validate_texture_data(self, texture_data: np.ndarray) -> bool:
+    def _validate_texture_data(self, texture_data: np.ndarray) -> None:
         """
         Validate data before uploading it to the texture.
+
+        Raises:
+            ValueError: If texture data is invalid.
         """
         if texture_data is None:
-            log.error("Texture data is None")
-            return
+            raise ValueError("Texture data is None — cannot upload to GPU texture")
 
         if not hasattr(texture_data, 'shape'):
-            log.error(f"Texture data has no shape attribute: {type(texture_data)}")
-            return
+            raise ValueError(f"Texture data has no shape attribute: {type(texture_data)}")
 
         if len(texture_data.shape) != 2:
-            log.error(f"Expected 2D texture data, got shape: {texture_data.shape}")
-            return
+            raise ValueError(f"Expected 2D texture data, got shape: {texture_data.shape}")
 
         if np.any(np.isnan(texture_data)):
-            log.error("Texture data contains NaN values")
-            return
+            raise ValueError("Texture data contains NaN values")
 
         if np.any(np.isinf(texture_data)):
-            log.error("Texture data contains infinite values")
-            return
+            raise ValueError("Texture data contains infinite values")
 
         # Validate data size matches texture size
         texture_bytes = texture_data.astype('f4').tobytes()
-        expected_bytes = self.texture.size[0] * self.texture.size[1] * 4  # 4 bytes per float32
+        expected_bytes = self.texture.size[0] * self.texture.size[1] * 4
         if len(texture_bytes) != expected_bytes:
-            log.error(f"Data size mismatch: got {len(texture_bytes)} bytes, expected {expected_bytes} bytes")
-            log.error(f"Texture size: {self.texture.size}, Data shape: {texture_data.shape}")
-            return
-
-        return True
+            raise ValueError(
+                f"Data size mismatch: got {len(texture_bytes)} bytes, "
+                f"expected {expected_bytes} bytes. "
+                f"Texture size: {self.texture.size}, Data shape: {texture_data.shape}"
+            )
 
     def _check_gl_error(self, ctx: moderngl.Context, operation: str) -> bool:
         """
@@ -458,12 +446,11 @@ class Renderer:
         Args:
             texture_data (np.ndarray): 2D array of data to upload to texture.
         """
-        # Validate data before upload
-        if not self._validate_texture_data(texture_data):
-            return
+        # Validate data before upload (raises ValueError on invalid data)
+        self._validate_texture_data(texture_data)
 
         if not self._check_gl_error(self.ctx, "before texture write"):
-            return
+            raise RuntimeError("OpenGL error before texture write")
 
         # Convert to bytes and upload to texture
         texture_bytes = texture_data.astype('f4').tobytes()
@@ -472,9 +459,8 @@ class Renderer:
         log.debug(f"Texture size: {self.texture.size}, Expected data size: {self.texture.size[0] * self.texture.size[1] * 4} bytes")
         log.debug(f"CPU→GPU: Uploaded texture data ({texture_data.shape}, f4, {len(texture_bytes)} bytes)")
 
-        # Check for OpenGL errors after texture write
         if not self._check_gl_error(self.ctx, "after texture write"):
-            return
+            raise RuntimeError("OpenGL error after texture write")
 
         log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
 
@@ -485,21 +471,22 @@ class Renderer:
         """
         try:
             if not self._check_gl_error(self.ctx, "before rendering"):
-                return
+                raise RuntimeError("OpenGL error before rendering")
 
             # Ensure texture is bound
             self.texture.use(location=self.TEXTURE_SLOT)
 
             if not self._check_gl_error(self.ctx, "after texture binding"):
-                return
+                raise RuntimeError("OpenGL error after texture binding")
 
             self.vao.render(moderngl.TRIANGLE_STRIP)
 
             if not self._check_gl_error(self.ctx, "after rendering"):
-                return
+                raise RuntimeError("OpenGL error after rendering")
 
         except Exception as e:
             log.error(f"Render exception: {e}")
+            raise
 
     def set_intensity_max(self, intensity_max: float) -> None:
         """
