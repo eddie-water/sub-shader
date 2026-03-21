@@ -21,11 +21,12 @@ The visualization accurately tracks audio input in real time with minimal latenc
 - ✓ Wavelet abstraction with multiple backend implementations — existing
 - ✓ Audio file input with chunked reading and overlap — existing
 - ✓ Scale normalization, edge artifact removal, downsampling — existing
+- ✓ Codebase hardened — no silent failures, GPU fallback in DSP init — Phase 1
+- ✓ GPU availability checked at init — falls back to NumPy with clear message — Phase 1
 
 ### Active
 
 - [ ] File-based audio playback synced to CWT visualization with <100ms perceived lag
-- [ ] Codebase hardened — no silent failures, GPU fallback in DSP init
 - [ ] Top-level README with embedded benchmark figures and visual comparisons
 - [ ] Module-level READMEs for DSP, rendering, and audio capture modules
 - [ ] DSP documentation that is pedagogical, visual, and accessible to non-specialists
@@ -90,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-21 after roadmap creation*
+*Last updated: 2026-03-21 after Phase 1 completion*
