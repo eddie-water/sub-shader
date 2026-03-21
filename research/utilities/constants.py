@@ -14,7 +14,7 @@ BENCHMARKS_STUBS_DIR = "assets/images/benchmarks/stubs"
 
 AUDIO_DEFAULT = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 AUDIO_CHIRP = "assets/audio/daw/chirp_beat.wav"
-AUDIO_POLYPHONIC = "assets/audio/daw/polyphonic_audio_example.wav"
+AUDIO_POLYPHONIC = "assets/audio/daw/overlapping_A3_A4_A5.wav"
 AUDIO_MUSICAL = "assets/audio/daw/musical_audio_example.wav"
 
 # =============================================================================
