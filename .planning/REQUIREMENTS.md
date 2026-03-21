@@ -9,7 +9,7 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Pipeline Fixes
 
-- [ ] **PIPE-01**: CWT normalization produces consistent brightness across frequency bands (investigate low-frequency brightness bias)
+- [x] **PIPE-01**: CWT normalization produces consistent brightness across frequency bands (investigate low-frequency brightness bias)
 - [x] **PIPE-02**: GPU fallback lives in DSP block instantiation, not benchmark code — auto-detects GPU failure and falls back to NumPy
 - [x] **PIPE-03**: GPU availability checked at init — if unavailable, run on NumPy path for the session
 
@@ -30,7 +30,7 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 ### Code Quality
 
 - [x] **QUAL-01**: Clean, readable code — descriptive function names, well-factored helpers, minimal comments
-- [ ] **QUAL-02**: Pytest unit tests built incrementally as issues surface (not comprehensive upfront suite)
+- [x] **QUAL-02**: Pytest unit tests built incrementally as issues surface (not comprehensive upfront suite)
 - [x] **QUAL-03**: Existing readability maintained — no unnecessary refactoring
 
 ### Install Experience
@@ -81,7 +81,7 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 2 | Pending |
+| PIPE-01 | Phase 2 | Complete |
 | PIPE-02 | Phase 1 | Complete |
 | PIPE-03 | Phase 1 | Complete |
 | AUDIO-01 | Phase 3 | Pending |
@@ -93,7 +93,7 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | DOCS-05 | Phase 5 | Pending |
 | DOCS-06 | Phase 5 | Pending |
 | QUAL-01 | Phase 1 | Complete |
-| QUAL-02 | Phase 2 | Pending |
+| QUAL-02 | Phase 2 | Complete |
 | QUAL-03 | Phase 1 | Complete |
 | INST-01 | Phase 4 | Pending |
 | INST-02 | Phase 4 | Pending |

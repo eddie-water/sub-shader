@@ -42,9 +42,9 @@ Plans:
   1. Low-frequency bands no longer appear disproportionately brighter than high-frequency bands on the same audio input
   2. A pytest test exists that asserts normalized CWT output stays within expected brightness bounds — the first test in the incremental suite
   3. The test can be run with `pytest` from the project root without manual setup
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 02-01-PLAN.md — TDD: kernel L1 normalization fix + brightness bias tests + dead code cleanup
+- [x] 02-01-PLAN.md — TDD: kernel L1 normalization fix + brightness bias tests + dead code cleanup
 - [ ] 02-02-PLAN.md — Regenerate benchmark figures + visual verification checkpoint
 
 ### Phase 3: Audio-Visual Sync
@@ -87,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Codebase Hardening | 1/2 | In Progress|  |
-| 2. CWT Pipeline Polish | 0/2 | Not started | - |
+| 2. CWT Pipeline Polish | 1/2 | In Progress|  |
 | 3. Audio-Visual Sync | 0/TBD | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |
 | 5. Documentation | 0/TBD | Not started | - |
