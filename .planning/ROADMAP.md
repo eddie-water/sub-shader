@@ -29,9 +29,9 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. GPU unavailability at startup is detected, logged explicitly, and the session continues on NumPy — not silently degraded
   3. GPU fallback lives in DSP block instantiation, not in benchmark code — you can delete the benchmark without breaking fallback
   4. Code in the changed files uses descriptive function names and well-factored helpers — no new comment litter or spaghetti added
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 01-01-PLAN.md — Consolidate exceptions, fix config, create gpu utility, set up tests
+- [x] 01-01-PLAN.md — Consolidate exceptions, fix config, create gpu utility, set up tests
 - [ ] 01-02-PLAN.md — Wire GPU fallback, guard CuPy imports, fix silent failures
 
 ### Phase 2: CWT Pipeline Polish
@@ -83,7 +83,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Codebase Hardening | 0/2 | Planning complete | - |
+| 1. Codebase Hardening | 1/2 | In Progress|  |
 | 2. CWT Pipeline Polish | 0/TBD | Not started | - |
 | 3. Audio-Visual Sync | 0/TBD | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |

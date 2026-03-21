@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: unknown
+stopped_at: Completed 01-codebase-hardening-01-01-PLAN.md
+last_updated: "2026-03-21T15:18:53.159Z"
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 1
+---
+
 # Project State
 
 ## Project Reference
@@ -5,20 +19,17 @@
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** The visualization accurately tracks audio input in real time with minimal latency
-**Current focus:** Phase 1 — Codebase Hardening
+**Current focus:** Phase 01 — codebase-hardening
 
 ## Current Position
 
-Phase: 1 of 5 (Codebase Hardening)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-21 — Roadmap created, ready to plan Phase 1
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 01 (codebase-hardening) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: -
 - Total execution time: 0 hours
@@ -30,10 +41,12 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 **Recent Trend:**
+
 - Last 5 plans: -
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-codebase-hardening P01 | 2 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -46,6 +59,9 @@ Recent decisions affecting current work:
 - [Init]: File-based audio is fine for v1, live capture deferred to v2
 - [Init]: Documentation scaffolded by Claude, authored by user in their own voice
 - [Init]: GPU fallback belongs in DSP block instantiation, not benchmark code
+- [Phase 01-codebase-hardening]: RuntimeError removed from GRACEFUL_EXCEPTIONS — was masking real errors; SubShaderException + KeyboardInterrupt is the correct scope
+- [Phase 01-codebase-hardening]: gpu_available() uses lazy cupy import inside try/except — safe on CPU-only machines, never import-time crash
+- [Phase 01-codebase-hardening]: AudioConfig default path fixed to assets/audio/daw/a2a3_a4_minor_scale.wav — __main__.py override was compensating for wrong default
 
 ### Pending Todos
 
@@ -58,6 +74,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21
-Stopped at: Roadmap created, STATE.md initialized — ready to plan Phase 1
+Last session: 2026-03-21T15:18:53.157Z
+Stopped at: Completed 01-codebase-hardening-01-01-PLAN.md
 Resume file: None
