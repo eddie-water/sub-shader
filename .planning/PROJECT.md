@@ -23,6 +23,8 @@ The visualization accurately tracks audio input in real time with minimal latenc
 - ✓ Scale normalization, edge artifact removal, downsampling — existing
 - ✓ Codebase hardened — no silent failures, GPU fallback in DSP init — Phase 1
 - ✓ GPU availability checked at init — falls back to NumPy with clear message — Phase 1
+- ✓ CWT brightness bias fixed — L1 kernel normalization equalizes frequency bands — Phase 2
+- ✓ CWT normalization test suite — 6 pytest tests covering kernel norm, magnitude ratio, no-op — Phase 2
 
 ### Active
 
@@ -30,7 +32,6 @@ The visualization accurately tracks audio input in real time with minimal latenc
 - [ ] Top-level README with embedded benchmark figures and visual comparisons
 - [ ] Module-level READMEs for DSP, rendering, and audio capture modules
 - [ ] DSP documentation that is pedagogical, visual, and accessible to non-specialists
-- [ ] GPU availability checked at init — run on NumPy if unavailable
 - [ ] Unit tests (pytest) built incrementally as issues are discovered
 - [ ] Clean, readable code — descriptive function names, helpers over spaghetti, minimal comments
 - [ ] Clone → install → run works without manual configuration
@@ -91,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-21 after Phase 1 completion*
+*Last updated: 2026-03-21 after Phase 2 completion*
