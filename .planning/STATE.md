@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-cwt-pipeline-polish-02-01-PLAN.md
-last_updated: "2026-03-21T22:54:41.810Z"
+stopped_at: Completed 02-cwt-pipeline-polish-02-02-PLAN.md
+last_updated: "2026-03-21T23:07:53.147Z"
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -49,6 +49,7 @@ Plan: 2 of 2
 | Phase 01-codebase-hardening P01 | 2 | 2 tasks | 10 files |
 | Phase 01-codebase-hardening P02 | 4 | 2 tasks | 5 files |
 | Phase 02-cwt-pipeline-polish P01 | 8 | 2 tasks | 5 files |
+| Phase 02-cwt-pipeline-polish P02 | 11 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - [Phase 02-cwt-pipeline-polish]: L1 kernel normalization applied at WaveletKernel construction — bias is structural so fixing at source is cleaner than post-hoc scale correction
 - [Phase 02-cwt-pipeline-polish]: normalize_by_scale retained as no-op for interface compatibility with PyWavelet and future backends
 - [Phase 02-cwt-pipeline-polish]: cwt_out_type field removed from WaveletConfig — confirmed zero references outside config.py
+- [Phase 02-cwt-pipeline-polish]: AUDIO_POLYPHONIC constant updated to overlapping_A3_A4_A5.wav — polyphonic_audio_example.wav was empty 0-frame placeholder
+- [Phase 02-cwt-pipeline-polish]: No intensity tracker tuning needed post-normalization — color range looks reasonable in regenerated figures
 
 ### Pending Todos
 
@@ -81,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T22:54:41.808Z
-Stopped at: Completed 02-cwt-pipeline-polish-02-01-PLAN.md
+Last session: 2026-03-21T23:07:53.144Z
+Stopped at: Completed 02-cwt-pipeline-polish-02-02-PLAN.md
 Resume file: None

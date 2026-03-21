@@ -13,7 +13,7 @@ The pipeline already works. This milestone gets it from "works on my machine wit
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Codebase Hardening** - Fix silent failure modes and relocate GPU fallback to the right place
-- [ ] **Phase 2: CWT Pipeline Polish** - Resolve frequency-band brightness bias and establish incremental test pattern
+- [x] **Phase 2: CWT Pipeline Polish** - Resolve frequency-band brightness bias and establish incremental test pattern (completed 2026-03-21)
 - [ ] **Phase 3: Audio-Visual Sync** - Wire file-based audio playback to CWT rendering with sub-100ms perceived lag
 - [ ] **Phase 4: Install Experience** - Make clone-install-run work without manual configuration or surprises
 - [ ] **Phase 5: Documentation** - Four READMEs scaffolded by Claude, authored by user in their own voice
@@ -42,10 +42,10 @@ Plans:
   1. Low-frequency bands no longer appear disproportionately brighter than high-frequency bands on the same audio input
   2. A pytest test exists that asserts normalized CWT output stays within expected brightness bounds — the first test in the incremental suite
   3. The test can be run with `pytest` from the project root without manual setup
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 02-01-PLAN.md — TDD: kernel L1 normalization fix + brightness bias tests + dead code cleanup
-- [ ] 02-02-PLAN.md — Regenerate benchmark figures + visual verification checkpoint
+- [x] 02-02-PLAN.md — Regenerate benchmark figures + visual verification checkpoint
 
 ### Phase 3: Audio-Visual Sync
 **Goal**: Users can play an audio file and watch the CWT visualization track it in real time with no perceptible drift
@@ -87,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Codebase Hardening | 1/2 | In Progress|  |
-| 2. CWT Pipeline Polish | 1/2 | In Progress|  |
+| 2. CWT Pipeline Polish | 2/2 | Complete   | 2026-03-21 |
 | 3. Audio-Visual Sync | 0/TBD | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |
 | 5. Documentation | 0/TBD | Not started | - |
