@@ -3,7 +3,6 @@ from typing import Optional, Final
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.fft import fft
-import cupy as cp
 
 from subshader.dsp.gaussian import Gaussian
 from subshader.utils.logging import get_logger

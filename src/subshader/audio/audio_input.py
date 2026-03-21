@@ -19,31 +19,13 @@ import numpy as np
 import soundfile as sf
 
 from subshader.utils.logging import get_logger
+from subshader.exceptions import AudioFileNotFoundError, EndOfAudioException
 
 # =============================================================================
 # LOGGING
 # =============================================================================
 
 log = get_logger(__name__)
-
-# =============================================================================
-# EXCEPTIONS
-# =============================================================================
-
-class AudioFileNotFoundError(Exception):
-    """Raised when the audio file cannot be found."""
-    def __init__(self, message):
-        super().__init__(message)
-        self.log_level = "error"
-        self.log_message = f"Audio file error: {message}"
-
-
-class EndOfAudioException(Exception):
-    """Raised when the audio file has been completely processed."""
-    def __init__(self, message="Audio file processing complete"):
-        super().__init__(message)
-        self.log_level = "warning"
-        self.log_message = f"Graceful exit: {message}"
 
 # =============================================================================
 # AUDIO INPUT CLASS

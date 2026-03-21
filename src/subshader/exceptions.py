@@ -34,7 +34,6 @@ class AudioFileNotFoundError(SubShaderException):
 GRACEFUL_EXCEPTIONS = (
     SubShaderException,
     KeyboardInterrupt,
-    RuntimeError,
 )
 
 
@@ -48,8 +47,6 @@ class ExceptionReporter:
             log.warning(f"Keyboard interrupt received {type(e).__name__}: {e}")
         elif isinstance(e, SubShaderException):
             getattr(log, e.log_level)(e.message)
-        elif isinstance(e, RuntimeError):
-            log.error(f"Runtime error: {type(e).__name__}: {e}")
         else:
             log.error(f"Unexpected error: {type(e).__name__}: {e}")
 

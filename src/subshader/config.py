@@ -56,7 +56,7 @@ class AudioConfig:
     """Configuration for audio processing."""
 
     # Audio File parameters
-    file_path: str = "assets/audio/songs/beltran_sc_rip.wav"
+    file_path: str = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 
     # Number of samples to grab from the audio file at a time
     chunk_size: int = 1 << 14 # 16384

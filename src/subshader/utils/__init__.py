@@ -8,6 +8,7 @@ performance monitoring, logging configuration, and other helper functionality.
 from .logging import logger_init, get_logger, set_log_level, get_module_logger
 from .os_env_setup import env_init
 from .loop_timer import LoopTimer
+from .gpu import gpu_available
 
 __all__ = [
     'env_init',
@@ -15,5 +16,6 @@ __all__ = [
     'logger_init',
     'get_logger',
     'set_log_level',
-    'get_module_logger'
-] 
+    'get_module_logger',
+    'gpu_available',
+]
