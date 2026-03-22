@@ -58,7 +58,7 @@ Plans:
 **Plans:** 2 plans
 Plans:
 - [x] 03-01-PLAN.md — Create AudioPlayer class with sounddevice, add dependency, unit tests
-- [ ] 03-02-PLAN.md — Wire AudioPlayer into orchestrator with CLI arg, sync loop, and human verification
+- [x] 03-02-PLAN.md — Wire AudioPlayer into orchestrator with CLI arg, sync loop, and human verification
 
 ### Phase 4: Install Experience
 **Goal**: A developer with Python and a compatible GPU can clone the repo, install, and run the visualization without reading source code
