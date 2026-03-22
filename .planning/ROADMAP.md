@@ -55,7 +55,10 @@ Plans:
   1. Running the tool with an audio file argument plays the audio and renders CWT frames simultaneously — not sequentially
   2. Transient events in the audio (a drum hit, a sharp consonant) appear in the visualization within ~100ms of being heard
   3. The visualization does not drift ahead or behind the audio over a 60-second playback — sync holds for the duration
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 03-01-PLAN.md — Create AudioPlayer class with sounddevice, add dependency, unit tests
+- [ ] 03-02-PLAN.md — Wire AudioPlayer into orchestrator with CLI arg, sync loop, and human verification
 
 ### Phase 4: Install Experience
 **Goal**: A developer with Python and a compatible GPU can clone the repo, install, and run the visualization without reading source code
@@ -88,6 +91,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Codebase Hardening | 1/2 | In Progress|  |
 | 2. CWT Pipeline Polish | 2/2 | Complete   | 2026-03-21 |
-| 3. Audio-Visual Sync | 0/TBD | Not started | - |
+| 3. Audio-Visual Sync | 0/2 | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |
 | 5. Documentation | 0/TBD | Not started | - |
