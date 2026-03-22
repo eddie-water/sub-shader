@@ -8,11 +8,12 @@ version = "0.1.0"
 description = "Real-Time Audio Vizualizer"
 authors = [{ name = "Eddie Devlin" }]
 dependencies = [
-    "numpy", 
-    "cupy", 
-    "pywavelets", 
-    "soundfile", 
-    "PyOpenGL", 
+    "numpy",
+    "cupy",
+    "pywavelets",
+    "soundfile",
+    "sounddevice",
+    "PyOpenGL",
     "glfw",
     "pyqtgraph",
     "PyQt5",
