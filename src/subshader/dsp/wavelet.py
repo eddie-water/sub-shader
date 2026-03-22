@@ -57,7 +57,8 @@ class Wavelet(ABC):
     def __init__(self,
                  sample_rate: np.float64,
                  input_n: int,
-                 config: WaveletConfig) -> None:
+                 config: WaveletConfig,
+                 overlap_factor: float = 0.0) -> None:
         """
         Wavelet base class that all other wavelet classes are derived from.
         Generates a list of frequencies that follows the chromatic scale that
@@ -67,6 +68,10 @@ class Wavelet(ABC):
             sample_rate: The rate the input data was sampled in Hz.
             input_n: The length of the input data (samples).
             config: Configuration object with wavelet parameters.
+            overlap_factor: Fraction of consecutive audio chunks that overlap
+                (0.0 = no overlap, 0.75 = 75% overlap). When > 0, cwt() will
+                trim output to the non-overlapping hop-center before downsampling
+                to avoid redundant wing repetition across consecutive frames.
         """
         self.config: WaveletConfig = config
 
@@ -86,6 +91,9 @@ class Wavelet(ABC):
                                                                             self.config.notes_per_octave).astype(np.float64, copy=False)
 
         self.num_freqs: int = int(len(self.freqs))
+
+        # Overlap factor for hop-center extraction
+        self.overlap_factor: float = float(overlap_factor)
 
         # Input and output dimensions
         self.input_n: int = int(input_n)
@@ -159,8 +167,11 @@ class Wavelet(ABC):
         # Keep only the reliable region to avoid edge effects
         reliable_coefs = self.discard_unreliable_coefs(mag_coefs)
 
+        # Trim to hop-center to remove redundant overlapping wings
+        hop_center_coefs = self.extract_hop_center(reliable_coefs)
+
         # Downsample to target width
-        downsampled_coefs = self.downsample(reliable_coefs, self.output_n)
+        downsampled_coefs = self.downsample(hop_center_coefs, self.output_n)
 
         return downsampled_coefs
 
@@ -214,7 +225,7 @@ class Wavelet(ABC):
     def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
         Discards the unreliable coefficients outside the reliable region of the
-        CWT output. 
+        CWT output.
 
         Args:
             coefs: Result time-frequency coefficients from the CWT.
@@ -223,7 +234,34 @@ class Wavelet(ABC):
             The reliable time-frequency coefficients.
         """
         raise NotImplementedError
-    
+
+    def extract_hop_center(self, reliable_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
+        """
+        Extract the hop-center portion of reliable CWT coefficients.
+
+        When overlap_factor > 0, consecutive chunks share overlapping samples.
+        Only the center portion corresponding to the hop (non-overlapping new data)
+        contains unique time content. This method extracts that center slice.
+
+        Args:
+            reliable_coefs: CWT coefficients after discard_unreliable_coefs,
+                           shape (num_freqs, reliable_width).
+
+        Returns:
+            Center slice of shape (num_freqs, center_width) where center_width
+            is proportional to (1 - overlap_factor) * reliable_width.
+            Returns input unchanged if overlap_factor is 0.
+        """
+        if self.overlap_factor <= 0.0:
+            return reliable_coefs
+
+        reliable_width = reliable_coefs.shape[1]
+        hop_fraction = 1.0 - self.overlap_factor
+        center_width = max(1, int(reliable_width * hop_fraction))
+        center_start = (reliable_width - center_width) // 2
+
+        return reliable_coefs[:, center_start:center_start + center_width]
+
     def downsample(self,
                    coefs: np.ndarray[np.floating],
                    target_width: Optional[int] = None) -> np.ndarray[np.floating]:
@@ -275,7 +313,8 @@ class PyWavelet(Wavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: WaveletConfig) -> None:
+                 config: WaveletConfig,
+                 overlap_factor: float = 0.0) -> None:
         """
         The PyWavelet implementation of the CWT.
 
@@ -283,8 +322,9 @@ class PyWavelet(Wavelet):
             sample_rate: The rate the input data was sampled in Hz.
             input_n: The length of the input data.
             config: Configuration object with wavelet parameters.
+            overlap_factor: Fraction of consecutive chunks that overlap (see Wavelet).
         """
-        super().__init__(sample_rate, input_n, config)
+        super().__init__(sample_rate, input_n, config, overlap_factor=overlap_factor)
 
         # Wavelet info TODO ISSUE-36 why 1.5-1.0?
         self.wavelet_name: str = "cmor1.5-1.0"
@@ -340,9 +380,10 @@ class AntsWavelet(Wavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: WaveletConfig = None) -> None:
+                 config: WaveletConfig = None,
+                 overlap_factor: float = 0.0) -> None:
         """
-        CWT implementation from Analyzing Neural Time Series (ANTS) by Mike X 
+        CWT implementation from Analyzing Neural Time Series (ANTS) by Mike X
         Cohen translated from Matlab. According to the list of frequencies, we
         generate a bank of wavelet kernels on init. Then determine the output's
         reliable region based on the wavelet with the widest time support. All
@@ -355,8 +396,9 @@ class AntsWavelet(Wavelet):
             num_cycles: Number of carrier cycles per wavelet.
             fwhm_cycles: Gaussian FWHM width in cycles.
             config: Configuration object with wavelet parameters.
+            overlap_factor: Fraction of consecutive chunks that overlap (see Wavelet).
         """
-        super().__init__(sample_rate, input_n, config)
+        super().__init__(sample_rate, input_n, config, overlap_factor=overlap_factor)
 
         # Generate the each wavelet
         self.wavelets: list[WaveletKernel] = [WaveletKernel(f=f, 
@@ -539,9 +581,10 @@ class NumPyWavelet(AntsWavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: WaveletConfig = None) -> None:
+                 config: WaveletConfig = None,
+                 overlap_factor: float = 0.0) -> None:
         """NumPy-based CWT with true scale-dependent time support."""
-        super().__init__(sample_rate, input_n, config)
+        super().__init__(sample_rate, input_n, config, overlap_factor=overlap_factor)
 
     def class_specific_cwt(self, input_t: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
@@ -570,13 +613,14 @@ class CuPyWavelet(AntsWavelet):
     def __init__(self,
                  sample_rate: int,
                  input_n: int,
-                 config: WaveletConfig = None) -> None:
+                 config: WaveletConfig = None,
+                 overlap_factor: float = 0.0) -> None:
         if not _CUPY_AVAILABLE:
             raise RuntimeError(
                 "CuPy is not available — cannot create CuPyWavelet. "
                 "Use NpWavelet for CPU-only execution."
             )
-        super().__init__(sample_rate, input_n, config)
+        super().__init__(sample_rate, input_n, config, overlap_factor=overlap_factor)
 
         log.info(f"CPU→GPU: Uploading {self.num_wavelets} wavelets to GPU")
 

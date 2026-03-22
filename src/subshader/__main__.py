@@ -72,16 +72,17 @@ class SubShader:
 
         # GPU Detection - select wavelet implementation (per D-07, D-08, D-09)
         if gpu_available():
-            wavelet_class = CuWavelet
+            wavelet = CuWavelet
         else:
             log.warning("GPU unavailable, running on NumPy — expect slower performance")
-            wavelet_class = NpWavelet
+            wavelet = NpWavelet
 
         # Wavelet Object - performs the Continuous Wavelet Transform
-        self.wavelet = wavelet_class(
+        self.wavelet = wavelet(
             sample_rate=self.audio_input.get_sample_rate(),
             input_n=self.audio_input.get_chunk_size(),
             config=config.wavelet,
+            overlap_factor=config.audio.overlap_factor,
         )
 
         # Plotter Object - GPU-accelerated shader plot of output results
