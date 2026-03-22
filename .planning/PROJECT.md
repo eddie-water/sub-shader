@@ -25,10 +25,9 @@ The visualization accurately tracks audio input in real time with minimal latenc
 - ✓ GPU availability checked at init — falls back to NumPy with clear message — Phase 1
 - ✓ CWT brightness bias fixed — L1 kernel normalization equalizes frequency bands — Phase 2
 - ✓ CWT normalization test suite — 6 pytest tests covering kernel norm, magnitude ratio, no-op — Phase 2
+- ✓ File-based audio playback synced to CWT visualization with <100ms perceived lag — Phase 3 (human verification pending)
 
 ### Active
-
-- [ ] File-based audio playback synced to CWT visualization with <100ms perceived lag
 - [ ] Top-level README with embedded benchmark figures and visual comparisons
 - [ ] Module-level READMEs for DSP, rendering, and audio capture modules
 - [ ] DSP documentation that is pedagogical, visual, and accessible to non-specialists
@@ -70,7 +69,7 @@ The visualization accurately tracks audio input in real time with minimal latenc
 |----------|-----------|---------|
 | Demo-ready locally before hosted demo | Get it working and documented first; hosting is a separate milestone | — Pending |
 | GPU check at init only, no mid-session switching | Simpler; just pick CPU or GPU path and run | — Pending |
-| File-based audio for v1, live capture for v2 | Sync is the priority, not input source | — Pending |
+| File-based audio for v1, live capture for v2 | Sync is the priority, not input source | — Validated Phase 3 |
 | Documentation scaffolded by Claude, authored by user | User wants their voice in docs; Claude helps structure and pick examples | — Pending |
 | Tests built incrementally, not as dedicated phase | User wants to focus on READMEs, not babysit test infrastructure | — Pending |
 
@@ -92,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-21 after Phase 2 completion*
+*Last updated: 2026-03-21 after Phase 3 completion*
