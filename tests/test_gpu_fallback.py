@@ -1,6 +1,7 @@
 """Tests for GPU detection and fallback behavior (PIPE-02, PIPE-03)."""
 
 import pytest
+import numpy as np
 from unittest.mock import patch, MagicMock
 
 
@@ -22,18 +23,26 @@ class TestGpuAvailable:
             importlib.reload(gpu)
 
 
+def _make_mock_audio_input(sample_rate: float = 44100.0, chunk_size: int = 16384) -> MagicMock:
+    """Build a mock AudioInput that returns a real numpy array from get_entire_audio()."""
+    mock_audio_instance = MagicMock()
+    mock_audio_instance.get_sample_rate.return_value = sample_rate
+    mock_audio_instance.get_chunk_size.return_value = chunk_size
+    # get_entire_audio must return a real array so AudioPlayer can inspect .ndim / .size
+    mock_audio_instance.get_entire_audio.return_value = np.zeros(chunk_size, dtype=np.float32)
+    return mock_audio_instance
+
+
 class TestGpuFallback:
     """Test that SubShader selects correct wavelet class based on GPU availability."""
 
     @patch('subshader.__main__.gpu_available', return_value=True)
+    @patch('subshader.__main__.AudioPlayer')
     @patch('subshader.__main__.ShaderPlot')
     @patch('subshader.__main__.AudioInput')
-    def test_gpu_available_selects_cu_wavelet(self, mock_audio, mock_plotter, mock_gpu):
+    def test_gpu_available_selects_cu_wavelet(self, mock_audio, mock_plotter, mock_player, mock_gpu):
         """When GPU is available, CuWavelet should be selected."""
-        mock_audio_instance = MagicMock()
-        mock_audio_instance.get_sample_rate.return_value = 44100.0
-        mock_audio_instance.get_chunk_size.return_value = 16384
-        mock_audio.return_value = mock_audio_instance
+        mock_audio.return_value = _make_mock_audio_input()
 
         mock_wavelet = MagicMock()
         mock_wavelet.get_output_shape.return_value = (120, 256)
@@ -50,14 +59,12 @@ class TestGpuFallback:
                 sub.cleanup()
 
     @patch('subshader.__main__.gpu_available', return_value=False)
+    @patch('subshader.__main__.AudioPlayer')
     @patch('subshader.__main__.ShaderPlot')
     @patch('subshader.__main__.AudioInput')
-    def test_gpu_unavailable_selects_np_wavelet(self, mock_audio, mock_plotter, mock_gpu):
+    def test_gpu_unavailable_selects_np_wavelet(self, mock_audio, mock_plotter, mock_player, mock_gpu):
         """When GPU is unavailable, NpWavelet should be selected."""
-        mock_audio_instance = MagicMock()
-        mock_audio_instance.get_sample_rate.return_value = 44100.0
-        mock_audio_instance.get_chunk_size.return_value = 16384
-        mock_audio.return_value = mock_audio_instance
+        mock_audio.return_value = _make_mock_audio_input()
 
         mock_wavelet = MagicMock()
         mock_wavelet.get_output_shape.return_value = (120, 256)
@@ -74,15 +81,13 @@ class TestGpuFallback:
                 sub.cleanup()
 
     @patch('subshader.__main__.gpu_available', return_value=False)
+    @patch('subshader.__main__.AudioPlayer')
     @patch('subshader.__main__.ShaderPlot')
     @patch('subshader.__main__.AudioInput')
-    def test_gpu_unavailable_logs_warning(self, mock_audio, mock_plotter, mock_gpu, caplog):
+    def test_gpu_unavailable_logs_warning(self, mock_audio, mock_plotter, mock_player, mock_gpu, caplog):
         """When GPU is unavailable, a warning should be logged."""
         import logging
-        mock_audio_instance = MagicMock()
-        mock_audio_instance.get_sample_rate.return_value = 44100.0
-        mock_audio_instance.get_chunk_size.return_value = 16384
-        mock_audio.return_value = mock_audio_instance
+        mock_audio.return_value = _make_mock_audio_input()
 
         mock_wavelet = MagicMock()
         mock_wavelet.get_output_shape.return_value = (120, 256)
