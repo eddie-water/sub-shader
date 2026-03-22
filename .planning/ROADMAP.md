@@ -57,7 +57,7 @@ Plans:
   3. The visualization does not drift ahead or behind the audio over a 60-second playback — sync holds for the duration
 **Plans:** 2 plans
 Plans:
-- [ ] 03-01-PLAN.md — Create AudioPlayer class with sounddevice, add dependency, unit tests
+- [x] 03-01-PLAN.md — Create AudioPlayer class with sounddevice, add dependency, unit tests
 - [ ] 03-02-PLAN.md — Wire AudioPlayer into orchestrator with CLI arg, sync loop, and human verification
 
 ### Phase 4: Install Experience

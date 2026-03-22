@@ -15,8 +15,8 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Audio Sync
 
-- [ ] **AUDIO-01**: Audio playback and visualization are synced — file-based audio with real-time CWT rendering
-- [ ] **AUDIO-02**: Audio-visual sync with minimal perceptible latency (<100ms perceived lag)
+- [x] **AUDIO-01**: Audio playback and visualization are synced — file-based audio with real-time CWT rendering
+- [x] **AUDIO-02**: Audio-visual sync with minimal perceptible latency (<100ms perceived lag)
 
 ### Documentation
 
@@ -84,8 +84,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PIPE-01 | Phase 2 | Complete |
 | PIPE-02 | Phase 1 | Complete |
 | PIPE-03 | Phase 1 | Complete |
-| AUDIO-01 | Phase 3 | Pending |
-| AUDIO-02 | Phase 3 | Pending |
+| AUDIO-01 | Phase 3 | Complete |
+| AUDIO-02 | Phase 3 | Complete |
 | DOCS-01 | Phase 5 | Pending |
 | DOCS-02 | Phase 5 | Pending |
 | DOCS-03 | Phase 5 | Pending |

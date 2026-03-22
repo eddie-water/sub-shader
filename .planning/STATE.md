@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-stopped_at: Completed 02-cwt-pipeline-polish-02-02-PLAN.md
-last_updated: "2026-03-21T23:07:53.147Z"
+stopped_at: Completed 03-audio-visual-sync-03-01-PLAN.md
+last_updated: "2026-03-22T01:06:35.965Z"
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
@@ -19,11 +19,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** The visualization accurately tracks audio input in real time with minimal latency
-**Current focus:** Phase 02 — cwt-pipeline-polish
+**Current focus:** Phase 03 — audio-visual-sync
 
 ## Current Position
 
-Phase: 02 (cwt-pipeline-polish) — EXECUTING
+Phase: 03 (audio-visual-sync) — EXECUTING
 Plan: 2 of 2
 
 ## Performance Metrics
@@ -50,6 +50,7 @@ Plan: 2 of 2
 | Phase 01-codebase-hardening P02 | 4 | 2 tasks | 5 files |
 | Phase 02-cwt-pipeline-polish P01 | 8 | 2 tasks | 5 files |
 | Phase 02-cwt-pipeline-polish P02 | 11 | 2 tasks | 3 files |
+| Phase 03-audio-visual-sync P01 | 84 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase 02-cwt-pipeline-polish]: cwt_out_type field removed from WaveletConfig — confirmed zero references outside config.py
 - [Phase 02-cwt-pipeline-polish]: AUDIO_POLYPHONIC constant updated to overlapping_A3_A4_A5.wav — polyphonic_audio_example.wav was empty 0-frame placeholder
 - [Phase 02-cwt-pipeline-polish]: No intensity tracker tuning needed post-normalization — color range looks reasonable in regenerated figures
+- [Phase 03-audio-visual-sync]: AudioPlayer stores _data as float32 — PortAudio callback layer expects float32; float64 causes silent type coercion
+- [Phase 03-audio-visual-sync]: threading.Lock used for _current_frame — low-contention single-int read/write; queue overhead unnecessary
+- [Phase 03-audio-visual-sync]: blocksize=0 in OutputStream — lets PortAudio choose optimal hardware buffer
 
 ### Pending Todos
 
@@ -84,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T23:07:53.144Z
-Stopped at: Completed 02-cwt-pipeline-polish-02-02-PLAN.md
+Last session: 2026-03-22T01:06:35.963Z
+Stopped at: Completed 03-audio-visual-sync-03-01-PLAN.md
 Resume file: None
