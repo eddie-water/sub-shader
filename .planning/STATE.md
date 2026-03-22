@@ -85,6 +85,12 @@ Recent decisions affecting current work:
 
 None yet.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260322-j2b | Fix overlap redundancy in CWT-to-plotter pipeline | 2026-03-22 | 019078b | [260322-j2b-fix-overlap-redundancy-in-cwt-to-plotter](./quick/260322-j2b-fix-overlap-redundancy-in-cwt-to-plotter/) |
+
 ### Blockers/Concerns
 
 - [Phase 2 ahead]: EGL headless rendering research flagged for v2 Phase work — not needed for v1
@@ -92,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-22T17:52:01.015Z
+Last activity: 2026-03-22 - Completed quick task 260322-j2b: Fix overlap redundancy in CWT-to-plotter pipeline
 Stopped at: Completed quick/260322-j2b-fix-overlap-redundancy-in-cwt-to-plotter
 Resume file: None
