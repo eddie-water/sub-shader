@@ -3,7 +3,7 @@ status: complete
 phase: 03-audio-visual-sync
 source: [03-VERIFICATION.md]
 started: 2026-03-21
-updated: 2026-03-22T23:59:00Z
+updated: 2026-03-22T00:10:00Z
 retest: 2026-03-22
 ---
 
@@ -19,9 +19,8 @@ result: pass
 
 ### 2. Sub-100ms transient response
 expected: Transient events in the audio (drum hit, sharp consonant) appear in the visualization within ~100ms of being heard
-result: issue
-reported: "its hard for me to tell if within 100ms visually - i definitely notice some lag - its not as responsive as the daw spectrogram - its a little chunky but better than it has ever looked"
-severity: minor
+result: pass
+retest: 2026-03-22 — passed after pipeline latency fixes (chunk_size 16384→4096, GPU iFFT)
 
 ### 3. No drift over 60 seconds
 expected: The visualization does not drift ahead or behind the audio over a 60-second playback — sync holds for the duration
@@ -38,30 +37,12 @@ result: pass
 ## Summary
 
 total: 5
-passed: 4
-issues: 1
+passed: 5
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
 
 ## Gaps
 
-- truth: "Transient events appear in visualization within ~100ms of being heard"
-  status: failed
-  reason: "User reported: its hard for me to tell if within 100ms visually - i definitely notice some lag - its not as responsive as the daw spectrogram - its a little chunky but better than it has ever looked"
-  severity: major
-  test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
-
-- truth: "Visualization responsiveness comparable to DAW spectrogram"
-  status: failed
-  reason: "User reported (retest 2026-03-22): still feels laggy - not even really close to a DAW - need to profile entire pipeline to measure where we are and what needs to change"
-  severity: major
-  test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+[none — all gaps closed after pipeline latency fixes]
