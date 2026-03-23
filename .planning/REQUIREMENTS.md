@@ -20,12 +20,12 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Documentation
 
-- [ ] **DOCS-01**: Top-level README — project overview, benchmark figures, visual comparisons, install/usage instructions
-- [ ] **DOCS-02**: DSP module README — pedagogical explanation of CWT pipeline, wavelet choices, normalization, with visuals
-- [ ] **DOCS-03**: Rendering module README — OpenGL/shader pipeline, frame buffer, intensity mapping
-- [ ] **DOCS-04**: Audio module README — audio capture, chunking, overlap strategy
-- [ ] **DOCS-05**: Meaningful examples chosen for each README (no filler, no superfluous content)
-- [ ] **DOCS-06**: Documentation scaffolded by Claude, authored by user in their own voice
+- [x] **DOCS-01**: Top-level README — project overview, benchmark figures, visual comparisons, install/usage instructions
+- [x] **DOCS-02**: DSP module README — pedagogical explanation of CWT pipeline, wavelet choices, normalization, with visuals
+- [x] **DOCS-03**: Rendering module README — OpenGL/shader pipeline, frame buffer, intensity mapping
+- [x] **DOCS-04**: Audio module README — audio capture, chunking, overlap strategy
+- [x] **DOCS-05**: Meaningful examples chosen for each README (no filler, no superfluous content)
+- [x] **DOCS-06**: Documentation scaffolded by Claude, authored by user in their own voice
 
 ### Code Quality
 
@@ -86,12 +86,12 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PIPE-03 | Phase 1 | Complete |
 | AUDIO-01 | Phase 3 | Complete |
 | AUDIO-02 | Phase 3 | Complete |
-| DOCS-01 | Phase 5 | Pending |
-| DOCS-02 | Phase 5 | Pending |
-| DOCS-03 | Phase 5 | Pending |
-| DOCS-04 | Phase 5 | Pending |
-| DOCS-05 | Phase 5 | Pending |
-| DOCS-06 | Phase 5 | Pending |
+| DOCS-01 | Phase 5 | Complete |
+| DOCS-02 | Phase 5 | Complete |
+| DOCS-03 | Phase 5 | Complete |
+| DOCS-04 | Phase 5 | Complete |
+| DOCS-05 | Phase 5 | Complete |
+| DOCS-06 | Phase 5 | Complete |
 | QUAL-01 | Phase 1 | Complete |
 | QUAL-02 | Phase 2 | Complete |
 | QUAL-03 | Phase 1 | Complete |
