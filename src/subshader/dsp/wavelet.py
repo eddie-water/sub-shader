@@ -237,30 +237,30 @@ class Wavelet(ABC):
 
     def extract_hop_center(self, reliable_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
-        Extract the hop-center portion of reliable CWT coefficients.
+        Extract the non-overlapping trailing portion of reliable CWT coefficients.
 
         When overlap_factor > 0, consecutive chunks share overlapping samples.
-        Only the center portion corresponding to the hop (non-overlapping new data)
-        contains unique time content. This method extracts that center slice.
+        The trailing (rightmost) hop_size columns of the reliable region represent
+        the newest audio content not present in the previous frame. Taking this
+        slice ensures consecutive frames tile contiguously without gaps or redundancy.
 
         Args:
             reliable_coefs: CWT coefficients after discard_unreliable_coefs,
                            shape (num_freqs, reliable_width).
 
         Returns:
-            Center slice of shape (num_freqs, center_width) where center_width
-            is proportional to (1 - overlap_factor) * reliable_width.
-            Returns input unchanged if overlap_factor is 0.
+            Trailing slice of shape (num_freqs, new_width) where new_width =
+            min(hop_size, reliable_width). Returns input unchanged if
+            overlap_factor is 0.
         """
         if self.overlap_factor <= 0.0:
             return reliable_coefs
 
         reliable_width = reliable_coefs.shape[1]
-        hop_fraction = 1.0 - self.overlap_factor
-        center_width = max(1, int(reliable_width * hop_fraction))
-        center_start = (reliable_width - center_width) // 2
+        hop_size = max(1, int(self.input_n * (1 - self.overlap_factor)))
+        new_width = min(hop_size, reliable_width)
 
-        return reliable_coefs[:, center_start:center_start + center_width]
+        return reliable_coefs[:, -new_width:]
 
     def downsample(self,
                    coefs: np.ndarray[np.floating],
@@ -634,28 +634,31 @@ class CuPyWavelet(AntsWavelet):
         """
         Perform CWT using variable-length wavelets, GPU version.
 
+        The entire convolution stays on GPU: input FFT → frequency-domain multiply
+        → iFFT. Only the trimmed result (num_freqs × input_n) is transferred back
+        to the host, avoiding the large (num_freqs × max_conv_n) intermediate download.
+
         Args:
-            data: 1D float64 array of audio samples.
+            input_t_cpu: 1D float64 array of audio samples.
 
         Returns:
-            Real-valued TF matrix (num_freqs, input_n) containing power (|x|^2),
-            transferred back to NumPy on return.
+            Complex TF matrix (num_freqs, input_n) as a NumPy array.
         """
         log.info(f"CPU→GPU: Uploading input data of size {input_t_cpu.shape[0]} to GPU")
-        
-        self.input_f_gpu = cp.asarray(fft(input_t_cpu, self.max_conv_n), 
+
+        self.input_f_gpu = cp.asarray(fft(input_t_cpu, self.max_conv_n),
                                       dtype=cp.complex64,
                                       order='C')
 
-        # Perform convolution via broadcasting frequency domain multiplication per row 
+        # Frequency-domain convolution: element-wise multiply across all rows
         conv_f_gpu = self.input_f_gpu * self.kernel_f_bank_gpu
 
-        log.info(f"GPU→CPU: Convolution result of size {conv_f_gpu.shape} to CPU")
-        conv_f_cpu = cp.asnumpy(conv_f_gpu)
+        # iFFT on GPU, then trim to input length before downloading
+        conv_tf_gpu = cp_fft.ifft(conv_f_gpu, axis=1)
+        conv_tf_trimmed_gpu = conv_tf_gpu[:, :self.input_n]
 
-        conv_tf_cpu = ifft(conv_f_cpu, axis=1)
-
-        return conv_tf_cpu[:, :self.input_n]
+        log.info(f"GPU→CPU: Transferring trimmed result {conv_tf_trimmed_gpu.shape}")
+        return cp.asnumpy(conv_tf_trimmed_gpu)
 
     def cleanup(self) -> None:
         try:

@@ -4,6 +4,7 @@ phase: 03-audio-visual-sync
 source: [03-VERIFICATION.md]
 started: 2026-03-21
 updated: 2026-03-22T23:59:00Z
+retest: 2026-03-22
 ---
 
 ## Current Test
@@ -48,7 +49,17 @@ blocked: 0
 - truth: "Transient events appear in visualization within ~100ms of being heard"
   status: failed
   reason: "User reported: its hard for me to tell if within 100ms visually - i definitely notice some lag - its not as responsive as the daw spectrogram - its a little chunky but better than it has ever looked"
-  severity: minor
+  severity: major
+  test: 2
+  root_cause: ""
+  artifacts: []
+  missing: []
+  debug_session: ""
+
+- truth: "Visualization responsiveness comparable to DAW spectrogram"
+  status: failed
+  reason: "User reported (retest 2026-03-22): still feels laggy - not even really close to a DAW - need to profile entire pipeline to measure where we are and what needs to change"
+  severity: major
   test: 2
   root_cause: ""
   artifacts: []

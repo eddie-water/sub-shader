@@ -58,8 +58,10 @@ class AudioConfig:
     # Audio File parameters
     file_path: str = "assets/audio/daw/a2a3_a4_minor_scale.wav"
 
-    # Number of samples to grab from the audio file at a time
-    chunk_size: int = 1 << 14 # 16384
+    # Number of samples to grab from the audio file at a time.
+    # 4096 samples at 44100 Hz = 92.9 ms window, 46.4 ms hop (21.5 fps).
+    # Increase to 16384 for full 10-octave chromatic range (degrades to 10.8 fps).
+    chunk_size: int = 1 << 12  # 4096
 
     # Percentage of overlap between consecutive chunks (0.5 = 50%)
     # TODO-45 Fix the overlap and plot overlap relationship
@@ -103,7 +105,7 @@ class WaveletConfig:
     num_fwhm_cycles: int = 3
 
     # Downsampling parameters - default for real-time rendering, reduce for better performance
-    target_width: int = 256
+    target_width: int = 64
     
     def validate(self) -> List[str]:
         """
@@ -166,7 +168,7 @@ class VisualizationConfig:
     """Configuration for visualization rendering."""
     
     # Number of frames in Circular Plot Buffer
-    num_frames: int = 32
+    num_frames: int = 256
 
     # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
     gamma: float = 0.5
