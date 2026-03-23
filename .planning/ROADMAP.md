@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: CWT Pipeline Polish** - Resolve frequency-band brightness bias and establish incremental test pattern (completed 2026-03-21)
 - [ ] **Phase 3: Audio-Visual Sync** - Wire file-based audio playback to CWT rendering with sub-100ms perceived lag
 - [ ] **Phase 4: Install Experience** - Make clone-install-run work without manual configuration or surprises
-- [ ] **Phase 5: Documentation** - Four READMEs scaffolded by Claude, authored by user in their own voice
+- [x] **Phase 5: Documentation** - Four READMEs scaffolded by Claude, authored by user in their own voice (completed 2026-03-23)
 
 ## Phase Details
 
@@ -80,9 +80,9 @@ Plans:
   3. The rendering and audio module READMEs exist and explain their respective pipelines at the same depth — not placeholder stubs
   4. Every code example in every README is accurate and runnable — no illustrative filler that silently fails
   5. The prose reads in the user's voice — Claude's scaffold is not detectable as generated text
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
-- [ ] 05-01-PLAN.md — Comparison grid figure + benchmark.py figure pipeline
+- [x] 05-01-PLAN.md — Comparison grid figure + benchmark.py figure pipeline
 - [x] 05-02-PLAN.md — DSP.md scaffold from wavelet foundations outline
 - [x] 05-03-PLAN.md — README.md update + AUDIO.md + RENDERER.md scaffolds
 
@@ -97,4 +97,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. CWT Pipeline Polish | 2/2 | Complete   | 2026-03-21 |
 | 3. Audio-Visual Sync | 0/2 | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |
-| 5. Documentation | 2/3 | In Progress|  |
+| 5. Documentation | 3/3 | Complete   | 2026-03-23 |
