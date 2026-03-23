@@ -9,6 +9,7 @@ Modes:
   --figures --stub-pywt       Skip PyWavelet, use random stubs, save to stub folder (faster)
   --seaborn                   Generate 3 comparison PNGs (seaborn heatmap style)
   --seaborn --stub-pywt       Seaborn with stubbed PyWavelet, save to stub folder
+  --comparison-grid           Generate 3x3 comparison grid (signals x representations)
   --unit-tests                Run unit tests (NumPy vs CuPy verification, etc.)
   --all                       Run timing, figures (matplotlib), figures (seaborn), unit tests
 """
@@ -527,16 +528,26 @@ class ReadmeFigures:
             print_results_row(label, times)
         print_total_time(total_s * 1000)
 
-        # Flatten buffers
-        stft_spec = stft_buf.get_flattened_buffer()
-        pywt_spec = pywt_buf.get_flattened_buffer()
-        npwt_spec = npwt_buf.get_flattened_buffer()
+        # Flatten buffers and trim to actual frames processed
+        frame_w = npwt_buf.width
+        actual_w = frames_processed * frame_w
+        stft_spec = stft_buf.get_flattened_buffer()[:, -actual_w:]
+        pywt_spec = pywt_buf.get_flattened_buffer()[:, -actual_w:]
+        npwt_spec = npwt_buf.get_flattened_buffer()[:, -actual_w:]
         spec_w    = pywt_spec.shape[1]
-        x, y_min, y_max = audio_buf.get_downsampled(spec_w)
 
-        duration_s  = audio_buf.total_samples / sr
+        # Trim audio buffer to actual samples processed and downsample for waveform
+        actual_samples = frames_processed * config.audio.chunk_size
+        audio_trimmed = audio_buf.get_flattened_buffer()[-actual_samples:]
+        window_size = max(1, actual_samples // spec_w)
+        trimmed_len = window_size * spec_w
+        windowed = audio_trimmed[:trimmed_len].reshape(spec_w, window_size)
+        y_min = windowed.min(axis=1)
+        y_max = windowed.max(axis=1)
+
+        duration_s  = actual_samples / sr
         extent_spec = [0, duration_s, 0, n_cwt_freqs]
-        t_audio     = np.linspace(0, duration_s, len(x))
+        t_audio     = np.linspace(0, duration_s, spec_w)
 
         spec_ytick_bins, spec_ytick_labels = compute_freq_yticks(cwt_freqs)
 
@@ -614,6 +625,206 @@ class ReadmeFigures:
 
 
 # =============================================================================
+# COMPARISON GRID (--comparison-grid)
+# =============================================================================
+
+def generate_comparison_grid():
+    """
+    Generate a 3x3 comparison grid figure: signals (columns) x representations (rows).
+
+    Columns: Chirp (10s synthetic), Polyphonic (file), Musical (file)
+    Rows:    STFT, PyWavelet CWT, SubShader CWT
+
+    Output: assets/images/benchmarks/comparison_grid.png
+    """
+    os.makedirs(BENCHMARKS_DIR, exist_ok=True)
+
+    config = get_default_config()
+    sr_default = int(config.wavelet.typical_sampling_freq)
+    chunk_size = config.audio.chunk_size
+    overlap_factor = config.audio.overlap_factor
+    wc = config.wavelet
+
+    # ── Signal definitions ────────────────────────────────────────────────────
+    # Each signal is either chirp chunks or an audio file path
+    CHIRP_DURATION_S = 10.0
+    chirp_n_frames = int(
+        CHIRP_DURATION_S * sr_default
+        / (chunk_size * (1 - overlap_factor))
+    )
+    chirp_n_frames = max(chirp_n_frames, NUM_FRAMES)
+
+    signal_specs = [
+        {"label": "Chirp",      "type": "chirp"},
+        {"label": "Polyphonic", "type": "file",  "path": AUDIO_POLYPHONIC},
+        {"label": "Musical",    "type": "file",  "path": AUDIO_MUSICAL},
+    ]
+    row_labels = ["STFT", "PyWavelet", "SubShader"]
+
+    # ── DSP result containers (per-column) ───────────────────────────────────
+    column_data = []
+
+    for col_idx, spec in enumerate(signal_specs):
+        print_section_start(f"Processing column {col_idx + 1}/3: {spec['label']}")
+
+        if spec["type"] == "chirp":
+            sr = sr_default
+            chunks = build_chirp_chunks(
+                CHIRP_F0, CHIRP_F1, sr, chunk_size, overlap_factor, chirp_n_frames
+            )
+            n_frames = len(chunks)
+            chunk_iter = iter(chunks)
+        else:
+            audio_path = spec["path"]
+            if not os.path.exists(audio_path):
+                raise FileNotFoundError(f"Missing audio file: {audio_path}")
+            ai = AudioInput(
+                path=audio_path,
+                chunk_size=chunk_size,
+                overlap_factor=overlap_factor,
+            )
+            sr = ai.get_sample_rate()
+            n_frames = NUM_FRAMES
+            chunk_iter = None
+
+        pywt = PyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+        npwt = NumPyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+
+        cwt_freqs = pywt.freqs
+        n_cwt_freqs = len(cwt_freqs)
+
+        stft_freqs = np.fft.rfftfreq(STFT_NPERSEG, d=1.0 / sr)
+        freq_min, freq_max = cwt_freqs[0], cwt_freqs[-1]
+        stft_freq_mask = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
+        stft_cropped_freqs = stft_freqs[stft_freq_mask]
+        stft_target_w = pywt.output_n
+
+        color_norm = ColorNormalizationConfig()
+        stft_buf = CircularFrameBuffer(
+            frame_shape=(n_cwt_freqs, stft_target_w),
+            num_frames=n_frames,
+            color_norm_config=color_norm,
+        )
+        pywt_buf = CircularFrameBuffer(
+            frame_shape=pywt.get_output_shape(),
+            num_frames=n_frames,
+            color_norm_config=color_norm,
+        )
+        npwt_buf = CircularFrameBuffer(
+            frame_shape=npwt.get_output_shape(),
+            num_frames=n_frames,
+            color_norm_config=color_norm,
+        )
+
+        frames_processed = 0
+        for i in range(n_frames):
+            chunk = next(chunk_iter, None) if chunk_iter is not None else ai.get_chunk()
+            if chunk is None:
+                break
+
+            stft_log = compute_stft_frame(
+                chunk, sr, STFT_NPERSEG, stft_freq_mask,
+                stft_cropped_freqs, cwt_freqs, stft_target_w,
+            )
+            stft_buf.push_frame(stft_log)
+
+            pywt_out, _ = time_call(pywt.cwt, chunk)
+            pywt_buf.push_frame(pywt_out)
+
+            npwt_out, _ = time_call(npwt.cwt, chunk)
+            npwt_buf.push_frame(npwt_out)
+
+            frames_processed += 1
+            live_progress(frames_processed, n_frames)
+
+        clear_progress()
+        print_section_end()
+
+        frame_w = npwt_buf.width
+        actual_w = frames_processed * frame_w
+        stft_spec = stft_buf.get_flattened_buffer()[:, -actual_w:]
+        pywt_spec = pywt_buf.get_flattened_buffer()[:, -actual_w:]
+        npwt_spec = npwt_buf.get_flattened_buffer()[:, -actual_w:]
+
+        duration_s = frames_processed * chunk_size / sr
+        ytick_bins, ytick_labels = compute_freq_yticks(cwt_freqs)
+
+        column_data.append({
+            "label":        spec["label"],
+            "stft":         stft_spec,
+            "pywt":         pywt_spec,
+            "npwt":         npwt_spec,
+            "stft_vmax":    stft_buf.get_intensity_max(),
+            "pywt_vmax":    pywt_buf.get_intensity_max(),
+            "npwt_vmax":    npwt_buf.get_intensity_max(),
+            "n_cwt_freqs":  n_cwt_freqs,
+            "duration_s":   duration_s,
+            "ytick_bins":   ytick_bins,
+            "ytick_labels": ytick_labels,
+        })
+
+    # ── Build 3x3 figure ─────────────────────────────────────────────────────
+    print_section_start("Rendering 3x3 comparison grid")
+
+    GRID_ROWS = 3
+    GRID_COLS = 3
+    fig, axes = plt.subplots(
+        GRID_ROWS, GRID_COLS,
+        figsize=(18, 10),
+        gridspec_kw={"hspace": 0.05, "wspace": 0.02},
+    )
+
+    for col_idx, col in enumerate(column_data):
+        row_specs = [
+            (col["stft"], col["stft_vmax"], "STFT"),
+            (col["pywt"], col["pywt_vmax"], "PyWavelet"),
+            (col["npwt"], col["npwt_vmax"], "SubShader"),
+        ]
+        for row_idx, (spec_data, vmax, _row_label) in enumerate(row_specs):
+            ax = axes[row_idx][col_idx]
+            extent = [0, col["duration_s"], 0, col["n_cwt_freqs"]]
+            ax.imshow(
+                spec_data, cmap="inferno", aspect="auto",
+                origin="lower", extent=extent, vmin=0, vmax=vmax,
+            )
+            ax.grid(True, color="white", alpha=0.08, linewidth=0.5)
+            for spine in ax.spines.values():
+                spine.set_edgecolor("#444444")
+                spine.set_linewidth(0.8)
+
+            # Y-axis ticks on left column only
+            if col_idx == 0:
+                ax.set_yticks(col["ytick_bins"])
+                ax.set_yticklabels(col["ytick_labels"], fontsize=8)
+            else:
+                ax.set_yticks([])
+
+            # X-axis ticks on bottom row only
+            if row_idx == GRID_ROWS - 1:
+                ax.tick_params(axis="x", labelsize=8)
+            else:
+                plt.setp(ax.get_xticklabels(), visible=False)
+                ax.tick_params(axis="x", length=0)
+
+    # Column labels across the top
+    for col_idx, col in enumerate(column_data):
+        axes[0][col_idx].set_title(col["label"], fontsize=11, fontweight="bold", pad=6)
+
+    # Row labels on the left
+    for row_idx, row_label in enumerate(row_labels):
+        axes[row_idx][0].set_ylabel(row_label, fontsize=10, fontweight="bold", labelpad=6)
+
+    plt.subplots_adjust(left=0.07, right=0.98, top=0.93, bottom=0.06,
+                        wspace=0.02, hspace=0.05)
+
+    out_path = os.path.join(BENCHMARKS_DIR, "comparison_grid.png")
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+    print(f"Saved -> {out_path}")
+    print_section_end()
+
+
+# =============================================================================
 # ENTRY POINT
 # =============================================================================
 
@@ -627,18 +838,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="SubShader benchmark suite"
     )
-    parser.add_argument("--timing",     action="store_true", help="STFT vs PyWavelet vs CWT timing comparison")
-    parser.add_argument("--figures",    action="store_true", help="Generate 3 README comparison PNGs (matplotlib)")
-    parser.add_argument("--seaborn",    action="store_true", help="Generate 3 comparison PNGs (seaborn heatmap style)")
-    parser.add_argument("--unit-tests", action="store_true", help="Run unit tests (NumPy vs CuPy, etc.)")
-    parser.add_argument("--all",        action="store_true", help="Run all modes")
-    parser.add_argument("--stub",       action="store_true",
+    parser.add_argument("--timing",          action="store_true", help="STFT vs PyWavelet vs CWT timing comparison")
+    parser.add_argument("--figures",         action="store_true", help="Generate all 3 README comparison PNGs (matplotlib)")
+    parser.add_argument("--figures-chirp",      action="store_true", help="Generate chirp signal comparison figure only")
+    parser.add_argument("--figures-polyphonic",  action="store_true", help="Generate polyphonic signal comparison figure only")
+    parser.add_argument("--figures-musical",     action="store_true", help="Generate musical signal comparison figure only")
+    parser.add_argument("--seaborn",         action="store_true", help="Generate 3 comparison PNGs (seaborn heatmap style)")
+    parser.add_argument("--comparison-grid", action="store_true", help="Generate 3x3 comparison grid (signals x representations)")
+    parser.add_argument("--unit-tests",      action="store_true", help="Run unit tests (NumPy vs CuPy, etc.)")
+    parser.add_argument("--all",             action="store_true", help="Run all modes")
+    parser.add_argument("--stub",            action="store_true",
                         help="With --figures: generate stub layouts instead of real DSP (fast iteration)")
-    parser.add_argument("--stub-pywt",  action="store_true",
+    parser.add_argument("--stub-pywt",       action="store_true",
                         help="With --figures: skip PyWavelet computation, use random stub spectrograms (faster, saves to stub folder)")
     args = parser.parse_args()
 
-    any_flag = args.timing or args.figures or args.seaborn or args.unit_tests or args.stub
+    any_figure_individual = args.figures_chirp or args.figures_polyphonic or args.figures_musical
+    any_flag = (args.timing or args.figures or any_figure_individual or args.seaborn
+                or args.unit_tests or args.stub or args.comparison_grid)
     if args.all or not any_flag:
         args.timing = args.figures = args.seaborn = args.unit_tests = True
 
@@ -651,16 +868,27 @@ if __name__ == "__main__":
     if args.timing:
         modes.append(("Timing Comparison", lambda: TimedSubShader().run()))
 
-    if args.figures:
+    if args.figures or any_figure_individual:
         backends = ["matplotlib"]
         if args.seaborn:
             backends.append("seaborn")
         if args.stub:
             modes.append(("Stub Layouts", lambda: ReadmeFigures().stub_layouts()))
+        elif any_figure_individual and not args.figures:
+            rf = ReadmeFigures(backends=backends, stub_pywt=args.stub_pywt)
+            if args.figures_chirp:
+                modes.append(("Chirp Figure", lambda r=rf: r.chirp_signal_comparison()))
+            if args.figures_polyphonic:
+                modes.append(("Polyphonic Figure", lambda r=rf: r.polyphonic_signal_comparison()))
+            if args.figures_musical:
+                modes.append(("Musical Figure", lambda r=rf: r.musical_signal_comparison()))
         else:
             modes.append(("Figures", lambda b=backends, sp=args.stub_pywt: ReadmeFigures(backends=b, stub_pywt=sp).run_all()))
     elif args.seaborn:
         modes.append(("Seaborn Figures", lambda sp=args.stub_pywt: ReadmeFigures(backends=["seaborn"], stub_pywt=sp).run_all()))
+
+    if args.comparison_grid:
+        modes.append(("Comparison Grid", generate_comparison_grid))
 
     if args.unit_tests:
         from utilities.unit_tests import run_all as run_unit_tests
