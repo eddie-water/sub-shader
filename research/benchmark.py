@@ -653,7 +653,7 @@ def export_signal_to_wav(signal: np.ndarray, sample_rate: int, path: str) -> Non
 # COMPARISON GRID (--comparison-grid)
 # =============================================================================
 
-def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
+def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: bool = False):
     """
     Generate a 5x3 comparison grid figure.
 
@@ -663,7 +663,8 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
     Args:
         stub_pywt: Skip PyWavelet computation, use random stub spectrograms (faster)
         dpi: Output DPI. When > 0, file is named comparison_grid_{dpi}dpi.png.
-             When 0 (default), file is named comparison_grid.png or comparison_grid_STUB.png.
+             When 0 (default), file is named comparison_grid.png or comparison_grid_STUB_PYWT.png.
+        comparison: Collect per-method timing stats and print after processing all columns.
 
     Output: assets/images/benchmarks/comparison_grid[_Ndpi].png
     """
@@ -697,6 +698,8 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
 
     # ── DSP result containers (per-column) ───────────────────────────────────
     column_data = []
+    if comparison:
+        all_timings = {}  # {signal_label: TimingAccumulator}
 
     for col_idx, spec in enumerate(signal_specs):
         print_section_start(f"Processing column {col_idx + 1}/3: {spec['label']}")
@@ -766,24 +769,46 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
             color_norm_config=color_norm,
         )
 
+        if comparison:
+            methods = ["STFT", "SubShader"]
+            if not stub_pywt:
+                methods.insert(1, "PyWavelet")
+            acc = TimingAccumulator(n_frames, methods)
+
         frames_processed = 0
         for _ in range(n_frames):
             chunk = next(chunk_iter, None) if chunk_iter is not None else ai.get_chunk()
             if chunk is None:
                 break
 
-            stft_log = compute_stft_frame(
-                chunk, sr, STFT_NPERSEG, stft_freq_mask,
-                stft_cropped_freqs, cwt_freqs, stft_target_w,
-            )
+            if comparison:
+                stft_log, acc["STFT"][acc.current_idx] = time_call(
+                    compute_stft_frame,
+                    chunk, sr, STFT_NPERSEG, stft_freq_mask,
+                    stft_cropped_freqs, cwt_freqs, stft_target_w,
+                )
+            else:
+                stft_log = compute_stft_frame(
+                    chunk, sr, STFT_NPERSEG, stft_freq_mask,
+                    stft_cropped_freqs, cwt_freqs, stft_target_w,
+                )
             stft_buf.push_frame(stft_log)
 
             if not stub_pywt:
-                pywt_out, _ = time_call(pywt.cwt, chunk)
+                if comparison:
+                    pywt_out, acc["PyWavelet"][acc.current_idx] = time_call(pywt.cwt, chunk)
+                else:
+                    pywt_out, _ = time_call(pywt.cwt, chunk)
                 pywt_buf.push_frame(pywt_out)
 
-            npwt_out, _ = time_call(npwt.cwt, chunk)
+            if comparison:
+                npwt_out, acc["SubShader"][acc.current_idx] = time_call(npwt.cwt, chunk)
+            else:
+                npwt_out, _ = time_call(npwt.cwt, chunk)
             npwt_buf.push_frame(npwt_out)
+
+            if comparison:
+                acc.advance()
 
             frames_processed += 1
             live_progress(frames_processed, n_frames)
@@ -832,6 +857,18 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
             # Use same time mapping as waveform (spans full duration_s)
             col_entry["chirp_inst_freq"] = chirp_inst_freq[:len(waveform)]
         column_data.append(col_entry)
+        if comparison:
+            acc.trim()
+            all_timings[spec["label"]] = acc
+
+    if comparison:
+        print_section_start("Per-Method Timing Comparison")
+        for signal_label, acc in all_timings.items():
+            print(f"\n  {signal_label}:")
+            print_results_header()
+            for method in acc.methods:
+                print_results_row(method, acc.arrays[method])
+        print_section_end()
 
     # ── Build 5x3 figure ─────────────────────────────────────────────────────
     print_section_start("Rendering 5x3 comparison grid")
@@ -971,7 +1008,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
     if dpi > 0:
         base_name = f"comparison_grid_{dpi}dpi.png"
     elif stub_pywt:
-        base_name = "comparison_grid_STUB.png"
+        base_name = "comparison_grid_STUB_PYWT.png"
     else:
         base_name = "comparison_grid.png"
     out_path = os.path.join(BENCHMARKS_DIR, base_name)
@@ -1003,6 +1040,8 @@ if __name__ == "__main__":
     parser.add_argument("--figures-musical",     action="store_true", help="Generate musical signal comparison figure only")
     parser.add_argument("--seaborn",         action="store_true", help="Generate 3 comparison PNGs (seaborn heatmap style)")
     parser.add_argument("--comparison-grid", action="store_true", help="Generate 3x3 comparison grid (signals x representations)")
+    parser.add_argument("--comparison", action="store_true",
+                        help="Run all methods (STFT, PyWavelet, SubShader) with timing stats and produce comparison grid")
     parser.add_argument("--unit-tests",      action="store_true", help="Run unit tests (NumPy vs CuPy, etc.)")
     parser.add_argument("--all",             action="store_true", help="Run all modes")
     parser.add_argument("--stub",            action="store_true",
@@ -1015,7 +1054,7 @@ if __name__ == "__main__":
 
     any_figure_individual = args.figures_chirp or args.figures_polyphonic or args.figures_musical
     any_flag = (args.timing or args.figures or any_figure_individual or args.seaborn
-                or args.unit_tests or args.stub or args.comparison_grid)
+                or args.unit_tests or args.stub or args.comparison_grid or args.comparison)
     if args.all or not any_flag:
         args.timing = args.figures = args.seaborn = args.unit_tests = True
 
@@ -1046,6 +1085,9 @@ if __name__ == "__main__":
             modes.append(("Figures", lambda b=backends, sp=args.stub_pywt: ReadmeFigures(backends=b, stub_pywt=sp).run_all()))
     elif args.seaborn:
         modes.append(("Seaborn Figures", lambda sp=args.stub_pywt: ReadmeFigures(backends=["seaborn"], stub_pywt=sp).run_all()))
+
+    if args.comparison:
+        modes.append(("Comparison", lambda sp=args.stub_pywt, d=args.dpi: generate_comparison_grid(stub_pywt=sp, dpi=d, comparison=True)))
 
     if args.comparison_grid:
         modes.append(("Comparison Grid", lambda sp=args.stub_pywt, d=args.dpi: generate_comparison_grid(stub_pywt=sp, dpi=d)))
