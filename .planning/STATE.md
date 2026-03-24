@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 05.1-01-PLAN.md
-last_updated: "2026-03-24T23:17:11.461Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 05.1-02-PLAN.md
+last_updated: "2026-03-24T23:27:44.864Z"
 last_activity: 2026-03-24
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -60,6 +60,7 @@ Plan: 2 of 2
 | Phase 06-finalize-example-audio-and-comparison-figures-for-readme P03 | 3 | 2 tasks | 1 files |
 | Phase 06 P02 | 8 | 1 tasks | 6 files |
 | Phase 05.1-research-toolkit-restructure P01 | 10 | 2 tasks | 4 files |
+| Phase 05.1-research-toolkit-restructure P02 | 25 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Timing bar chart generate_timing_bar_chart() added to benchmark.py with --timing-chart flag — chart can now be reproduced programmatically
 - [Phase 06]: Timing bar chart moved from README.md to DSP.md Section 6 — detailed timing analysis belongs in implementation docs
 - [Phase 05.1-01]: benchmark.py split into figures.py/timing.py/wav_export.py — all research/ modules use bare 'from utilities import' pattern matching existing CWD convention
+- [Phase 05.1-02]: pyproject.toml pythonpath includes src/subshader so conftest helpers are importable in colocated test files without __init__.py
+- [Phase 05.1-02]: test_kernel_energy_per_scale rewritten to verify L1 normalization invariant after Phase 2 — L1 norm ~1.0, L2 slope ~+0.5 vs pre-Phase-2 slope ~-0.5
+- [Phase 05.1-02]: PyWavelet reliable range capped at bin 90 (~5 kHz) in test_pure_tone_peak_accuracy — above that pywt.cwt() aliases to wrong frequency bin
 
 ### Pending Todos
 
@@ -126,5 +130,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-24
-Stopped at: Completed 05.1-01-PLAN.md
+Stopped at: Completed 05.1-02-PLAN.md
 Resume file: None
