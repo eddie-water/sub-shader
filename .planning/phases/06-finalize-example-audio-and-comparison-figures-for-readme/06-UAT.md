@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-finalize-example-audio-and-comparison-figures-for-readme
 source: 06-01-SUMMARY.md
 started: 2026-03-24T19:00:00Z
@@ -52,9 +52,12 @@ blocked: 0
   reason: "User reported: chirp instantaneous frequency plot doesn't match 100% with the methods below — time axis mismatch where reference continues but spectrograms have ended"
   severity: minor
   test: 4
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Line 806 computes duration_s = frames_processed * chunk_size / sr which ignores overlap. With overlap_factor=0.5, this nearly doubles the true duration. Correct formula: ((frames_processed - 1) * hop_size + chunk_size) / sr. The inflated duration stretches the reference waveform/inst-freq trace past the spectrogram energy."
+  artifacts:
+    - path: "research/benchmark.py"
+      issue: "Line 806: duration_s formula ignores frame overlap"
+  missing:
+    - "Fix duration_s to account for hop_size overlap"
   debug_session: ""
 
 - truth: "benchmark.py has a --comparison flag that runs all 3 methods (STFT, PyWavelet, SubShader) with timing stats (avg/min/max) and produces the comparison figure"
@@ -62,7 +65,13 @@ blocked: 0
   reason: "User reported: --timing only does subshader pipeline. Need --comparison flag that runs all method timings and produces comparison plot. --timing stays as-is for subshader-only pipeline timing. --stub-pywt skips pywavelet and appends _STUB_PYWT to filename."
   severity: major
   test: 5
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "generate_comparison_grid() already runs all 3 methods via time_call() but discards timing values. --comparison flag needs to: (1) collect timing arrays per method, (2) print stats via existing print_results_header/print_results_row helpers, (3) produce the grid figure. ~40-60 lines of changes to benchmark.py."
+  artifacts:
+    - path: "research/benchmark.py"
+      issue: "generate_comparison_grid discards timing; no --comparison flag exists"
+  missing:
+    - "Add --comparison argparse flag"
+    - "Wrap STFT call in time_call(), collect timing arrays instead of discarding"
+    - "Print per-signal timing stats after processing"
+    - "Use _STUB_PYWT suffix (not _STUB) when --stub-pywt is active"
   debug_session: ""
