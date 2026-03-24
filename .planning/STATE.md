@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-03-24T19:59:33.697Z"
+stopped_at: "Completed 06-02-PLAN.md (checkpoint:human-verify pending)"
+last_updated: "2026-03-24T20:10:09.885Z"
 last_activity: 2026-03-24
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-21)
 ## Current Position
 
 Phase: 06 (finalize-example-audio-and-comparison-figures-for-readme) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Plan: 2 of 3
 | Phase 05-documentation P01 | 7 | 2 tasks | 2 files |
 | Phase 06 P01 | 10 | 3 tasks | 9 files |
 | Phase 06-finalize-example-audio-and-comparison-figures-for-readme P03 | 3 | 2 tasks | 1 files |
+| Phase 06 P02 | 8 | 1 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Recent decisions affecting current work:
 - [Phase 06]: DPI=0 sentinel in generate_comparison_grid() means default naming; dpi>0 produces _Ndpi.png suffix regardless of stub_pywt
 - [Phase 06]: Stub suffix only applies to DPI=0 (default) path; explicit --dpi N gets clean comparison_grid_Ndpi.png name
 - [Phase 06-finalize-example-audio-and-comparison-figures-for-readme]: _STUB_PYWT suffix replaces _STUB so the stub scope is explicit in the filename
+- [Phase 06]: comparison_grid.png copied from comparison_grid_200dpi.png — canonical README name; --dpi 200 always produces _200dpi suffix
+- [Phase 06]: Timing bar chart generate_timing_bar_chart() added to benchmark.py with --timing-chart flag — chart can now be reproduced programmatically
+- [Phase 06]: Timing bar chart moved from README.md to DSP.md Section 6 — detailed timing analysis belongs in implementation docs
 
 ### Pending Todos
 
@@ -119,5 +123,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-24
-Stopped at: Completed 06-03-PLAN.md
+Stopped at: Completed 06-02-PLAN.md (checkpoint:human-verify pending)
 Resume file: None

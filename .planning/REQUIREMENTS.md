@@ -45,8 +45,8 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 - [x] **FIG-02**: Comparison grid uses curated audio examples: bouncing chirp, polyphonic MIDI, musical excerpt
 - [x] **FIG-03**: Comparison grid generated at multiple DPI levels for user quality/filesize selection
 - [x] **FIG-04**: README Performance section has single hero comparison grid figure centered at ~80% width
-- [ ] **FIG-05**: README per-signal sections have scaffold captions replacing REWRITE markers
-- [ ] **FIG-06**: Timing bar chart relocated from README to DSP.md computational cost section
+- [x] **FIG-05**: README per-signal sections have scaffold captions replacing REWRITE markers
+- [x] **FIG-06**: Timing bar chart relocated from README to DSP.md computational cost section
 
 ## v2 Requirements
 
@@ -111,8 +111,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | FIG-02 | Phase 6 | Complete |
 | FIG-03 | Phase 6 | Complete |
 | FIG-04 | Phase 6 | Complete |
-| FIG-05 | Phase 6 | Pending |
-| FIG-06 | Phase 6 | Pending |
+| FIG-05 | Phase 6 | Complete |
+| FIG-06 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 23 total

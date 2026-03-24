@@ -110,5 +110,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 Plans:
 - [x] 06-01-PLAN.md — Bouncing chirp synthesis + comparison grid at multiple DPIs + user DPI selection
-- [ ] 06-02-PLAN.md — Final grid generation (full PyWavelet) + README/DSP.md updates
+- [x] 06-02-PLAN.md — Final grid generation (full PyWavelet) + README/DSP.md updates
 - [x] 06-03-PLAN.md — Fix duration_s overlap bug + add --comparison flag with per-method timing stats (gap closure)
