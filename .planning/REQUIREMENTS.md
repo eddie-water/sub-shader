@@ -48,6 +48,15 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 - [x] **FIG-05**: README per-signal sections have scaffold captions replacing REWRITE markers
 - [x] **FIG-06**: Timing bar chart relocated from README to DSP.md computational cost section
 
+### Research Toolkit
+
+- [ ] **RTK-01**: benchmark.py split into figures.py (~800 lines), timing.py (~100 lines), wav_export.py (~15 lines) by concern
+- [ ] **RTK-02**: benchmark.py reduced to thin CLI dispatcher (~60-70 lines) preserving all existing flags
+- [ ] **RTK-03**: All existing CLI commands (`--comparison-grid`, `--timing`, `--figures`, etc.) produce identical output after restructure
+- [ ] **RTK-04**: unit_tests.py (10 test categories) migrated to colocated pytest test files alongside source modules
+- [ ] **RTK-05**: `pytest src/` discovers and runs all migrated tests with zero configuration
+- [ ] **RTK-06**: Standalone scripts relocated (font_showcase to utilities/, overlap_diagnostic deleted after test logic folded in)
+
 ## v2 Requirements
 
 Deferred to future milestone. Tracked but not in current roadmap.
@@ -113,12 +122,18 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | FIG-04 | Phase 6 | Complete |
 | FIG-05 | Phase 6 | Complete |
 | FIG-06 | Phase 6 | Complete |
+| RTK-01 | Phase 5.1 | Pending |
+| RTK-02 | Phase 5.1 | Pending |
+| RTK-03 | Phase 5.1 | Pending |
+| RTK-04 | Phase 5.1 | Pending |
+| RTK-05 | Phase 5.1 | Pending |
+| RTK-06 | Phase 5.1 | Pending |
 
 **Coverage:**
-- v1 requirements: 23 total
-- Mapped to phases: 23
+- v1 requirements: 29 total
+- Mapped to phases: 29
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-24 — Phase 6 figure requirements added*
+*Last updated: 2026-03-24 — Phase 5.1 research toolkit requirements added*

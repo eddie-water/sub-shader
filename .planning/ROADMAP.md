@@ -99,7 +99,19 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Audio-Visual Sync | 0/2 | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |
 | 5. Documentation | 3/4 | In Progress | - |
+| 5.1 Research Toolkit | 0/2 | Not started | - |
 | 6. Finalize Audio & Figures | 2/3 | In Progress|  |
+
+### Phase 05.1: Research toolkit restructure (INSERTED)
+
+**Goal:** Restructure monolithic benchmark.py into modular research toolkit and migrate unit tests to colocated pytest files alongside source modules
+**Requirements**: RTK-01, RTK-02, RTK-03, RTK-04, RTK-05, RTK-06
+**Depends on:** Phase 5
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05.1-01-PLAN.md — Split benchmark.py into figures.py, timing.py, wav_export.py + thin CLI dispatcher
+- [ ] 05.1-02-PLAN.md — Migrate unit_tests.py to colocated pytest files + relocate standalone scripts
 
 ### Phase 6: Finalize example audio and comparison figures for README
 
