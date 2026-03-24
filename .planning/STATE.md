@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Milestone complete
-stopped_at: Phase 5.1 context gathered
-last_updated: "2026-03-24T22:50:37.501Z"
+status: Ready to execute
+stopped_at: Completed 05.1-01-PLAN.md
+last_updated: "2026-03-24T23:17:11.461Z"
 last_activity: 2026-03-24
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 13
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
 ---
 
 # Project State
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** The visualization accurately tracks audio input in real time with minimal latency
-**Current focus:** Phase 06 — finalize-example-audio-and-comparison-figures-for-readme
+**Current focus:** Phase 05.1 — research-toolkit-restructure
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
+Phase: 05.1 (research-toolkit-restructure) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Plan: Not started
 | Phase 06 P01 | 10 | 3 tasks | 9 files |
 | Phase 06-finalize-example-audio-and-comparison-figures-for-readme P03 | 3 | 2 tasks | 1 files |
 | Phase 06 P02 | 8 | 1 tasks | 6 files |
+| Phase 05.1-research-toolkit-restructure P01 | 10 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,7 @@ Recent decisions affecting current work:
 - [Phase 06]: comparison_grid.png copied from comparison_grid_200dpi.png — canonical README name; --dpi 200 always produces _200dpi suffix
 - [Phase 06]: Timing bar chart generate_timing_bar_chart() added to benchmark.py with --timing-chart flag — chart can now be reproduced programmatically
 - [Phase 06]: Timing bar chart moved from README.md to DSP.md Section 6 — detailed timing analysis belongs in implementation docs
+- [Phase 05.1-01]: benchmark.py split into figures.py/timing.py/wav_export.py — all research/ modules use bare 'from utilities import' pattern matching existing CWD convention
 
 ### Pending Todos
 
@@ -124,5 +126,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-24
-Stopped at: Phase 5.1 context gathered
-Resume file: .planning/phases/05.1-research-toolkit-restructure/05.1-CONTEXT.md
+Stopped at: Completed 05.1-01-PLAN.md
+Resume file: None

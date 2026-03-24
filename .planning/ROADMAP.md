@@ -107,10 +107,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 **Goal:** Restructure monolithic benchmark.py into modular research toolkit and migrate unit tests to colocated pytest files alongside source modules
 **Requirements**: RTK-01, RTK-02, RTK-03, RTK-04, RTK-05, RTK-06
 **Depends on:** Phase 5
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 05.1-01-PLAN.md — Split benchmark.py into figures.py, timing.py, wav_export.py + thin CLI dispatcher
+- [x] 05.1-01-PLAN.md — Split benchmark.py into figures.py, timing.py, wav_export.py + thin CLI dispatcher
 - [ ] 05.1-02-PLAN.md — Migrate unit_tests.py to colocated pytest files + relocate standalone scripts
 
 ### Phase 6: Finalize example audio and comparison figures for README
