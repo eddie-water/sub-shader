@@ -260,6 +260,15 @@ def build_bouncing_chirp(sr: int, duration_s: float,
     log_inst_freq = np.clip(log_inst_freq, log_decades[0], log_decades[-1])
     inst_freq = np.exp(log_inst_freq)
 
+    # Truncate once inst_freq first reaches the ceiling so the signal
+    # ends naturally instead of lingering at 20 kHz.
+    ceiling = f_decades[-1]
+    ceiling_hits = np.where(inst_freq >= ceiling * 0.999)[0]
+    if len(ceiling_hits) > 0:
+        cut = ceiling_hits[0]
+        inst_freq = inst_freq[:cut]
+        t = t[:cut]
+
     # Integrate instantaneous frequency to get phase
     phase = 2 * np.pi * np.cumsum(inst_freq) / sr
     signal = np.sin(phase)
@@ -277,7 +286,8 @@ def build_bouncing_chirp_chunks(sr, chunk_size, overlap_factor, n_frames,
     """
     hop_size = int(chunk_size * (1 - overlap_factor))
     total_samples = hop_size * n_frames + chunk_size
-    duration_s = total_samples / sr
+    # Overshoot duration to compensate for ceiling truncation in build_bouncing_chirp
+    duration_s = total_samples / sr * 1.15
 
     signal, inst_freq, t = build_bouncing_chirp(
         sr, duration_s,
@@ -286,7 +296,10 @@ def build_bouncing_chirp_chunks(sr, chunk_size, overlap_factor, n_frames,
         seed=seed,
     )
 
-    chunks = [signal[i * hop_size: i * hop_size + chunk_size] for i in range(n_frames)]
+    # Only yield as many full chunks as the (possibly truncated) signal supports
+    max_chunks = max(0, (len(signal) - chunk_size) // hop_size + 1)
+    actual_n_frames = min(n_frames, max_chunks)
+    chunks = [signal[i * hop_size: i * hop_size + chunk_size] for i in range(actual_n_frames)]
     return chunks, signal, inst_freq, t
 
 

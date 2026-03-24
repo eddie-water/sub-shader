@@ -128,14 +128,9 @@ Each task was committed atomically:
 
 ## User Setup Required
 
-**DPI selection pending.** The user needs to review the 4 grid variants and select their preferred DPI for plan 02:
+**DPI selected: 200.** User reviewed all 4 grid variants and chose 200 DPI (8.9MB) as the quality/filesize sweet spot. Plan 02 will use DPI=200 for the final non-stub grid.
 
-- `assets/images/benchmarks/comparison_grid_150dpi.png` — 5.4MB
-- `assets/images/benchmarks/comparison_grid_200dpi.png` — 8.9MB
-- `assets/images/benchmarks/comparison_grid_250dpi.png` — 13MB
-- `assets/images/benchmarks/comparison_grid_300dpi.png` — 17.7MB
-
-Plan 02 will use the selected DPI to generate the final non-stub grid. If no selection is recorded, plan 02 defaults to 200 DPI.
+Post-checkpoint fix: Truncated bouncing chirp signal at 20kHz ceiling so the plot ends naturally instead of lingering at max frequency. Signal shortened from 6.08s to ~6.5s (with overshoot for chunk coverage).
 
 ## Known Stubs
 
