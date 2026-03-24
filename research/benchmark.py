@@ -16,6 +16,9 @@ Modes:
 """
 
 import argparse
+import os
+import subprocess
+import sys
 
 import matplotlib
 matplotlib.use('Agg')
@@ -102,8 +105,15 @@ if __name__ == "__main__":
         modes.append(("Timing Bar Chart", lambda d=args.dpi: generate_timing_bar_chart(dpi=d if d > 0 else 200)))
 
     if args.unit_tests:
-        from utilities.unit_tests import run_all as run_unit_tests
-        modes.append(("Unit Tests", run_unit_tests))
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        result = subprocess.run(
+            [sys.executable, "-m", "pytest", "src/", "-v"],
+            cwd=project_root,
+        )
+        if result.returncode != 0:
+            sys.exit(result.returncode)
+        if not modes:
+            sys.exit(0)
 
     if modes:
         run_modes(modes)
