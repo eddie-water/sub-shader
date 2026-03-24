@@ -49,11 +49,17 @@ from utilities import (
     BENCHMARKS_SEABORN_DIR,
     BENCHMARKS_STUBS_DIR,
     AUDIO_DEFAULT,
+    AUDIO_BOUNCING_CHIRP,
     AUDIO_POLYPHONIC,
     AUDIO_MUSICAL,
+    AUDIO_BELTRAN,
+    AUDIO_BELTRAN_16BAR,
+    AUDIO_BELTRAN_8BAR,
     MIDI_POLYPHONIC,
     DAW_POLYPHONIC,
     DAW_MUSICAL,
+    DAW_BELTRAN_16BAR,
+    DAW_BELTRAN_8BAR,
     STFT_NPERSEG,
     NUM_FRAMES,
     CHIRP_F0,
@@ -82,6 +88,9 @@ from utilities import (
     set_backend,
     compute_stft_frame,
     build_chirp_chunks,
+    build_wandering_chirp_chunks,
+    build_fm_chirp_chunks,
+    build_bouncing_chirp_chunks,
 )
 
 # =============================================================================
@@ -625,18 +634,40 @@ class ReadmeFigures:
 
 
 # =============================================================================
+# WAV EXPORT HELPER
+# =============================================================================
+
+def export_signal_to_wav(signal: np.ndarray, sample_rate: int, path: str) -> None:
+    """Write a 1-D float signal to a 16-bit WAV file."""
+    import soundfile as sf
+    # Normalize to [-1, 1] if needed
+    peak = np.abs(signal).max()
+    if peak > 0:
+        signal = signal / peak
+    sf.write(path, signal, sample_rate, subtype="PCM_16")
+    print(f"Exported WAV -> {path}  ({len(signal)} samples, {sample_rate} Hz, "
+          f"{len(signal) / sample_rate:.2f}s)")
+
+
+# =============================================================================
 # COMPARISON GRID (--comparison-grid)
 # =============================================================================
 
-def generate_comparison_grid():
+def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
     """
-    Generate a 3x3 comparison grid figure: signals (columns) x representations (rows).
+    Generate a 5x3 comparison grid figure.
 
-    Columns: Chirp (10s synthetic), Polyphonic (file), Musical (file)
-    Rows:    STFT, PyWavelet CWT, SubShader CWT
+    Columns: Bouncing Chirp (synthetic), Polyphonic (file), Musical (beltran first 20s)
+    Rows:    Reference (waveform/inst-freq), DAW (placeholder), STFT, PyWavelet CWT, SubShader CWT
 
-    Output: assets/images/benchmarks/comparison_grid.png
+    Args:
+        stub_pywt: Skip PyWavelet computation, use random stub spectrograms (faster)
+        dpi: Output DPI. When > 0, file is named comparison_grid_{dpi}dpi.png.
+             When 0 (default), file is named comparison_grid.png or comparison_grid_STUB.png.
+
+    Output: assets/images/benchmarks/comparison_grid[_Ndpi].png
     """
+
     os.makedirs(BENCHMARKS_DIR, exist_ok=True)
 
     config = get_default_config()
@@ -645,21 +676,24 @@ def generate_comparison_grid():
     overlap_factor = config.audio.overlap_factor
     wc = config.wavelet
 
+    # ── Visual config (single source for all grid plots) ─────────────────────
+    GRID_CMAP = "inferno"
+    GRID_WAVEFORM_COLOR = "#FFDB4A"
+
     # ── Signal definitions ────────────────────────────────────────────────────
-    # Each signal is either chirp chunks or an audio file path
-    CHIRP_DURATION_S = 10.0
+    CHIRP_DURATION_S = 6.0
     chirp_n_frames = int(
         CHIRP_DURATION_S * sr_default
         / (chunk_size * (1 - overlap_factor))
     )
     chirp_n_frames = max(chirp_n_frames, NUM_FRAMES)
 
+    # DAW reference images (row 1) — placeholders until user generates Edison screenshots
     signal_specs = [
-        {"label": "Chirp",      "type": "chirp"},
-        {"label": "Polyphonic", "type": "file",  "path": AUDIO_POLYPHONIC},
-        {"label": "Musical",    "type": "file",  "path": AUDIO_MUSICAL},
+        {"label": "Bouncing Chirp", "type": "chirp", "daw_image": os.path.join(BENCHMARKS_DIR, "bouncing_chirp.png")},
+        {"label": "Polyphonic", "type": "file",  "path": AUDIO_POLYPHONIC, "daw_image": DAW_POLYPHONIC},
+        {"label": "Beltran SoundCloud Rip (8 Bars)", "type": "file", "path": AUDIO_BELTRAN_8BAR, "daw_image": DAW_BELTRAN_8BAR},
     ]
-    row_labels = ["STFT", "PyWavelet", "SubShader"]
 
     # ── DSP result containers (per-column) ───────────────────────────────────
     column_data = []
@@ -669,11 +703,16 @@ def generate_comparison_grid():
 
         if spec["type"] == "chirp":
             sr = sr_default
-            chunks = build_chirp_chunks(
-                CHIRP_F0, CHIRP_F1, sr, chunk_size, overlap_factor, chirp_n_frames
+            chunks, raw_waveform, chirp_inst_freq, _ = build_bouncing_chirp_chunks(
+                sr=sr, chunk_size=chunk_size, overlap_factor=overlap_factor,
+                n_frames=chirp_n_frames,
             )
             n_frames = len(chunks)
             chunk_iter = iter(chunks)
+            raw_sr = sr
+            # Export bouncing chirp as WAV so it can be dragged into FL Studio / Edison
+            chirp_wav_path = AUDIO_BOUNCING_CHIRP
+            export_signal_to_wav(raw_waveform, sr, chirp_wav_path)
         else:
             audio_path = spec["path"]
             if not os.path.exists(audio_path):
@@ -684,20 +723,30 @@ def generate_comparison_grid():
                 overlap_factor=overlap_factor,
             )
             sr = ai.get_sample_rate()
-            n_frames = NUM_FRAMES
+            raw_waveform = ai.get_entire_audio()
+            hop = int(chunk_size * (1 - overlap_factor))
+            file_n_frames = int(len(raw_waveform) / hop)
+            n_frames = spec.get("max_frames", file_n_frames)
             chunk_iter = None
+            raw_sr = sr
+            max_samples = int(n_frames * chunk_size * (1 - overlap_factor) + chunk_size)
+            if len(raw_waveform) > max_samples:
+                raw_waveform = raw_waveform[:max_samples]
 
-        pywt = PyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
         npwt = NumPyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+        if not stub_pywt:
+            pywt = PyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+            cwt_freqs = pywt.freqs
+        else:
+            cwt_freqs = npwt.freqs
 
-        cwt_freqs = pywt.freqs
         n_cwt_freqs = len(cwt_freqs)
 
         stft_freqs = np.fft.rfftfreq(STFT_NPERSEG, d=1.0 / sr)
         freq_min, freq_max = cwt_freqs[0], cwt_freqs[-1]
         stft_freq_mask = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
         stft_cropped_freqs = stft_freqs[stft_freq_mask]
-        stft_target_w = pywt.output_n
+        stft_target_w = npwt.output_n
 
         color_norm = ColorNormalizationConfig()
         stft_buf = CircularFrameBuffer(
@@ -705,11 +754,12 @@ def generate_comparison_grid():
             num_frames=n_frames,
             color_norm_config=color_norm,
         )
-        pywt_buf = CircularFrameBuffer(
-            frame_shape=pywt.get_output_shape(),
-            num_frames=n_frames,
-            color_norm_config=color_norm,
-        )
+        if not stub_pywt:
+            pywt_buf = CircularFrameBuffer(
+                frame_shape=pywt.get_output_shape(),
+                num_frames=n_frames,
+                color_norm_config=color_norm,
+            )
         npwt_buf = CircularFrameBuffer(
             frame_shape=npwt.get_output_shape(),
             num_frames=n_frames,
@@ -717,7 +767,7 @@ def generate_comparison_grid():
         )
 
         frames_processed = 0
-        for i in range(n_frames):
+        for _ in range(n_frames):
             chunk = next(chunk_iter, None) if chunk_iter is not None else ai.get_chunk()
             if chunk is None:
                 break
@@ -728,8 +778,9 @@ def generate_comparison_grid():
             )
             stft_buf.push_frame(stft_log)
 
-            pywt_out, _ = time_call(pywt.cwt, chunk)
-            pywt_buf.push_frame(pywt_out)
+            if not stub_pywt:
+                pywt_out, _ = time_call(pywt.cwt, chunk)
+                pywt_buf.push_frame(pywt_out)
 
             npwt_out, _ = time_call(npwt.cwt, chunk)
             npwt_buf.push_frame(npwt_out)
@@ -743,48 +794,132 @@ def generate_comparison_grid():
         frame_w = npwt_buf.width
         actual_w = frames_processed * frame_w
         stft_spec = stft_buf.get_flattened_buffer()[:, -actual_w:]
-        pywt_spec = pywt_buf.get_flattened_buffer()[:, -actual_w:]
         npwt_spec = npwt_buf.get_flattened_buffer()[:, -actual_w:]
+
+        if not stub_pywt:
+            pywt_spec = pywt_buf.get_flattened_buffer()[:, -actual_w:]
+            pywt_vmax = pywt_buf.get_intensity_max()
+        else:
+            pywt_spec = np.random.rand(n_cwt_freqs, actual_w).astype(np.float32)
+            pywt_vmax = pywt_spec.max()
 
         duration_s = frames_processed * chunk_size / sr
         ytick_bins, ytick_labels = compute_freq_yticks(cwt_freqs)
 
-        column_data.append({
+        # Trim waveform to match DSP duration
+        waveform_samples = int(duration_s * raw_sr)
+        waveform = raw_waveform[:waveform_samples]
+        waveform_time = np.linspace(0, duration_s, len(waveform), endpoint=False)
+
+        col_entry = {
             "label":        spec["label"],
             "stft":         stft_spec,
             "pywt":         pywt_spec,
             "npwt":         npwt_spec,
             "stft_vmax":    stft_buf.get_intensity_max(),
-            "pywt_vmax":    pywt_buf.get_intensity_max(),
+            "pywt_vmax":    pywt_vmax,
             "npwt_vmax":    npwt_buf.get_intensity_max(),
             "n_cwt_freqs":  n_cwt_freqs,
+            "cwt_freqs":    cwt_freqs,
             "duration_s":   duration_s,
             "ytick_bins":   ytick_bins,
             "ytick_labels": ytick_labels,
-        })
+            "waveform":     waveform,
+            "waveform_time": waveform_time,
+        }
+        if spec["type"] == "chirp":
+            # Use same time mapping as waveform (spans full duration_s)
+            col_entry["chirp_inst_freq"] = chirp_inst_freq[:len(waveform)]
+        column_data.append(col_entry)
 
-    # ── Build 3x3 figure ─────────────────────────────────────────────────────
-    print_section_start("Rendering 3x3 comparison grid")
+    # ── Build 5x3 figure ─────────────────────────────────────────────────────
+    print_section_start("Rendering 5x3 comparison grid")
 
-    GRID_ROWS = 3
+    GRID_ROWS = 5  # Reference + DAW + STFT + PyWavelet + SubShader
     GRID_COLS = 3
     fig, axes = plt.subplots(
         GRID_ROWS, GRID_COLS,
-        figsize=(18, 10),
-        gridspec_kw={"hspace": 0.05, "wspace": 0.02},
+        figsize=(24, 16),
+        gridspec_kw={
+            "hspace": 0.08,
+            "wspace": 0.04,
+        },
     )
 
-    for col_idx, col in enumerate(column_data):
-        row_specs = [
-            (col["stft"], col["stft_vmax"], "STFT"),
-            (col["pywt"], col["pywt_vmax"], "PyWavelet"),
-            (col["npwt"], col["npwt_vmax"], "SubShader"),
+    pywt_label = "PyWavelet (stub)" if stub_pywt else "PyWavelet"
+
+    for col_idx, (col, spec) in enumerate(zip(column_data, signal_specs)):
+        # ── Row 0: Reference — waveform time series / instantaneous freq ──
+        ax_ref = axes[0][col_idx]
+
+        if spec["type"] == "chirp":
+            # Map inst_freq (Hz) → bin indices matching spectrogram y-axis
+            cwt_freqs = col["cwt_freqs"]
+            inst_freq_hz = col["chirp_inst_freq"]
+            inst_freq_bins = np.interp(inst_freq_hz, cwt_freqs,
+                                       np.arange(len(cwt_freqs)))
+            ax_ref.plot(col["waveform_time"], inst_freq_bins,
+                        color=GRID_WAVEFORM_COLOR, linewidth=1.5, alpha=0.9)
+            ax_ref.set_ylim(0, col["n_cwt_freqs"])
+            ax_ref.set_facecolor("#1a1a2e")
+            ax_ref.grid(True, color="white", alpha=0.08, linewidth=0.5)
+            # Use same freq ticks as spectrogram rows
+            if col_idx == 0:
+                ax_ref.set_yticks(col["ytick_bins"])
+                ax_ref.set_yticklabels(col["ytick_labels"], fontsize=14)
+            else:
+                ax_ref.set_yticks([])
+        else:
+            # Audio files: waveform time series
+            ax_ref.plot(col["waveform_time"], col["waveform"],
+                        color=GRID_WAVEFORM_COLOR, linewidth=0.2, alpha=0.8)
+            peak = max(np.abs(col["waveform"]).max(), 1e-6)
+            ax_ref.set_ylim(-peak * 1.10, peak * 1.10)
+            ax_ref.set_facecolor("#1a1a2e")
+            ax_ref.grid(True, color="gray", alpha=0.15, linewidth=0.5)
+            if col_idx != 0:
+                ax_ref.set_yticks([])
+
+        ax_ref.set_xlim(0, col["duration_s"])
+        for spine in ax_ref.spines.values():
+            spine.set_edgecolor("#444444")
+            spine.set_linewidth(0.8)
+        plt.setp(ax_ref.get_xticklabels(), visible=False)
+        ax_ref.tick_params(axis="x", length=0)
+
+        # ── Row 1: DAW — placeholder / reference image ───────────────────
+        ax_daw = axes[1][col_idx]
+
+        daw_path = spec.get("daw_image")
+        if daw_path and os.path.exists(daw_path):
+            daw_img = plt.imread(daw_path)
+            ax_daw.imshow(daw_img, aspect="auto",
+                          extent=[0, col["duration_s"], 0, 1])
+        else:
+            ax_daw.set_facecolor("#2a2a2a")
+            ax_daw.text(0.5, 0.5, "placeholder — generate in FL Studio",
+                        transform=ax_daw.transAxes, ha="center", va="center",
+                        fontsize=18, color="#666666", style="italic")
+        ax_daw.set_yticks([])
+
+        ax_daw.set_xlim(0, col["duration_s"])
+        for spine in ax_daw.spines.values():
+            spine.set_edgecolor("#444444")
+            spine.set_linewidth(0.8)
+        plt.setp(ax_daw.get_xticklabels(), visible=False)
+        ax_daw.tick_params(axis="x", length=0)
+
+        # ── Rows 2-4: STFT, PyWavelet, SubShader ─────────────────────────
+        spec_rows = [
+            (col["stft"], col["stft_vmax"]),
+            (col["pywt"], col["pywt_vmax"]),
+            (col["npwt"], col["npwt_vmax"]),
         ]
-        for row_idx, (spec_data, vmax, _row_label) in enumerate(row_specs):
-            ax = axes[row_idx][col_idx]
+        for row_idx, (spec_data, vmax) in enumerate(spec_rows):
+            ax = axes[row_idx + 2][col_idx]
             extent = [0, col["duration_s"], 0, col["n_cwt_freqs"]]
             ax.imshow(
-                spec_data, cmap="inferno", aspect="auto",
+                spec_data, cmap=GRID_CMAP, aspect="auto",
                 origin="lower", extent=extent, vmin=0, vmax=vmax,
             )
             ax.grid(True, color="white", alpha=0.08, linewidth=0.5)
@@ -792,33 +927,55 @@ def generate_comparison_grid():
                 spine.set_edgecolor("#444444")
                 spine.set_linewidth(0.8)
 
-            # Y-axis ticks on left column only
+            # Y-axis: "Freq (Hz)" on left column only
             if col_idx == 0:
                 ax.set_yticks(col["ytick_bins"])
-                ax.set_yticklabels(col["ytick_labels"], fontsize=8)
+                ax.set_yticklabels(col["ytick_labels"], fontsize=14)
+                if row_idx == 1:  # middle spectrogram row (PyWavelet)
+                    ax.set_ylabel("Freq (Hz)", fontsize=18, labelpad=4)
             else:
                 ax.set_yticks([])
 
-            # X-axis ticks on bottom row only
-            if row_idx == GRID_ROWS - 1:
-                ax.tick_params(axis="x", labelsize=8)
+            # X-axis: "Time (s)" on bottom row only
+            if row_idx == 2:  # bottom spectrogram row (SubShader)
+                ax.tick_params(axis="x", labelsize=14)
+                if col_idx == 1:  # center column
+                    ax.set_xlabel("Time (s)", fontsize=18, labelpad=4)
             else:
                 plt.setp(ax.get_xticklabels(), visible=False)
                 ax.tick_params(axis="x", length=0)
 
     # Column labels across the top
     for col_idx, col in enumerate(column_data):
-        axes[0][col_idx].set_title(col["label"], fontsize=11, fontweight="bold", pad=6)
+        axes[0][col_idx].set_title(col["label"], fontsize=24, fontweight="bold", pad=8)
 
-    # Row labels on the left
-    for row_idx, row_label in enumerate(row_labels):
-        axes[row_idx][0].set_ylabel(row_label, fontsize=10, fontweight="bold", labelpad=6)
+    # Row labels on the RIGHT side (rotated 90° clockwise)
+    right_labels = ["Reference", "DAW", "STFT", pywt_label, "SubShader"]
+    for row_idx, label in enumerate(right_labels):
+        ax_right = axes[row_idx][GRID_COLS - 1]
+        ax_right.annotate(
+            label, xy=(1.02, 0.5), xycoords="axes fraction",
+            fontsize=20, fontweight="bold", va="center", ha="left",
+            rotation=-90,
+        )
 
-    plt.subplots_adjust(left=0.07, right=0.98, top=0.93, bottom=0.06,
-                        wspace=0.02, hspace=0.05)
+    GRID_MARGIN = 0.05
+    plt.subplots_adjust(left=GRID_MARGIN, right=1 - GRID_MARGIN,
+                        top=1 - GRID_MARGIN, bottom=GRID_MARGIN,
+                        wspace=0.04, hspace=0.08)
 
-    out_path = os.path.join(BENCHMARKS_DIR, "comparison_grid.png")
-    fig.savefig(out_path, dpi=200)
+    # When --dpi is passed explicitly, the output is always named by DPI (no stub suffix).
+    # The stub suffix only applies to the default 200 DPI path without an explicit DPI request.
+    # Caller uses dpi=0 as sentinel to mean "use default naming".
+    if dpi > 0:
+        base_name = f"comparison_grid_{dpi}dpi.png"
+    elif stub_pywt:
+        base_name = "comparison_grid_STUB.png"
+    else:
+        base_name = "comparison_grid.png"
+    out_path = os.path.join(BENCHMARKS_DIR, base_name)
+    save_dpi = dpi if dpi > 0 else 200
+    fig.savefig(out_path, dpi=save_dpi)
     plt.close(fig)
     print(f"Saved -> {out_path}")
     print_section_end()
@@ -851,6 +1008,8 @@ if __name__ == "__main__":
                         help="With --figures: generate stub layouts instead of real DSP (fast iteration)")
     parser.add_argument("--stub-pywt",       action="store_true",
                         help="With --figures: skip PyWavelet computation, use random stub spectrograms (faster, saves to stub folder)")
+    parser.add_argument("--dpi",             type=int, default=0,
+                        help="Output DPI for --comparison-grid. When set, output is named comparison_grid_{dpi}dpi.png. Default: 200 DPI with standard filename.")
     args = parser.parse_args()
 
     any_figure_individual = args.figures_chirp or args.figures_polyphonic or args.figures_musical
@@ -888,7 +1047,7 @@ if __name__ == "__main__":
         modes.append(("Seaborn Figures", lambda sp=args.stub_pywt: ReadmeFigures(backends=["seaborn"], stub_pywt=sp).run_all()))
 
     if args.comparison_grid:
-        modes.append(("Comparison Grid", generate_comparison_grid))
+        modes.append(("Comparison Grid", lambda sp=args.stub_pywt, d=args.dpi: generate_comparison_grid(stub_pywt=sp, dpi=d)))
 
     if args.unit_tests:
         from utilities.unit_tests import run_all as run_unit_tests

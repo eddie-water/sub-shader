@@ -7,11 +7,17 @@ from .constants import (
     BENCHMARKS_STUBS_DIR,
     AUDIO_DEFAULT,
     AUDIO_CHIRP,
+    AUDIO_BOUNCING_CHIRP,
     AUDIO_POLYPHONIC,
     AUDIO_MUSICAL,
+    AUDIO_BELTRAN,
+    AUDIO_BELTRAN_16BAR,
+    AUDIO_BELTRAN_8BAR,
     MIDI_POLYPHONIC,
     DAW_POLYPHONIC,
     DAW_MUSICAL,
+    DAW_BELTRAN_16BAR,
+    DAW_BELTRAN_8BAR,
     STFT_NPERSEG,
     NUM_FRAMES,
     CHIRP_F0,
@@ -54,7 +60,14 @@ from .plotting import (
 )
 
 # Export DSP helpers
-from .dsp_helpers import compute_stft_frame, build_chirp_chunks
+from .dsp_helpers import (
+    compute_stft_frame,
+    build_chirp_chunks,
+    build_wandering_chirp_chunks,
+    build_fm_chirp_chunks,
+    build_bouncing_chirp,
+    build_bouncing_chirp_chunks,
+)
 
 __all__ = [
     # Constants
@@ -63,11 +76,15 @@ __all__ = [
     "BENCHMARKS_STUBS_DIR",
     "AUDIO_DEFAULT",
     "AUDIO_CHIRP",
+    "AUDIO_BOUNCING_CHIRP",
     "AUDIO_POLYPHONIC",
     "AUDIO_MUSICAL",
+    "AUDIO_BELTRAN",
+    "AUDIO_BELTRAN_16BAR",
     "MIDI_POLYPHONIC",
     "DAW_POLYPHONIC",
     "DAW_MUSICAL",
+    "DAW_BELTRAN_16BAR",
     "STFT_NPERSEG",
     "NUM_FRAMES",
     "CHIRP_F0",
@@ -104,4 +121,7 @@ __all__ = [
     # DSP
     "compute_stft_frame",
     "build_chirp_chunks",
+    "build_wandering_chirp_chunks",
+    "build_bouncing_chirp",
+    "build_bouncing_chirp_chunks",
 ]
