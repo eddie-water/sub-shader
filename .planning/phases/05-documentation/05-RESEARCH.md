@@ -1,6 +1,6 @@
-# Phase 5: Documentation - Research
+# Phase 5: Documentation - Research (Updated)
 
-**Researched:** 2026-03-23
+**Researched:** 2026-03-23 (updated 2026-03-23 post-execution)
 **Domain:** Technical documentation scaffolding — README structure, pedagogical writing, benchmark figure pipeline
 **Confidence:** HIGH
 
@@ -66,174 +66,178 @@
 
 | ID | Description | Research Support |
 |----|-------------|------------------|
-| DOCS-01 | Top-level README — project overview, benchmark figures, visual comparisons, install/usage instructions | README.md exists at ~50% draft; scaffold must preserve voice, add performance section with comparison grid figure |
-| DOCS-02 | DSP module README — pedagogical explanation of CWT pipeline, wavelet choices, normalization, with visuals | wavelet_foundations_outline.md sections 1-6 cover exactly this content; notebook through 2.4 already written |
-| DOCS-03 | Rendering module README — OpenGL/shader pipeline, frame buffer, intensity mapping | plotter.py is fully readable; visualizer_submodule_readme_claude.md gives the topic list |
-| DOCS-04 | Audio module README — audio capture, chunking, overlap strategy | audio_input.py + audio_player.py are fully readable; audio_submodule_readme_claude.md gives the topic list |
-| DOCS-05 | Meaningful examples — no filler, no superfluous content | All code examples must be extracted from actual source; placeholder images must reference real assets |
-| DOCS-06 | Documentation scaffolded by Claude, authored by user in their own voice | Scaffold = structure + placeholders + candidate analogies, NOT draft prose |
+| DOCS-01 | Top-level README — project overview, benchmark figures, visual comparisons, install/usage instructions | README.md scaffold complete; comparison grid PLACEHOLDER tag in place; install section flagged for Phase 4 output |
+| DOCS-02 | DSP module README — pedagogical explanation of CWT pipeline, wavelet choices, normalization, with visuals | DSP.md scaffold complete with 68 WRITE placeholders, 8 image placeholders, 6 candidate analogies, all code verified |
+| DOCS-03 | Rendering module README — OpenGL/shader pipeline, frame buffer, intensity mapping | RENDERER.md scaffold complete with 9 sections, 22 WRITE placeholders, all code verified |
+| DOCS-04 | Audio module README — audio capture, chunking, overlap strategy | AUDIO.md scaffold complete with 6 sections, 12 WRITE placeholders, all code verified |
+| DOCS-05 | Meaningful examples — no filler, no superfluous content | comparison_grid.png generated; all code examples extracted from actual source |
+| DOCS-06 | Documentation scaffolded by Claude, authored by user in their own voice | All four scaffold documents complete — zero Claude-written prose paragraphs |
 </phase_requirements>
 
 ---
 
 ## Summary
 
-Phase 5 is a scaffolding phase, not a writing phase. The deliverable is four scaffold files (README.md, DSP.md, AUDIO.md, RENDERER.md) that give the user exactly enough structure to sit down and fill in prose — without Claude writing the prose for them. The existing content inventory is rich: a 10-section wavelet foundations outline (sections 1-6 already detailed), a working top-level README draft at ~50%, and detailed topic lists for the audio and renderer modules.
+**Plans 01, 02, and 03 are complete as of 2026-03-23.** All four scaffold documents exist at project root: README.md (updated), DSP.md, AUDIO.md, RENDERER.md. The comparison grid figure (3x3, 3600x2000 px, 200 DPI) has been generated at `assets/images/benchmarks/comparison_grid.png`.
 
-The primary technical work in this phase is the comparison grid figure — a 3x3 (or 3x4) matplotlib grid with columns = signals (chirp, polyphonic, musical) and rows = representations (STFT, PyWavelet CWT, SubShader CWT). This figure is the visual centerpiece of the README performance section, and the benchmark.py file is the designated home for all figure generation. Notebook figure-generation code should be migrated there.
+This RESEARCH.md update serves as the accurate post-execution state record for any new plans in this phase. The remaining work is split into two categories:
 
-The scaffold methodology is consistent across all four documents: section headings, sub-headings, bullet-point guidance ("explain X here", "analogy opportunity"), image placeholder markers, and a few candidate analogies the user can accept or rewrite. The only code in the scaffolds is accurate, runnable examples extracted from actual source files — no illustrative filler that silently fails.
+1. **Figure generation for DSP.md** — DSP.md contains 8 image `[PLACEHOLDER:]` markers. Two of these reference figures that require a new `--foundations-figures` flag in benchmark.py (inner product / vector geometry figures currently only in the notebook). The `numpy_vs_cupy_diff.png` already exists and is already embedded in DSP.md using live image syntax. The STFT windowing, wavelet scaling, and Fourier basis figures also need generating.
 
-**Primary recommendation:** Build scaffolds from canonical sources (foundations outline, source code, existing readme drafts), never invent content — then flag what is already written vs what needs authoring.
+2. **User prose authoring** — the scaffolds are complete; the user writes all final prose. This is out of scope for Claude's execution tasks. The scaffold markers guide this work.
+
+**Primary recommendation:** If a new plan is needed, it should focus on migrating notebook figure-generation code into benchmark.py via a `--foundations-figures` flag, and then generating the DSP.md figure set into `assets/images/dsp/`.
 
 ---
 
-## Content Inventory
+## Current Execution State
 
-### What Exists (can be incorporated directly)
+### What Plans 01-03 Delivered
 
-| Item | Location | Status | Notes |
-|------|----------|--------|-------|
-| Top-level README draft | `README.md` | ~50% done | Voice is right; several sections are stream-of-consciousness placeholders |
-| Wavelet foundations outline | `research/docs/demo/readmes/wavelet/wavelet_foundations_outline.md` | Complete | Sections 1-6 are fully detailed; 7-10 thorough but deferred |
-| Foundations notebook | `research/docs/demo/readmes/wavelet/wavelet_foundations.ipynb` | Through 2.4 | Has working figures (basic vectors, projections); figure gen code to migrate to benchmark.py |
-| DSP README spec | `research/docs/demo/readmes/wavelet/dsp_submodule_readme_claude.md` | Outline only | Confirms: use foundations outline, figure gen via benchmark flags |
-| Audio README spec | `research/docs/demo/readmes/audio/audio_submodule_readme_claude.md` | Outline only | 4-row overlap viz described; style guidelines explicit |
-| Renderer README spec | `research/docs/demo/readmes/plotter/visualizer_submodule_readme_claude.md` | Outline only | Topics listed; diagram placeholder noted |
-| Discussion summary | `research/docs/demo/discussion_summary.md` | Done | Terminology ladder, voice guidelines, pedagogy decisions — critical for DSP scaffold |
-| Chirp comparison | `assets/images/benchmarks/chirp_signal_comparison.png` | Exists | STFT + pywt + SubShader CWT, but no grid format yet |
-| Polyphonic comparison | `assets/images/benchmarks/polyphonic_signal_comparison.png` | Exists | Same format |
-| Musical comparison | `assets/images/benchmarks/musical_signal_comparison.png` | Exists | Same format |
-| numpy_vs_cupy_diff | `assets/images/benchmarks/numpy_vs_cupy_diff.png` | Exists | Moves to DSP.md per decision |
-| Bouncing chirp | `assets/images/diagnostics/overlap_redundancy_diagnostic.png` | Exists | Candidate replacement for linear chirp in grid |
-| Timing bar chart | `assets/images/benchmarks/timing_bar_chart.png` | Exists | Goes in STFT vs pywt vs numpy vs cupy timing section |
-| PyWt stub images | `assets/images/benchmarks/stubs/` | Stubs | chirp/polyphonic/musical _STUB_PYWT.png — needs real PyWavelet rows |
+| Plan | Deliverable | Status | Key Files |
+|------|-------------|--------|-----------|
+| 05-01 | Comparison grid figure + benchmark.py flag | Complete | `assets/images/benchmarks/comparison_grid.png`, `research/benchmark.py` |
+| 05-02 | DSP.md scaffold (sections 1-7, verified code) | Complete | `DSP.md` |
+| 05-03 | README.md scaffold + AUDIO.md + RENDERER.md | Complete | `README.md`, `AUDIO.md`, `RENDERER.md` |
 
-### What Does Not Exist (needs to be created during implementation)
+### What Each Scaffold Document Contains Now
 
-| Item | Blocker | Owner |
-|------|---------|-------|
-| Comparison grid figure (3×3 or 3×4) | benchmark.py needs new grid-layout flag | Implementer |
-| Inner product / vector figures in DSP.md | Already in notebook; need migration to benchmark.py | Implementer |
-| `DSP.md` file | Does not exist yet | Implementer (scaffold) |
-| `AUDIO.md` file | Does not exist yet | Implementer (scaffold) |
-| `RENDERER.md` file | Does not exist yet | Implementer (scaffold) |
-| PyWavelet rows in comparison images | Stubs exist; real renders needed | Implementer |
+**README.md** (updated — was ~50% draft)
+- 8 `[REWRITE:]` tags on stream-of-consciousness passages (all with intent + placement guidance)
+- 10 `[WRITE:]` tags on gaps (install section, benchmark timing breakdown)
+- 2 `[PLACEHOLDER:]` tags (comparison grid figure, demo video clip)
+- `[MOVED:]` marker for `numpy_vs_cupy_diff.png` (now in DSP.md Section 6.4)
+- Cross-links fixed: all three point to `AUDIO.md`, `DSP.md`, `RENDERER.md`
+- Python requirement updated from `3.8+` to `3.9+`
+
+**DSP.md** (new)
+- 7 sections (Motivation through Future) matching wavelet_foundations_outline.md
+- 68 `[WRITE:]` placeholders
+- 8 `[PLACEHOLDER:]` image markers
+- 6 `candidate analogy:` labeled suggestions
+- CWT pipeline code block verified against wavelet.py (all 6 method calls)
+- WaveletConfig parameter table with actual defaults (7 fields verified against config.py)
+- `numpy_vs_cupy_diff.png` embedded with live image syntax (file exists)
+- Appendix: Concept Ladder table from foundations outline
+
+**AUDIO.md** (new)
+- 6 sections: Role in Pipeline, The Overlap Strategy, AudioInput, AudioPlayer, Configuration, Usage Example
+- 12 `[WRITE:]` placeholders
+- `hop_size = int(chunk_size * (1.0 - overlap_factor))` formula with concrete example
+- Code examples extracted from `audio_input.py`, `audio_player.py`, `__main__.py`
+- AudioConfig fields table with actual defaults (3 fields)
+- All design decisions documented: float32 storage, blocksize=0, threading.Lock, seamless looping
+
+**RENDERER.md** (new)
+- 9 sections: Role in Pipeline, Why Shaders, Circular Frame Buffer, Intensity Normalization, Init CPU-GPU Transfers, Runtime Render Loop, Shader Pipeline, Configuration, Diagram
+- 22 `[WRITE:]` placeholders
+- `frame_order` code extracted from `plotter.py CircularFrameBuffer.push_frame`
+- IntensityTracker decay code extracted from `plot_normalizer.py` (3 lines)
+- `flattened_buffer` pre-allocation documented (5 mentions)
+- `intensity_max, 1e-8` floor documented (2 locations)
+- VisualizationConfig and ColorNormalizationConfig fields tables with actual defaults
+
+---
+
+## Assets State
+
+### Benchmark Figures (all in `assets/images/benchmarks/`)
+
+| File | Exists | Used In | Notes |
+|------|--------|---------|-------|
+| `comparison_grid.png` | YES | README.md placeholder | 3x3, 3600x2000 px, 200 DPI — user has not yet reviewed final layout |
+| `chirp_signal_comparison.png` | YES | Superseded by grid | Individual signal comparisons; no longer referenced in README |
+| `polyphonic_signal_comparison.png` | YES | Superseded by grid | Same |
+| `musical_signal_comparison.png` | YES | Superseded by grid | Same |
+| `numpy_vs_cupy_diff.png` | YES | DSP.md Section 6.4 | Live image reference (not a placeholder) |
+| `timing_bar_chart.png` | YES | README.md Benchmark section | Embedded directly (live path, not placeholder) |
+| `stubs/chirp_signal_comparison_STUB_PYWT.png` | YES | Stubs only | Stub for pywt row — real renders from `--comparison-grid` |
+| `stubs/polyphonic_signal_comparison_STUB_PYWT.png` | YES | Stubs only | Same |
+| `stubs/musical_signal_comparison_STUB_PYWT.png` | YES | Stubs only | Same |
+
+### Diagnostic Figures
+
+| File | Exists | Used In | Notes |
+|------|--------|---------|-------|
+| `assets/images/diagnostics/overlap_redundancy_diagnostic.png` | YES | Not yet referenced | Bouncing chirp candidate for Column 1 of comparison grid — deferred to user review |
+
+### DSP Foundations Figures (all MISSING — need generation)
+
+DSP.md contains 8 `[PLACEHOLDER:]` markers. Two are already resolved (`numpy_vs_cupy_diff.png` is live). The remaining 6 require generating new figures:
+
+| Placeholder | Where in DSP.md | Generator | Output Path | Status |
+|-------------|-----------------|-----------|-------------|--------|
+| 2D vector dot product geometric interpretation | Section 2.3 | benchmark.py `--foundations-figures` (TBD) | `assets/images/dsp/dot_product_geometry.png` | MISSING |
+| Parallel/perpendicular vector pairs | Section 2.4.1 | Same | `assets/images/dsp/vector_similarity.png` | MISSING |
+| Basis decomposition 2D vector | Section 2.4.3 | Same | `assets/images/dsp/basis_decomposition.png` | MISSING |
+| Sign accumulation color-coded | Section 2.5 | Same | `assets/images/dsp/sign_accumulation.png` | MISSING |
+| Fourier basis functions | Section 3.3 | Same | `assets/images/dsp/fourier_basis.png` | MISSING |
+| STFT windowing illustration | Section 4.1 | Same | `assets/images/dsp/stft_windowing.png` | MISSING |
+| Wavelet scaling at different frequencies | Section 5.4 | Same | `assets/images/dsp/wavelet_scaling.png` | MISSING |
+| numpy_vs_cupy_diff.png | Section 6.4 | EXISTS — already in benchmark.py `--figures` | `assets/images/benchmarks/numpy_vs_cupy_diff.png` | DONE |
+
+Source notebook for figures 1-5: `research/docs/demo/readmes/wavelet/wavelet_foundations.ipynb` (through Section 2.4)
+Figures 6-7 (STFT windowing, wavelet scaling) require new implementation in benchmark.py.
+
+---
+
+## What Remains for Phase 5 Completion
+
+### Remaining Engineering Work (potential Plan 04)
+
+**DSP.md Figure Generation** — blocked by missing `--foundations-figures` flag in benchmark.py:
+
+1. Audit `wavelet_foundations.ipynb` for existing figure-generation cells (Sections 2.3-2.4 have working matplotlib figures)
+2. Add `--foundations-figures` flag to `benchmark.py` that generates the 6 missing DSP.md figures
+3. Output to `assets/images/dsp/` (new directory)
+4. Update DSP.md `[PLACEHOLDER:]` markers to live image paths after generation
+
+This is a legitimate Plan 04 scope. It is self-contained, has clear verification (6 PNG files exist), and unblocks the user from seeing their DSP.md visually complete.
+
+### User Authoring Work (not Claude's task)
+
+The scaffold format with `[WRITE:]`, `[REWRITE:]`, and `[PLACEHOLDER:]` markers is the contract: the user fills in all prose. Per DOCS-06 and CONTEXT.md, Claude does not write draft paragraphs. The following are the author's surface areas:
+
+| Document | Marker Count | Biggest Sections |
+|----------|-------------|-----------------|
+| README.md | 8 REWRITE + 10 WRITE | Performance section prose, Future Improvements, Install |
+| DSP.md | 68 WRITE | All of Sections 1-7 prose content |
+| AUDIO.md | 12 WRITE | All section prose |
+| RENDERER.md | 22 WRITE | All section prose |
 
 ---
 
 ## Architecture Patterns
 
-### Scaffold Structure (all four documents)
+### Scaffold Format (established and in use)
 
-Each scaffold follows the same anatomy:
+All four documents follow the same marker system:
+- `[DONE: keep this text]` — existing content ready as-is
+- `[REWRITE: intent="..." placement="..."]` — rough draft passage needing authoring
+- `[PLACEHOLDER: figure — "description"]` — image not yet generated
+- `[WRITE: "specific topic"]` — blank section needing prose
+- `candidate analogy:` — one-liner suggestion, labeled, never embedded in prose
 
-```
-# [Title]
+This format is consistent across all four documents. Any new plan must not introduce a different marker style.
 
-## Section Heading
+### Benchmark Figure Generation Pattern
 
-[One sentence of what goes here]
+All figure generation lives in `research/benchmark.py` via argparse flags. The established pattern:
+1. Add `--flag-name` to argparse section
+2. Write a standalone `def generate_flag_name()` function
+3. Append to run_modes dispatch in `if __name__ == "__main__"` block
+4. Save output to `assets/images/[subdirectory]/filename.png`
 
-- **Sub-point:** [Specific guidance, e.g. "Explain why overlap_factor=0.5 is the default"]
-- **Analogy opportunity:** [Candidate phrasing user can accept/rewrite]
-- [IMAGE PLACEHOLDER: description of what figure goes here, path when generated]
+The `generate_comparison_grid()` function established in Plan 05-01 is the canonical model. Any `--foundations-figures` implementation must follow the same pattern.
 
-### Sub-section
+### DSP Foundations Figure Style
 
-[Guidance continues...]
-```
+Figures from `wavelet_foundations.ipynb` are matplotlib-based. The notebook Sections 2.3-2.4 already have working figure cells. Migration to benchmark.py means:
+- Extract the matplotlib figure code from notebook cells
+- Wrap in a function with consistent style parameters
+- Save to `assets/images/dsp/` with `plt.savefig(path, dpi=150, bbox_inches='tight')`
 
-Placeholders MUST be formatted so a human scanning the file instantly knows what is done vs what needs writing:
-- `[DONE: keep this text]` — existing content that is ready
-- `[REWRITE: intent="..." placement="..."]` — existing stream-of-consciousness that needs authoring
-- `[PLACEHOLDER: figure — "description of what this shows"]` — image that needs generating
-- `[WRITE: "specific topic to cover here"]` — blank section needing prose
-
-### README.md Scaffold Plan
-
-**Sections confirmed from existing draft and spec:**
-
-1. **Project Summary** — keep existing paragraph; flag two sentences as REWRITE
-2. **Design** — keep architecture diagram, links to AUDIO.md / DSP.md / RENDERER.md (update file names from current *_README.md to match decided names)
-3. **Performance** — replace three separate images with single comparison grid; add brief STFT vs PyWt vs SubShader prose guidance per signal
-4. **Benchmark** — timing bar chart + numpy_vs_cupy_diff.png moves to DSP.md; this section becomes SubShader-only timing
-5. **Installation** — placeholder for Phase 4 output (install instructions come from INST-01/02)
-6. **Future Improvements** — keep; flag for user authoring
-
-**Stream-of-consciousness passages in current README.md that need REWRITE flags:**
-- Lines 51-55: commented-out STFT/PyWavelet explanation (good intent, rough execution)
-- Lines 76-104: musical signal section with "TODO", "shitty fft", "link source" — preserve intent, flag execution
-- Lines 102-104: "Comparing the Fourier Transform to the CWT is like comparing apples to oranges..." — user voice starting to emerge; flag as "keep tone, rewrite paragraph"
-- Lines 129-131: Future Improvements — stream-of-consciousness; flag and preserve
-
-### DSP.md Scaffold Plan
-
-**Source: wavelet_foundations_outline.md sections 1-6**
-
-The outline is already at scaffold depth — headers, sub-headers, and bullet points exist. The task is:
-1. Convert outline to README scaffold format (strip notebook-style directives)
-2. Insert image placeholder markers at each `*[Figure/Visual/Example: ...]`
-3. Map each placeholder to a benchmark.py flag
-4. Add "Future" section collapsing sections 7-10 into a compact forward pointer
-5. Keep terminology ladder from discussion_summary.md
-
-**Sections to cover:**
-- 1. Motivation
-- 2. Foundations: Inner Product (2.1-2.7)
-- 3. Fourier Transform
-- 4. STFT
-- 5. Wavelet Transform
-- 6. Implementation Deep Dive (wavelet construction, post-processing pipeline, GPU acceleration)
-- 7. Future (collapse 7-10)
-
-**Key pedagogical constraints from discussion_summary.md:**
-- Do not use "features" or "patterns" before section 7
-- Use "properties" in section 2, "components" as bridge, "features" only when ML appears
-- Concrete examples before abstractions in every section
-- Candidate analogies: paint mixing (already in outline), "casting a shadow" (projection), "measuring with different rulers at different frequencies" (adaptive resolution)
-
-### AUDIO.md Scaffold Plan
-
-**Source: audio_input.py, audio_player.py, audio_submodule_readme_claude.md**
-
-Sections (Claude's discretion on ordering):
-
-1. **Role in the Pipeline** — AudioInput delivers overlapping chunks to DSP; AudioPlayer drives the render clock
-2. **The Overlap Strategy** — why overlap_factor exists; edge discontinuity and aliasing explanation; 4-row visualization placeholder
-3. **AudioInput** — how get_chunk() works; hop_size = chunk_size * (1 - overlap_factor); stereo-to-mono; file_pos tracking
-4. **AudioPlayer** — audio-clock-driven sync design; callback thread; get_playback_sample() as timing reference; seamless loop
-5. **Configuration** — AudioConfig dataclass parameters with real defaults from config.py
-6. **Usage Example** — runnable code extracted from __main__.py pattern
-
-**Key implementation details to expose in scaffold (from source code):**
-- `hop_size = int(chunk_size * (1.0 - overlap_factor))` — the relationship that drives everything
-- `file_pos += hop_size` (not chunk_size) — this is what makes overlap work
-- AudioPlayer stores `_data` as float32 because PortAudio callback expects float32
-- `blocksize=0` lets PortAudio choose optimal hardware buffer (not a magic number)
-- `threading.Lock()` on `_current_frame` — single int read/write, low contention
-
-### RENDERER.md Scaffold Plan
-
-**Source: plotter.py (ShaderPlot, GLContext, Renderer, CircularFrameBuffer, IntensityTracker), viz/shaders/, plot_normalizer.py, visualizer_submodule_readme_claude.md**
-
-Sections:
-
-1. **Role in the Pipeline** — receives CWT frames; stores history; renders as texture
-2. **Why Shaders** — Python plotting libraries (matplotlib, pyqtgraph) can't sustain real-time frame rates with the data volume; GPU renders the entire history as a texture in one draw call
-3. **The Circular Frame Buffer** — how CircularFrameBuffer stores frames, maintains chronological order, pre-allocates flattened_buffer; frame_index and ordering logic
-4. **Intensity Normalization** — IntensityTracker; percentile-based global_max; exponential decay; warmup_frames; why this instead of per-frame min/max
-5. **Init: CPU-GPU Transfers** — what goes to GPU at init (quad geometry VBO, texture allocation); what goes every frame (texture data write only); design rationale for minimizing per-frame transfers
-6. **Runtime: The Render Loop** — push_frame → update_texture → set_intensity_max → clear → render → display; the sequence and why it's ordered this way
-7. **Shader Pipeline** — vertex shader (full-screen quad geometry), fragment shader (colormap + gamma correction); `intensity_max` uniform; `gamma` uniform
-8. **Configuration** — VisualizationConfig parameters (num_frames, gamma, color_norm)
-9. **Diagram placeholder** — user has diagram; placeholder goes here
-
-**Key implementation details to expose:**
-- `flattened_buffer` is pre-allocated, not rebuilt each frame — this is the performance-critical design
-- `frame_order = [(frame_index + i) % num_frames for i in range(num_frames)]` — this is how chronological order is maintained in a circular buffer
-- IntensityTracker uses `(1 - decay_rate) * global_max` — slow decay so max doesn't collapse on quiet passages
-- `shader['intensity_max'] = max(intensity_max, 1e-8)` — floor prevents division-by-zero in shader
+The notebook is the authoritative source for these figures. Do not regenerate from scratch — port existing working code.
 
 ---
 
@@ -241,221 +245,186 @@ Sections:
 
 | Problem | Don't Build | Use Instead | Why |
 |---------|-------------|-------------|-----|
-| Comparison grid figure | Custom multi-subplot layout from scratch | Extend existing benchmark.py pattern | Existing signals and rendering code already there; consistency with all other figures |
-| Runnable usage examples | Illustrative pseudo-code | Extract from `__main__.py` and tests | DOCS-05 requires accurate, runnable examples |
-| Placeholder image references | Made-up paths | Reference actual existing paths under `assets/images/` | Broken image links make README unusable |
-| DSP terminology definitions | Write from scratch | Copy from foundations_outline.md section 10 terminology ladder | Already written, tested for consistency |
+| Comparison grid figure | Custom layout from scratch | Existing `generate_comparison_grid()` in benchmark.py | Already built in Plan 05-01 |
+| Runnable usage examples | Illustrative pseudo-code | Extract from `__main__.py` | DOCS-05 requires accurate examples |
+| DSP foundations figures | New matplotlib code | Port from `wavelet_foundations.ipynb` cells | Notebook already has working vetted code |
+| Placeholder image references | Made-up paths | Reference paths that actually exist | Broken image links make README unusable |
+| DSP terminology | Write from scratch | Copy from foundations outline Section 10 concept ladder (already in DSP.md Appendix) | Already written, format established |
 
 ---
 
 ## Common Pitfalls
 
 ### Pitfall 1: Writing Prose Instead of Scaffold
-**What goes wrong:** Claude writes draft prose, user reads it, dislikes the voice, rewrites from scratch. The scaffold becomes wasted work and the user loses the structure.
-**Why it happens:** Default behavior is to produce complete-looking output.
-**How to avoid:** Every paragraph-length gap in the scaffold must be a `[WRITE: ...]` placeholder, never a prose paragraph. Candidate analogies are one-liners labeled "candidate analogy:", not embedded in prose.
-**Warning signs:** Any scaffold section that could be published as-is without user edits.
+**What goes wrong:** Any plan task that outputs paragraph-length content violates DOCS-06 and USER CONSTRAINTS.
+**Prevention:** Every content section is a `[WRITE:]` placeholder. Candidate analogies are one-liners. No exceptions.
+**Warning signs:** Any scaffold section readable as final prose.
 
-### Pitfall 2: Stale Image References
-**What goes wrong:** Scaffold references image paths that don't exist yet (e.g., `comparison_grid.png`), breaking the README before images are generated.
-**Why it happens:** Placeholder images are planned but not yet generated.
-**How to avoid:** Use two-tier placeholder format: `[IMAGE PLACEHOLDER: description]` in scaffold text, with a separate task to generate and replace. Do not embed paths for images that don't yet exist.
-**Warning signs:** Any README that links to a file not present in `assets/images/`.
+### Pitfall 2: Stale Image References in DSP.md
+**What goes wrong:** DSP.md has 6 `[PLACEHOLDER:]` markers for figures not yet generated. Replacing them with paths that don't exist breaks the document.
+**Prevention:** Only replace a `[PLACEHOLDER:]` with a live path after the file exists at that path. The generation task and the link-update task must be in the same plan or sequenced correctly.
+**Warning signs:** `![...]` image syntax in DSP.md pointing to a path under `assets/images/dsp/` that doesn't exist.
 
-### Pitfall 3: Inaccurate Code Examples
-**What goes wrong:** Code examples are illustrative-only and contain wrong method names, wrong parameter names, or wrong invocation patterns. Users copy them and they fail silently.
-**Why it happens:** Code written from memory or documentation, not from the actual source.
-**How to avoid:** Every code example must be extracted from `src/subshader/` source or from a file that is actively run (e.g., `__main__.py`, `research/benchmark.py`). Cross-check parameter names against actual signatures.
-**Warning signs:** Code with comments like "# simplified" or "# illustrative" or any TODO.
+### Pitfall 3: New Figures Not Following benchmark.py Pattern
+**What goes wrong:** Figure generation code scattered across notebook cells, standalone scripts, or inline in a plan task — breaking the single-source-of-truth invariant.
+**Prevention:** All figure generation MUST be in `research/benchmark.py` behind an argparse flag.
+**Warning signs:** Any plan task that runs matplotlib inline without adding a flag to benchmark.py.
 
-### Pitfall 4: Forgetting the README.md Link Updates
-**What goes wrong:** The existing `README.md` links to `AUDIO_README.md`, `DSP_README.md`, `RENDERER_README.md` — the decided file names are `AUDIO.md`, `DSP.md`, `RENDERER.md`. If links are not updated, navigation breaks.
-**Why it happens:** The existing draft predates the naming decision in CONTEXT.md.
-**How to avoid:** README.md scaffold task must explicitly update all three cross-links.
-**Warning signs:** Any occurrence of `*_README.md` in the final scaffold.
+### Pitfall 4: Comparison Grid Layout Not Yet Locked
+**What goes wrong:** Treating the comparison_grid.png as final before user review. CONTEXT.md explicitly says "workshop exact layout during implementation — not locked yet."
+**Prevention:** Any plan touching the comparison grid should present it to the user as a checkpoint before embedding in README.md. The `--comparison-grid` flag is the iteration mechanism.
+**Warning signs:** README.md Performance section replacing `[PLACEHOLDER:]` with a live path before user approval.
 
-### Pitfall 5: Missing benchmark.py Figure Migration Task
-**What goes wrong:** DSP.md scaffold references figures from the notebook but no task migrates the notebook's figure generation code to benchmark.py. Implementer has no way to generate the referenced images.
-**Why it happens:** Easy to scaffold references without tracking the generation dependency.
-**How to avoid:** Plan must include an explicit task: "Migrate notebook figure generation code from `wavelet_foundations.ipynb` to `benchmark.py` with a CLI flag." DSP.md image placeholders are not live until this task is complete.
-**Warning signs:** Any DSP.md image placeholder that does not have a corresponding benchmark.py flag.
-
-### Pitfall 6: Over-Scaffolding the Comparison Grid Before Layout Is Locked
-**What goes wrong:** CONTEXT.md says "workshop exact layout during implementation — not locked yet." A plan that pre-commits to a specific grid dimensions, axis label decisions, or color scheme wastes implementation time when those decisions change.
-**How to avoid:** Comparison grid task should be: implement a working draft, present to user, iterate. Do not scaffold the grid as if all layout decisions are final.
+### Pitfall 5: Inaccurate Code Examples
+**What goes wrong:** Method names or parameter names in scaffold documents drift from actual source.
+**Prevention:** Any new code example must be cross-checked against the actual source file using the venv Python environment.
+**Warning signs:** Comments like `# simplified` or `# illustrative` in any code block.
 
 ---
 
 ## Code Examples
 
-Accurate patterns from actual source (for use in README scaffolds):
+All code examples in the scaffold documents have been verified against actual source. They are not repeated here — see the scaffold documents themselves.
 
-### AudioInput — Core chunk retrieval pattern
-```python
-# Source: src/subshader/audio/audio_input.py AudioInput.__init__ + get_chunk
-audio = AudioInput(
-    path="assets/audio/daw/a2a3_a4_minor_scale.wav",
-    chunk_size=4096,
-    overlap_factor=0.5
-)
-# hop_size = 4096 * (1 - 0.5) = 2048 samples
-# get_chunk() returns 4096 samples, advances file_pos by 2048
+For reference, the verification commands used in Plan 05-02 and 05-03:
 
-chunk = audio.get_chunk()  # Returns None at end of file
-```
+```bash
+# Verify Wavelet methods
+source venv/bin/activate && python -c "
+from subshader.dsp.wavelet import Wavelet
+methods = ['cwt', 'class_specific_cwt', 'normalize_by_scale', 'compute_mag',
+           'discard_unreliable_coefs', 'extract_hop_center', 'downsample']
+for m in methods:
+    assert hasattr(Wavelet, m), f'Missing method: {m}'
+print('All verified')
+"
 
-### AudioPlayer — timing reference pattern
-```python
-# Source: src/subshader/audio/audio_player.py
-player = AudioPlayer(audio_data=audio.get_entire_audio(), sample_rate=audio.get_sample_rate())
-player.start()
+# Verify AudioInput/AudioPlayer methods
+source venv/bin/activate && python -c "
+from subshader.audio.audio_input import AudioInput
+from subshader.audio.audio_player import AudioPlayer
+from subshader.viz.plotter import CircularFrameBuffer, ShaderPlot
+from subshader.viz.plot_normalizer import IntensityTracker
+print('All classes importable')
+"
 
-# In render loop — audio clock drives the position
-current_sample = player.get_playback_sample()
-```
-
-### ShaderPlot — single render frame
-```python
-# Source: src/subshader/viz/plotter.py ShaderPlot.update_plot
-plotter.update_plot(cwt_frame)  # push_frame → update_texture → render
-```
-
-### CircularFrameBuffer — chronological ordering
-```python
-# Source: src/subshader/viz/plotter.py CircularFrameBuffer.push_frame
-# frame_index points to NEXT write slot; ordering computed from there
-frame_order = [(self.frame_index + i) % self.num_frames for i in range(self.num_frames)]
-```
-
-### IntensityTracker — decay with floor
-```python
-# Source: src/subshader/viz/plot_normalizer.py IntensityTracker.update
-self.global_max = (1.0 - self.decay_rate) * self.global_max
-self.global_max = max(self.global_max, self.floor_value)
-self.global_max = max(self.global_max, frame_max)
-```
-
-### Wavelet CWT pipeline steps
-```python
-# Source: src/subshader/dsp/wavelet.py Wavelet.cwt
-cwt_coefs = self.class_specific_cwt(input_data)     # GPU or NumPy implementation
-cwt_coefs = self.normalize_by_scale(cwt_coefs)       # L1 kernel norm at construction (no-op here)
-mag_coefs = self.compute_mag(cwt_coefs)              # |complex| → magnitude
-reliable_coefs = self.discard_unreliable_coefs(mag_coefs)  # trim cone of influence
-hop_center_coefs = self.extract_hop_center(reliable_coefs) # trim overlapping wings
-downsampled_coefs = self.downsample(hop_center_coefs, self.output_n)  # to target_width
+# Verify WaveletConfig fields
+source venv/bin/activate && python -c "
+from subshader.config import WaveletConfig
+print([f for f in WaveletConfig.__dataclass_fields__.keys()])
+# Expected: ['typical_sampling_freq', 'notes_per_octave', 'num_octaves',
+#            'root_note_a0_hz', 'num_cycles', 'num_fwhm_cycles', 'target_width']
+"
 ```
 
 ---
 
 ## Benchmark Figure Pipeline
 
-### Existing Figures
-| File | What It Shows | Used In |
-|------|--------------|---------|
-| `chirp_signal_comparison.png` | Chirp: STFT + PyWt + SubShader CWT, side by side | To be replaced by comparison grid |
-| `polyphonic_signal_comparison.png` | Polyphonic: same | To be replaced |
-| `musical_signal_comparison.png` | Musical: same | To be replaced |
-| `numpy_vs_cupy_diff.png` | NumPy vs CuPy coefficient diff | Moves from README.md to DSP.md |
-| `timing_bar_chart.png` | Timing bars (needs cleanup) | README.md Benchmark section |
-| `overlap_redundancy_diagnostic.png` | Bouncing chirp sweep | Candidate for grid Column 1 |
-| `stubs/chirp_signal_comparison_STUB_PYWT.png` | PyWt row stub | Stubs — real renders needed |
+### Current State of benchmark.py Flags
 
-### New Figure Needed: Comparison Grid
-- Columns: chirp (10s or bouncing), polyphonic (~16s), musical (~8 bars)
-- Rows: STFT, PyWavelet CWT, SubShader CWT
-- Style: minimal axis labels, squeezed subplots, grid lines, decorators
-- Location: `assets/images/benchmarks/comparison_grid.png`
-- Generator: `research/benchmark.py` — new flag `--comparison-grid`
-- Layout is NOT locked — workshop during implementation task
+| Flag | Function | Output | Status |
+|------|----------|--------|--------|
+| `--figures` | `_generate_comparison_figure()` | 3 individual signal comparison PNGs | Working |
+| `--figures-chirp` | Same, chirp only | `chirp_signal_comparison.png` | Working |
+| `--figures-polyphonic` | Same, polyphonic only | `polyphonic_signal_comparison.png` | Working |
+| `--figures-musical` | Same, musical only | `musical_signal_comparison.png` | Working |
+| `--comparison-grid` | `generate_comparison_grid()` | `comparison_grid.png` (3x3, 200 DPI) | Working (Plan 05-01) |
+| `--foundations-figures` | Not yet implemented | 6 DSP pedagogical figures | MISSING — Plan 04 scope |
 
-### New Figures Needed: DSP.md Inner Product / Vector Illustrations
-- Source: `research/docs/demo/readmes/wavelet/wavelet_foundations.ipynb` (Sections 2.3-2.4)
-- Migration target: `research/benchmark.py` — new flag `--foundations-figures`
-- Output path: `assets/images/dsp/` (new directory)
+### DSP Foundations Figure Source
+
+The notebook `research/docs/demo/readmes/wavelet/wavelet_foundations.ipynb` contains working matplotlib figure cells through Section 2.4. The Plan 04 implementer must:
+1. Read the notebook to extract existing figure cells
+2. Port them to a `generate_foundations_figures()` function in benchmark.py
+3. Implement the remaining figures (STFT windowing, wavelet scaling) not yet in the notebook
+4. Save to `assets/images/dsp/` at 150 DPI
 
 ---
 
 ## Validation Architecture
 
 ### Test Framework
+
 | Property | Value |
 |----------|-------|
-| Framework | pytest |
-| Config file | none detected — tests are inline per-module |
-| Quick run command | `python -m pytest tests/ -x -q` |
-| Full suite command | `python -m pytest tests/ -v` |
+| Framework | pytest + structural file checks |
+| Config file | none — documentation phase |
+| Quick run command | `python -c "import subshader"` |
+| Full suite command | `python -m pytest tests/ -x -q` |
+| Estimated runtime | ~10 seconds |
 
 ### Phase Requirements → Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | Notes |
 |--------|----------|-----------|-------------------|-------|
-| DOCS-01 | README.md exists and contains required sections | manual | n/a | Visual review — no automated check for prose quality |
-| DOCS-02 | DSP.md exists and covers sections 1-6 | manual | n/a | Section completeness is a human judgment |
-| DOCS-03 | RENDERER.md exists and covers shader/buffer pipeline | manual | n/a | Same |
-| DOCS-04 | AUDIO.md exists and covers overlap strategy | manual | n/a | Same |
-| DOCS-05 | All code examples are runnable | smoke | `python -c "$(cat code_example)"` or extract and run | Implementer should test each snippet before placing in scaffold |
-| DOCS-06 | Scaffold, not prose | manual | n/a | Verified by human review that no paragraph-length prose is present |
+| DOCS-01 | README.md exists with required sections | structural | `grep -c "##" README.md` | Manual visual review for voice quality |
+| DOCS-02 | DSP.md exists and covers sections 1-6 | structural | `test -f DSP.md && grep -c "##" DSP.md` | Section completeness is human judgment |
+| DOCS-03 | RENDERER.md exists and covers pipeline | structural | `test -f RENDERER.md` | Same |
+| DOCS-04 | AUDIO.md exists and covers overlap | structural | `test -f AUDIO.md` | Same |
+| DOCS-05 | Code examples are runnable | smoke | See verification commands above | All examples verified in Plans 02-03 |
+| DOCS-06 | Scaffold, not prose | manual | n/a | Human review only — no Claude prose paragraphs |
 
-Documentation phase is manual-only for quality gates. The only automatable check is DOCS-05 (code correctness), which is a pre-condition for placing examples in scaffolds, not a post-condition test.
+### Sampling Rate
+- **Per task commit:** Verify files exist and contain expected markers via grep
+- **Per wave merge:** Run full pytest suite + verify image paths reference existing files
+- **Phase gate:** All scaffold files exist, no broken image links, no `*_README.md` cross-links
 
 ### Wave 0 Gaps
-None — no new test infrastructure is needed for this phase. The phase deliverables are .md scaffold files, not code.
+None — no new test infrastructure is needed. The phase deliverables are .md scaffold files and generated images.
 
 ---
 
 ## Open Questions
 
-1. **Comparison grid: bouncing chirp vs linear chirp as Column 1**
-   - What we know: `overlap_redundancy_diagnostic.png` exists (bouncing chirp); linear chirp is the existing standard
-   - What's unclear: Which tells the clearer story for non-stationary signal advantage — the bouncing chirp is more dynamic but the linear sweep is simpler to explain
-   - Recommendation: Present both options to user during comparison grid implementation; let them choose after seeing the renders
+1. **Comparison grid layout approval**
+   - What we know: `comparison_grid.png` exists (3x3, 3600x2000 px, Plan 05-01 output). The plan had a checkpoint task that auto-advanced without explicit user review.
+   - What is unclear: Whether the user has reviewed and approved the current layout, or whether layout iteration is still pending.
+   - Recommendation: If a new plan is added, include a checkpoint task presenting `comparison_grid.png` for explicit user layout feedback before the README.md `[PLACEHOLDER:]` is replaced with a live path.
 
-2. **PyWavelet comparison rows: stub images vs real renders**
-   - What we know: Stubs exist under `assets/images/benchmarks/stubs/`; real PyWavelet renders require benchmark.py to run PyWavelet CWT
-   - What's unclear: Whether the existing benchmark.py already generates these or whether the stubs are pure placeholders
-   - Recommendation: Read `research/benchmark.py` at implementation time to confirm what flags exist; if PyWt renders are missing, that is a prerequisite for the comparison grid task
+2. **Comparison grid PLACEHOLDER vs live path in README.md**
+   - What we know: README.md currently has `[PLACEHOLDER: figure — "3x3 comparison grid..."]` — not a live image reference. The file exists at `assets/images/benchmarks/comparison_grid.png`.
+   - What is unclear: The CONTEXT.md decision to workshop layout before locking means the placeholder should remain until user approves the layout.
+   - Recommendation: The placeholder-to-live-path replacement should be a distinct task gated on user approval, not automated.
 
-3. **DSP.md figure directory**
-   - What we know: All existing figures live under `assets/images/benchmarks/` or `assets/images/diagnostics/`
-   - What's unclear: Should inner-product/vector figures from the DSP foundations live under `assets/images/dsp/` or `assets/images/benchmarks/`
-   - Recommendation: Use `assets/images/dsp/` — keeps DSP pedagogical figures separate from benchmark performance figures
+3. **Installation section in README.md**
+   - What we know: Phase 4 (install experience, INST-01/02) is pending. README.md Installation section is currently `[WRITE: "Installation instructions — fill from Phase 4 output (INST-01/INST-02)"]`.
+   - What is unclear: Whether Phase 4 is planned or deferred. REQUIREMENTS.md shows INST-01/02/03 as `[ ]` pending.
+   - Recommendation: Leave installation placeholder as-is until Phase 4 completes.
 
-4. **Installation section in README.md**
-   - What we know: Phase 4 (install experience) is pending; INST-01/02 requirements are not yet complete
-   - What's unclear: Whether Phase 4 will be done before or after Phase 5
-   - Recommendation: Scaffold the Installation section with a placeholder; flag it as "fill from Phase 4 output"
+4. **DSP.md image directory naming**
+   - What we know: Existing benchmark figures live under `assets/images/benchmarks/`. DSP foundations figures are pedagogical, not benchmark performance figures.
+   - Recommendation: Use `assets/images/dsp/` for foundations figures — keeps pedagogical visuals separate from benchmark comparison figures. This is consistent with the RESEARCH.md plan written before execution.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `research/docs/demo/readmes/wavelet/wavelet_foundations_outline.md` — all 10 sections; used directly for DSP.md scaffold structure
-- `research/docs/demo/discussion_summary.md` — voice guidelines, terminology ladder, pedagogy decisions
-- `src/subshader/audio/audio_input.py` — AudioInput class; all code examples verified against source
-- `src/subshader/audio/audio_player.py` — AudioPlayer class; timing reference design
-- `src/subshader/dsp/wavelet.py` — Wavelet hierarchy; CWT pipeline steps
-- `src/subshader/viz/plotter.py` — ShaderPlot, CircularFrameBuffer, Renderer, GLContext
-- `src/subshader/viz/plot_normalizer.py` — IntensityTracker decay logic
-- `README.md` — existing top-level draft; confirmed ~50% status, identified REWRITE passages
-- `research/docs/demo/readmes/audio/audio_submodule_readme_claude.md` — AUDIO.md topic list
-- `research/docs/demo/readmes/plotter/visualizer_submodule_readme_claude.md` — RENDERER.md topic list
+- `.planning/phases/05-documentation/05-01-SUMMARY.md` — Plan 01 execution record
+- `.planning/phases/05-documentation/05-02-SUMMARY.md` — Plan 02 execution record
+- `.planning/phases/05-documentation/05-03-SUMMARY.md` — Plan 03 execution record
+- `README.md` — current scaffold state (directly read)
+- `DSP.md` — current scaffold state (directly read)
+- `AUDIO.md` — current scaffold state (directly read)
+- `RENDERER.md` — current scaffold state (directly read)
+- `research/benchmark.py` — confirmed flags via grep (generate_comparison_grid exists, --foundations-figures does not exist)
+- `assets/images/benchmarks/` — all files listed via ls (comparison_grid.png confirmed)
 - `.planning/phases/05-documentation/05-CONTEXT.md` — all locked decisions and constraints
 
 ### Secondary (MEDIUM confidence)
-- `research/docs/demo/readmes/wavelet/dsp_submodule_readme_claude.md` — DSP README workflow instructions; used to confirm benchmark.py as figure generation home
-- `research/docs/demo/readmes/subshader_toplevel_readme_claude.md` — top-level README spec; confirmed scope
+- `research/docs/demo/readmes/wavelet/wavelet_foundations.ipynb` — cited in SUMMARY.md as source for foundations figures; not directly read in this update pass
+- `research/docs/demo/discussion_summary.md` — terminology and voice constraints; confirmed applied per SUMMARY.md records
 
 ---
 
 ## Metadata
 
 **Confidence breakdown:**
-- Scaffold structure: HIGH — CONTEXT.md decisions are explicit; source files are all readable
-- Content inventory: HIGH — all files read directly; no guesswork on what exists
-- Figure pipeline: MEDIUM — benchmark.py not deeply read; PyWavelet row status unclear
-- Code examples: HIGH — all extracted from actual source, not from memory
+- Execution state (what's done): HIGH — all three SUMMARY.md files read, files confirmed to exist
+- Scaffold quality: HIGH — all four documents directly read; marker counts verified
+- Figure pipeline gaps: HIGH — confirmed via grep that `--foundations-figures` does not exist in benchmark.py
+- Open questions: MEDIUM — comparison grid approval status depends on user interaction not captured in research
 
-**Research date:** 2026-03-23
-**Valid until:** Stable — documentation scaffolding does not depend on rapidly-changing APIs
+**Research date:** 2026-03-23 (initial) / 2026-03-23 (updated post-execution)
+**Valid until:** Stable for planning purposes — all dependencies are internal files, not external APIs
