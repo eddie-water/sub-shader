@@ -41,10 +41,10 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Figures & Audio Examples
 
-- [ ] **FIG-01**: Bouncing chirp audio signal synthesized programmatically — ascending frequency contour with parabolic dips across three decades
-- [ ] **FIG-02**: Comparison grid uses curated audio examples: bouncing chirp, polyphonic MIDI, musical excerpt
-- [ ] **FIG-03**: Comparison grid generated at multiple DPI levels for user quality/filesize selection
-- [ ] **FIG-04**: README Performance section has single hero comparison grid figure centered at ~80% width
+- [x] **FIG-01**: Bouncing chirp audio signal synthesized programmatically — ascending frequency contour with parabolic dips across three decades
+- [x] **FIG-02**: Comparison grid uses curated audio examples: bouncing chirp, polyphonic MIDI, musical excerpt
+- [x] **FIG-03**: Comparison grid generated at multiple DPI levels for user quality/filesize selection
+- [x] **FIG-04**: README Performance section has single hero comparison grid figure centered at ~80% width
 - [ ] **FIG-05**: README per-signal sections have scaffold captions replacing REWRITE markers
 - [ ] **FIG-06**: Timing bar chart relocated from README to DSP.md computational cost section
 
@@ -107,10 +107,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | INST-01 | Phase 4 | Pending |
 | INST-02 | Phase 4 | Pending |
 | INST-03 | Phase 4 | Pending |
-| FIG-01 | Phase 6 | Pending |
-| FIG-02 | Phase 6 | Pending |
-| FIG-03 | Phase 6 | Pending |
-| FIG-04 | Phase 6 | Pending |
+| FIG-01 | Phase 6 | Complete |
+| FIG-02 | Phase 6 | Complete |
+| FIG-03 | Phase 6 | Complete |
+| FIG-04 | Phase 6 | Complete |
 | FIG-05 | Phase 6 | Pending |
 | FIG-06 | Phase 6 | Pending |
 

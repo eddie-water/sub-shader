@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-24T18:39:44.611Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-03-24T19:59:33.697Z"
 last_activity: 2026-03-24
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 12
-  completed_plans: 10
+  total_plans: 13
+  completed_plans: 11
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-21)
 ## Current Position
 
 Phase: 06 (finalize-example-audio-and-comparison-figures-for-readme) — EXECUTING
-Plan: 2 of 2
+Plan: 2 of 3
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Plan: 2 of 2
 | Phase 05-documentation P03 | 3 | 3 tasks | 3 files |
 | Phase 05-documentation P01 | 7 | 2 tasks | 2 files |
 | Phase 06 P01 | 10 | 3 tasks | 9 files |
+| Phase 06-finalize-example-audio-and-comparison-figures-for-readme P03 | 3 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,7 @@ Recent decisions affecting current work:
 - [Phase 06]: Bouncing chirp uses CubicSpline in log-frequency space with peak/dip waypoints — matches user sketch naturally
 - [Phase 06]: DPI=0 sentinel in generate_comparison_grid() means default naming; dpi>0 produces _Ndpi.png suffix regardless of stub_pywt
 - [Phase 06]: Stub suffix only applies to DPI=0 (default) path; explicit --dpi N gets clean comparison_grid_Ndpi.png name
+- [Phase 06-finalize-example-audio-and-comparison-figures-for-readme]: _STUB_PYWT suffix replaces _STUB so the stub scope is explicit in the filename
 
 ### Pending Todos
 
@@ -117,5 +119,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-24
-Stopped at: Completed 06-01-PLAN.md
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
