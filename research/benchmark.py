@@ -4,6 +4,7 @@ SubShader Benchmark Suite.
 Modes:
   (default)                   Run all modes (same as --all)
   --timing                    STFT vs PyWavelet vs NumPy CWT vs CuPy CWT timing comparison
+  --timing-chart              Generate timing bar chart PNG (assets/images/benchmarks/timing_bar_chart.png)
   --figures                   Generate 3 README comparison PNGs (matplotlib)
   --figures --stub            Generate stub layouts instead of real DSP (fast iteration)
   --figures --stub-pywt       Skip PyWavelet, use random stubs, save to stub folder (faster)
@@ -650,6 +651,89 @@ def export_signal_to_wav(signal: np.ndarray, sample_rate: int, path: str) -> Non
 
 
 # =============================================================================
+# TIMING BAR CHART (--timing-chart)
+# =============================================================================
+
+def generate_timing_bar_chart(dpi: int = 200, num_frames: int = NUM_FRAMES):
+    """
+    Run STFT, PyWavelet, and NumPy CWT timing over num_frames frames, then
+    save a bar chart to assets/images/benchmarks/timing_bar_chart.png.
+
+    Shows average time with min/max error bars for each pipeline component.
+    """
+    print_section_start("Timing Bar Chart")
+
+    config = get_default_config()
+    config.audio.file_path = AUDIO_DEFAULT
+    ai = AudioInput(
+        path=config.audio.file_path,
+        chunk_size=config.audio.chunk_size,
+        overlap_factor=config.audio.overlap_factor,
+    )
+    sr = ai.get_sample_rate()
+
+    pywt = PyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=config.wavelet)
+    npwt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=config.wavelet)
+
+    stft_freqs     = np.fft.rfftfreq(STFT_NPERSEG, d=1.0 / sr)
+    cwt_freqs      = npwt.freqs
+    freq_min, freq_max = cwt_freqs[0], cwt_freqs[-1]
+    stft_freq_mask = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
+    stft_cropped   = stft_freqs[stft_freq_mask]
+    stft_target_w  = npwt.output_n
+
+    methods = ["AudioInput.get_chunk()", "scipy STFT", "PyWavelet.cwt()", "NumPyWavelet.cwt()"]
+    acc = TimingAccumulator(num_frames, methods)
+
+    for i in range(num_frames):
+        chunk, acc["AudioInput.get_chunk()"][i] = time_call(ai.get_chunk)
+        if chunk is None:
+            acc.current_idx = i
+            break
+
+        _, acc["scipy STFT"][i] = time_call(
+            compute_stft_frame,
+            chunk, sr, STFT_NPERSEG, stft_freq_mask, stft_cropped, cwt_freqs, stft_target_w,
+        )
+        _, acc["PyWavelet.cwt()"][i] = time_call(pywt.cwt, chunk)
+        _, acc["NumPyWavelet.cwt()"][i] = time_call(npwt.cwt, chunk)
+        acc.current_idx = i + 1
+        live_progress(acc.current_idx, num_frames)
+
+    acc.trim()
+    clear_progress()
+
+    stats = acc.compute_stats()
+
+    avgs   = [stats[m]["avg_ms"] for m in methods]
+    mins   = [stats[m]["min_ms"] for m in methods]
+    maxs   = [stats[m]["max_ms"] for m in methods]
+    yerr   = [
+        [avgs[j] - mins[j] for j in range(len(methods))],
+        [maxs[j] - avgs[j] for j in range(len(methods))],
+    ]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x = np.arange(len(methods))
+    ax.bar(x, avgs, yerr=yerr, capsize=4, color="#5588bb", error_kw={"linewidth": 1.5})
+    ax.set_xticks(x)
+    ax.set_xticklabels(methods, rotation=30, ha="right", fontsize=11)
+    ax.set_ylabel("Time (ms)", fontsize=12)
+    ax.set_title("SubShader Component Timing (avg \u00b1 min/max)", fontsize=13)
+    ax.set_facecolor("#f5f5f5")
+    fig.patch.set_facecolor("white")
+    fig.tight_layout()
+
+    out_path = os.path.join(BENCHMARKS_DIR, "timing_bar_chart.png")
+    os.makedirs(BENCHMARKS_DIR, exist_ok=True)
+    fig.savefig(out_path, dpi=dpi)
+    plt.close(fig)
+    print(f"Saved -> {out_path}")
+
+    print_section_end()
+
+
+# =============================================================================
 # COMPARISON GRID (--comparison-grid)
 # =============================================================================
 
@@ -1034,6 +1118,7 @@ if __name__ == "__main__":
         description="SubShader benchmark suite"
     )
     parser.add_argument("--timing",          action="store_true", help="STFT vs PyWavelet vs CWT timing comparison")
+    parser.add_argument("--timing-chart",    action="store_true", help="Generate timing bar chart PNG (timing_bar_chart.png)")
     parser.add_argument("--figures",         action="store_true", help="Generate all 3 README comparison PNGs (matplotlib)")
     parser.add_argument("--figures-chirp",      action="store_true", help="Generate chirp signal comparison figure only")
     parser.add_argument("--figures-polyphonic",  action="store_true", help="Generate polyphonic signal comparison figure only")
@@ -1054,7 +1139,8 @@ if __name__ == "__main__":
 
     any_figure_individual = args.figures_chirp or args.figures_polyphonic or args.figures_musical
     any_flag = (args.timing or args.figures or any_figure_individual or args.seaborn
-                or args.unit_tests or args.stub or args.comparison_grid or args.comparison)
+                or args.unit_tests or args.stub or args.comparison_grid or args.comparison
+                or args.timing_chart)
     if args.all or not any_flag:
         args.timing = args.figures = args.seaborn = args.unit_tests = True
 
@@ -1091,6 +1177,9 @@ if __name__ == "__main__":
 
     if args.comparison_grid:
         modes.append(("Comparison Grid", lambda sp=args.stub_pywt, d=args.dpi: generate_comparison_grid(stub_pywt=sp, dpi=d)))
+
+    if args.timing_chart:
+        modes.append(("Timing Bar Chart", lambda d=args.dpi: generate_timing_bar_chart(dpi=d if d > 0 else 200)))
 
     if args.unit_tests:
         from utilities.unit_tests import run_all as run_unit_tests

@@ -232,6 +232,10 @@ candidate analogy: "measuring with different rulers at different frequencies" â€
 
 ## 6. Implementation Deep Dive
 
+<p align="center"><img src="assets/images/benchmarks/timing_bar_chart.png" width="60%"></p>
+
+[WRITE: "SubShader pipeline timing breakdown â€” per-stage costs for CWT computation, normalization, and rendering"]
+
 ### 6.1 Wavelet Construction
 
 [WRITE: "How SubShader builds wavelet kernels: starting from the mother wavelet (Morlet/Gaussian-modulated sinusoid) and scaling it for each frequency in the chromatic scale"]
