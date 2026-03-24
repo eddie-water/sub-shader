@@ -26,9 +26,7 @@ The visualization accurately tracks audio input in real time with minimal latenc
 - ✓ CWT brightness bias fixed — L1 kernel normalization equalizes frequency bands — Phase 2
 - ✓ CWT normalization test suite — 6 pytest tests covering kernel norm, magnitude ratio, no-op — Phase 2
 - ✓ File-based audio playback synced to CWT visualization with <100ms perceived lag — Phase 3 (human verification pending)
-
-### Active
-- [ ] Top-level README with embedded benchmark figures and visual comparisons
+- ✓ Top-level README with embedded comparison grid hero figure and scaffold captions — Phase 6
 - [ ] Module-level READMEs for DSP, rendering, and audio capture modules
 - [ ] DSP documentation that is pedagogical, visual, and accessible to non-specialists
 - [ ] Unit tests (pytest) built incrementally as issues are discovered
@@ -91,4 +89,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-21 after Phase 3 completion*
+*Last updated: 2026-03-24 after Phase 6 completion*
