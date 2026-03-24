@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 6 context gathered
-last_updated: "2026-03-24T17:41:14.499Z"
-last_activity: 2026-03-23
+status: Ready to execute
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-24T18:39:44.611Z"
+last_activity: 2026-03-24
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
 ---
 
 # Project State
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** The visualization accurately tracks audio input in real time with minimal latency
-**Current focus:** Phase 05 — documentation
+**Current focus:** Phase 06 — finalize-example-audio-and-comparison-figures-for-readme
 
 ## Current Position
 
-Phase: 05 (documentation) — EXECUTING
-Plan: 3 of 3
+Phase: 06 (finalize-example-audio-and-comparison-figures-for-readme) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Plan: 3 of 3
 | Phase 05-documentation P02 | 2 | 2 tasks | 1 files |
 | Phase 05-documentation P03 | 3 | 3 tasks | 3 files |
 | Phase 05-documentation P01 | 7 | 2 tasks | 2 files |
+| Phase 06 P01 | 10 | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - [Phase 05-documentation]: numpy_vs_cupy_diff.png reference marked as MOVED in README.md — makes the decision visible in-place rather than silently deleting
 - [Phase 05-documentation]: Chirp column uses ~215 frames from 10s target rather than capping at NUM_FRAMES — gives complete sweep
 - [Phase 05-documentation]: Per-row vmax for each comparison grid column so each representation's dynamic range is independently visible
+- [Phase 06]: Bouncing chirp uses CubicSpline in log-frequency space with peak/dip waypoints — matches user sketch naturally
+- [Phase 06]: DPI=0 sentinel in generate_comparison_grid() means default naming; dpi>0 produces _Ndpi.png suffix regardless of stub_pywt
+- [Phase 06]: Stub suffix only applies to DPI=0 (default) path; explicit --dpi N gets clean comparison_grid_Ndpi.png name
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-03-23
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-finalize-example-audio-and-comparison-figures-for-readme/06-CONTEXT.md
+Last activity: 2026-03-24
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
