@@ -803,7 +803,8 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0):
             pywt_spec = np.random.rand(n_cwt_freqs, actual_w).astype(np.float32)
             pywt_vmax = pywt_spec.max()
 
-        duration_s = frames_processed * chunk_size / sr
+        hop_size = int(chunk_size * (1 - overlap_factor))
+        duration_s = ((frames_processed - 1) * hop_size + chunk_size) / sr
         ytick_bins, ytick_labels = compute_freq_yticks(cwt_freqs)
 
         # Trim waveform to match DSP duration
