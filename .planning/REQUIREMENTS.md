@@ -39,6 +39,15 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 - [ ] **INST-02**: Dependencies install cleanly via pip/setup
 - [ ] **INST-03**: Clear error messages if GPU not available (with automatic CPU fallback)
 
+### Figures & Audio Examples
+
+- [ ] **FIG-01**: Bouncing chirp audio signal synthesized programmatically — ascending frequency contour with parabolic dips across three decades
+- [ ] **FIG-02**: Comparison grid uses curated audio examples: bouncing chirp, polyphonic MIDI, musical excerpt
+- [ ] **FIG-03**: Comparison grid generated at multiple DPI levels for user quality/filesize selection
+- [ ] **FIG-04**: README Performance section has single hero comparison grid figure centered at ~80% width
+- [ ] **FIG-05**: README per-signal sections have scaffold captions replacing REWRITE markers
+- [ ] **FIG-06**: Timing bar chart relocated from README to DSP.md computational cost section
+
 ## v2 Requirements
 
 Deferred to future milestone. Tracked but not in current roadmap.
@@ -98,12 +107,18 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | INST-01 | Phase 4 | Pending |
 | INST-02 | Phase 4 | Pending |
 | INST-03 | Phase 4 | Pending |
+| FIG-01 | Phase 6 | Pending |
+| FIG-02 | Phase 6 | Pending |
+| FIG-03 | Phase 6 | Pending |
+| FIG-04 | Phase 6 | Pending |
+| FIG-05 | Phase 6 | Pending |
+| FIG-06 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 17 total (note: REQUIREMENTS.md header previously stated 16 — DOCS-06 is the 17th)
-- Mapped to phases: 17
+- v1 requirements: 23 total
+- Mapped to phases: 23
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-21 after roadmap creation — traceability complete*
+*Last updated: 2026-03-24 — Phase 6 figure requirements added*
