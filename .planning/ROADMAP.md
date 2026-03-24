@@ -99,15 +99,16 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Audio-Visual Sync | 0/2 | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |
 | 5. Documentation | 3/4 | In Progress | - |
-| 6. Finalize Audio & Figures | 1/2 | In Progress|  |
+| 6. Finalize Audio & Figures | 1/3 | In Progress|  |
 
 ### Phase 6: Finalize example audio and comparison figures for README
 
 **Goal:** Curate final audio examples (bouncing chirp synthesis) and generate the polished comparison grid figure for the top-level README, with timing analysis relocated to DSP.md
 **Requirements**: FIG-01, FIG-02, FIG-03, FIG-04, FIG-05, FIG-06
 **Depends on:** Phase 5
-**Plans:** 1/2 plans executed
+**Plans:** 3 plans
 
 Plans:
 - [x] 06-01-PLAN.md — Bouncing chirp synthesis + comparison grid at multiple DPIs + user DPI selection
 - [ ] 06-02-PLAN.md — Final grid generation (full PyWavelet) + README/DSP.md updates
+- [ ] 06-03-PLAN.md — Fix duration_s overlap bug + add --comparison flag with per-method timing stats (gap closure)
