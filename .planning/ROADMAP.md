@@ -108,11 +108,11 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 **Goal:** Add cwt_timed() sub-stage profiling to --timing output, add NumPy timing to --comparison table, and commit existing grid visual improvements
 **Requirements**: TBD-01, TBD-02, TBD-03, TBD-04
 **Depends on:** Phase 5.1
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 05.2-01-PLAN.md — cwt_timed() method + TimedSubShader sub-stage breakdown + render timing + tests
-- [ ] 05.2-02-PLAN.md — NumPy (SubShader CPU) timing row in --comparison table
+- [x] 05.2-02-PLAN.md — NumPy (SubShader CPU) timing row in --comparison table
 
 ### Phase 05.1: Research toolkit restructure (INSERTED)
 

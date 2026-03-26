@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 05.2-01-PLAN.md
-last_updated: "2026-03-26T01:25:50.295Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 05.2-02-PLAN.md
+last_updated: "2026-03-26T01:28:38.411Z"
 last_activity: 2026-03-26
 progress:
   total_phases: 8
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -62,6 +62,7 @@ Plan: 2 of 2
 | Phase 05.1-research-toolkit-restructure P01 | 10 | 2 tasks | 4 files |
 | Phase 05.1-research-toolkit-restructure P02 | 25 | 2 tasks | 8 files |
 | Phase 05.2-benchmark-timing-profiling-and-comparison-grid-polish P01 | 2 | 2 tasks | 3 files |
+| Phase 05.2-benchmark-timing-profiling-and-comparison-grid-polish P02 | 1 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 05.1-02]: PyWavelet reliable range capped at bin 90 (~5 kHz) in test_pure_tone_peak_accuracy — above that pywt.cwt() aliases to wrong frequency bin
 - [Phase 05.2]: cwt_timed() uses inline time.perf_counter in wavelet.py — production code must not import from research/utilities
 - [Phase 05.2]: TimedSubShader now uses 8-method accumulator: get_chunk + 6 cwt sub-stages + push_frame
+- [Phase Phase 05.2]: CuWavelet import deferred inside generate_comparison_grid() — avoids unconditional GPU import at module load
+- [Phase Phase 05.2]: GPU CWT result discarded in --comparison — timing-table-only per D-07; no new figure rows added
 
 ### Pending Todos
 
@@ -134,5 +137,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-26
-Stopped at: Completed 05.2-01-PLAN.md
+Stopped at: Completed 05.2-02-PLAN.md
 Resume file: None
