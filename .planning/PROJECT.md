@@ -28,6 +28,7 @@ The visualization accurately tracks audio input in real time with minimal latenc
 - ✓ File-based audio playback synced to CWT visualization with <100ms perceived lag — Phase 3 (human verification pending)
 - ✓ Top-level README with embedded comparison grid hero figure and scaffold captions — Phase 6
 - ✓ Research toolkit restructured — benchmark.py split into modular modules, colocated pytest tests — Phase 5.1
+- ✓ CWT sub-stage profiling via cwt_timed() + 4-method comparison timing (STFT, PyWavelet, CPU, GPU) — Phase 5.2
 - [ ] Module-level READMEs for DSP, rendering, and audio capture modules
 - [ ] DSP documentation that is pedagogical, visual, and accessible to non-specialists
 - [ ] Unit tests (pytest) built incrementally as issues are discovered
@@ -90,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after Phase 5.1 completion*
+*Last updated: 2026-03-25 after Phase 5.2 completion*
