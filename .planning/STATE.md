@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to plan
-stopped_at: Phase 5.2 context gathered
-last_updated: "2026-03-26T01:06:55.146Z"
-last_activity: 2026-03-24
+status: Ready to execute
+stopped_at: Completed 05.2-01-PLAN.md
+last_updated: "2026-03-26T01:25:50.295Z"
+last_activity: 2026-03-26
 progress:
   total_phases: 8
   completed_phases: 5
-  total_plans: 15
-  completed_plans: 14
+  total_plans: 17
+  completed_plans: 15
 ---
 
 # Project State
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-21)
 
 **Core value:** The visualization accurately tracks audio input in real time with minimal latency
-**Current focus:** Phase 05.1 — research-toolkit-restructure
+**Current focus:** Phase 05.2 — benchmark-timing-profiling-and-comparison-grid-polish
 
 ## Current Position
 
-Phase: 06
-Plan: Not started
+Phase: 05.2 (benchmark-timing-profiling-and-comparison-grid-polish) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Plan: Not started
 | Phase 06 P02 | 8 | 1 tasks | 6 files |
 | Phase 05.1-research-toolkit-restructure P01 | 10 | 2 tasks | 4 files |
 | Phase 05.1-research-toolkit-restructure P02 | 25 | 2 tasks | 8 files |
+| Phase 05.2-benchmark-timing-profiling-and-comparison-grid-polish P01 | 2 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Recent decisions affecting current work:
 - [Phase 05.1-02]: pyproject.toml pythonpath includes src/subshader so conftest helpers are importable in colocated test files without __init__.py
 - [Phase 05.1-02]: test_kernel_energy_per_scale rewritten to verify L1 normalization invariant after Phase 2 — L1 norm ~1.0, L2 slope ~+0.5 vs pre-Phase-2 slope ~-0.5
 - [Phase 05.1-02]: PyWavelet reliable range capped at bin 90 (~5 kHz) in test_pure_tone_peak_accuracy — above that pywt.cwt() aliases to wrong frequency bin
+- [Phase 05.2]: cwt_timed() uses inline time.perf_counter in wavelet.py — production code must not import from research/utilities
+- [Phase 05.2]: TimedSubShader now uses 8-method accumulator: get_chunk + 6 cwt sub-stages + push_frame
 
 ### Pending Todos
 
@@ -130,6 +133,6 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-03-24
-Stopped at: Phase 5.2 context gathered
-Resume file: .planning/phases/05.2-benchmark-timing-profiling-and-comparison-grid-polish/05.2-CONTEXT.md
+Last activity: 2026-03-26
+Stopped at: Completed 05.2-01-PLAN.md
+Resume file: None
