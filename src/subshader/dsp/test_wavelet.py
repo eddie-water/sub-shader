@@ -259,14 +259,14 @@ def test_normalization_behavior():
     np_ratio = np_low / (np_high + 1e-12)
     py_ratio = py_low / (py_high + 1e-12)
 
-    print(f"  NumPyWavelet white noise low/high ratio: {np_ratio:.2f} (expect < 3.0 with sqrt(f) norm)")
-    print(f"  PyWavelet white noise low/high ratio: {py_ratio:.2f} (expect > 2.0 without norm)")
+    print(f"  NumPyWavelet white noise low/high ratio: {np_ratio:.2f} (expect < 3.0 with L1 kernel norm)")
+    print(f"  PyWavelet white noise low/high ratio: {py_ratio:.2f} (expect < 3.0 with sqrt(scale) norm)")
 
     assert np_ratio < 3.0, (
-        f"NumPyWavelet white noise low/high ratio: {np_ratio:.2f} (expect < 3.0 with sqrt(f) norm)"
+        f"NumPyWavelet white noise low/high ratio: {np_ratio:.2f} (expect < 3.0 with L1 kernel norm)"
     )
-    assert py_ratio > 2.0, (
-        f"PyWavelet white noise low/high ratio: {py_ratio:.2f} (expect > 2.0 without norm)"
+    assert py_ratio < 3.0, (
+        f"PyWavelet white noise low/high ratio: {py_ratio:.2f} (expect < 3.0 with sqrt(scale) norm)"
     )
 
     # --- 6b: Equal-amplitude multi-tone ---
@@ -308,6 +308,51 @@ def test_normalization_behavior():
     assert ratio < 8.0, (
         f"Single-tone sufficiency: 200 Hz peak / 5 kHz peak = {ratio:.2f} "
         f"(expect < 8.0; residual bias from CWT time-freq tradeoff is normal)"
+    )
+
+
+# =============================================================================
+# TEST 6d: CROSS-IMPLEMENTATION NORMALIZATION COMPARABILITY
+# =============================================================================
+
+def test_normalization_comparability():
+    """PyWavelet and NumPyWavelet should produce comparable energy profiles.
+
+    Both implementations normalize to compensate for scale-dependent energy
+    bias: SubShader uses L1 kernel normalization, PyWavelet uses 1/sqrt(scale).
+    Equal-amplitude tones should produce similar peak ratios across both.
+    """
+    config = get_default_config()
+    sr = int(config.wavelet.typical_sampling_freq)
+    chunk = config.audio.chunk_size
+
+    npwt = NumPyWavelet(sample_rate=sr, input_n=chunk, config=config.wavelet)
+    pywt_wt = PyWavelet(sample_rate=sr, input_n=chunk, config=config.wavelet)
+
+    # Equal-amplitude tones at 200 Hz and 5 kHz
+    f_low, f_high = 200.0, 5000.0
+    tone_low = generate_tone(f_low, sr, chunk)
+    tone_high = generate_tone(f_high, sr, chunk)
+
+    # Get peak energy at each tone's frequency for both implementations
+    np_low = np.max(np.mean(npwt.cwt(tone_low), axis=1))
+    np_high = np.max(np.mean(npwt.cwt(tone_high), axis=1))
+    py_low = np.max(np.mean(pywt_wt.cwt(tone_low), axis=1))
+    py_high = np.max(np.mean(pywt_wt.cwt(tone_high), axis=1))
+
+    np_ratio = np_low / (np_high + 1e-12)
+    py_ratio = py_low / (py_high + 1e-12)
+
+    print(f"  NumPyWavelet 200Hz/5kHz ratio: {np_ratio:.2f}")
+    print(f"  PyWavelet 200Hz/5kHz ratio: {py_ratio:.2f}")
+
+    # Both should have similar-ish ratios (within 4x of each other)
+    ratio_of_ratios = max(np_ratio, py_ratio) / (min(np_ratio, py_ratio) + 1e-12)
+    print(f"  Ratio of ratios: {ratio_of_ratios:.2f} (expect < 4.0)")
+
+    assert ratio_of_ratios < 4.0, (
+        f"Normalization mismatch: NumPy ratio={np_ratio:.2f}, PyWavelet ratio={py_ratio:.2f}, "
+        f"ratio-of-ratios={ratio_of_ratios:.2f} (expect < 4.0 for comparable normalization)"
     )
 
 
@@ -374,3 +419,34 @@ def test_output_shape_regression():
         assert len(wt.freqs) == wt.num_freqs, (
             f"{name}: len(freqs)={len(wt.freqs)} != num_freqs={wt.num_freqs}"
         )
+
+
+# =============================================================================
+# TEST 9: CWT_TIMED METHOD
+# =============================================================================
+
+def test_cwt_timed_returns_six_stages():
+    """cwt_timed() returns result + dict with exactly 6 stage keys, all positive floats."""
+    config = get_default_config()
+    wc = config.wavelet
+    sr = 44100
+    wt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
+    tone = generate_tone(440.0, sr, config.audio.chunk_size)
+    result, timings = wt.cwt_timed(tone)
+    expected_keys = {"raw_cwt", "normalize", "magnitude", "edge_trim", "hop_center", "downsample"}
+    assert set(timings.keys()) == expected_keys
+    for key, val in timings.items():
+        assert isinstance(val, float), f"{key} is not float"
+        assert val >= 0.0, f"{key} is negative"
+
+
+def test_cwt_timed_output_matches_cwt():
+    """cwt_timed() produces identical output to cwt() for the same input."""
+    config = get_default_config()
+    wc = config.wavelet
+    sr = 44100
+    wt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
+    tone = generate_tone(440.0, sr, config.audio.chunk_size)
+    result_timed, _ = wt.cwt_timed(tone)
+    result_plain = wt.cwt(tone)
+    np.testing.assert_allclose(result_timed, result_plain, rtol=1e-10)
