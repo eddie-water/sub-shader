@@ -1,6 +1,7 @@
-from subshader.config import get_default_config
+from subshader.config import get_default_config, ColorNormalizationConfig
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import NumPyWavelet
+from subshader.viz.plotter import CircularFrameBuffer
 
 from utilities import (
     AUDIO_DEFAULT,
@@ -86,7 +87,15 @@ class TimedSubShader:
         # ── Runtime loop ─────────────────────────────────────────────────────
         print_section_start(f"Runtime Loop ({self.num_frames} frames)")
 
-        acc = TimingAccumulator(self.num_frames, ["get_chunk()", "cwt()"])
+        cwt_stages = ["raw_cwt", "normalize", "magnitude", "edge_trim", "hop_center", "downsample"]
+        all_methods = ["get_chunk()"] + cwt_stages + ["push_frame()"]
+        acc = TimingAccumulator(self.num_frames, all_methods)
+
+        buf = CircularFrameBuffer(
+            frame_shape=wavelet.get_output_shape(),
+            num_frames=self.num_frames,
+            color_norm_config=ColorNormalizationConfig(),
+        )
 
         for i in range(self.num_frames):
             audio_data, acc["get_chunk()"][i] = time_call(audio_input.get_chunk)
@@ -95,7 +104,10 @@ class TimedSubShader:
                 acc.current_idx = i
                 break
 
-            _, acc["cwt()"][i] = time_call(wavelet.cwt, audio_data)
+            result, stage_times = wavelet.cwt_timed(audio_data)
+            for stage, t in stage_times.items():
+                acc[stage][i] = t
+            _, acc["push_frame()"][i] = time_call(buf.push_frame, result)
             acc.current_idx = i + 1
             live_progress(i + 1, self.num_frames)
 
@@ -106,9 +118,15 @@ class TimedSubShader:
         print("Results:")
         print_results_header()
         print_results_row("get_chunk()", acc["get_chunk()"])
-        print_results_row("cwt()", acc["cwt()"])
+        print_separator()
+        for stage in cwt_stages:
+            print_results_row(f"  {stage}", acc[stage])
+        cwt_total_times = sum(acc[s] for s in cwt_stages)
+        print_results_row("cwt() total", cwt_total_times)
+        print_separator()
+        print_results_row("push_frame()", acc["push_frame()"])
 
-        total_times = acc["get_chunk()"] + acc["cwt()"]
+        total_times = acc["get_chunk()"] + cwt_total_times + acc["push_frame()"]
         print_loop_summary(len(total_times), total_times)
         print_section_end()
 
