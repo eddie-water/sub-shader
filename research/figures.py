@@ -609,6 +609,8 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
     """
     from wav_export import export_signal_to_wav
 
+    GPU_COMP_AVAILABLE = gpu_available()
+
     os.makedirs(BENCHMARKS_DIR, exist_ok=True)
 
     config = get_default_config()
@@ -619,7 +621,9 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
     # ── Visual config (single source for all grid plots) ─────────────────────
     GRID_CMAP = "inferno"
-    GRID_WAVEFORM_COLOR = "#FFDB4A"
+    GRID_BG_COLOR = "#1A1A1A"
+    GRID_WAVEFORM_COLOR = "#ffffcf"
+    LABEL_FONT_SIZE = 24
 
     # ── Signal definitions ────────────────────────────────────────────────────
     CHIRP_DURATION_S = 6.0
@@ -677,6 +681,10 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
                 raw_waveform = raw_waveform[:max_samples]
 
         npwt = NumPyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+        cpwt = None
+        if GPU_COMP_AVAILABLE and comparison:
+            from subshader.dsp.wavelet import CuWavelet
+            cpwt = CuWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
         if not stub_pywt:
             pywt = PyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
             cwt_freqs = pywt.freqs
@@ -710,9 +718,11 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         )
 
         if comparison:
-            methods = ["STFT", "SubShader"]
+            methods = ["STFT", "SubShader (CPU)"]
             if not stub_pywt:
                 methods.insert(1, "PyWavelet")
+            if GPU_COMP_AVAILABLE:
+                methods.append("SubShader (GPU)")
             acc = TimingAccumulator(n_frames, methods)
 
         frames_processed = 0
@@ -742,10 +752,13 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
                 pywt_buf.push_frame(pywt_out)
 
             if comparison:
-                npwt_out, acc["SubShader"][acc.current_idx] = time_call(npwt.cwt, chunk)
+                npwt_out, acc["SubShader (CPU)"][acc.current_idx] = time_call(npwt.cwt, chunk)
             else:
                 npwt_out, _ = time_call(npwt.cwt, chunk)
             npwt_buf.push_frame(npwt_out)
+
+            if cpwt is not None and comparison:
+                _, acc["SubShader (GPU)"][acc.current_idx] = time_call(cpwt.cwt, chunk)
 
             if comparison:
                 acc.advance()
@@ -810,25 +823,42 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
                 print_results_row(method, acc.arrays[method])
         print_section_end()
 
-    # ── Build 5x3 figure ─────────────────────────────────────────────────────
+    # ── Build 5x4 figure (label col + 3 data cols) ─────────────────────────
     print_section_start("Rendering 5x3 comparison grid")
 
     GRID_ROWS = 5  # Reference + DAW + STFT + PyWavelet + SubShader
-    GRID_COLS = 3
-    fig, axes = plt.subplots(
-        GRID_ROWS, GRID_COLS,
-        figsize=(24, 16),
-        gridspec_kw={
-            "hspace": 0.08,
-            "wspace": 0.04,
-        },
+    GRID_DATA_COLS = 3
+    pywt_label = "PyWavelet (stub)" if stub_pywt else "PyWavelet"
+    row_labels = ["Reference", "DAW", "STFT", pywt_label, "SubShader"]
+    LABEL_CHAR_WIDTH = 0.028   # ratio units per character at fontsize 24 bold
+    LABEL_PAD = 0.14           # clearance for y-axis tick labels + "Freq (Hz)"
+    LABEL_RATIO = len(max(row_labels, key=len)) * LABEL_CHAR_WIDTH + LABEL_PAD
+    fig = plt.figure(figsize=(24, 16))
+    gs = fig.add_gridspec(
+        GRID_ROWS, GRID_DATA_COLS + 1,
+        width_ratios=[LABEL_RATIO, 1, 1, 1],
+        hspace=0.08, wspace=0.04,
     )
 
-    pywt_label = "PyWavelet (stub)" if stub_pywt else "PyWavelet"
+    # Build axes array: axes[row][col] where col 0 = label, 1-3 = data
+    axes = []
+    for r in range(GRID_ROWS):
+        row_axes = []
+        for c in range(GRID_DATA_COLS + 1):
+            row_axes.append(fig.add_subplot(gs[r, c]))
+        axes.append(row_axes)
+    for r, label in enumerate(row_labels):
+        ax_lbl = axes[r][0]
+        ax_lbl.text(0.5, 0.5, label, transform=ax_lbl.transAxes,
+                    ha="center", va="center", fontweight="bold",
+                    fontsize=LABEL_FONT_SIZE, color="black")
+        ax_lbl.set_facecolor(GRID_BG_COLOR)
+        ax_lbl.axis("off")
 
     for col_idx, (col, spec) in enumerate(zip(column_data, signal_specs)):
+        dc = col_idx + 1  # data column (0 is label column)
         # ── Row 0: Reference — waveform time series / instantaneous freq ──
-        ax_ref = axes[0][col_idx]
+        ax_ref = axes[0][dc]
 
         if spec["type"] == "chirp":
             # Map inst_freq (Hz) → bin indices matching spectrogram y-axis
@@ -839,10 +869,10 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             ax_ref.plot(col["waveform_time"], inst_freq_bins,
                         color=GRID_WAVEFORM_COLOR, linewidth=1.5, alpha=0.9)
             ax_ref.set_ylim(0, col["n_cwt_freqs"])
-            ax_ref.set_facecolor("#1a1a2e")
+            ax_ref.set_facecolor(GRID_BG_COLOR)
             ax_ref.grid(True, color="white", alpha=0.08, linewidth=0.5)
             # Use same freq ticks as spectrogram rows
-            if col_idx == 0:
+            if dc == 1:
                 ax_ref.set_yticks(col["ytick_bins"])
                 ax_ref.set_yticklabels(col["ytick_labels"], fontsize=14)
             else:
@@ -853,9 +883,9 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
                         color=GRID_WAVEFORM_COLOR, linewidth=0.2, alpha=0.8)
             peak = max(np.abs(col["waveform"]).max(), 1e-6)
             ax_ref.set_ylim(-peak * 1.10, peak * 1.10)
-            ax_ref.set_facecolor("#1a1a2e")
+            ax_ref.set_facecolor(GRID_BG_COLOR)
             ax_ref.grid(True, color="gray", alpha=0.15, linewidth=0.5)
-            if col_idx != 0:
+            if dc != 1:
                 ax_ref.set_yticks([])
 
         ax_ref.set_xlim(0, col["duration_s"])
@@ -866,19 +896,25 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         ax_ref.tick_params(axis="x", length=0)
 
         # ── Row 1: DAW — placeholder / reference image ───────────────────
-        ax_daw = axes[1][col_idx]
+        ax_daw = axes[1][dc]
 
         daw_path = spec.get("daw_image")
         if daw_path and os.path.exists(daw_path):
             daw_img = plt.imread(daw_path)
             ax_daw.imshow(daw_img, aspect="auto",
-                          extent=[0, col["duration_s"], 0, 1])
+                          extent=[0, col["duration_s"], 0, col["n_cwt_freqs"]])
         else:
             ax_daw.set_facecolor("#2a2a2a")
             ax_daw.text(0.5, 0.5, "placeholder — generate in FL Studio",
                         transform=ax_daw.transAxes, ha="center", va="center",
                         fontsize=18, color="#666666", style="italic")
-        ax_daw.set_yticks([])
+            ax_daw.set_ylim(0, col["n_cwt_freqs"])
+        # Y-axis: freq ticks on first data column to match spectrogram rows
+        if dc == 1:
+            ax_daw.set_yticks(col["ytick_bins"])
+            ax_daw.set_yticklabels(col["ytick_labels"], fontsize=14)
+        else:
+            ax_daw.set_yticks([])
 
         ax_daw.set_xlim(0, col["duration_s"])
         for spine in ax_daw.spines.values():
@@ -894,7 +930,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             (col["npwt"], col["npwt_vmax"]),
         ]
         for row_idx, (spec_data, vmax) in enumerate(spec_rows):
-            ax = axes[row_idx + 2][col_idx]
+            ax = axes[row_idx + 2][dc]
             extent = [0, col["duration_s"], 0, col["n_cwt_freqs"]]
             ax.imshow(
                 spec_data, cmap=GRID_CMAP, aspect="auto",
@@ -905,11 +941,11 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
                 spine.set_edgecolor("#444444")
                 spine.set_linewidth(0.8)
 
-            # Y-axis: "Freq (Hz)" on left column only
-            if col_idx == 0:
+            # Y-axis: "Freq (Hz)" on first data column only
+            if dc == 1:
                 ax.set_yticks(col["ytick_bins"])
                 ax.set_yticklabels(col["ytick_labels"], fontsize=14)
-                if row_idx == 1:  # middle spectrogram row (PyWavelet)
+                if row_idx == 0:  # middle row of grid (STFT = row 2 of 5)
                     ax.set_ylabel("Freq (Hz)", fontsize=18, labelpad=4)
             else:
                 ax.set_yticks([])
@@ -917,30 +953,19 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             # X-axis: "Time (s)" on bottom row only
             if row_idx == 2:  # bottom spectrogram row (SubShader)
                 ax.tick_params(axis="x", labelsize=14)
-                if col_idx == 1:  # center column
+                if dc == 2:  # center data column
                     ax.set_xlabel("Time (s)", fontsize=18, labelpad=4)
             else:
                 plt.setp(ax.get_xticklabels(), visible=False)
                 ax.tick_params(axis="x", length=0)
 
-    # Column labels across the top
+    # Column labels across the top (data columns only)
     for col_idx, col in enumerate(column_data):
-        axes[0][col_idx].set_title(col["label"], fontsize=24, fontweight="bold", pad=8)
-
-    # Row labels on the RIGHT side (rotated 90° clockwise)
-    right_labels = ["Reference", "DAW", "STFT", pywt_label, "SubShader"]
-    for row_idx, label in enumerate(right_labels):
-        ax_right = axes[row_idx][GRID_COLS - 1]
-        ax_right.annotate(
-            label, xy=(1.02, 0.5), xycoords="axes fraction",
-            fontsize=20, fontweight="bold", va="center", ha="left",
-            rotation=-90,
-        )
+        axes[0][col_idx + 1].set_title(col["label"], fontsize=LABEL_FONT_SIZE, fontweight="bold", pad=8)
 
     GRID_MARGIN = 0.05
     plt.subplots_adjust(left=GRID_MARGIN, right=1 - GRID_MARGIN,
-                        top=1 - GRID_MARGIN, bottom=GRID_MARGIN,
-                        wspace=0.04, hspace=0.08)
+                        top=1 - GRID_MARGIN, bottom=GRID_MARGIN)
 
     # When --dpi is passed explicitly, the output is always named by DPI (no stub suffix).
     # The stub suffix only applies to the default 200 DPI path without an explicit DPI request.
