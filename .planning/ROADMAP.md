@@ -99,8 +99,20 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. Audio-Visual Sync | 0/2 | Not started | - |
 | 4. Install Experience | 0/TBD | Not started | - |
 | 5. Documentation | 3/4 | In Progress | - |
-| 5.1 Research Toolkit | 0/2 | Not started | - |
+| 5.1 Research Toolkit | 2/2 | Complete | - |
+| 5.2 Timing & Grid Polish | 0/2 | Not started | - |
 | 6. Finalize Audio & Figures | 2/3 | In Progress|  |
+
+### Phase 05.2: Benchmark timing profiling and comparison grid polish (INSERTED)
+
+**Goal:** Add cwt_timed() sub-stage profiling to --timing output, add NumPy timing to --comparison table, and commit existing grid visual improvements
+**Requirements**: TBD-01, TBD-02, TBD-03, TBD-04
+**Depends on:** Phase 5.1
+**Plans:** 2 plans
+
+Plans:
+- [ ] 05.2-01-PLAN.md — cwt_timed() method + TimedSubShader sub-stage breakdown + render timing + tests
+- [ ] 05.2-02-PLAN.md — NumPy (SubShader CPU) timing row in --comparison table
 
 ### Phase 05.1: Research toolkit restructure (INSERTED)
 
