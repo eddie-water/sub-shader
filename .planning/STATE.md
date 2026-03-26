@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to plan
-stopped_at: Completed 05.1-02-PLAN.md
-last_updated: "2026-03-24T23:31:07.071Z"
+stopped_at: Phase 5.2 context gathered
+last_updated: "2026-03-26T01:06:55.146Z"
 last_activity: 2026-03-24
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 5
   total_plans: 15
   completed_plans: 14
@@ -121,6 +121,7 @@ None yet.
 
 - Phase 6 added: Finalize example audio and comparison figures for README
 - Phase 05.1 inserted after Phase 5: Research toolkit restructure (URGENT) — restructure monolithic benchmark.py into modular research toolkit before 05-04 figure generation
+- Phase 05.2 inserted after Phase 5: Benchmark timing profiling and comparison grid polish (URGENT) — sub-stage timing for --timing, NumPy timing in --comparison, PyWavelet normalization, grid label layout
 
 ### Blockers/Concerns
 
@@ -130,5 +131,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-24
-Stopped at: Completed 05.1-02-PLAN.md
-Resume file: None
+Stopped at: Phase 5.2 context gathered
+Resume file: .planning/phases/05.2-benchmark-timing-profiling-and-comparison-grid-polish/05.2-CONTEXT.md
