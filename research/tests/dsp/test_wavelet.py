@@ -422,31 +422,40 @@ def test_output_shape_regression():
 
 
 # =============================================================================
-# TEST 9: CWT_TIMED METHOD
+# TEST 9: @TIMED METHOD ATTRIBUTES
 # =============================================================================
 
-def test_cwt_timed_returns_six_stages():
-    """cwt_timed() returns result + dict with exactly 6 stage keys, all positive floats."""
+def test_timed_attributes_populated_after_cwt():
+    """After cwt(), all @timed sub-stage attributes are set and non-negative."""
     config = get_default_config()
     wc = config.wavelet
     sr = 44100
     wt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
     tone = generate_tone(440.0, sr, config.audio.chunk_size)
-    result, timings = wt.cwt_timed(tone)
-    expected_keys = {"raw_cwt", "normalize", "magnitude", "edge_trim", "hop_center", "downsample"}
-    assert set(timings.keys()) == expected_keys
-    for key, val in timings.items():
-        assert isinstance(val, float), f"{key} is not float"
-        assert val >= 0.0, f"{key} is negative"
+    wt.cwt(tone)
+
+    # Each @timed method sets _timing_{name}_ms on the instance after each call
+    expected_attrs = [
+        "_timing_class_specific_cwt_ms",
+        "_timing_normalize_by_scale_ms",
+        "_timing_compute_mag_ms",
+        "_timing_discard_unreliable_coefs_ms",
+        "_timing_downsample_ms",
+    ]
+    for attr in expected_attrs:
+        assert hasattr(wt, attr), f"Expected attribute {attr} not found after cwt()"
+        val = getattr(wt, attr)
+        assert isinstance(val, float), f"{attr} is not float (got {type(val)})"
+        assert val >= 0.0, f"{attr} is negative ({val})"
 
 
-def test_cwt_timed_output_matches_cwt():
-    """cwt_timed() produces identical output to cwt() for the same input."""
+def test_cwt_output_consistent_across_calls():
+    """Repeated cwt() calls on the same input produce identical output."""
     config = get_default_config()
     wc = config.wavelet
     sr = 44100
     wt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
     tone = generate_tone(440.0, sr, config.audio.chunk_size)
-    result_timed, _ = wt.cwt_timed(tone)
-    result_plain = wt.cwt(tone)
-    np.testing.assert_allclose(result_timed, result_plain, rtol=1e-10)
+    result_a = wt.cwt(tone)
+    result_b = wt.cwt(tone)
+    np.testing.assert_allclose(result_a, result_b, rtol=1e-10)
