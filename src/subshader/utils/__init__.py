@@ -9,6 +9,7 @@ from .logging import logger_init, get_logger, set_log_level, get_module_logger
 from .os_env_setup import env_init
 from .loop_timer import LoopTimer
 from .gpu import gpu_available
+from .timing import timed
 
 __all__ = [
     'env_init',
@@ -18,4 +19,5 @@ __all__ = [
     'set_log_level',
     'get_module_logger',
     'gpu_available',
+    'timed',
 ]

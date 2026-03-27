@@ -18,7 +18,6 @@ from __future__ import annotations
 # IMPORTS
 # =============================================================================
 
-import time
 from abc import ABC, abstractmethod
 from typing import Final, Optional, Literal
 
@@ -34,6 +33,7 @@ from numpy.fft import fft, ifft
 import pywt
 
 from subshader.utils.logging import get_logger
+from subshader.utils.timing import timed
 from subshader.dsp.wavelet_kernel import WaveletKernel
 
 from ..config import WaveletConfig
@@ -139,6 +139,7 @@ class Wavelet(ABC):
         """
         return self.output_shape
 
+    @timed
     def cwt(self, input_data: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
         Performs the Continuous Wavelet Transform (CWT) on input audio data,
@@ -176,51 +177,6 @@ class Wavelet(ABC):
 
         return downsampled_coefs
 
-    def cwt_timed(self, input_data: np.ndarray[np.floating]) -> tuple[np.ndarray[np.floating], dict[str, float]]:
-        """
-        Timed variant of cwt() — identical pipeline but returns per-stage timings.
-
-        Returns:
-            Tuple of (downsampled_coefs, timings_dict) where timings_dict maps
-            stage name to elapsed milliseconds.
-        """
-        if input_data.shape != self.input_shape:
-            raise ValueError(f"Input data length {input_data.shape[0]} does not match expected input data size {self.input_n}")
-
-        t0 = time.perf_counter()
-        cwt_coefs = self.class_specific_cwt(np.asarray(input_data, dtype=np.float64))
-        t_raw_cwt = (time.perf_counter() - t0) * 1000.0
-
-        t0 = time.perf_counter()
-        cwt_coefs = self.normalize_by_scale(cwt_coefs)
-        t_normalize = (time.perf_counter() - t0) * 1000.0
-
-        t0 = time.perf_counter()
-        mag_coefs = self.compute_mag(cwt_coefs)
-        t_magnitude = (time.perf_counter() - t0) * 1000.0
-
-        t0 = time.perf_counter()
-        reliable_coefs = self.discard_unreliable_coefs(mag_coefs)
-        t_edge_trim = (time.perf_counter() - t0) * 1000.0
-
-        t0 = time.perf_counter()
-        hop_center_coefs = self.extract_hop_center(reliable_coefs)
-        t_hop_center = (time.perf_counter() - t0) * 1000.0
-
-        t0 = time.perf_counter()
-        downsampled_coefs = self.downsample(hop_center_coefs, self.output_n)
-        t_downsample = (time.perf_counter() - t0) * 1000.0
-
-        timings = {
-            "raw_cwt":    t_raw_cwt,
-            "normalize":  t_normalize,
-            "magnitude":  t_magnitude,
-            "edge_trim":  t_edge_trim,
-            "hop_center": t_hop_center,
-            "downsample": t_downsample,
-        }
-        return downsampled_coefs, timings
-
     @abstractmethod
     def class_specific_cwt(self, data: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
@@ -255,6 +211,7 @@ class Wavelet(ABC):
         """
         raise NotImplementedError
 
+    @timed
     def compute_mag(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.floating]:
         """
         Convert the raw CWT coefficients to magnitude 
@@ -281,6 +238,7 @@ class Wavelet(ABC):
         """
         raise NotImplementedError
 
+    @timed
     def extract_hop_center(self, reliable_coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
         Extract the non-overlapping trailing portion of reliable CWT coefficients.
@@ -308,6 +266,7 @@ class Wavelet(ABC):
 
         return reliable_coefs[:, -new_width:]
 
+    @timed
     def downsample(self,
                    coefs: np.ndarray[np.floating],
                    target_width: Optional[int] = None) -> np.ndarray[np.floating]:
@@ -379,6 +338,7 @@ class PyWavelet(Wavelet):
         f_norm: np.ndarray[np.float64] = (self.freqs / self.sample_rate)
         self.scales: np.ndarray[np.float64] = pywt.frequency2scale(self.wavelet_name, f_norm)
 
+    @timed
     def class_specific_cwt(self, data: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
         Produces the normalized CWT coefficients using PyWavelets.
@@ -398,6 +358,7 @@ class PyWavelet(Wavelet):
     
         return coefs_raw
     
+    @timed
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
         """
         Scale-dependent normalization for PyWavelet CWT output.
@@ -418,6 +379,7 @@ class PyWavelet(Wavelet):
         """
         return cwt_coefs / np.sqrt(self.scales)[:, np.newaxis]
 
+    @timed
     def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         # stub
         keep = 8192
@@ -517,6 +479,7 @@ class AntsWavelet(Wavelet):
 
         return slice(slice_start, slice_end)
 
+    @timed
     def normalize_by_scale(self, cwt_coefs: np.ndarray[np.complexfloating]) -> np.ndarray[np.complexfloating]:
         """
         Kernel normalization in WaveletKernel.__init__ corrects the energy bias
@@ -556,6 +519,7 @@ class AntsWavelet(Wavelet):
         """
         return coefs[:, self.reliable_slice]
 
+    @timed
     def discard_unreliable_coefs(self, coefs: np.ndarray[np.floating]) -> np.ndarray[np.floating]:
         """
         Discards the unreliable coefficients outside the reliable region of the
@@ -639,6 +603,7 @@ class NumPyWavelet(AntsWavelet):
         """NumPy-based CWT with true scale-dependent time support."""
         super().__init__(sample_rate, input_n, config, overlap_factor=overlap_factor)
 
+    @timed
     def class_specific_cwt(self, input_t: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
         Perform CWT using variable-length wavelets, CPU version.
@@ -683,6 +648,7 @@ class CuPyWavelet(AntsWavelet):
             dtype=cp.complex64, 
             order='C')
 
+    @timed
     def class_specific_cwt(self, input_t_cpu: np.ndarray[np.float64]) -> np.ndarray[np.complexfloating]:
         """
         Perform CWT using variable-length wavelets, GPU version.
