@@ -59,11 +59,11 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Visual Style System
 
-- [ ] **STY-01**: All visual constants centralized in `research/utilities/style.py` as module-level names — single source of truth
-- [ ] **STY-02**: Backend toggle (set_backend/get_backend/get_active_style) and style dict pattern removed from plotting.py
-- [ ] **STY-03**: Seaborn import and SEABORN_STYLE removed — one canonical dark style only
-- [ ] **STY-04**: plotting.py primitives (create_figure_scaffold, render_top_row, render_spectrogram_row) use style.py constants directly
-- [ ] **STY-05**: Style system designed for reusability — works for comparison grid, per-signal figures, future documentation figures
+- [x] **STY-01**: All visual constants centralized in `research/utilities/style.py` as module-level names — single source of truth
+- [x] **STY-02**: Backend toggle (set_backend/get_backend/get_active_style) and style dict pattern removed from plotting.py
+- [x] **STY-03**: Seaborn import and SEABORN_STYLE removed — one canonical dark style only
+- [x] **STY-04**: plotting.py primitives (create_figure_scaffold, render_top_row, render_spectrogram_row) use style.py constants directly
+- [x] **STY-05**: Style system designed for reusability — works for comparison grid, per-signal figures, future documentation figures
 - [ ] **STY-06**: Comparison grid column titles have visible top margin (increased pad from 8 to 20+)
 - [ ] **STY-07**: Comparison grid column titles centered over spectrogram columns
 
@@ -161,11 +161,11 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | RTK-04 | Phase 5.1 | Complete |
 | RTK-05 | Phase 5.1 | Complete |
 | RTK-06 | Phase 5.1 | Complete |
-| STY-01 | Phase 7 | Pending |
-| STY-02 | Phase 7 | Pending |
-| STY-03 | Phase 7 | Pending |
-| STY-04 | Phase 7 | Pending |
-| STY-05 | Phase 7 | Pending |
+| STY-01 | Phase 7 | Complete |
+| STY-02 | Phase 7 | Complete |
+| STY-03 | Phase 7 | Complete |
+| STY-04 | Phase 7 | Complete |
+| STY-05 | Phase 7 | Complete |
 | STY-06 | Phase 7 | Pending |
 | STY-07 | Phase 7 | Pending |
 | TIM-01 | Phase 7 | Complete |
