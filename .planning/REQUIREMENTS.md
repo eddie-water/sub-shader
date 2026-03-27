@@ -69,10 +69,10 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Pipeline Timing
 
-- [ ] **TIM-01**: @timed decorator in src/subshader/utils/timing.py wraps pipeline methods with perf_counter
-- [ ] **TIM-02**: All wavelet pipeline stages (class_specific_cwt, normalize_by_scale, compute_mag, discard_unreliable_coefs, extract_hop_center, downsample) decorated with @timed
-- [ ] **TIM-03**: cwt_timed() duplicate code path removed from wavelet.py — timing via instance attributes only
-- [ ] **TIM-04**: research/timing.py reads timing from @timed instance attributes, not from parallel pipeline reimplementation
+- [x] **TIM-01**: @timed decorator in src/subshader/utils/timing.py wraps pipeline methods with perf_counter
+- [x] **TIM-02**: All wavelet pipeline stages (class_specific_cwt, normalize_by_scale, compute_mag, discard_unreliable_coefs, extract_hop_center, downsample) decorated with @timed
+- [x] **TIM-03**: cwt_timed() duplicate code path removed from wavelet.py — timing via instance attributes only
+- [x] **TIM-04**: research/timing.py reads timing from @timed instance attributes, not from parallel pipeline reimplementation
 
 ### Research Toolkit v2
 
@@ -168,10 +168,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | STY-05 | Phase 7 | Pending |
 | STY-06 | Phase 7 | Pending |
 | STY-07 | Phase 7 | Pending |
-| TIM-01 | Phase 7 | Pending |
-| TIM-02 | Phase 7 | Pending |
-| TIM-03 | Phase 7 | Pending |
-| TIM-04 | Phase 7 | Pending |
+| TIM-01 | Phase 7 | Complete |
+| TIM-02 | Phase 7 | Complete |
+| TIM-03 | Phase 7 | Complete |
+| TIM-04 | Phase 7 | Complete |
 | RTK2-01 | Phase 7 | Pending |
 | RTK2-02 | Phase 7 | Pending |
 | RTK2-03 | Phase 7 | Pending |
