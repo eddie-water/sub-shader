@@ -104,9 +104,13 @@ class TimedSubShader:
                 acc.current_idx = i
                 break
 
-            result, stage_times = wavelet.cwt_timed(audio_data)
-            for stage, t in stage_times.items():
-                acc[stage][i] = t
+            result = wavelet.cwt(audio_data)
+            acc["raw_cwt"][i] = wavelet._timing_class_specific_cwt_ms
+            acc["normalize"][i] = wavelet._timing_normalize_by_scale_ms
+            acc["magnitude"][i] = wavelet._timing_compute_mag_ms
+            acc["edge_trim"][i] = wavelet._timing_discard_unreliable_coefs_ms
+            acc["hop_center"][i] = wavelet._timing_extract_hop_center_ms
+            acc["downsample"][i] = wavelet._timing_downsample_ms
             _, acc["push_frame()"][i] = time_call(buf.push_frame, result)
             acc.current_idx = i + 1
             live_progress(i + 1, self.num_frames)
