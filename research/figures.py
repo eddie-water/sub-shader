@@ -7,12 +7,6 @@ matplotlib.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
 
-try:
-    import seaborn  # noqa: F401
-    SEABORN_AVAILABLE = True
-except ImportError:
-    SEABORN_AVAILABLE = False
-
 from subshader.config import get_default_config, ColorNormalizationConfig
 from subshader.audio.audio_input import AudioInput
 from subshader.dsp.wavelet import PyWavelet, NumPyWavelet
@@ -20,7 +14,6 @@ from subshader.viz.plotter import CircularFrameBuffer, AudioFrameBuffer
 
 from utilities import (
     BENCHMARKS_DIR,
-    BENCHMARKS_SEABORN_DIR,
     BENCHMARKS_STUBS_DIR,
     AUDIO_DEFAULT,
     AUDIO_BOUNCING_CHIRP,
@@ -58,7 +51,6 @@ from utilities import (
     create_figure_scaffold,
     render_top_row,
     render_spectrogram_row,
-    set_backend,
     compute_stft_frame,
     build_chirp_chunks,
     build_wandering_chirp_chunks,
@@ -76,13 +68,10 @@ GPU_AVAILABLE = gpu_available()
 class ReadmeFigures:
     """Generate the 3 README comparison PNGs with integrated timing."""
 
-    def __init__(self, num_frames: int = NUM_FRAMES, backends=None, stub_pywt: bool = False):
+    def __init__(self, num_frames: int = NUM_FRAMES, stub_pywt: bool = False):
         self.num_frames = num_frames
-        self.backends   = backends or ["matplotlib"]
         self.stub_pywt  = stub_pywt
         os.makedirs(BENCHMARKS_DIR, exist_ok=True)
-        if "seaborn" in self.backends:
-            os.makedirs(BENCHMARKS_SEABORN_DIR, exist_ok=True)
         # When stub_pywt is enabled, ensure stub dir exists for output
         if stub_pywt:
             os.makedirs(BENCHMARKS_STUBS_DIR, exist_ok=True)
@@ -437,69 +426,48 @@ class ReadmeFigures:
         n_top = len(top_rows)
         print_separator()
 
-        for backend in self.backends:
-            set_backend(backend)
+        output_dir = BENCHMARKS_STUBS_DIR if self.stub_pywt else BENCHMARKS_DIR
+        # Add _STUB_PYWT suffix to filename when using stub_pywt
+        if self.stub_pywt:
+            out_filename = filename.replace(".png", "_STUB_PYWT.png")
+        else:
+            out_filename = filename
+        # Per-row vmax so each method's detail is visible
+        stft_vmax = stft_buf.get_intensity_max()
+        pywt_vmax = pywt_buf.get_intensity_max()
+        npwt_vmax = npwt_buf.get_intensity_max()
+        pywt_subtitle = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
+        subtitle = f"STFT  |  {pywt_subtitle}  |  SubShader CWT"
 
-            if backend == "seaborn":
-                output_dir = BENCHMARKS_SEABORN_DIR
-                out_filename = filename.replace(".png", "_seaborn.png")
-                # Seaborn uses per-row vmax for richer contrast
-                stft_vmax = stft_buf.get_intensity_max()
-                pywt_vmax = pywt_buf.get_intensity_max()
-                npwt_vmax = npwt_buf.get_intensity_max()
-                suptitle = title
-                subtitle = None
-            else:
-                output_dir = BENCHMARKS_STUBS_DIR if self.stub_pywt else BENCHMARKS_DIR
-                # Add _STUB_PYWT suffix to filename when using stub_pywt
-                if self.stub_pywt:
-                    out_filename = filename.replace(".png", "_STUB_PYWT.png")
-                else:
-                    out_filename = filename
-                # Per-row vmax so each method's detail is visible
-                stft_vmax = stft_buf.get_intensity_max()
-                pywt_vmax = pywt_buf.get_intensity_max()
-                npwt_vmax = npwt_buf.get_intensity_max()
-                suptitle = title
-                pywt_subtitle = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
-                subtitle = f"STFT  |  {pywt_subtitle}  |  SubShader CWT"
+        fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
+            title, subtitle, n_top)
 
-            fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
-                suptitle, subtitle, n_top)
+        for idx, row in enumerate(top_rows):
+            render_top_row(fig, gs, idx, row, ax_stft,
+                           t_audio=t_audio, y_min=y_min, y_max=y_max,
+                           cwt_freqs=cwt_freqs, duration_s=duration_s,
+                           ytick_bins=spec_ytick_bins,
+                           ytick_labels=spec_ytick_labels)
 
-            for idx, row in enumerate(top_rows):
-                render_top_row(fig, gs, idx, row, ax_stft,
-                               t_audio=t_audio, y_min=y_min, y_max=y_max,
-                               cwt_freqs=cwt_freqs, duration_s=duration_s,
-                               ytick_bins=spec_ytick_bins,
-                               ytick_labels=spec_ytick_labels)
+        pywt_plot_label = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
+        spec_rows = [
+            (ax_stft, stft_spec, "STFT", stft_vmax, False),
+            (ax_pywt, pywt_spec, pywt_plot_label, pywt_vmax, False),
+            (ax_npwt, npwt_spec, subshader_base, npwt_vmax, True),
+        ]
+        for ax, data, label, vmax, bottom in spec_rows:
+            render_spectrogram_row(
+                ax, data,
+                title=label,
+                extent=extent_spec, vmax=vmax,
+                ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
+                is_bottom=bottom,
+                n_cwt_freqs=n_cwt_freqs, duration_s=duration_s)
 
-            pywt_plot_label = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
-            spec_rows = [
-                (ax_stft, stft_spec, "STFT", stft_vmax, False),
-                (ax_pywt, pywt_spec, pywt_plot_label, pywt_vmax, False),
-                (ax_npwt, npwt_spec, subshader_base, npwt_vmax, True),
-            ]
-            for ax, data, label, vmax, bottom in spec_rows:
-                render_spectrogram_row(
-                    ax, data,
-                    title=label,
-                    extent=extent_spec, vmax=vmax,
-                    ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
-                    is_bottom=bottom,
-                    n_cwt_freqs=n_cwt_freqs, duration_s=duration_s)
-
-            save_path_backend = os.path.join(output_dir, out_filename)
-            if backend == "seaborn":
-                fig.savefig(save_path_backend, dpi=150, bbox_inches="tight",
-                            facecolor=fig.get_facecolor())
-            else:
-                fig.savefig(save_path_backend, dpi=150)
-            plt.close(fig)
-            print(f"Saved {backend} -> {save_path_backend}")
-
-        # Reset to matplotlib when done
-        set_backend("matplotlib")
+        save_path = os.path.join(output_dir, out_filename)
+        fig.savefig(save_path, dpi=150)
+        plt.close(fig)
+        print(f"Saved -> {save_path}")
         print_section_end()
 
         return timing
@@ -615,6 +583,17 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
     config = get_default_config()
     sr_default = int(config.wavelet.typical_sampling_freq)
+    
+    # This decides the time-frequency resolution of the spectrogram, controlling the low-end frequency resolution
+    # This is an important config member, as it affects the low-end frequency resolution
+    # We need to protect and control this member depending on the context of the analysis
+    # For example, if we are analyzing a low-end frequency signal, we need to increase the chunk size
+    # to ensure that the low-end frequency is properly resolved
+    # If we are analyzing a high-end frequency signal, we need to decrease the chunk size
+    # to ensure that the high-end frequency is properly resolved
+    # We need to protect and control this member depending on the context of the analysis
+    # For example, if we are analyzing a low-end frequency signal, we need to increase the chunk size
+    # to ensure that the low-end frequency is properly resolved
     chunk_size = config.audio.chunk_size
     overlap_factor = config.audio.overlap_factor
     wc = config.wavelet

@@ -8,11 +8,9 @@ Modes:
   --figures                   Generate 3 README comparison PNGs (matplotlib)
   --figures --stub            Generate stub layouts instead of real DSP (fast iteration)
   --figures --stub-pywt       Skip PyWavelet, use random stubs, save to stub folder (faster)
-  --seaborn                   Generate 3 comparison PNGs (seaborn heatmap style)
-  --seaborn --stub-pywt       Seaborn with stubbed PyWavelet, save to stub folder
   --comparison-grid           Generate 3x3 comparison grid (signals x representations)
   --unit-tests                Run unit tests (NumPy vs CuPy verification, etc.)
-  --all                       Run timing, figures (matplotlib), figures (seaborn), unit tests
+  --all                       Run timing, figures, unit tests
 """
 
 import argparse
@@ -33,13 +31,6 @@ GPU_AVAILABLE = gpu_available()
 if not GPU_AVAILABLE:
     print("[benchmark] No GPU detected -- CuPy benchmarks will be skipped.\n")
 
-try:
-    import seaborn  # noqa: F401
-    SEABORN_AVAILABLE = True
-except ImportError:
-    SEABORN_AVAILABLE = False
-    print("[benchmark] seaborn not installed -- --seaborn flag will be ignored.\n")
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="SubShader benchmark suite"
@@ -50,7 +41,6 @@ if __name__ == "__main__":
     parser.add_argument("--figures-chirp",      action="store_true", help="Generate chirp signal comparison figure only")
     parser.add_argument("--figures-polyphonic",  action="store_true", help="Generate polyphonic signal comparison figure only")
     parser.add_argument("--figures-musical",     action="store_true", help="Generate musical signal comparison figure only")
-    parser.add_argument("--seaborn",         action="store_true", help="Generate 3 comparison PNGs (seaborn heatmap style)")
     parser.add_argument("--comparison-grid", action="store_true", help="Generate 3x3 comparison grid (signals x representations)")
     parser.add_argument("--comparison", action="store_true", help="Run all methods (STFT, PyWavelet, SubShader) with timing stats and produce comparison grid")
     parser.add_argument("--unit-tests",      action="store_true", help="Run unit tests (NumPy vs CuPy, etc.)")
@@ -61,29 +51,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     any_figure_individual = args.figures_chirp or args.figures_polyphonic or args.figures_musical
-    any_flag = (args.timing or args.figures or any_figure_individual or args.seaborn
+    any_flag = (args.timing or args.figures or any_figure_individual
                 or args.unit_tests or args.stub or args.comparison_grid or args.comparison
                 or args.timing_chart)
     if args.all or not any_flag:
-        args.timing = args.figures = args.seaborn = args.unit_tests = True
-
-    if args.seaborn and not SEABORN_AVAILABLE:
-        print("[benchmark] --seaborn requested but seaborn is not installed. "
-              "pip install seaborn\n")
-        args.seaborn = False
+        args.timing = args.figures = args.unit_tests = True
 
     modes = []
     if args.timing:
         modes.append(("Timing Comparison", lambda: TimedSubShader().run()))
 
     if args.figures or any_figure_individual:
-        backends = ["matplotlib"]
-        if args.seaborn:
-            backends.append("seaborn")
         if args.stub:
             modes.append(("Stub Layouts", lambda: ReadmeFigures().stub_layouts()))
         elif any_figure_individual and not args.figures:
-            rf = ReadmeFigures(backends=backends, stub_pywt=args.stub_pywt)
+            rf = ReadmeFigures(stub_pywt=args.stub_pywt)
             if args.figures_chirp:
                 modes.append(("Chirp Figure", lambda r=rf: r.chirp_signal_comparison()))
             if args.figures_polyphonic:
@@ -91,9 +73,7 @@ if __name__ == "__main__":
             if args.figures_musical:
                 modes.append(("Musical Figure", lambda r=rf: r.musical_signal_comparison()))
         else:
-            modes.append(("Figures", lambda b=backends, sp=args.stub_pywt: ReadmeFigures(backends=b, stub_pywt=sp).run_all()))
-    elif args.seaborn:
-        modes.append(("Seaborn Figures", lambda sp=args.stub_pywt: ReadmeFigures(backends=["seaborn"], stub_pywt=sp).run_all()))
+            modes.append(("Figures", lambda sp=args.stub_pywt: ReadmeFigures(stub_pywt=sp).run_all()))
 
     if args.comparison:
         modes.append(("Comparison", lambda sp=args.stub_pywt, d=args.dpi: generate_comparison_grid(stub_pywt=sp, dpi=d, comparison=True)))

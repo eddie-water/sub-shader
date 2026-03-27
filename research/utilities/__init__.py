@@ -48,11 +48,11 @@ from .printing import (
     run_modes,
 )
 
+# Export style module
+from . import style
+
 # Export plotting utilities
 from .plotting import (
-    set_backend,
-    get_backend,
-    get_active_style,
     compute_freq_yticks,
     create_figure_scaffold,
     render_top_row,
@@ -110,10 +110,9 @@ __all__ = [
     "print_total_time",
     "compute_timing_stats",
     "run_modes",
+    # Style
+    "style",
     # Plotting
-    "set_backend",
-    "get_backend",
-    "get_active_style",
     "compute_freq_yticks",
     "create_figure_scaffold",
     "render_top_row",
