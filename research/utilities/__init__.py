@@ -69,6 +69,9 @@ from .dsp_helpers import (
     build_bouncing_chirp_chunks,
 )
 
+# Export WAV utilities
+from .wav_export import export_signal_to_wav
+
 __all__ = [
     # Constants
     "BENCHMARKS_DIR",
@@ -123,4 +126,6 @@ __all__ = [
     "build_wandering_chirp_chunks",
     "build_bouncing_chirp",
     "build_bouncing_chirp_chunks",
+    # WAV export
+    "export_signal_to_wav",
 ]

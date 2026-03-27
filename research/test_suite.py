@@ -1,16 +1,15 @@
 """
-SubShader Benchmark Suite.
+SubShader Test Suite.
 
 Modes:
-  (default)                   Run all modes (same as --all)
-  --timing                    STFT vs PyWavelet vs NumPy CWT vs CuPy CWT timing comparison
+  --test                      Run pytest on research/tests/
+  --timing                    Pipeline profiling (STFT vs PyWavelet vs NumPy CWT vs CuPy CWT)
   --timing-chart              Generate timing bar chart PNG (assets/images/benchmarks/timing_bar_chart.png)
-  --figures                   Generate 3 README comparison PNGs (matplotlib)
+  --figures                   Generate README comparison PNGs
   --figures --stub            Generate stub layouts instead of real DSP (fast iteration)
   --figures --stub-pywt       Skip PyWavelet, use random stubs, save to stub folder (faster)
   --comparison-grid           Generate 3x3 comparison grid (signals x representations)
-  --unit-tests                Run unit tests (NumPy vs CuPy verification, etc.)
-  --all                       Run timing, figures, unit tests
+  --comparison                Run all methods with timing stats + comparison grid
 """
 
 import argparse
@@ -23,18 +22,19 @@ matplotlib.use('Agg')
 
 from figures import ReadmeFigures, generate_comparison_grid, generate_timing_bar_chart
 from timing import TimedSubShader, run_default
-from wav_export import export_signal_to_wav  # noqa: F401
+from utilities.wav_export import export_signal_to_wav  # noqa: F401
 
 from utilities import run_modes, gpu_available
 
 GPU_AVAILABLE = gpu_available()
 if not GPU_AVAILABLE:
-    print("[benchmark] No GPU detected -- CuPy benchmarks will be skipped.\n")
+    print("[test_suite] No GPU detected -- CuPy benchmarks will be skipped.\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="SubShader benchmark suite"
+        description="SubShader test suite and benchmark runner"
     )
+    parser.add_argument("--test", "--unit-tests",  action="store_true", help="Run unit tests (research/tests/)")
     parser.add_argument("--timing",          action="store_true", help="STFT vs PyWavelet vs CWT timing comparison")
     parser.add_argument("--timing-chart",    action="store_true", help="Generate timing bar chart PNG (timing_bar_chart.png)")
     parser.add_argument("--figures",         action="store_true", help="Generate all 3 README comparison PNGs (matplotlib)")
@@ -43,7 +43,6 @@ if __name__ == "__main__":
     parser.add_argument("--figures-musical",     action="store_true", help="Generate musical signal comparison figure only")
     parser.add_argument("--comparison-grid", action="store_true", help="Generate 3x3 comparison grid (signals x representations)")
     parser.add_argument("--comparison", action="store_true", help="Run all methods (STFT, PyWavelet, SubShader) with timing stats and produce comparison grid")
-    parser.add_argument("--unit-tests",      action="store_true", help="Run unit tests (NumPy vs CuPy, etc.)")
     parser.add_argument("--all",             action="store_true", help="Run all modes")
     parser.add_argument("--stub",      action="store_true", help="With --figures: generate stub layouts instead of real DSP (fast iteration)")
     parser.add_argument("--stub-pywt", action="store_true", help="With --figures: skip PyWavelet computation, use random stub spectrograms (faster, saves to stub folder)")
@@ -52,10 +51,10 @@ if __name__ == "__main__":
 
     any_figure_individual = args.figures_chirp or args.figures_polyphonic or args.figures_musical
     any_flag = (args.timing or args.figures or any_figure_individual
-                or args.unit_tests or args.stub or args.comparison_grid or args.comparison
+                or args.test or args.stub or args.comparison_grid or args.comparison
                 or args.timing_chart)
     if args.all or not any_flag:
-        args.timing = args.figures = args.unit_tests = True
+        args.timing = args.figures = args.test = True
 
     modes = []
     if args.timing:
@@ -84,10 +83,10 @@ if __name__ == "__main__":
     if args.timing_chart:
         modes.append(("Timing Bar Chart", lambda d=args.dpi: generate_timing_bar_chart(dpi=d if d > 0 else 200)))
 
-    if args.unit_tests:
+    if args.test:
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         result = subprocess.run(
-            [sys.executable, "-m", "pytest", "src/", "-v"],
+            [sys.executable, "-m", "pytest", "research/tests/", "-v"],
             cwd=project_root,
         )
         if result.returncode != 0:
