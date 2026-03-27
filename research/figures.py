@@ -250,10 +250,10 @@ class ReadmeFigures:
                     title=label,
                     extent=extent_spec, vmax=stub_vmax,
                     ytick_bins=ytick_bins, ytick_labels=ytick_labels,
-                    is_bottom=bottom)
+                    is_bottom=bottom, cmap=style.GRID_CMAP)
 
             path = os.path.join(stub_dir, cfg["filename"])
-            fig.savefig(path, dpi=100)
+            fig.savefig(path, dpi=style.STUB_DPI)
             plt.close(fig)
             print(f"Saved -> {path}")
 
@@ -462,7 +462,7 @@ class ReadmeFigures:
                 title=label,
                 extent=extent_spec, vmax=vmax,
                 ytick_bins=spec_ytick_bins, ytick_labels=spec_ytick_labels,
-                is_bottom=bottom,
+                is_bottom=bottom, cmap=style.GRID_CMAP,
                 n_cwt_freqs=n_cwt_freqs, duration_s=duration_s)
 
         save_path = os.path.join(output_dir, out_filename)
