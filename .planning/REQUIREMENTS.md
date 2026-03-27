@@ -76,19 +76,19 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Research Toolkit v2
 
-- [ ] **RTK2-01**: benchmark.py renamed to test_suite.py as single CLI entry point
-- [ ] **RTK2-02**: --seaborn flag removed from CLI (seaborn backend killed with style consolidation)
-- [ ] **RTK2-03**: --test flag runs pytest on research/tests/ (replaces --unit-tests running on src/)
-- [ ] **RTK2-04**: wav_export.py moved from research/ root to research/utilities/wav_export.py
-- [ ] **RTK2-05**: Historical directories (ants, docs, gpu_basics, misc, python) archived to research/archive/
-- [ ] **RTK2-06**: All test files migrated from src/ to research/tests/ mirroring src/ structure
+- [x] **RTK2-01**: benchmark.py renamed to test_suite.py as single CLI entry point
+- [x] **RTK2-02**: --seaborn flag removed from CLI (seaborn backend killed with style consolidation)
+- [x] **RTK2-03**: --test flag runs pytest on research/tests/ (replaces --unit-tests running on src/)
+- [x] **RTK2-04**: wav_export.py moved from research/ root to research/utilities/wav_export.py
+- [x] **RTK2-05**: Historical directories (ants, docs, gpu_basics, misc, python) archived to research/archive/
+- [x] **RTK2-06**: All test files migrated from src/ to research/tests/ mirroring src/ structure
 - [ ] **RTK2-07**: comparison.py extracted from figures.py with generate_comparison_grid() and generate_timing_bar_chart()
 - [ ] **RTK2-08**: COMPARISON_METHODS extensible config list in comparison.py — adding a method is one list append
 - [ ] **RTK2-09**: figures.py (ReadmeFigures) uses style.py constants — no hardcoded visual values
 
 ### Frequency Range Configuration
 
-- [ ] **FREQ-01**: WaveletConfig root_note_a0_hz (27.5Hz) and num_octaves (10) confirmed as configurable parameters with existing Nyquist trimming — no new code needed
+- [x] **FREQ-01**: WaveletConfig root_note_a0_hz (27.5Hz) and num_octaves (10) confirmed as configurable parameters with existing Nyquist trimming — no new code needed
 
 ## v2 Requirements
 
@@ -172,16 +172,16 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | TIM-02 | Phase 7 | Complete |
 | TIM-03 | Phase 7 | Complete |
 | TIM-04 | Phase 7 | Complete |
-| RTK2-01 | Phase 7 | Pending |
-| RTK2-02 | Phase 7 | Pending |
-| RTK2-03 | Phase 7 | Pending |
-| RTK2-04 | Phase 7 | Pending |
-| RTK2-05 | Phase 7 | Pending |
-| RTK2-06 | Phase 7 | Pending |
+| RTK2-01 | Phase 7 | Complete |
+| RTK2-02 | Phase 7 | Complete |
+| RTK2-03 | Phase 7 | Complete |
+| RTK2-04 | Phase 7 | Complete |
+| RTK2-05 | Phase 7 | Complete |
+| RTK2-06 | Phase 7 | Complete |
 | RTK2-07 | Phase 7 | Pending |
 | RTK2-08 | Phase 7 | Pending |
 | RTK2-09 | Phase 7 | Pending |
-| FREQ-01 | Phase 7 | Pending |
+| FREQ-01 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 47 total

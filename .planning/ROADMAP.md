@@ -148,5 +148,5 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Create style.py constants module + strip plotting.py backend toggle and style dicts
 - [x] 07-02-PLAN.md — @timed decorator in src/subshader/utils/ + wavelet.py refactor + timing.py update
-- [ ] 07-03-PLAN.md — Research toolkit restructure: rename dispatcher, move files, migrate tests, archive dirs
+- [x] 07-03-PLAN.md — Research toolkit restructure: rename dispatcher, move files, migrate tests, archive dirs
 - [ ] 07-04-PLAN.md — Style consumer migration + comparison.py extraction + grid header fix
