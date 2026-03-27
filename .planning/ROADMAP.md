@@ -136,3 +136,13 @@ Plans:
 - [x] 06-01-PLAN.md — Bouncing chirp synthesis + comparison grid at multiple DPIs + user DPI selection
 - [x] 06-02-PLAN.md — Final grid generation (full PyWavelet) + README/DSP.md updates
 - [x] 06-03-PLAN.md — Fix duration_s overlap bug + add --comparison flag with per-method timing stats (gap closure)
+
+### Phase 7: Visual style system and frequency range configuration
+
+**Goal:** Centralize all plot styling into a single constants module, fix comparison grid header margins/centering, and add configurable frequency range bounds so users can trade low-end accuracy for real-time speed
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)

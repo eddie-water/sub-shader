@@ -128,6 +128,7 @@ None yet.
 - Phase 6 added: Finalize example audio and comparison figures for README
 - Phase 05.1 inserted after Phase 5: Research toolkit restructure (URGENT) — restructure monolithic benchmark.py into modular research toolkit before 05-04 figure generation
 - Phase 05.2 inserted after Phase 5: Benchmark timing profiling and comparison grid polish (URGENT) — sub-stage timing for --timing, NumPy timing in --comparison, PyWavelet normalization, grid label layout
+- Phase 7 added: Visual style system and frequency range configuration
 
 ### Blockers/Concerns
 
