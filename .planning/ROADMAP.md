@@ -102,6 +102,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 5.1 Research Toolkit | 2/2 | Complete | - |
 | 5.2 Timing & Grid Polish | 0/2 | Not started | - |
 | 6. Finalize Audio & Figures | 2/3 | In Progress|  |
+| 7. Visual Style & Config | 0/4 | Not started | - |
 
 ### Phase 05.2: Benchmark timing profiling and comparison grid polish (INSERTED)
 
@@ -139,10 +140,13 @@ Plans:
 
 ### Phase 7: Visual style system and frequency range configuration
 
-**Goal:** Centralize all plot styling into a single constants module, fix comparison grid header margins/centering, and add configurable frequency range bounds so users can trade low-end accuracy for real-time speed
-**Requirements**: TBD
+**Goal:** Centralize all plot styling into a single constants module, fix comparison grid header margins/centering, restructure research toolkit into coherent architecture, and replace cwt_timed() with @timed decorator
+**Requirements**: STY-01, STY-02, STY-03, STY-04, STY-05, STY-06, STY-07, TIM-01, TIM-02, TIM-03, TIM-04, RTK2-01, RTK2-02, RTK2-03, RTK2-04, RTK2-05, RTK2-06, RTK2-07, RTK2-08, RTK2-09, FREQ-01
 **Depends on:** Phase 6
-**Plans:** 0 plans
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 7 to break down)
+- [ ] 07-01-PLAN.md — Create style.py constants module + strip plotting.py backend toggle and style dicts
+- [ ] 07-02-PLAN.md — @timed decorator in src/subshader/utils/ + wavelet.py refactor + timing.py update
+- [ ] 07-03-PLAN.md — Research toolkit restructure: rename dispatcher, move files, migrate tests, archive dirs
+- [ ] 07-04-PLAN.md — Style consumer migration + comparison.py extraction + grid header fix

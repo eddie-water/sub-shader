@@ -50,12 +50,45 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 
 ### Research Toolkit
 
-- [ ] **RTK-01**: benchmark.py split into figures.py (~800 lines), timing.py (~100 lines), wav_export.py (~15 lines) by concern
-- [ ] **RTK-02**: benchmark.py reduced to thin CLI dispatcher (~60-70 lines) preserving all existing flags
-- [ ] **RTK-03**: All existing CLI commands (`--comparison-grid`, `--timing`, `--figures`, etc.) produce identical output after restructure
-- [ ] **RTK-04**: unit_tests.py (10 test categories) migrated to colocated pytest test files alongside source modules
-- [ ] **RTK-05**: `pytest src/` discovers and runs all migrated tests with zero configuration
-- [ ] **RTK-06**: Standalone scripts relocated (font_showcase to utilities/, overlap_diagnostic deleted after test logic folded in)
+- [x] **RTK-01**: benchmark.py split into figures.py (~800 lines), timing.py (~100 lines), wav_export.py (~15 lines) by concern
+- [x] **RTK-02**: benchmark.py reduced to thin CLI dispatcher (~60-70 lines) preserving all existing flags
+- [x] **RTK-03**: All existing CLI commands (`--comparison-grid`, `--timing`, `--figures`, etc.) produce identical output after restructure
+- [x] **RTK-04**: unit_tests.py (10 test categories) migrated to colocated pytest test files alongside source modules
+- [x] **RTK-05**: `pytest src/` discovers and runs all migrated tests with zero configuration
+- [x] **RTK-06**: Standalone scripts relocated (font_showcase to utilities/, overlap_diagnostic deleted after test logic folded in)
+
+### Visual Style System
+
+- [ ] **STY-01**: All visual constants centralized in `research/utilities/style.py` as module-level names — single source of truth
+- [ ] **STY-02**: Backend toggle (set_backend/get_backend/get_active_style) and style dict pattern removed from plotting.py
+- [ ] **STY-03**: Seaborn import and SEABORN_STYLE removed — one canonical dark style only
+- [ ] **STY-04**: plotting.py primitives (create_figure_scaffold, render_top_row, render_spectrogram_row) use style.py constants directly
+- [ ] **STY-05**: Style system designed for reusability — works for comparison grid, per-signal figures, future documentation figures
+- [ ] **STY-06**: Comparison grid column titles have visible top margin (increased pad from 8 to 20+)
+- [ ] **STY-07**: Comparison grid column titles centered over spectrogram columns
+
+### Pipeline Timing
+
+- [ ] **TIM-01**: @timed decorator in src/subshader/utils/timing.py wraps pipeline methods with perf_counter
+- [ ] **TIM-02**: All wavelet pipeline stages (class_specific_cwt, normalize_by_scale, compute_mag, discard_unreliable_coefs, extract_hop_center, downsample) decorated with @timed
+- [ ] **TIM-03**: cwt_timed() duplicate code path removed from wavelet.py — timing via instance attributes only
+- [ ] **TIM-04**: research/timing.py reads timing from @timed instance attributes, not from parallel pipeline reimplementation
+
+### Research Toolkit v2
+
+- [ ] **RTK2-01**: benchmark.py renamed to test_suite.py as single CLI entry point
+- [ ] **RTK2-02**: --seaborn flag removed from CLI (seaborn backend killed with style consolidation)
+- [ ] **RTK2-03**: --test flag runs pytest on research/tests/ (replaces --unit-tests running on src/)
+- [ ] **RTK2-04**: wav_export.py moved from research/ root to research/utilities/wav_export.py
+- [ ] **RTK2-05**: Historical directories (ants, docs, gpu_basics, misc, python) archived to research/archive/
+- [ ] **RTK2-06**: All test files migrated from src/ to research/tests/ mirroring src/ structure
+- [ ] **RTK2-07**: comparison.py extracted from figures.py with generate_comparison_grid() and generate_timing_bar_chart()
+- [ ] **RTK2-08**: COMPARISON_METHODS extensible config list in comparison.py — adding a method is one list append
+- [ ] **RTK2-09**: figures.py (ReadmeFigures) uses style.py constants — no hardcoded visual values
+
+### Frequency Range Configuration
+
+- [ ] **FREQ-01**: WaveletConfig root_note_a0_hz (27.5Hz) and num_octaves (10) confirmed as configurable parameters with existing Nyquist trimming — no new code needed
 
 ## v2 Requirements
 
@@ -122,18 +155,39 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | FIG-04 | Phase 6 | Complete |
 | FIG-05 | Phase 6 | Complete |
 | FIG-06 | Phase 6 | Complete |
-| RTK-01 | Phase 5.1 | Pending |
-| RTK-02 | Phase 5.1 | Pending |
-| RTK-03 | Phase 5.1 | Pending |
-| RTK-04 | Phase 5.1 | Pending |
-| RTK-05 | Phase 5.1 | Pending |
-| RTK-06 | Phase 5.1 | Pending |
+| RTK-01 | Phase 5.1 | Complete |
+| RTK-02 | Phase 5.1 | Complete |
+| RTK-03 | Phase 5.1 | Complete |
+| RTK-04 | Phase 5.1 | Complete |
+| RTK-05 | Phase 5.1 | Complete |
+| RTK-06 | Phase 5.1 | Complete |
+| STY-01 | Phase 7 | Pending |
+| STY-02 | Phase 7 | Pending |
+| STY-03 | Phase 7 | Pending |
+| STY-04 | Phase 7 | Pending |
+| STY-05 | Phase 7 | Pending |
+| STY-06 | Phase 7 | Pending |
+| STY-07 | Phase 7 | Pending |
+| TIM-01 | Phase 7 | Pending |
+| TIM-02 | Phase 7 | Pending |
+| TIM-03 | Phase 7 | Pending |
+| TIM-04 | Phase 7 | Pending |
+| RTK2-01 | Phase 7 | Pending |
+| RTK2-02 | Phase 7 | Pending |
+| RTK2-03 | Phase 7 | Pending |
+| RTK2-04 | Phase 7 | Pending |
+| RTK2-05 | Phase 7 | Pending |
+| RTK2-06 | Phase 7 | Pending |
+| RTK2-07 | Phase 7 | Pending |
+| RTK2-08 | Phase 7 | Pending |
+| RTK2-09 | Phase 7 | Pending |
+| FREQ-01 | Phase 7 | Pending |
 
 **Coverage:**
-- v1 requirements: 29 total
-- Mapped to phases: 29
+- v1 requirements: 47 total
+- Mapped to phases: 47
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-24 — Phase 5.1 research toolkit requirements added*
+*Last updated: 2026-03-27 — Phase 7 visual style, timing, and research toolkit v2 requirements added*
