@@ -20,7 +20,8 @@ import sys
 import matplotlib
 matplotlib.use('Agg')
 
-from figures import ReadmeFigures, generate_comparison_grid, generate_timing_bar_chart
+from figures import ReadmeFigures
+from comparison import generate_comparison_grid, generate_timing_bar_chart
 from timing import TimedSubShader, run_default
 from utilities.wav_export import export_signal_to_wav  # noqa: F401
 
