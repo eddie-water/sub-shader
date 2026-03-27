@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Completed 07-03-PLAN.md
-last_updated: "2026-03-27T05:07:24.505Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-03-27T05:17:28.645Z"
 last_activity: 2026-03-27
 progress:
   total_phases: 9
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 21
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -66,6 +66,7 @@ Plan: 4 of 4
 | Phase 07-visual-style-system-and-frequency-range-configuration P02 | 4 | 2 tasks | 4 files |
 | Phase 07-visual-style-system-and-frequency-range-configuration P01 | 15 | 2 tasks | 5 files |
 | Phase 07-visual-style-system-and-frequency-range-configuration P03 | 217 | 2 tasks | 20 files |
+| Phase 07-visual-style-system-and-frequency-range-configuration P04 | 15 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 07]: Backend toggle (set_backend/get_backend/get_active_style) removed — one canonical dark style only per D-04/D-05
 - [Phase 07-03]: research/tests added to pythonpath so conftest.py plain helpers are importable via from conftest import
 - [Phase 07-03]: cwt_timed tests rewritten to use @timed _timing_*_ms attributes — cwt_timed() removed in 07-02
+- [Phase 07-04]: generate_comparison_grid and generate_timing_bar_chart extracted to comparison.py — separation of concerns between per-signal figures (ReadmeFigures) and method-vs-method comparison
+- [Phase 07-04]: STUB_DPI = 100 added to style.py — stub_layouts intentionally renders at lower DPI for fast iteration; value lives in style rather than hardcoded
 
 ### Pending Todos
 
@@ -147,5 +150,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-03-27
-Stopped at: Completed 07-03-PLAN.md
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None

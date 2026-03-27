@@ -64,8 +64,8 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 - [x] **STY-03**: Seaborn import and SEABORN_STYLE removed — one canonical dark style only
 - [x] **STY-04**: plotting.py primitives (create_figure_scaffold, render_top_row, render_spectrogram_row) use style.py constants directly
 - [x] **STY-05**: Style system designed for reusability — works for comparison grid, per-signal figures, future documentation figures
-- [ ] **STY-06**: Comparison grid column titles have visible top margin (increased pad from 8 to 20+)
-- [ ] **STY-07**: Comparison grid column titles centered over spectrogram columns
+- [x] **STY-06**: Comparison grid column titles have visible top margin (increased pad from 8 to 20+)
+- [x] **STY-07**: Comparison grid column titles centered over spectrogram columns
 
 ### Pipeline Timing
 
@@ -82,9 +82,9 @@ Requirements for "Demo Ready" — locally installable, documented, real-time aud
 - [x] **RTK2-04**: wav_export.py moved from research/ root to research/utilities/wav_export.py
 - [x] **RTK2-05**: Historical directories (ants, docs, gpu_basics, misc, python) archived to research/archive/
 - [x] **RTK2-06**: All test files migrated from src/ to research/tests/ mirroring src/ structure
-- [ ] **RTK2-07**: comparison.py extracted from figures.py with generate_comparison_grid() and generate_timing_bar_chart()
-- [ ] **RTK2-08**: COMPARISON_METHODS extensible config list in comparison.py — adding a method is one list append
-- [ ] **RTK2-09**: figures.py (ReadmeFigures) uses style.py constants — no hardcoded visual values
+- [x] **RTK2-07**: comparison.py extracted from figures.py with generate_comparison_grid() and generate_timing_bar_chart()
+- [x] **RTK2-08**: COMPARISON_METHODS extensible config list in comparison.py — adding a method is one list append
+- [x] **RTK2-09**: figures.py (ReadmeFigures) uses style.py constants — no hardcoded visual values
 
 ### Frequency Range Configuration
 
@@ -166,8 +166,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | STY-03 | Phase 7 | Complete |
 | STY-04 | Phase 7 | Complete |
 | STY-05 | Phase 7 | Complete |
-| STY-06 | Phase 7 | Pending |
-| STY-07 | Phase 7 | Pending |
+| STY-06 | Phase 7 | Complete |
+| STY-07 | Phase 7 | Complete |
 | TIM-01 | Phase 7 | Complete |
 | TIM-02 | Phase 7 | Complete |
 | TIM-03 | Phase 7 | Complete |
@@ -178,9 +178,9 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | RTK2-04 | Phase 7 | Complete |
 | RTK2-05 | Phase 7 | Complete |
 | RTK2-06 | Phase 7 | Complete |
-| RTK2-07 | Phase 7 | Pending |
-| RTK2-08 | Phase 7 | Pending |
-| RTK2-09 | Phase 7 | Pending |
+| RTK2-07 | Phase 7 | Complete |
+| RTK2-08 | Phase 7 | Complete |
+| RTK2-09 | Phase 7 | Complete |
 | FREQ-01 | Phase 7 | Complete |
 
 **Coverage:**
