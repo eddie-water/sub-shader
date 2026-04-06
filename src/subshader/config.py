@@ -277,6 +277,10 @@ class RendererConfig(PipelineConfig):
 # Will be removed in next phase once all callers migrate to the new hierarchy.
 ProcessingConfig = CWTConfig
 
+# DEPRECATED: WaveletConfig was the pre-08 name for CWTConfig.
+# Preserved so wavelet.py can be imported without modification until Plan 08-05.
+WaveletConfig = CWTConfig
+
 # =============================================================================
 # DEFAULT CONFIG FACTORY
 # =============================================================================
