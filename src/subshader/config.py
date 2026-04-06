@@ -1,10 +1,15 @@
 """
 Configuration Module for SubShader.
 
-Centralized configuration management for SubShader module components:
- - Defines configuration classes for audio, wavelet, and visualization settings
- - Parameter validation
- - Sensible defaults while allowing easy customization
+Centralized configuration management for SubShader module components using
+a flat inheritance hierarchy:
+
+  PipelineConfig       — base: file_path, chunk_size, overlap, sample_rate, total_samples
+    CWTConfig          — adds wavelet-specific params (notes, octaves, root freq, etc.)
+    RendererConfig     — adds rendering params (num_frames, color normalization)
+
+All config objects flow through the pipeline. AudioStream discovers runtime
+values (sample_rate, total_samples) and writes them back to the shared config.
 """
 
 # =============================================================================
@@ -15,7 +20,6 @@ import os
 from dataclasses import dataclass, field
 from typing import Tuple, List
 
-import numpy as np
 import tkinter as tk
 
 from .utils.logging import get_logger
@@ -33,7 +37,7 @@ log = get_logger(__name__)
 def _get_system_display_size() -> Tuple[int, int]:
     """
     Get system display dimensions with fallback.
-    
+
     Returns:
         Tuple[int, int]: Screen width and height in pixels
     """
@@ -48,28 +52,110 @@ def _get_system_display_size() -> Tuple[int, int]:
         return 1920, 1080
 
 # =============================================================================
-# CONFIGURATION CLASSES
+# COLOR NORMALIZATION CONFIG
 # =============================================================================
 
 @dataclass
-class AudioConfig:
-    """Configuration for audio processing."""
+class ColorNormalizationConfig:
+    """Configuration for color normalization across all data frames."""
 
-    # Audio File parameters
-    file_path: str = "assets/audio/daw/a2a3_a4_minor_scale.wav"
+    # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
+    gamma: float = 0.5
 
-    # Number of samples to grab from the audio file at a time.
-    # 4096 samples at 44100 Hz = 92.9 ms window, 46.4 ms hop (21.5 fps).
-    # Increase to 16384 for full 10-octave chromatic range (degrades to 10.8 fps).
-    chunk_size: int = 1 << 12  # 4096
+    # Exponential smoothing weight for global intensity tracking (lower = slower adaptation)
+    global_intensity_smoothing_weight: float = 0.1
 
-    # Percentage of overlap between consecutive chunks (0.5 = 50%)
+    # Percentile of the global intensity distribution used for normalization reference
+    global_intensity_percentile: float = 99.0
+
+    # Percentile used to normalize each individual frame
+    frame_intensity_percentile: float = 95.0
+
+    # Exponential decay rate applied to global intensity per frame
+    decay_rate: float = 0.95
+
+    # Initial global intensity estimate (prevents division by zero at startup)
+    initial_intensity: float = 0.1
+
+    # Percentile used to set per-frame brightness ceiling
+    frame_brightness_percentile: float = 99.0
+
+    def validate(self) -> List[str]:
+        """Validate color normalization configuration parameters."""
+        errors = []
+
+        if not (0.0 < self.global_intensity_percentile <= 100.0):
+            errors.append(
+                f"global_intensity_percentile ({self.global_intensity_percentile}) "
+                f"must be between 0 and 100"
+            )
+
+        if not (0.0 < self.frame_intensity_percentile <= 100.0):
+            errors.append(
+                f"frame_intensity_percentile ({self.frame_intensity_percentile}) "
+                f"must be between 0 and 100"
+            )
+
+        if not (0.0 < self.decay_rate < 1.0):
+            errors.append(f"decay_rate ({self.decay_rate}) must be strictly between 0 and 1")
+
+        if self.initial_intensity <= 0:
+            errors.append(f"initial_intensity ({self.initial_intensity}) must be positive")
+
+        return errors
+
+# =============================================================================
+# BASE PIPELINE CONFIG
+# =============================================================================
+
+@dataclass
+class PipelineConfig:
+    """
+    Base configuration shared across all pipeline stages.
+
+    Fields are grouped into two categories:
+      - User-settable: set before pipeline construction
+      - Runtime-discovered: written by AudioStream after file open
+
+    Derived properties (hop_size, nyquist_freq) are computed on demand.
+    """
+
+    # --- User-settable ---
+
+    # Path to the audio file for processing (per D-04: reference dir default)
+    file_path: str = "assets/audio/reference/beltran_sc_rip.wav"
+
+    # Number of samples per chunk. 1<<14 = 16384 samples at 44100 Hz covers
+    # the full 10-octave chromatic range needed for low-frequency wavelet support.
+    chunk_size: int = 1 << 14
+
+    # Fraction of overlap between consecutive chunks (0.5 = 50% overlap)
     # TODO-45 Fix the overlap and plot overlap relationship
     overlap_factor: float = 0.5
 
+    # --- Runtime-discovered by AudioStream ---
+
+    # Sample rate discovered from audio file; default matches standard CD quality
+    sample_rate: float = 44100.0
+
+    # Total samples in the audio file; 0 until AudioStream opens the file
+    total_samples: int = 0
+
+    # --- Derived properties ---
+
+    @property
+    def hop_size(self) -> int:
+        """Number of samples advanced per chunk (chunk_size * (1 - overlap_factor))."""
+        return int(self.chunk_size * (1.0 - self.overlap_factor))
+
+    @property
+    def nyquist_freq(self) -> float:
+        """Nyquist frequency in Hz (sample_rate / 2)."""
+        return self.sample_rate / 2.0
+
     def validate(self) -> List[str]:
         """
-        Validate critical audio configuration parameters.
+        Validate critical pipeline configuration parameters.
 
         Returns:
             List[str]: List of validation error messages (empty if valid)
@@ -82,329 +168,144 @@ class AudioConfig:
         if self.chunk_size <= 0:
             errors.append(f"chunk_size ({self.chunk_size}) must be positive")
 
-        if not (0.0 <= self.overlap_factor <= 0.9):
-            errors.append(f"overlap_factor ({self.overlap_factor}) must be between 0.0 and 0.9")
+        if not (0.0 < self.overlap_factor < 1.0):
+            errors.append(
+                f"overlap_factor ({self.overlap_factor}) must be strictly between 0.0 and 1.0"
+            )
 
         return errors
 
+# =============================================================================
+# CWT CONFIG
+# =============================================================================
 
 @dataclass
-class WaveletConfig:
-    """Configuration for wavelet transform and normalization."""
+class CWTConfig(PipelineConfig):
+    """
+    Configuration for the Continuous Wavelet Transform stage.
 
-    # Sampling parameters
-    typical_sampling_freq: np.float64 = 44100.0
+    Extends PipelineConfig with wavelet-specific parameters for chromatic
+    scale construction and wavelet kernel shape.
+    """
 
-    # Scale parameters for chromatic (musical) scale frequency list
+    # Number of frequency bins per octave (12 = semitone resolution)
     notes_per_octave: int = 12
-    num_octaves: int = 10
-    root_note_a0_hz: np.float64 = 27.5
 
-    # Wavelet shape parameters for wavelet kernel construction
+    # Number of octaves to cover in the chromatic scale
+    num_octaves: int = 10
+
+    # Root note frequency in Hz (A0 = 27.5 Hz, the lowest piano key)
+    root_note_hz: float = 27.5
+
+    # Output width in time bins after downsampling CWT coefficients
+    target_width: int = 64
+
+    # Number of full oscillation cycles in the wavelet kernel (controls time/freq tradeoff)
     num_cycles: int = 6
+
+    # Number of FWHM cycles used to define the reliable coefficient region
     num_fwhm_cycles: int = 3
 
-    # Downsampling parameters - default for real-time rendering, reduce for better performance
-    target_width: int = 64
-    
     def validate(self) -> List[str]:
         """
-        Validate critical wavelet configuration parameters.
-        
+        Validate CWT configuration.
+
+        Extends PipelineConfig.validate() with wavelet-specific checks.
+
         Returns:
             List[str]: List of validation error messages (empty if valid)
         """
-        errors = []
-        
+        errors = super().validate()
+
         if self.target_width <= 0:
             errors.append(f"target_width ({self.target_width}) must be positive")
-        
+
         if self.notes_per_octave <= 0:
             errors.append(f"notes_per_octave ({self.notes_per_octave}) must be positive")
-            
+
         if self.num_octaves <= 0:
             errors.append(f"num_octaves ({self.num_octaves}) must be positive")
-        
+
         return errors
 
+# =============================================================================
+# RENDERER CONFIG
+# =============================================================================
 
 @dataclass
-class ColorNormalizationConfig:
-    """Configuration for color normalization across all data frames."""
-    
-    # Robust statistics parameters
-    percentile: float = 99.0
-    
-    # Adaptation parameters
-    decay_rate: float = 0.001  # Exponential decay rate per frame
-    floor_value: float = 1e-8  # Minimum global factor to prevent division by zero
-    
-    # Warm-up parameters
-    warmup_frames: int = 10  # Frames to process before normalization is "ready"
-    
-    # Enhancement parameters
-    log_mapping: bool = False  # Apply log1p mapping for perceptual detail
-    
-    def validate(self) -> List[str]:
-        """Validate color normalization configuration parameters."""
-        errors = []
-        
-        if not (0.0 < self.percentile <= 100.0):
-            errors.append(f"percentile ({self.percentile}) must be between 0 and 100")
-        
-        if not (0.0 <= self.decay_rate < 1.0):
-            errors.append(f"decay_rate ({self.decay_rate}) must be between 0 and 1")
-        
-        if self.floor_value <= 0:
-            errors.append(f"floor_value ({self.floor_value}) must be positive")
-        
-        if self.warmup_frames < 0:
-            errors.append(f"warmup_frames ({self.warmup_frames}) must be non-negative")
-        
-        return errors
+class RendererConfig(PipelineConfig):
+    """
+    Configuration for the shader-based renderer.
 
-@dataclass
-class VisualizationConfig:
-    """Configuration for visualization rendering."""
-    
-    # Number of frames in Circular Plot Buffer
+    Extends PipelineConfig with display and color normalization parameters.
+    """
+
+    # Number of time frames stored in the circular frame buffer
     num_frames: int = 256
 
-    # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
-    gamma: float = 0.5
-
+    # Color normalization parameters (gamma, percentiles, decay)
     color_norm: ColorNormalizationConfig = field(default_factory=ColorNormalizationConfig)
-    
+
+    # Window dimensions — auto-detected from system display, fallback to Full HD
+    window_width: int = field(default_factory=lambda: _get_system_display_size()[0])
+    window_height: int = field(default_factory=lambda: _get_system_display_size()[1])
+
     def validate(self) -> List[str]:
         """
-        Validate critical visualization configuration parameters.
-        
+        Validate renderer configuration.
+
+        Extends PipelineConfig.validate() with rendering-specific checks.
+
         Returns:
             List[str]: List of validation error messages (empty if valid)
         """
-        errors = []
-        
+        errors = super().validate()
+
         if self.num_frames <= 0:
             errors.append(f"num_frames ({self.num_frames}) must be positive")
 
-        if self.gamma <= 0.0:
-            errors.append(f"gamma ({self.gamma}) must be positive")
-
         if self.color_norm:
             errors.extend(self.color_norm.validate())
-        
-        return errors
-
-
-@dataclass
-class ProcessingConfig:
-    """Configuration for audio processing pipeline."""
-    
-    # Component configurations
-    audio: AudioConfig = None
-    wavelet: WaveletConfig = None
-    viz: VisualizationConfig = None
-    
-    def __post_init__(self):
-        """Initialize sub-configurations if not provided."""
-        if self.audio is None:
-            self.audio = AudioConfig()
-        if self.wavelet is None:
-            self.wavelet = WaveletConfig()
-        if self.viz is None:
-            self.viz = VisualizationConfig()
-    
-    def validate(self, opengl_max_texture_size: int = 16384) -> List[str]:
-        """
-        Validate the complete processing configuration with comprehensive hardware checks.
-        
-        Args:
-            opengl_max_texture_size (int): Maximum texture size supported by OpenGL
-            
-        Returns:
-            List[str]: List of validation error messages (empty if valid)
-        """
-        errors = []
-        
-        # Validate sub-configurations
-        if self.audio:
-            errors.extend(self.audio.validate())
-        if self.wavelet:
-            errors.extend(self.wavelet.validate())
-        if self.viz:
-            errors.extend(self.viz.validate())
-
-        # TODO: Look through these and see how important they are@q
-
-        # CRITICAL: Validate OpenGL texture size limits
-        if self.wavelet and self.viz:
-            texture_width = self.viz.num_frames * self.wavelet.target_width
-            if texture_width > opengl_max_texture_size:
-                errors.append(
-                    f"CRITICAL: Texture size exceeds OpenGL limit! "
-                    f"num_frames ({self.viz.num_frames}) × target_width ({self.wavelet.target_width}) "
-                    f"= {texture_width} pixels > {opengl_max_texture_size} limit. "
-                    f"Reduce num_frames to {opengl_max_texture_size // self.wavelet.target_width} or less."
-                )
-        
-        # GPU Memory validation 
-        gpu_memory_errors = self._validate_gpu_memory()
-        errors.extend(gpu_memory_errors)
-        
-        # CPU Memory validation
-        cpu_memory_errors = self._validate_cpu_memory()
-        errors.extend(cpu_memory_errors)
-        
-        # Performance validation
-        performance_errors = self._validate_performance_targets()
-        errors.extend(performance_errors)
-        
-        return errors
-
-    def _validate_gpu_memory(self) -> List[str]:
-        """Estimate and validate GPU memory requirements."""
-        errors = []
-        
-        if not (self.wavelet and self.viz):
-            return errors
-        
-        # Estimate GPU memory usage in MB
-        freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave  # Approximate
-        
-        # CWT coefficients: freq_bins × input_n × 4 bytes (float32)
-        cwt_memory_mb = (freq_bins * self.audio.chunk_size * 4) / (1024 * 1024)
-        
-        # Texture memory: freq_bins × (num_frames × target_width) × 4 bytes  
-        texture_memory_mb = (freq_bins * self.viz.num_frames * self.wavelet.target_width * 4) / (1024 * 1024)
-        
-        # Rolling frame buffer: num_frames × freq_bins × target_width × 4 bytes
-        buffer_memory_mb = (self.viz.num_frames * freq_bins * self.wavelet.target_width * 4) / (1024 * 1024)
-        
-        total_gpu_mb = cwt_memory_mb + texture_memory_mb + buffer_memory_mb
-        
-        # Warn if estimated usage exceeds reasonable limits
-        if total_gpu_mb > 2048:  # 2GB warning threshold
-            errors.append(
-                f"WARNING: High GPU memory usage estimated: {total_gpu_mb:.1f} MB "
-                f"(CWT: {cwt_memory_mb:.1f}, Texture: {texture_memory_mb:.1f}, Buffer: {buffer_memory_mb:.1f}). "
-                f"Consider reducing num_frames or target_width."
-            )
 
         return errors
 
-    def _validate_cpu_memory(self) -> List[str]:
-        """Estimate and validate CPU memory requirements.""" 
-        errors = []
-        
-        if not (self.wavelet and self.viz):
-            return errors
-        
-        # Audio buffer memory (for file reading)
-        audio_buffer_mb = (self.audio.chunk_size * 4) / (1024 * 1024)  # float32
-        
-        # Wavelets kernels storage (estimated)
-        freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave
-        wavelet_kernels_mb = (freq_bins * self.audio.chunk_size * 8) / (1024 * 1024)  # complex64
-        
-        total_cpu_mb = audio_buffer_mb + wavelet_kernels_mb
-        
-        # Warn if estimated usage exceeds reasonable limits
-        if total_cpu_mb > 1024:  # 1GB warning threshold  
-            errors.append(
-                f"WARNING: High CPU memory usage estimated: {total_cpu_mb:.1f} MB "
-                f"(Audio: {audio_buffer_mb:.1f}, Kernels: {wavelet_kernels_mb:.1f}). "
-                f"Consider reducing chunk_size."
-            )
-        
-        return errors
+# =============================================================================
+# DEPRECATED COMPATIBILITY SHIM
+# =============================================================================
 
-    def _validate_performance_targets(self) -> List[str]:
-        """Validate configuration against performance targets."""
-        errors = []
-        
-        if not (self.wavelet and self.viz):
-            return errors
-        
-        # Estimate computational complexity
-        freq_bins = self.wavelet.num_octaves * self.wavelet.notes_per_octave
-        operations_per_frame = freq_bins * self.audio.chunk_size
-        
-        # Warn about potentially expensive configurations
-        if operations_per_frame > 10_000_000:  # 10M operations per frame
-            errors.append(
-                f"WARNING: High computational load estimated: {operations_per_frame:,} operations/frame. "
-                f"This may impact real-time performance. Consider reducing chunk_size or num_octaves."
-            )
-        
-        # Check for reasonable frame rates
-        frames_per_second = self.wavelet.typical_sampling_freq / (self.audio.chunk_size * (1 - self.audio.overlap_factor))
-        
-        if frames_per_second > 200:  # Very high frame rate
-            errors.append(
-                f"WARNING: Very high frame rate estimated: {frames_per_second:.1f} FPS. "
-                f"This may cause excessive GPU updates. Consider increasing chunk_size."
-            )
-        # TODO-36 This check needs to be re-visited because the number of 
-        # samples I need to process depends on the smallest wavelet's time 
-        # support. So either I ditch the lower frequency wavelets (I think this
-        # is the easier option) or I need to figure out a way to optimize 
-        # processing such large chunk of audio data (ideal option4656544564654685)
-        # elif frames_per_second < 10:  # Very low frame rate  
-        #     errors.append(
-        #         f"WARNING: Low frame rate estimated: {frames_per_second:.1f} FPS. "
-        #         f"This may cause choppy visualization. Consider decreasing chunk_size."
-        #     )
-        
-        return errors
+# DEPRECATED: Use CWTConfig or PipelineConfig directly.
+# Will be removed in next phase once all callers migrate to the new hierarchy.
+ProcessingConfig = CWTConfig
 
+# =============================================================================
+# DEFAULT CONFIG FACTORY
+# =============================================================================
 
-# Default configuration
-def get_default_config() -> ProcessingConfig:
+def get_default_config() -> CWTConfig:
     """
-    Get default configuration with system-derived dimensions.
-    
-    Args:
-        validate (bool): Whether to validate the configuration before returning
-        
+    Return default pipeline configuration as a CWTConfig instance.
+
+    CWTConfig is the most parameter-rich subclass and is the appropriate
+    default for the full pipeline (audio → CWT → renderer). Callers that
+    previously used ProcessingConfig still work because ProcessingConfig
+    is aliased to CWTConfig.
+
     Returns:
-        ProcessingConfig: Default configuration
-        
+        CWTConfig: Default configuration
+
     Raises:
-        ValueError: If validation is enabled and configuration is invalid
+        ValueError: If configuration validation fails (e.g., file not found)
     """
-    config = ProcessingConfig()
-    
+    config = CWTConfig()
+
     errors = config.validate()
     if errors:
-        error_msg = "Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in errors)
+        error_msg = "Configuration validation failed:\n" + "\n".join(
+            f"  - {error}" for error in errors
+        )
         log.error(error_msg)
         raise ValueError(error_msg)
     else:
-        log.info("✅ Configuration validation passed")
-    
+        log.info("Configuration validation passed")
+
     return config
-
-
-def validate_config(config: ProcessingConfig, opengl_max_texture_size: int = 16384) -> bool:
-    """
-    Validate a configuration and log results.
-    
-    Args:
-        config (ProcessingConfig): Configuration to validate
-        opengl_max_texture_size (int): Maximum OpenGL texture size
-        
-    Returns:
-        bool: True if valid, False if invalid
-    """
-    errors = config.validate(opengl_max_texture_size)
-    
-    if errors:
-        log.error("❌ Configuration validation failed:")
-        for error in errors:
-            log.error(f"  - {error}")
-        return False
-    else:
-        log.info("✅ Configuration validation passed")
-        texture_width = config.viz.num_frames * config.wavelet.target_width
-        log.info(f"  Texture size: {texture_width} pixels (within {opengl_max_texture_size} limit)")
-        return True
