@@ -81,3 +81,12 @@ class PywaveletCWT(DSP):
     def post(self, raw: np.ndarray) -> np.ndarray:
         """Pass-through stub (D-14 — no post-processing defined for PyWavelets backend)."""
         return raw
+
+    def get_output_shape(self) -> tuple:
+        """Return the shape of the process() output.
+
+        PywaveletCWT.post() is a stub — process() returns raw complex CWT coefficients
+        of shape (num_freqs, chunk_size). No reliable-region trimming or downsampling
+        is applied (D-14).
+        """
+        return (len(self.freqs), self.config.chunk_size)

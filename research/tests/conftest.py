@@ -1,6 +1,6 @@
 """Shared test helpers for SubShader pytest suite."""
 import numpy as np
-from subshader.config import get_default_config
+from subshader.config import CWTConfig
 
 
 def generate_tone(freq_hz, sample_rate, num_samples):
@@ -10,16 +10,31 @@ def generate_tone(freq_hz, sample_rate, num_samples):
 
 
 def find_peak_bin(cwt_output, freqs):
-    """Find the frequency bin with the highest mean energy."""
-    mean_energy = np.mean(cwt_output, axis=1)
+    """Find the frequency bin with the highest mean energy.
+
+    Handles both real-valued (post-processed) and complex (raw CWT) outputs by
+    taking the absolute value before computing mean energy. This allows comparing
+    PywaveletCWT (which returns raw complex coefficients from its stub post()) and
+    CpuCWT (which returns real-valued magnitude output).
+    """
+    mean_energy = np.mean(np.abs(cwt_output), axis=1)
     peak_bin = np.argmax(mean_energy)
     return peak_bin, freqs[peak_bin]
 
 
+def make_test_config():
+    """Create a CWTConfig for tests without requiring a valid audio file.
+
+    Tests that don't use audio file I/O should use this instead of
+    get_default_config() to avoid file-existence validation errors.
+    """
+    # CWTConfig() uses default values; file_path not validated until validate() is called
+    return CWTConfig()
+
+
 def _make_wavelet(cls, config=None):
-    """Construct a wavelet instance with default config."""
+    """Construct a CWT instance with default config."""
     if config is None:
-        config = get_default_config()
-    sr = int(config.wavelet.typical_sampling_freq)
-    chunk = config.audio.chunk_size
-    return cls(sample_rate=sr, input_n=chunk, config=config.wavelet)
+        config = make_test_config()
+    # config is already a CWTConfig with sample_rate and chunk_size embedded
+    return cls(config)
