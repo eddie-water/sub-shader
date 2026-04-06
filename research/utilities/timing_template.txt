@@ -1,0 +1,22 @@
+============================================================
+SubShader Pipeline Timing Report
+============================================================
+Date:    {date}
+Audio:   {audio_file}
+Frames:  {num_frames}
+Backend: {backend}
+
+Stage                     Mean (ms)    Std (ms)    % Total
+-----------------------------------------------------------
+Audio: get_chunk          {audio_get_chunk_mean:>9.2f}    {audio_get_chunk_std:>8.2f}    {audio_get_chunk_pct:>6.1f}%
+DSP: raw_cwt              {dsp_raw_cwt_mean:>9.2f}    {dsp_raw_cwt_std:>8.2f}    {dsp_raw_cwt_pct:>6.1f}%
+DSP: normalize            {dsp_normalize_mean:>9.2f}    {dsp_normalize_std:>8.2f}    {dsp_normalize_pct:>6.1f}%
+DSP: magnitude            {dsp_magnitude_mean:>9.2f}    {dsp_magnitude_std:>8.2f}    {dsp_magnitude_pct:>6.1f}%
+DSP: edge_trim            {dsp_edge_trim_mean:>9.2f}    {dsp_edge_trim_std:>8.2f}    {dsp_edge_trim_pct:>6.1f}%
+DSP: hop_center           {dsp_hop_center_mean:>9.2f}    {dsp_hop_center_std:>8.2f}    {dsp_hop_center_pct:>6.1f}%
+DSP: downsample           {dsp_downsample_mean:>9.2f}    {dsp_downsample_std:>8.2f}    {dsp_downsample_pct:>6.1f}%
+Renderer: push_frame      {renderer_push_frame_mean:>9.2f}    {renderer_push_frame_std:>8.2f}    {renderer_push_frame_pct:>6.1f}%
+-----------------------------------------------------------
+Total per frame           {total_mean:>9.2f}    {total_std:>8.2f}    100.0%
+Theoretical FPS           {fps:>9.1f}
+============================================================

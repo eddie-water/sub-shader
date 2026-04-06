@@ -1,5 +1,8 @@
 """Utilities module for the benchmark suite."""
 
+# Export signal registry
+from .signals import SIGNALS, get_signal
+
 # Export constants
 from .constants import (
     AUDIO_REFERENCE_DIR,
@@ -67,7 +70,6 @@ from .plotting import (
 
 # Export DSP helpers
 from .dsp_helpers import (
-    compute_stft_frame,
     build_chirp_chunks,
     build_wandering_chirp_chunks,
     build_fm_chirp_chunks,
@@ -138,7 +140,6 @@ __all__ = [
     "render_top_row",
     "render_spectrogram_row",
     # DSP
-    "compute_stft_frame",
     "build_chirp_chunks",
     "build_wandering_chirp_chunks",
     "build_fm_chirp_chunks",
@@ -146,4 +147,7 @@ __all__ = [
     "build_bouncing_chirp_chunks",
     # WAV export
     "export_signal_to_wav",
+    # Signal registry
+    "SIGNALS",
+    "get_signal",
 ]
