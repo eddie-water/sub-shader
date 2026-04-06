@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 5.2 Timing & Grid Polish | 0/2 | Not started | - |
 | 6. Finalize Audio & Figures | 2/3 | In Progress|  |
 | 7. Visual Style & Config | 2/4 | In Progress|  |
-| 8. Codebase Refactoring | 4/7 | In Progress|  |
+| 8. Codebase Refactoring | 7/7 | Complete   | 2026-04-06 |
 
 ### Phase 05.2: Benchmark timing profiling and comparison grid polish (INSERTED)
 
@@ -157,7 +157,7 @@ Plans:
 **Goal:** Refactor all core modules for clean separation of concerns, readable flow, and professional naming — main orchestrator simplified, AudioInput+AudioPlayer merged into unified audio manager, DSP module renamed, Plotter→Renderer, research/benchmark suite restructured for clarity — no performance regressions
 **Requirements**: D-01 through D-38 (from 08-CONTEXT.md)
 **Depends on:** Phase 7
-**Plans:** 4/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md — Config redesign (PipelineConfig inheritance) + asset directory reorganization
@@ -166,4 +166,4 @@ Plans:
 - [x] 08-04-PLAN.md — AudioStream facade wrapping reader + player
 - [x] 08-05-PLAN.md — Orchestrator (pipeline.py + thin __main__.py) + full import switchover
 - [x] 08-06-PLAN.md — Test suite restructure (signal registry, 4 modes, timing template)
-- [ ] 08-07-PLAN.md — Archive unused files + update documentation paths
+- [x] 08-07-PLAN.md — Archive unused files + update documentation paths

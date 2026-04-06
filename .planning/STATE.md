@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: "Completed 08-06: test suite restructure + signal registry"
-last_updated: "2026-04-06T23:43:41.918Z"
+status: Phase complete — ready for verification
+stopped_at: "Completed 08-07: archive and cleanup"
+last_updated: "2026-04-06T23:45:13.046Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # Project State
@@ -73,6 +73,7 @@ Plan: 7 of 7
 | Phase 08-codebase-refactoring-and-module-cleanup P03 | 12 | 1 tasks | 7 files |
 | Phase 08-codebase-refactoring-and-module-cleanup P05 | 90 | 3 tasks | 18 files |
 | Phase 08-codebase-refactoring-and-module-cleanup P06 | 3 | 2 tasks | 6 files |
+| Phase 08-codebase-refactoring-and-module-cleanup P07 | 4 | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -145,6 +146,7 @@ Recent decisions affecting current work:
 - [Phase 08]: Signal registry uses figures/ not reference/ for DAW images — matches actual asset layout from Phase 06/07
 - [Phase 08]: timing_template.txt matches TimedSubShader 8-method accumulator keys — all 8 CWT sub-stages are tracked
 - [Phase 08]: test_suite.py uses mutually_exclusive_group for 4 modes — signals intent that only one mode runs per invocation
+- [Phase 08-07]: viz/shaders removed not archived — exact copies of renderer/shaders/ content
 
 ### Pending Todos
 
@@ -172,5 +174,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-04-06
-Stopped at: Completed 08-06: test suite restructure + signal registry
+Stopped at: Completed 08-07: archive and cleanup
 Resume file: None
