@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08-03-PLAN.md
-last_updated: "2026-04-06T23:15:48.165Z"
+stopped_at: "Completed 08-05: module switchover + old file deletion"
+last_updated: "2026-04-06T23:38:55.046Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 10
   completed_phases: 7
   total_plans: 28
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 ## Current Position
 
 Phase: 08 (codebase-refactoring-and-module-cleanup) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Plan: 5 of 7
 | Phase 08-codebase-refactoring-and-module-cleanup P04 | 6 | 2 tasks | 4 files |
 | Phase 08-codebase-refactoring-and-module-cleanup P02 | 3 | 2 tasks | 6 files |
 | Phase 08-codebase-refactoring-and-module-cleanup P03 | 12 | 1 tasks | 7 files |
+| Phase 08-codebase-refactoring-and-module-cleanup P05 | 90 | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -138,6 +139,8 @@ Recent decisions affecting current work:
 - [Phase 08]: WaveletConfig=CWTConfig alias added to config.py — preserves wavelet.py import-time compat until Plan 08-05 completes the migration
 - [Phase 08-03]: GPURenderer chosen as the name for the low-level GPU class (was Renderer in plotter.py) — Renderer is now the top-level orchestrator (was ShaderPlot), so the inner class needed a distinct name
 - [Phase 08-03]: ColorNormalizationConfig.global_intensity_percentile used in CircularFrameBuffer — field name matches actual config dataclass; old plotter.py used wrong attribute names
+- [Phase 08]: PywaveletCWT.post() stub preserved (D-14) — tests updated to handle complex output via np.abs()
+- [Phase 08]: pipeline_timing_profile.py archived to research/archive/ — requires full rewrite for new @timed pattern
 
 ### Pending Todos
 
@@ -165,5 +168,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-04-06
-Stopped at: Completed 08-03-PLAN.md
+Stopped at: Completed 08-05: module switchover + old file deletion
 Resume file: None
