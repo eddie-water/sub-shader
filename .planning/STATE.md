@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Milestone complete
-stopped_at: Phase 8 context gathered
-last_updated: "2026-04-06T21:45:39.048Z"
-last_activity: 2026-03-27
+status: Ready to execute
+stopped_at: Completed 08-01-PLAN.md
+last_updated: "2026-04-06T23:09:54.241Z"
+last_activity: 2026-04-06
 progress:
   total_phases: 10
   completed_phases: 7
-  total_plans: 21
-  completed_plans: 20
+  total_plans: 28
+  completed_plans: 21
 ---
 
 # Project State
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The visualization accurately tracks audio input in real time with minimal latency
-**Current focus:** Phase 07 — visual-style-system-and-frequency-range-configuration
+**Current focus:** Phase 08 — codebase-refactoring-and-module-cleanup
 
 ## Current Position
 
-Phase: 07
-Plan: Not started
+Phase: 08 (codebase-refactoring-and-module-cleanup) — EXECUTING
+Plan: 2 of 7
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Plan: Not started
 | Phase 07-visual-style-system-and-frequency-range-configuration P01 | 15 | 2 tasks | 5 files |
 | Phase 07-visual-style-system-and-frequency-range-configuration P03 | 217 | 2 tasks | 20 files |
 | Phase 07-visual-style-system-and-frequency-range-configuration P04 | 15 | 2 tasks | 4 files |
+| Phase 08-codebase-refactoring-and-module-cleanup P01 | 7 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,10 @@ Recent decisions affecting current work:
 - [Phase 07-03]: cwt_timed tests rewritten to use @timed _timing_*_ms attributes — cwt_timed() removed in 07-02
 - [Phase 07-04]: generate_comparison_grid and generate_timing_bar_chart extracted to comparison.py — separation of concerns between per-signal figures (ReadmeFigures) and method-vs-method comparison
 - [Phase 07-04]: STUB_DPI = 100 added to style.py — stub_layouts intentionally renders at lower DPI for fast iteration; value lives in style rather than hardcoded
+- [Phase 08]: CWTConfig chosen as default from get_default_config() — most param-rich subclass, correct for full pipeline
+- [Phase 08]: ProcessingConfig = CWTConfig alias defers __main__.py migration to Plan 08-05 — callers still import without error
+- [Phase 08]: Default file_path changed from assets/audio/daw/a2a3 to assets/audio/reference/beltran_sc_rip.wav per D-04
+- [Phase 08]: Asset lifecycle: reference/ for committed input files, generated/ for test-suite outputs — asset ownership model settled
 
 ### Pending Todos
 
@@ -150,6 +155,6 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-03-27
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-codebase-refactoring-and-module-cleanup/08-CONTEXT.md
+Last activity: 2026-04-06
+Stopped at: Completed 08-01-PLAN.md
+Resume file: None
