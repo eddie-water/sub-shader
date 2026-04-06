@@ -22,7 +22,7 @@ import os
 import pyqtgraph as pg
 
 from subshader.utils.logging import get_logger
-from subshader.config import VisualizationConfig
+from subshader.config import RendererConfig
 from subshader.exceptions import WindowCloseException
 
 from .shaders import get_vertex_shader_source, get_fragment_shader_source
@@ -66,7 +66,7 @@ class Plotter(ABC):
         pass
 
 class ShaderPlot(Plotter):
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], config: VisualizationConfig):
+    def __init__(self, file_path: str, frame_shape: tuple[int, int], config: RendererConfig):
         """
         2D data visualization using shaders
 
@@ -88,10 +88,10 @@ class ShaderPlot(Plotter):
         # ModernGL Context - window creation and OpenGL context setup
         self.gl_context = GLContext(title=f"SubShader - {os.path.basename(file_path)}")
 
-        # GPU Renderer - shader compilation, texture management, and rendering 
+        # GPU Renderer - shader compilation, texture management, and rendering
         self.renderer = Renderer(ctx=self.gl_context.ctx,
                                  texture_shape=self.frame_buffer.get_shape(),
-                                 gamma=self.config.gamma)
+                                 gamma=self.config.color_norm.gamma)
 
     def update_plot(self, plot_values: np.ndarray) -> None:
         """
@@ -519,10 +519,10 @@ class CircularFrameBuffer:
         # Pre-allocate flattened buffer
         self.flattened_buffer = np.zeros((self.height, self.width * num_frames), dtype=np.float32)
 
-        self.intensity_tracker = IntensityTracker(percentile=color_norm_config.percentile,
-                                                  decay_rate=color_norm_config.decay_rate,
-                                                  floor_value=color_norm_config.floor_value,
-                                                  warmup_frames=color_norm_config.warmup_frames)
+        self.intensity_tracker = IntensityTracker(
+            percentile=color_norm_config.global_intensity_percentile,
+            decay_rate=color_norm_config.decay_rate,
+        )
 
     # =========================================================================
     # PUBLIC METHODS - External interface
