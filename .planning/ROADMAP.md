@@ -165,5 +165,5 @@ Plans:
 - [x] 08-03-PLAN.md — Renderer split (viz/ -> renderer/, plotter.py -> 3 files)
 - [x] 08-04-PLAN.md — AudioStream facade wrapping reader + player
 - [x] 08-05-PLAN.md — Orchestrator (pipeline.py + thin __main__.py) + full import switchover
-- [ ] 08-06-PLAN.md — Test suite restructure (signal registry, 4 modes, timing template)
+- [x] 08-06-PLAN.md — Test suite restructure (signal registry, 4 modes, timing template)
 - [ ] 08-07-PLAN.md — Archive unused files + update documentation paths
