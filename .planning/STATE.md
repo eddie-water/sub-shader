@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Ready to execute
-stopped_at: Completed 08-02-PLAN.md
-last_updated: "2026-04-06T23:15:39.555Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-04-06T23:15:48.165Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 10
@@ -136,6 +136,8 @@ Recent decisions affecting current work:
 - [Phase 08]: next_chunk() encapsulates hop-aligned seek + 1ms yield + frame-skip logic from __main__.py — pipeline.py can call audio.next_chunk() cleanly
 - [Phase 08]: CWT base class absorbs Wavelet + AntsWavelet shared logic — 7-class wavelet.py hierarchy flattened to CWT + CpuCWT + GpuCWT in cwt.py
 - [Phase 08]: WaveletConfig=CWTConfig alias added to config.py — preserves wavelet.py import-time compat until Plan 08-05 completes the migration
+- [Phase 08-03]: GPURenderer chosen as the name for the low-level GPU class (was Renderer in plotter.py) — Renderer is now the top-level orchestrator (was ShaderPlot), so the inner class needed a distinct name
+- [Phase 08-03]: ColorNormalizationConfig.global_intensity_percentile used in CircularFrameBuffer — field name matches actual config dataclass; old plotter.py used wrong attribute names
 
 ### Pending Todos
 
@@ -163,5 +165,5 @@ None yet.
 ## Session Continuity
 
 Last activity: 2026-04-06
-Stopped at: Completed 08-02-PLAN.md
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None
