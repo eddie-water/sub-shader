@@ -10,10 +10,12 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-from subshader.config import get_default_config, ColorNormalizationConfig
-from subshader.audio.audio_input import AudioInput
-from subshader.dsp.wavelet import PyWavelet, NumPyWavelet
-from subshader.viz.plotter import CircularFrameBuffer
+from subshader.config import get_default_config, CWTConfig, ColorNormalizationConfig
+from subshader.audio.reader import AudioReader
+from subshader.dsp.cwt import CpuCWT, GpuCWT
+from subshader.dsp.pywavelet import PywaveletCWT
+from subshader.dsp.stft import STFT
+from subshader.renderer.frame_buffer import CircularFrameBuffer
 
 from utilities import (
     IMAGES_GENERATED_DIR,
@@ -23,7 +25,6 @@ from utilities import (
     DAW_IMAGE_COMPARISON_1,
     DAW_IMAGE_COMPARISON_2,
     DAW_IMAGE_COMPARISON_3,
-    STFT_NPERSEG,
     NUM_FRAMES,
     gpu_available,
     time_call,
@@ -35,7 +36,6 @@ from utilities import (
     print_results_header,
     print_results_row,
     compute_freq_yticks,
-    compute_stft_frame,
     build_bouncing_chirp_chunks,
 )
 from utilities import style
@@ -47,15 +47,15 @@ from utilities.wav_export import export_signal_to_wav
 # =============================================================================
 
 def _run_numpy_cwt(chunk, npwt):
-    return npwt.cwt(chunk)
+    return npwt.process(chunk)
 
 
 def _run_pywavelet(chunk, pywt):
-    return pywt.cwt(chunk)
+    return pywt.process(chunk)
 
 
 def _run_gpu_cwt(chunk, cpwt):
-    return cpwt.cwt(chunk)
+    return cpwt.process(chunk)
 
 
 COMPARISON_METHODS = [
@@ -85,21 +85,19 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
     Output: assets/images/benchmarks/comparison_grid[_Ndpi].png
     """
-    # CuWavelet import deferred to avoid unconditional GPU import at module load
+    # GpuCWT import deferred to avoid unconditional GPU import at module load
     GPU_COMP_AVAILABLE = gpu_available()
 
     os.makedirs(IMAGES_GENERATED_DIR, exist_ok=True)
 
     config = get_default_config()
-    sr_default = int(config.wavelet.typical_sampling_freq)
-    chunk_size = config.audio.chunk_size
-    overlap_factor = config.audio.overlap_factor
-    wc = config.wavelet
+    chunk_size = config.chunk_size
+    overlap_factor = config.overlap_factor
 
     # ── Signal definitions ────────────────────────────────────────────────────
     CHIRP_DURATION_S = 6.0
     chirp_n_frames = int(
-        CHIRP_DURATION_S * sr_default
+        CHIRP_DURATION_S * config.sample_rate
         / (chunk_size * (1 - overlap_factor))
     )
     chirp_n_frames = max(chirp_n_frames, NUM_FRAMES)
@@ -120,9 +118,9 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         print_section_start(f"Processing column {col_idx + 1}/3: {spec['label']}")
 
         if spec["type"] == "chirp":
-            sr = sr_default
+            sr = config.sample_rate
             chunks, raw_waveform, chirp_inst_freq, _ = build_bouncing_chirp_chunks(
-                sr=sr, chunk_size=chunk_size, overlap_factor=overlap_factor,
+                sr=int(sr), chunk_size=chunk_size, overlap_factor=overlap_factor,
                 n_frames=chirp_n_frames,
             )
             n_frames = len(chunks)
@@ -130,18 +128,20 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             raw_sr = sr
             # Export bouncing chirp as WAV so it can be dragged into FL Studio / Edison
             chirp_wav_path = AUDIO_COMPARISON_1
-            export_signal_to_wav(raw_waveform, sr, chirp_wav_path)
+            export_signal_to_wav(raw_waveform, int(sr), chirp_wav_path)
+            col_config = config
         else:
             audio_path = spec["path"]
             if not os.path.exists(audio_path):
                 raise FileNotFoundError(f"Missing audio file: {audio_path}")
-            ai = AudioInput(
-                path=audio_path,
+            col_config = CWTConfig(
+                file_path=audio_path,
                 chunk_size=chunk_size,
                 overlap_factor=overlap_factor,
             )
-            sr = ai.get_sample_rate()
-            raw_waveform = ai.get_entire_audio()
+            reader = AudioReader(col_config)
+            sr = col_config.sample_rate
+            raw_waveform = reader.get_entire_audio()
             hop = int(chunk_size * (1 - overlap_factor))
             file_n_frames = int(len(raw_waveform) / hop)
             n_frames = spec.get("max_frames", file_n_frames)
@@ -151,23 +151,18 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             if len(raw_waveform) > max_samples:
                 raw_waveform = raw_waveform[:max_samples]
 
-        npwt = NumPyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+        npwt = CpuCWT(col_config)
+        stft = STFT(col_config)
         cpwt = None
         if GPU_COMP_AVAILABLE and comparison:
-            from subshader.dsp.wavelet import CuWavelet
-            cpwt = CuWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+            cpwt = GpuCWT(col_config)
         if not stub_pywt:
-            pywt = PyWavelet(sample_rate=sr, input_n=chunk_size, config=wc)
+            pywt = PywaveletCWT(col_config)
             cwt_freqs = pywt.freqs
         else:
             cwt_freqs = npwt.freqs
 
         n_cwt_freqs = len(cwt_freqs)
-
-        stft_freqs = np.fft.rfftfreq(STFT_NPERSEG, d=1.0 / sr)
-        freq_min, freq_max = cwt_freqs[0], cwt_freqs[-1]
-        stft_freq_mask = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
-        stft_cropped_freqs = stft_freqs[stft_freq_mask]
         stft_target_w = npwt.output_n
 
         color_norm = ColorNormalizationConfig()
@@ -198,38 +193,31 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
         frames_processed = 0
         for _ in range(n_frames):
-            chunk = next(chunk_iter, None) if chunk_iter is not None else ai.get_chunk()
+            chunk = next(chunk_iter, None) if chunk_iter is not None else reader.get_chunk()
             if chunk is None:
                 break
 
             if comparison:
-                stft_log, acc["STFT"][acc.current_idx] = time_call(
-                    compute_stft_frame,
-                    chunk, sr, STFT_NPERSEG, stft_freq_mask,
-                    stft_cropped_freqs, cwt_freqs, stft_target_w,
-                )
+                stft_log, acc["STFT"][acc.current_idx] = time_call(stft.process, chunk)
             else:
-                stft_log = compute_stft_frame(
-                    chunk, sr, STFT_NPERSEG, stft_freq_mask,
-                    stft_cropped_freqs, cwt_freqs, stft_target_w,
-                )
+                stft_log = stft.process(chunk)
             stft_buf.push_frame(stft_log)
 
             if not stub_pywt:
                 if comparison:
-                    pywt_out, acc["PyWavelet"][acc.current_idx] = time_call(pywt.cwt, chunk)
+                    pywt_out, acc["PyWavelet"][acc.current_idx] = time_call(pywt.process, chunk)
                 else:
-                    pywt_out, _ = time_call(pywt.cwt, chunk)
+                    pywt_out, _ = time_call(pywt.process, chunk)
                 pywt_buf.push_frame(pywt_out)
 
             if comparison:
-                npwt_out, acc["SubShader (CPU)"][acc.current_idx] = time_call(npwt.cwt, chunk)
+                npwt_out, acc["SubShader (CPU)"][acc.current_idx] = time_call(npwt.process, chunk)
             else:
-                npwt_out, _ = time_call(npwt.cwt, chunk)
+                npwt_out, _ = time_call(npwt.process, chunk)
             npwt_buf.push_frame(npwt_out)
 
             if cpwt is not None and comparison:
-                _, acc["SubShader (GPU)"][acc.current_idx] = time_call(cpwt.cwt, chunk)
+                _, acc["SubShader (GPU)"][acc.current_idx] = time_call(cpwt.process, chunk)
 
             if comparison:
                 acc.advance()
@@ -440,12 +428,13 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
     # Draw once to resolve tick label geometry, then center labels between the
     # figure left edge and the y-axis decorations' left extent.
     fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
+    rend = fig.canvas.get_renderer()
     fig_width_px = fig.get_size_inches()[0] * fig.dpi
     # Use the STFT row (has yticks + ylabel) to find where y-axis labels start
-    yaxis_bbox = axes[2][1].yaxis.get_tightbbox(renderer)
+    yaxis_bbox = axes[2][1].yaxis.get_tightbbox(rend)
     yaxis_left_frac = yaxis_bbox.x0 / fig_width_px
     label_x = (h_margin + yaxis_left_frac) / 2
+
     for r, label in enumerate(row_labels):
         row_pos = axes[r][1].get_position()
         label_y = row_pos.y0 + row_pos.height / 2
@@ -475,47 +464,32 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
 def generate_timing_bar_chart(dpi: int = 200, num_frames: int = NUM_FRAMES):
     """
-    Run STFT, PyWavelet, and NumPy CWT timing over num_frames frames, then
+    Run STFT, PyWavelet, and CpuCWT timing over num_frames frames, then
     save a bar chart to assets/images/benchmarks/timing_bar_chart.png.
 
     Shows average time with min/max error bars for each pipeline component.
     """
     print_section_start("Timing Bar Chart")
 
-    config = get_default_config()
-    config.audio.file_path = AUDIO_COMPARISON_2
-    ai = AudioInput(
-        path=config.audio.file_path,
-        chunk_size=config.audio.chunk_size,
-        overlap_factor=config.audio.overlap_factor,
-    )
-    sr = ai.get_sample_rate()
+    config = CWTConfig(file_path=AUDIO_COMPARISON_2)
+    reader = AudioReader(config)
 
-    pywt = PyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=config.wavelet)
-    npwt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=config.wavelet)
+    pywt = PywaveletCWT(config)
+    npwt = CpuCWT(config)
+    stft = STFT(config)
 
-    stft_freqs     = np.fft.rfftfreq(STFT_NPERSEG, d=1.0 / sr)
-    cwt_freqs      = npwt.freqs
-    freq_min, freq_max = cwt_freqs[0], cwt_freqs[-1]
-    stft_freq_mask = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
-    stft_cropped   = stft_freqs[stft_freq_mask]
-    stft_target_w  = npwt.output_n
-
-    methods = ["AudioInput.get_chunk()", "scipy STFT", "PyWavelet.cwt()", "NumPyWavelet.cwt()"]
+    methods = ["AudioReader.get_chunk()", "STFT.process()", "PywaveletCWT.process()", "CpuCWT.process()"]
     acc = TimingAccumulator(num_frames, methods)
 
     for i in range(num_frames):
-        chunk, acc["AudioInput.get_chunk()"][i] = time_call(ai.get_chunk)
+        chunk, acc["AudioReader.get_chunk()"][i] = time_call(reader.get_chunk)
         if chunk is None:
             acc.current_idx = i
             break
 
-        _, acc["scipy STFT"][i] = time_call(
-            compute_stft_frame,
-            chunk, sr, STFT_NPERSEG, stft_freq_mask, stft_cropped, cwt_freqs, stft_target_w,
-        )
-        _, acc["PyWavelet.cwt()"][i] = time_call(pywt.cwt, chunk)
-        _, acc["NumPyWavelet.cwt()"][i] = time_call(npwt.cwt, chunk)
+        _, acc["STFT.process()"][i] = time_call(stft.process, chunk)
+        _, acc["PywaveletCWT.process()"][i] = time_call(pywt.process, chunk)
+        _, acc["CpuCWT.process()"][i] = time_call(npwt.process, chunk)
         acc.current_idx = i + 1
         live_progress(acc.current_idx, num_frames)
 

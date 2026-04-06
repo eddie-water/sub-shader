@@ -7,10 +7,12 @@ matplotlib.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
 
-from subshader.config import get_default_config, ColorNormalizationConfig
-from subshader.audio.audio_input import AudioInput
-from subshader.dsp.wavelet import PyWavelet, NumPyWavelet
-from subshader.viz.plotter import CircularFrameBuffer, AudioFrameBuffer
+from subshader.config import get_default_config, CWTConfig, ColorNormalizationConfig
+from subshader.audio.reader import AudioReader
+from subshader.dsp.cwt import CpuCWT, GpuCWT
+from subshader.dsp.pywavelet import PywaveletCWT
+from subshader.dsp.stft import STFT
+from subshader.renderer.frame_buffer import CircularFrameBuffer, AudioFrameBuffer
 
 from utilities import style
 from utilities import (
@@ -19,7 +21,6 @@ from utilities import (
     AUDIO_COMPARISON_3,
     DAW_IMAGE_COMPARISON_2,
     DAW_IMAGE_COMPARISON_3,
-    STFT_NPERSEG,
     NUM_FRAMES,
     CHIRP_F0,
     CHIRP_F1,
@@ -43,12 +44,12 @@ from utilities import (
     create_figure_scaffold,
     render_top_row,
     render_spectrogram_row,
-    compute_stft_frame,
     build_chirp_chunks,
     build_wandering_chirp_chunks,
     build_fm_chirp_chunks,
     build_bouncing_chirp_chunks,
 )
+from utilities.signals import SIGNALS, get_signal
 
 GPU_AVAILABLE = gpu_available()
 
@@ -82,15 +83,15 @@ class ReadmeFigures:
           Row 3: SubShader CWT
         """
         config    = get_default_config()
-        sr        = int(config.wavelet.typical_sampling_freq)
-        chunk_size = config.audio.chunk_size
+        sr        = int(config.sample_rate)
+        chunk_size = config.chunk_size
 
         chunks = build_chirp_chunks(
             CHIRP_F0,
             CHIRP_F1,
             sr,
             chunk_size,
-            config.audio.overlap_factor,
+            config.overlap_factor,
             self.num_frames,
         )
 
@@ -273,44 +274,40 @@ class ReadmeFigures:
             sr = sample_rate
             chunk_iter = iter(audio_chunks)
             num_frames = len(audio_chunks)
+            fig_config = config
         else:
-            config.audio.file_path = audio_path
-            ai = AudioInput(
-                path=config.audio.file_path,
-                chunk_size=config.audio.chunk_size,
-                overlap_factor=config.audio.overlap_factor,
+            fig_config = CWTConfig(
+                file_path=audio_path,
+                chunk_size=config.chunk_size,
+                overlap_factor=config.overlap_factor,
             )
-            sr = ai.get_sample_rate()
+            ai = AudioReader(fig_config)
+            sr = fig_config.sample_rate
             chunk_iter = None
             # Use NUM_FRAMES as the limit for file-based audio
             num_frames = NUM_FRAMES
 
-        wc = wavelet_config if wavelet_config is not None else config.wavelet
         if not self.stub_pywt:
-            pywt = PyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
+            pywt = PywaveletCWT(fig_config)
         else:
             pywt = None
-        npwt = NumPyWavelet(sample_rate=sr, input_n=config.audio.chunk_size, config=wc)
+        npwt = CpuCWT(fig_config)
+        stft = STFT(fig_config)
 
         # STFT setup -- crop to chromatic scale frequency range
-        stft_freqs        = np.fft.rfftfreq(STFT_NPERSEG, d=1.0 / sr)
         # Use pywt freqs if available, otherwise use npwt freqs
         ref_freqs = pywt.freqs if pywt is not None else npwt.freqs
-        freq_min, freq_max = ref_freqs[0], ref_freqs[-1]
-        stft_freq_mask    = (stft_freqs >= freq_min) & (stft_freqs <= freq_max)
-        stft_cropped_freqs = stft_freqs[stft_freq_mask]
-        stft_target_w     = (pywt.output_n if pywt is not None else npwt.output_n)
-
         cwt_freqs   = ref_freqs
         n_cwt_freqs = len(cwt_freqs)
+        stft_target_w = npwt.output_n
 
         # Circular buffers
         color_norm = ColorNormalizationConfig()
-        audio_buf  = AudioFrameBuffer(chunk_size=config.audio.chunk_size, num_chunks=num_frames)
+        audio_buf  = AudioFrameBuffer(chunk_size=fig_config.chunk_size, num_chunks=num_frames)
         stft_buf   = CircularFrameBuffer(frame_shape=(n_cwt_freqs, stft_target_w), num_frames=num_frames, color_norm_config=color_norm)
         # Use npwt shape for pywt_buf (they have the same output shape)
-        pywt_buf   = CircularFrameBuffer(frame_shape=npwt.get_output_shape(),       num_frames=num_frames, color_norm_config=color_norm)
-        npwt_buf   = CircularFrameBuffer(frame_shape=npwt.get_output_shape(),       num_frames=num_frames, color_norm_config=color_norm)
+        pywt_buf   = CircularFrameBuffer(frame_shape=npwt.get_output_shape(), num_frames=num_frames, color_norm_config=color_norm)
+        npwt_buf   = CircularFrameBuffer(frame_shape=npwt.get_output_shape(), num_frames=num_frames, color_norm_config=color_norm)
 
         # Process frames -- with per-method timing and live progress
         stft_times = np.empty(num_frames)
@@ -329,16 +326,7 @@ class ReadmeFigures:
 
             audio_buf.push_chunk(chunk)
 
-            stft_log, stft_times[i] = time_call(
-                compute_stft_frame,
-                chunk,
-                sr,
-                STFT_NPERSEG,
-                stft_freq_mask,
-                stft_cropped_freqs,
-                cwt_freqs,
-                stft_target_w,
-            )
+            stft_log, stft_times[i] = time_call(stft.process, chunk)
             stft_buf.push_frame(stft_log)
 
             if self.stub_pywt:
@@ -347,10 +335,10 @@ class ReadmeFigures:
                 pywt_stub = np.random.rand(n_cwt_freqs, stft_target_w).astype(np.float32)
                 pywt_buf.push_frame(pywt_stub)
             else:
-                _, pywt_times[i] = time_call(pywt.cwt, chunk)
+                _, pywt_times[i] = time_call(pywt.process, chunk)
                 pywt_buf.push_frame(_)
 
-            _, npwt_times[i] = time_call(npwt.cwt, chunk)
+            _, npwt_times[i] = time_call(npwt.process, chunk)
             npwt_buf.push_frame(_)
 
             frames_processed = i + 1
@@ -396,7 +384,7 @@ class ReadmeFigures:
         spec_w    = pywt_spec.shape[1]
 
         # Trim audio buffer to actual samples processed and downsample for waveform
-        actual_samples = frames_processed * config.audio.chunk_size
+        actual_samples = frames_processed * fig_config.chunk_size
         audio_trimmed = audio_buf.get_flattened_buffer()[-actual_samples:]
         window_size = max(1, actual_samples // spec_w)
         trimmed_len = window_size * spec_w
@@ -460,3 +448,110 @@ class ReadmeFigures:
         print_section_end()
 
         return timing
+
+
+# =============================================================================
+# PUBLIC ENTRY POINTS (called from test_suite.py)
+# =============================================================================
+
+def generate_method_comparison(
+    signal_name: str | None = None,
+    input_signal: str | None = None,
+    stub: bool = False,
+) -> None:
+    """Generate per-signal method comparison figures.
+
+    Each figure has rows: time series, DAW reference, STFT, PyWavelet, SubShader.
+    The DAW reference row shows a placeholder message when the reference image
+    is absent so the figure still generates cleanly.
+
+    Args:
+        signal_name: Name of a registered signal (chirp, polyphonic, musical).
+                     When None, runs all signals in the registry.
+        input_signal: Path to a custom audio file. When provided, runs a
+                      single custom-signal figure instead of the registry.
+        stub: When True, stub PyWavelet with random data and save output to
+              the stubs/ subdirectory with a _STUB_PYWT suffix.
+    """
+    output_dir = os.path.join(IMAGES_GENERATED_DIR, "stubs") if stub else IMAGES_GENERATED_DIR
+    os.makedirs(output_dir, exist_ok=True)
+
+    if input_signal is not None:
+        # Custom audio file — no registry entry, no DAW reference image
+        signal_label = os.path.splitext(os.path.basename(input_signal))[0]
+        safe_name = signal_label.replace(" ", "_").lower()
+        filename = f"{safe_name}_comparison{'_STUB_PYWT' if stub else ''}.png"
+        rf = ReadmeFigures(stub_pywt=stub)
+        rf._generate_comparison_figure(
+            audio_path=input_signal,
+            title=signal_label,
+            display_title=f"{signal_label} Comparison",
+            filename=filename,
+            top_rows=[
+                {"type": "waveform", "title": "Audio Waveform"},
+                {
+                    "type": "image",
+                    "path": "__missing__",
+                    "title": "DAW Reference",
+                },
+            ],
+        )
+        print(f"Figures written -> {output_dir}/")
+        return
+
+    # Registry-based signals
+    signals_to_run = [get_signal(signal_name)] if signal_name is not None else SIGNALS
+
+    rf = ReadmeFigures(stub_pywt=stub)
+    for sig in signals_to_run:
+        safe_name = sig["name"]
+        filename = f"{safe_name}_comparison{'_STUB_PYWT' if stub else ''}.png"
+
+        if sig["type"] == "synthetic":
+            # Synthetic signals are generated at runtime (e.g. bouncing chirp)
+            config = get_default_config()
+            sr = int(config.sample_rate)
+            chunks = build_bouncing_chirp_chunks(
+                sr=sr,
+                chunk_size=config.chunk_size,
+                overlap_factor=config.overlap_factor,
+                n_frames=NUM_FRAMES,
+            )
+            # build_bouncing_chirp_chunks returns (chunks, waveform, inst_freq, sr)
+            chunk_list = chunks[0] if isinstance(chunks, tuple) else chunks
+            rf._generate_comparison_figure(
+                title=sig["label"],
+                display_title=f"{sig['label']} Comparison",
+                filename=filename,
+                top_rows=[
+                    {"type": "freq_line", "f0": CHIRP_F0, "f1": CHIRP_F1, "title": "Instantaneous Frequency"},
+                ],
+                audio_chunks=chunk_list,
+                sample_rate=float(sr),
+            )
+        else:
+            rf._generate_comparison_figure(
+                audio_path=sig["audio"],
+                title=sig["label"],
+                display_title=f"{sig['label']} Comparison",
+                filename=filename,
+                top_rows=[
+                    {"type": "waveform", "title": "Audio Waveform"},
+                    {"type": "image", "path": sig["reference"], "title": "DAW Reference"},
+                ],
+            )
+
+    print(f"Figures written -> {output_dir}/")
+
+
+def generate_all_figures(stub: bool = False) -> None:
+    """Generate all documentation figures.
+
+    Runs --compare-methods for all registered signals, then generates the
+    timing bar chart. The comparison grid utility is preserved in comparison.py
+    but is not generated here by default.
+    """
+    generate_method_comparison(stub=stub)
+
+    from comparison import generate_timing_bar_chart
+    generate_timing_bar_chart()
