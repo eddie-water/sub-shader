@@ -1,70 +1,112 @@
 # Sub Shader
 
-Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline that analyzes and converts audio into a visual representation using modern techniques in digital signal processing and parallel computing.
+Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline that analyzes audio using modern techniques in digital signal processing and parallel computing to render a low-latency frequency vs time plot. 
 
-This project is a technical showcase of my skills and interests in DSP and GPU acceleration. It's given me a deeper understanding of the foundations of signal processing and how they can be generalized into other contexts beyond monitoring audio. It also serves as an exercise for off-loading parallel operations onto a GPU and optimizing pipeline bottlenecks.
+This project has given me a deeper understanding of the foundations of DSP and how they generalize to contexts beyond audio. It has also been an opportunity to learn how to use CUDA to minimize pipeline bottlenecks by off-loading parallel operations to a GPU.
 
-The top-level design and performance of Sub Shader are detailed in this document.
+Details of the top-level design and its performance are outlined in this document.
 
-[PLACEHOLDER: video — "Demo clip of real-time visualization"]
-
----
-
-## Design
+# Design
 
 ```
-Audio Source → DSP Block → Renderer
+Audio → DSP → Renderer
 ```
 
-Sub Shader splits the pipeline into three modules:
+## Audio 
 
-### Audio Source
+Loads audio from file and delivers overlapping window frames of audio samples to the DSP Stage. The overlap reduces edge artifacts at window boundaries. For more details → [Audio README](AUDIO.md)
 
-Loads audio from file and delivers overlapping window frames of audio samples to the DSP Stage. The overlap reduces edge artifacts at window boundaries.
+## DSP
 
-For more details → [Audio README](AUDIO.md)
+Performs the Continuous Wavelet Transform ([CWT](https://www.mathworks.com/help/wavelet/ug/continuous-wavelet-analysis-of-modulated-signals.html)) using [CuPy](https://cupy.dev/) on the raw audio samples across the chromatic scale. Post-processing includes scale normalization, discarding of edge-contaminated results, and downsampling. For design intuition and explanation → [DSP README](DSP.md)
 
-### DSP Stage
+## Renderer
 
-Using CUDA, performs the Continuous Wavelet Transform ([CWT](link)) on the raw audio samples across the chromatic scale. Post-processing includes scale normalization, discarding of edge-contaminated results, and downsampling.
-
-For design intuition and explanation → [DSP README](DSP.md)
-
-### Renderer
-
-Chronologically stores the processed results from the DSP Stage in a circular buffer, and uploads its entirety as a GPU texture. The renderer feeds the texture data to a fragment shader that colormaps the results into a 2D scale vs time plot.
-
-For specifics → [Renderer README](RENDERER.md)
+Chronologically stores the time-frequency results from the DSP module in a circular buffer, and uploads its entirety as a GPU texture. The renderer feeds the texture data to a fragment shader that colormaps the results to a 2D frequency vs time plot. For specifics → [Renderer README](RENDERER.md)
 
 <!-- Placeholder: init flowchart -->
 
 <!-- Placeholder: runtime flowchart -->
 
----
+# Plot Comparison
+Below is a performance comparison plot of different audio signals and analysis methods, highlighting the accuracy and timing tradeoffs between each method.
 
-## Performance
+<p align="center"><img src="assets/images/generated/comparison_grid.png" width="100%"></p>
 
-[WRITE: "explain STFT fixed resolution limitation and PyWavelet CWT advantage — introductory paragraph before comparison grid"]
+<!-- - STFT from [SciPy](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.stft.html)  -->
+<!-- - CWT from [PyWavelet](https://pywavelets.readthedocs.io/en/latest/ref/cwt.html) -->
+<!-- - SubShader CWT from [ANTS](https://www.youtube.com/playlist?list=PLn0OLiymPak2BYu--bR0ADNBJsC4kuRWs).  -->
 
-[WRITE: "introduce comparison methodology and signal selection rationale — before grid figure"]
+Bouncing Chirp 
+- A signal whose frequency sweeps upward with periodic variation
+- This stress-tests each method's time-frequency resolution
+    - Methods like the STFT with fixed resolution smear signal measurements of rapid frequency transitions
+    - Methods like the PyWavelet and Sub Shader CWT that adapt their resolution proportionally to the scaled frequency being measured track the signal contour more precisely
 
-<p align="center"><img src="assets/images/benchmarks/comparison_grid.png" width="80%"></p>
+MIDI Sine Waves 
+- A signal composed of multiple, overlapping sine waves played at different frequencies and varying durations
+- Tests each method's ability to resolve multiple frequencies simultaneously and distinguish between long sustained tones and quick transient ones
 
-### Bouncing Chirp
+Beltran Audio
+- This audio is 4 bar measures ripped from [Beltran's SoundCloud](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) at about 8:00 minutes in the beat drops, the bass cuts out, then cuts back in.
+- Tests the ability to measure more realistically recorded audio containing apparent and non-apparent audio patterns via vocal tones, sustained bass activity, and repetitive broadband transients like kicks, snares, and percussions
 
-[WRITE: "Non-stationary test signal — frequency sweeps upward across three decades (20Hz to 20kHz) with periodic parabolic dips. Designed to stress-test time-frequency resolution: methods with fixed resolution blur the rapid frequency transitions, while adaptive resolution tracks the contour precisely."]
 
-### Polyphonic Signal
+# Timing Comparison
 
-[WRITE: "MIDI composition with overlapping notes at varying pitches and durations. Tests each method's ability to resolve simultaneous frequencies and distinguish sustained tones from transient attacks."]
+```
+Bouncing Chirp:
+--------------------------------------------------------------------------------
+Function                            Avg (ms)        Max (ms)        Min (ms)
+--------------------------------------------------------------------------------
+STFT                                 0.73 ms         1.13 ms         0.65 ms
+PyWavelet                         1111.52 ms      2124.07 ms       991.35 ms
+SubShader (CPU)                     75.20 ms        95.66 ms        62.12 ms
+SubShader (GPU)                     78.94 ms        84.58 ms         6.22 ms
 
-### Musical Signal
+================================================================================
 
-[WRITE: "Eight bars of electronic music with four-on-the-floor percussion and sustained bass. Real-world audio that combines broadband transients (kicks, hats) with tonal content — the most demanding test for any time-frequency method."]
+MIDI Sine Waves:
+--------------------------------------------------------------------------------
+Function                            Avg (ms)        Max (ms)        Min (ms)
+--------------------------------------------------------------------------------
+STFT                                 0.70 ms         0.89 ms         0.65 ms
+PyWavelet                         1109.93 ms      1440.09 ms      1009.23 ms
+SubShader (CPU)                     69.83 ms        83.48 ms        60.62 ms
+SubShader (GPU)                     82.46 ms        88.53 ms        38.34 ms
 
-[WRITE: "Structured comparison of STFT vs PyWavelet vs SubShader — accuracy and computational cost for each method"]
+================================================================================
 
-[WRITE: "Summary of time-frequency resolution tradeoffs — keep the analogy tone from the original draft"]
+Beltran SoundCloud Rip (4 Bars):
+--------------------------------------------------------------------------------
+Function                            Avg (ms)        Max (ms)        Min (ms)
+--------------------------------------------------------------------------------
+STFT                                 0.72 ms         1.02 ms         0.66 ms
+PyWavelet                         1119.50 ms      1429.56 ms      1010.55 ms
+SubShader (CPU)                     70.78 ms        80.53 ms        60.38 ms
+SubShader (GPU)                     84.40 ms        88.11 ms        83.87 ms
+
+================================================================================
+```
+
+STFT
+- The [Short Time Fourier Transform](https://www.youtube.com/watch?v=T9x2rvdhaIE) we'll consider as the text-book approach for this kind of task
+- It's very fast at < 1 ms per call, great for real-time applications
+- Here we see the limitations of the STFT in the Plot Comparison - the fixed time-frequency resolution of the STFT struggles to capture low end frequencies, bleeding the signal's energy into neighboring frequency bands
+
+PyWavelet CWT
+- [PyWavelet](https://pywavelets.readthedocs.io/en/latest/ref/cwt.html) CWT is a popular python library module for wavelet-based analysis
+- Unfortunately is very slow at almost 300 ms per call, unsuitable for real-time performance
+- The CWT uses a time-frequency resolution that scales proportionally to the frequency being measured, producing an overcomplete representation of the input signal 
+
+SubShader CWT
+- The CWT is based off an implementation from this course: [Analyzing Neural Times Series](https://www.youtube.com/watch?v=7ahrcB5HL0k&list=PLn0OLiymPak2BYu--bR0ADNBJsC4kuRWs&index=1) (ANTS)
+- Two implementations
+    - Uses NumPy for running on CPU at about 20 ms per call
+    - Uses CuPy for parallelizing on GPU at about 10 ms per call
+- Near identical computation results, the time-frequency resolution in the ANTS CWT produces a tightly measured result
+
+Seems like SubShader is a happy medium between performance and accuracy
 
 ---
 
