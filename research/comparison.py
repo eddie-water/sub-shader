@@ -16,13 +16,13 @@ from subshader.dsp.wavelet import PyWavelet, NumPyWavelet
 from subshader.viz.plotter import CircularFrameBuffer
 
 from utilities import (
-    BENCHMARKS_DIR,
-    AUDIO_DEFAULT,
-    AUDIO_POLYPHONIC,
-    AUDIO_BOUNCING_CHIRP,
-    AUDIO_BELTRAN_8BAR,
-    DAW_POLYPHONIC,
-    DAW_BELTRAN_8BAR,
+    IMAGES_GENERATED_DIR,
+    AUDIO_COMPARISON_1,
+    AUDIO_COMPARISON_2,
+    AUDIO_COMPARISON_3,
+    DAW_IMAGE_COMPARISON_1,
+    DAW_IMAGE_COMPARISON_2,
+    DAW_IMAGE_COMPARISON_3,
     STFT_NPERSEG,
     NUM_FRAMES,
     gpu_available,
@@ -32,7 +32,6 @@ from utilities import (
     clear_progress,
     print_section_start,
     print_section_end,
-    print_separator,
     print_results_header,
     print_results_row,
     compute_freq_yticks,
@@ -89,7 +88,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
     # CuWavelet import deferred to avoid unconditional GPU import at module load
     GPU_COMP_AVAILABLE = gpu_available()
 
-    os.makedirs(BENCHMARKS_DIR, exist_ok=True)
+    os.makedirs(IMAGES_GENERATED_DIR, exist_ok=True)
 
     config = get_default_config()
     sr_default = int(config.wavelet.typical_sampling_freq)
@@ -107,9 +106,9 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
     # DAW reference images (row 1) — placeholders until user generates Edison screenshots
     signal_specs = [
-        {"label": "Bouncing Chirp", "type": "chirp", "daw_image": os.path.join(BENCHMARKS_DIR, "bouncing_chirp.png")},
-        {"label": "Polyphonic", "type": "file",  "path": AUDIO_POLYPHONIC, "daw_image": DAW_POLYPHONIC},
-        {"label": "Beltran SoundCloud Rip (8 Bars)", "type": "file", "path": AUDIO_BELTRAN_8BAR, "daw_image": DAW_BELTRAN_8BAR},
+        {"label": "Bouncing Chirp", "type": "chirp", "daw_image": DAW_IMAGE_COMPARISON_1},
+        {"label": "MIDI Sine Waves", "type": "file", "path": AUDIO_COMPARISON_2, "daw_image": DAW_IMAGE_COMPARISON_2},
+        {"label": "Beltran SoundCloud Rip (4 Bars)", "type": "file", "path": AUDIO_COMPARISON_3, "daw_image": DAW_IMAGE_COMPARISON_3},
     ]
 
     # ── DSP result containers (per-column) ───────────────────────────────────
@@ -130,7 +129,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             chunk_iter = iter(chunks)
             raw_sr = sr
             # Export bouncing chirp as WAV so it can be dragged into FL Studio / Edison
-            chirp_wav_path = AUDIO_BOUNCING_CHIRP
+            chirp_wav_path = AUDIO_COMPARISON_1
             export_signal_to_wav(raw_waveform, sr, chirp_wav_path)
         else:
             audio_path = spec["path"]
@@ -300,7 +299,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
     GRID_ROWS = 5  # Reference + DAW + STFT + PyWavelet + SubShader
     GRID_DATA_COLS = 3
-    pywt_label = "PyWavelet (stub)" if stub_pywt else "PyWavelet"
+    pywt_label = "PyWavelet Stub" if stub_pywt else "PyWavelet"
     row_labels = ["Reference", "DAW", "STFT", pywt_label, "SubShader"]
     LABEL_RATIO = len(max(row_labels, key=len)) * style.LABEL_CHAR_WIDTH + style.LABEL_PAD
     fig = plt.figure(figsize=(style.GRID_FIGSIZE_W, style.GRID_FIGSIZE_H))
@@ -317,13 +316,9 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         for c in range(GRID_DATA_COLS + 1):
             row_axes.append(fig.add_subplot(gs[r, c]))
         axes.append(row_axes)
-    for r, label in enumerate(row_labels):
-        ax_lbl = axes[r][0]
-        ax_lbl.text(0.5, 0.5, label, transform=ax_lbl.transAxes,
-                    ha="center", va="center", fontweight="bold",
-                    fontsize=style.LABEL_FONT_SIZE, color="black")
-        ax_lbl.set_facecolor(style.BG_COLOR)
-        ax_lbl.axis("off")
+    # Hide label column axes — labels placed after layout is finalized (below)
+    for r in range(GRID_ROWS):
+        axes[r][0].axis("off")
 
     for col_idx, (col, spec) in enumerate(zip(column_data, signal_specs)):
         dc = col_idx + 1  # data column (0 is label column)
@@ -344,7 +339,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             # Use same freq ticks as spectrogram rows
             if dc == 1:
                 ax_ref.set_yticks(col["ytick_bins"])
-                ax_ref.set_yticklabels(col["ytick_labels"], fontsize=14)
+                ax_ref.set_yticklabels(col["ytick_labels"], fontsize=style.TICK_LABEL_SIZE)
             else:
                 ax_ref.set_yticks([])
         else:
@@ -382,7 +377,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         # Y-axis: freq ticks on first data column to match spectrogram rows
         if dc == 1:
             ax_daw.set_yticks(col["ytick_bins"])
-            ax_daw.set_yticklabels(col["ytick_labels"], fontsize=14)
+            ax_daw.set_yticklabels(col["ytick_labels"], fontsize=style.TICK_LABEL_SIZE)
         else:
             ax_daw.set_yticks([])
 
@@ -414,7 +409,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             # Y-axis: "Freq (Hz)" on first data column only
             if dc == 1:
                 ax.set_yticks(col["ytick_bins"])
-                ax.set_yticklabels(col["ytick_labels"], fontsize=14)
+                ax.set_yticklabels(col["ytick_labels"], fontsize=style.TICK_LABEL_SIZE)
                 if row_idx == 0:  # middle row of grid (STFT = row 2 of 5)
                     ax.set_ylabel("Freq (Hz)", fontsize=style.AXIS_LABEL_FONT_SIZE, labelpad=4)
             else:
@@ -422,7 +417,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
 
             # X-axis: "Time (s)" on bottom row only
             if row_idx == 2:  # bottom spectrogram row (SubShader)
-                ax.tick_params(axis="x", labelsize=14)
+                ax.tick_params(axis="x", labelsize=style.TICK_LABEL_SIZE)
                 if dc == 2:  # center data column
                     ax.set_xlabel("Time (s)", fontsize=style.AXIS_LABEL_FONT_SIZE, labelpad=4)
             else:
@@ -436,8 +431,26 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
             pad=style.GRID_TITLE_PAD,
         )
 
-    plt.subplots_adjust(left=style.GRID_MARGIN, right=1 - style.GRID_MARGIN,
+    # Scale horizontal margins by aspect ratio so they match vertical margins in inches
+    h_margin = style.GRID_MARGIN * style.GRID_FIGSIZE_H / style.GRID_FIGSIZE_W
+    plt.subplots_adjust(left=h_margin, right=1 - h_margin,
                         top=1 - style.GRID_MARGIN, bottom=style.GRID_MARGIN)
+
+    # Place row labels after layout is finalized so we can query rendered positions.
+    # Draw once to resolve tick label geometry, then center labels between the
+    # figure left edge and the y-axis decorations' left extent.
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    fig_width_px = fig.get_size_inches()[0] * fig.dpi
+    # Use the STFT row (has yticks + ylabel) to find where y-axis labels start
+    yaxis_bbox = axes[2][1].yaxis.get_tightbbox(renderer)
+    yaxis_left_frac = yaxis_bbox.x0 / fig_width_px
+    label_x = (h_margin + yaxis_left_frac) / 2
+    for r, label in enumerate(row_labels):
+        row_pos = axes[r][1].get_position()
+        label_y = row_pos.y0 + row_pos.height / 2
+        fig.text(label_x, label_y, label, ha="center", va="center",
+                 fontweight="bold", fontsize=style.LABEL_FONT_SIZE, color="black")
 
     # When --dpi is passed explicitly, the output is always named by DPI (no stub suffix).
     # The stub suffix only applies to the default 200 DPI path without an explicit DPI request.
@@ -448,7 +461,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         base_name = "comparison_grid_STUB_PYWT.png"
     else:
         base_name = "comparison_grid.png"
-    out_path = os.path.join(BENCHMARKS_DIR, base_name)
+    out_path = os.path.join(IMAGES_GENERATED_DIR, base_name)
     save_dpi = dpi if dpi > 0 else 200
     fig.savefig(out_path, dpi=save_dpi)
     plt.close(fig)
@@ -470,7 +483,7 @@ def generate_timing_bar_chart(dpi: int = 200, num_frames: int = NUM_FRAMES):
     print_section_start("Timing Bar Chart")
 
     config = get_default_config()
-    config.audio.file_path = AUDIO_DEFAULT
+    config.audio.file_path = AUDIO_COMPARISON_2
     ai = AudioInput(
         path=config.audio.file_path,
         chunk_size=config.audio.chunk_size,
@@ -530,8 +543,8 @@ def generate_timing_bar_chart(dpi: int = 200, num_frames: int = NUM_FRAMES):
     fig.patch.set_facecolor("white")
     fig.tight_layout()
 
-    out_path = os.path.join(BENCHMARKS_DIR, "timing_bar_chart.png")
-    os.makedirs(BENCHMARKS_DIR, exist_ok=True)
+    out_path = os.path.join(IMAGES_GENERATED_DIR, "timing_bar_chart.png")
+    os.makedirs(IMAGES_GENERATED_DIR, exist_ok=True)
     fig.savefig(out_path, dpi=dpi)
     plt.close(fig)
     print(f"Saved -> {out_path}")

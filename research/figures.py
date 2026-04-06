@@ -14,20 +14,11 @@ from subshader.viz.plotter import CircularFrameBuffer, AudioFrameBuffer
 
 from utilities import style
 from utilities import (
-    BENCHMARKS_DIR,
-    BENCHMARKS_STUBS_DIR,
-    AUDIO_DEFAULT,
-    AUDIO_BOUNCING_CHIRP,
-    AUDIO_POLYPHONIC,
-    AUDIO_MUSICAL,
-    AUDIO_BELTRAN,
-    AUDIO_BELTRAN_16BAR,
-    AUDIO_BELTRAN_8BAR,
-    MIDI_POLYPHONIC,
-    DAW_POLYPHONIC,
-    DAW_MUSICAL,
-    DAW_BELTRAN_16BAR,
-    DAW_BELTRAN_8BAR,
+    IMAGES_GENERATED_DIR,
+    AUDIO_COMPARISON_2,
+    AUDIO_COMPARISON_3,
+    DAW_IMAGE_COMPARISON_2,
+    DAW_IMAGE_COMPARISON_3,
     STFT_NPERSEG,
     NUM_FRAMES,
     CHIRP_F0,
@@ -72,10 +63,10 @@ class ReadmeFigures:
     def __init__(self, num_frames: int = NUM_FRAMES, stub_pywt: bool = False):
         self.num_frames = num_frames
         self.stub_pywt  = stub_pywt
-        os.makedirs(BENCHMARKS_DIR, exist_ok=True)
+        os.makedirs(IMAGES_GENERATED_DIR, exist_ok=True)
         # When stub_pywt is enabled, ensure stub dir exists for output
         if stub_pywt:
-            os.makedirs(BENCHMARKS_STUBS_DIR, exist_ok=True)
+            os.makedirs(os.path.join(IMAGES_GENERATED_DIR, "stubs"), exist_ok=True)
 
     # -------------------------------------------------------------------------
     # Public figure generators
@@ -125,13 +116,12 @@ class ReadmeFigures:
           Row 4: SubShader CWT
         """
         return self._generate_comparison_figure(
-            audio_path=AUDIO_POLYPHONIC,
-            title="Polyphonic Signal",
-            display_title="Polyphonic Signal Comparison",
+            audio_path=AUDIO_COMPARISON_2,
+            title="MIDI Sine Waves",
+            display_title="MIDI Sine Waves Comparison",
             filename="polyphonic_signal_comparison.png",
             top_rows=[
-                {"type": "image", "path": MIDI_POLYPHONIC, "title": "MIDI Piano Roll"},
-                {"type": "image", "path": DAW_POLYPHONIC, "title": "DAW Spectrogram (Edison)"},
+                {"type": "image", "path": DAW_IMAGE_COMPARISON_2, "title": "DAW Spectrogram (Edison)"},
             ],
         )
 
@@ -146,21 +136,21 @@ class ReadmeFigures:
           Row 4: SubShader CWT
         """
         return self._generate_comparison_figure(
-            audio_path=AUDIO_MUSICAL,
+            audio_path=AUDIO_COMPARISON_3,
             title="Beltran Audio Clip",
             display_title="Musical Signal Comparison",
             filename="musical_signal_comparison.png",
             top_rows=[
                 {"type": "waveform", "title": "Audio Waveform"},
-                {"type": "image", "path": DAW_MUSICAL, "title": "DAW Spectrogram (Edison)"},
+                {"type": "image", "path": DAW_IMAGE_COMPARISON_3, "title": "DAW Spectrogram (Edison)"},
             ],
         )
 
     def run_all(self):
         """Generate all 3 comparison figures."""
         required_files = [
-            AUDIO_POLYPHONIC,
-            AUDIO_MUSICAL,
+            AUDIO_COMPARISON_2,
+            AUDIO_COMPARISON_3,
         ]
         missing = [f for f in required_files if not os.path.exists(f)]
         if missing:
@@ -169,7 +159,7 @@ class ReadmeFigures:
                 + "\n".join(f"  - {f}" for f in missing)
             )
 
-        print(f"\nGenerating README Figures -> {BENCHMARKS_DIR}/\n")
+        print(f"\nGenerating README Figures -> {IMAGES_GENERATED_DIR}/\n")
 
         chirp_timing = self.chirp_signal_comparison()
         poly_timing = self.polyphonic_signal_comparison()
@@ -187,7 +177,7 @@ class ReadmeFigures:
 
     def stub_layouts(self):
         """Render all 3 figure layouts with random noise -- no DSP, instant."""
-        stub_dir = os.path.join(BENCHMARKS_DIR, "stubs")
+        stub_dir = os.path.join(IMAGES_GENERATED_DIR, "stubs")
         os.makedirs(stub_dir, exist_ok=True)
         print_section_start(f"Stub Layouts -> {stub_dir}/")
 
@@ -200,11 +190,10 @@ class ReadmeFigures:
                 ],
             },
             {
-                "title": "Polyphonic Signal",
+                "title": "MIDI Sine Waves",
                 "filename": "polyphonic_signal_comparison_STUB.png",
                 "top_rows": [
-                    {"type": "image", "path": MIDI_POLYPHONIC, "title": "MIDI Piano Roll"},
-                    {"type": "image", "path": DAW_POLYPHONIC, "title": "DAW Spectrogram (Edison)"},
+                    {"type": "image", "path": DAW_IMAGE_COMPARISON_2, "title": "DAW Spectrogram (Edison)"},
                 ],
             },
             {
@@ -212,7 +201,7 @@ class ReadmeFigures:
                 "filename": "musical_signal_comparison_STUB.png",
                 "top_rows": [
                     {"type": "waveform", "title": "Audio Waveform"},
-                    {"type": "image", "path": DAW_MUSICAL, "title": "DAW Spectrogram (Edison)"},
+                    {"type": "image", "path": DAW_IMAGE_COMPARISON_3, "title": "DAW Spectrogram (Edison)"},
                 ],
             },
         ]
@@ -383,12 +372,11 @@ class ReadmeFigures:
             print_section_end()
             return {}
 
-        pywt_label = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
-        labels = ["STFT", pywt_label, "SubShader CWT"]
+        labels = ["SciPy STFT", "PyWavelet CWT", "SubShader CWT"]
         timing = {
-            "STFT":           compute_timing_stats(stft_times),
-            pywt_label:       compute_timing_stats(pywt_times),
-            "SubShader CWT":  compute_timing_stats(npwt_times),
+            labels[0]: compute_timing_stats(stft_times),
+            labels[1]: compute_timing_stats(pywt_times),
+            labels[2]: compute_timing_stats(npwt_times),
         }
 
         clear_progress()
@@ -427,7 +415,7 @@ class ReadmeFigures:
         n_top = len(top_rows)
         print_separator()
 
-        output_dir = BENCHMARKS_STUBS_DIR if self.stub_pywt else BENCHMARKS_DIR
+        output_dir = os.path.join(IMAGES_GENERATED_DIR, "stubs") if self.stub_pywt else IMAGES_GENERATED_DIR
         # Add _STUB_PYWT suffix to filename when using stub_pywt
         if self.stub_pywt:
             out_filename = filename.replace(".png", "_STUB_PYWT.png")
@@ -437,7 +425,7 @@ class ReadmeFigures:
         stft_vmax = stft_buf.get_intensity_max()
         pywt_vmax = pywt_buf.get_intensity_max()
         npwt_vmax = npwt_buf.get_intensity_max()
-        pywt_subtitle = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
+        pywt_subtitle = "PyWavelet Stub" if self.stub_pywt else "PyWavelet CWT"
         subtitle = f"STFT  |  {pywt_subtitle}  |  SubShader CWT"
 
         fig, gs, ax_stft, ax_pywt, ax_npwt = create_figure_scaffold(
@@ -450,7 +438,7 @@ class ReadmeFigures:
                            ytick_bins=spec_ytick_bins,
                            ytick_labels=spec_ytick_labels)
 
-        pywt_plot_label = "PyWavelet CWT (stub)" if self.stub_pywt else "PyWavelet CWT"
+        pywt_plot_label = "PyWavelet Stub" if self.stub_pywt else "PyWavelet CWT"
         spec_rows = [
             (ax_stft, stft_spec, "STFT", stft_vmax, False),
             (ax_pywt, pywt_spec, pywt_plot_label, pywt_vmax, False),

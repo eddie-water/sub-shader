@@ -4,32 +4,46 @@
 # DIRECTORIES
 # =============================================================================
 
-BENCHMARKS_DIR = "assets/images/benchmarks"
-BENCHMARKS_SEABORN_DIR = "assets/images/benchmarks/seaborn"
-BENCHMARKS_STUBS_DIR = "assets/images/benchmarks/stubs"
+AUDIO_REFERENCE_DIR = "assets/audio/reference"
+AUDIO_GENERATED_DIR = "assets/audio/generated"
+
+IMAGES_REFERENCE_DIR = "assets/images/reference"
+IMAGES_GENERATED_DIR = "assets/images/generated"
+
+TIMING_DIR = "assets/timing"
 
 # =============================================================================
 # AUDIO FILES
 # =============================================================================
 
-AUDIO_DEFAULT = "assets/audio/daw/a2a3_a4_minor_scale.wav"
-AUDIO_CHIRP = "assets/audio/daw/chirp_beat.wav"
-AUDIO_BOUNCING_CHIRP = "assets/audio/daw/bouncing_chirp.wav"
-AUDIO_POLYPHONIC = "assets/audio/daw/polyphonic_audio_example.wav"
-AUDIO_MUSICAL = "assets/audio/daw/musical_audio_example.wav"
-AUDIO_BELTRAN = "assets/audio/songs/beltran_sc_rip.wav"
-AUDIO_BELTRAN_16BAR = "assets/audio/songs/beltran_sc_rip_16_bar.wav"
-AUDIO_BELTRAN_8BAR = "assets/audio/songs/beltran_sc_rip_8_bar.wav"
+# Reference audio — committed input files (recorded or curated)
+AUDIO_BOUNCING_CHIRP = "assets/audio/generated/bouncing_chirp.wav"
+AUDIO_MIDI_SINE_WAVES = "assets/audio/reference/midi_sine_waves.wav"
+AUDIO_BELTRAN = "assets/audio/reference/beltran_sc_rip.wav"
+AUDIO_BELTRAN_16BAR = "assets/audio/reference/beltran_sc_rip_16_bar.wav"
+AUDIO_BELTRAN_8BAR = "assets/audio/reference/beltran_sc_rip_8_bar.wav"
+AUDIO_BELTRAN_4BAR = "assets/audio/reference/beltran_sc_rip_4_bar.wav"
+
+# Comparison Figure Audio
+AUDIO_COMPARISON_1 = AUDIO_BOUNCING_CHIRP
+AUDIO_COMPARISON_2 = AUDIO_MIDI_SINE_WAVES
+AUDIO_COMPARISON_3 = AUDIO_BELTRAN_4BAR
 
 # =============================================================================
 # REFERENCE IMAGES
 # =============================================================================
 
-MIDI_POLYPHONIC = "assets/images/polyphonic-signal-example-midi-notes.png"
-DAW_POLYPHONIC = "assets/audio/daw/polyphonic_audio_example_edison.png"
-DAW_MUSICAL = "assets/images/musical-signal-example-edison-spectrogram.png"
-DAW_BELTRAN_16BAR = "assets/images/benchmarks/beltran_sc_rip_16_bar.png"
-DAW_BELTRAN_8BAR = "assets/images/beltran_sc_rip_8_bar.png"
+# Reference images — curated comparisons, not test suite outputs
+DAW_IMAGE_BOUNCING_CHIRP_EDISON = "assets/images/figures/bouncing_chirp_edison.png"
+DAW_IMAGE_MIDI_SINE_WAVES_EDISON = "assets/images/figures/midi_sine_wave_edison.png"
+DAW_IMAGE_BELTRAN_16BAR_EDISON = "assets/images/generated/beltran_sc_rip_16_bar.png"
+DAW_IMAGE_BELTRAN_8BAR_EDISON = "assets/images/diagnostics/beltran_sc_rip_8_bar.png"
+DAW_IMAGE_BELTRAN_4BAR_EDISON = "assets/images/figures/beltran_sc_rip_4_bar_edison.png"
+
+# Comparison Figure Reference Images
+DAW_IMAGE_COMPARISON_1 = DAW_IMAGE_BOUNCING_CHIRP_EDISON
+DAW_IMAGE_COMPARISON_2 = DAW_IMAGE_MIDI_SINE_WAVES_EDISON
+DAW_IMAGE_COMPARISON_3 = DAW_IMAGE_BELTRAN_4BAR_EDISON
 
 # =============================================================================
 # DSP PARAMETERS
