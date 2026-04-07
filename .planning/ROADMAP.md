@@ -167,4 +167,4 @@ Plans:
 - [x] 08-05-PLAN.md — Orchestrator (pipeline.py + thin __main__.py) + full import switchover
 - [x] 08-06-PLAN.md — Test suite restructure (signal registry, 4 modes, timing template)
 - [x] 08-07-PLAN.md — Archive unused files + update documentation paths
-- [ ] 08-08-PLAN.md — Gap closure: add @timed decorator to Renderer.update() (D-21, D-24)
+- [x] 08-08-PLAN.md — Gap closure: add @timed decorator to Renderer.update() (D-21, D-24)
