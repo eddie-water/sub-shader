@@ -15,6 +15,7 @@ import moderngl
 import numpy as np
 
 from subshader.utils.logging import get_logger
+from subshader.utils.timing import timed
 from subshader.config import RendererConfig
 from subshader.exceptions import WindowCloseException
 from .frame_buffer import CircularFrameBuffer
@@ -435,6 +436,7 @@ class Renderer:
                                         texture_shape=self.frame_buffer.get_shape(),
                                         gamma=self.config.color_norm.gamma)
 
+    @timed
     def update(self, coefs: np.ndarray) -> None:
         """
         Push a new CWT frame and render it.
