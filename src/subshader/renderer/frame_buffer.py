@@ -8,21 +8,18 @@ AudioFrameBuffer   — stores audio chunks in a circular array for waveform disp
 import numpy as np
 
 from subshader.utils.logging import get_logger
-from .intensity import IntensityTracker
 
 log = get_logger(__name__)
 
 
 class CircularFrameBuffer:
-    def __init__(self, frame_shape: tuple[int, int], num_frames: int, color_norm_config) -> None:
+    def __init__(self, frame_shape: tuple[int, int], num_frames: int) -> None:
         """
         Handles circular buffer for scrolling visualization
 
         Args:
             frame_shape (tuple[int, int]): Shape (height, width) of each frame.
             num_frames (int): Number of frames to store.
-            color_norm_config: Color normalization configuration with percentile,
-                retention_rate, floor_value, and warmup_frames fields.
         """
         self.num_frames = num_frames
         self.height, self.width = frame_shape
@@ -35,11 +32,6 @@ class CircularFrameBuffer:
 
         # Pre-allocate flattened buffer
         self.flattened_buffer = np.zeros((self.height, self.width * num_frames), dtype=np.float32)
-
-        self.intensity_tracker = IntensityTracker(
-            percentile=color_norm_config.global_intensity_percentile,
-            retention_rate=color_norm_config.retention_rate,
-        )
 
     # =========================================================================
     # PUBLIC METHODS - External interface
@@ -56,7 +48,6 @@ class CircularFrameBuffer:
             log.error(f"Frame data shape mismatch: expected {(self.height, self.width)}, got {frame_data.shape}")
             raise ValueError(f"Expected shape {(self.height, self.width)}, got {frame_data.shape}")
 
-        self.intensity_tracker.update(frame_data)
         self.frames[self.frame_index] = frame_data
 
         # Calculate the correct order of frames (oldest first)
@@ -93,15 +84,6 @@ class CircularFrameBuffer:
             np.ndarray: Time-ordered flattened buffer.
         """
         return self.flattened_buffer
-
-    def get_intensity_max(self) -> float:
-        """
-        Get the tracked global max intensity for colormap scaling.
-
-        Returns:
-            float: The global max value to use as vmax in colormap.
-        """
-        return self.intensity_tracker.global_max
 
 
 class AudioFrameBuffer:

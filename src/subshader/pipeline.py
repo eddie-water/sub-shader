@@ -1,13 +1,18 @@
 """SubShader pipeline — audio visualization orchestrator."""
 
+import numpy as np
+
 from subshader.utils.logging import get_logger
 from subshader.utils.gpu import gpu_available
-from subshader.config import RendererConfig
+from subshader.config import PipelineConfig, CWTConfig, RendererConfig
 from subshader.audio import AudioStream
 from subshader.dsp.cwt import GpuCWT, CpuCWT
 from subshader.renderer import Renderer
 
 log = get_logger(__name__)
+
+# Number of evenly-spaced chunks sampled during the pre-scan intensity survey
+PRESCAN_NUM_CHUNKS = 10
 
 
 class SubShader:
@@ -17,13 +22,18 @@ class SubShader:
     The run() method reads like pseudocode: get chunk, process, update.
     """
 
-    def __init__(self, config) -> None:
-        """Initialize all pipeline stages from config.
+    def __init__(self, config: PipelineConfig) -> None:
+        """Initialize all pipeline stages from base pipeline config.
+
+        SubShader constructs module-specific configs internally. AudioStream
+        discovers sample_rate and total_samples and writes them back into the
+        shared base config. CWTConfig is constructed after AudioStream so that
+        the now-populated sample_rate can be copied over.
 
         Args:
-            config: CWTConfig or PipelineConfig with file_path, chunk_size,
-                    overlap_factor. sample_rate and total_samples are
-                    discovered by AudioStream and written back into config.
+            config: PipelineConfig with file_path, chunk_size, overlap_factor.
+                    sample_rate and total_samples are discovered by AudioStream
+                    and written back into config.
         """
         log.info("Initializing SubShader pipeline...")
 
@@ -31,12 +41,22 @@ class SubShader:
         # Discovers sample_rate from the file and writes it back into config.
         self.audio = AudioStream(config)
 
+        # Construct CWTConfig with all discovered runtime values.
+        # sample_rate is now populated by AudioStream.
+        cwt_config = CWTConfig(
+            file_path=config.file_path,
+            chunk_size=config.chunk_size,
+            overlap_factor=config.overlap_factor,
+            sample_rate=config.sample_rate,
+            total_samples=config.total_samples,
+        )
+
         # Select CWT backend based on GPU availability
         if gpu_available():
-            self.dsp = GpuCWT(config)
+            self.dsp = GpuCWT(cwt_config)
         else:
             log.warning("GPU unavailable — running CpuCWT. Expect slower performance.")
-            self.dsp = CpuCWT(config)
+            self.dsp = CpuCWT(cwt_config)
 
         # Renderer creates the GLFW window and GPU rendering pipeline.
         # frame_shape comes from the CWT output so the texture matches exactly.
@@ -48,12 +68,58 @@ class SubShader:
             sample_rate=config.sample_rate,
         )
         self.renderer = Renderer(
-            file_path=config.file_path,
             frame_shape=self.dsp.get_output_shape(),
             config=renderer_config,
         )
 
+        # Pre-scan the audio file to determine a fixed intensity reference.
+        # Must happen after Renderer is constructed (renderer_config carries the percentile).
+        self._fixed_intensity_max = self._prescan_intensity(renderer_config)
+        self.renderer.set_fixed_intensity_max(self._fixed_intensity_max)
+
         log.info("SubShader pipeline initialized")
+
+    def _prescan_intensity(self, renderer_config: RendererConfig) -> float:
+        """Sample evenly-spaced CWT frames to compute a fixed intensity reference.
+
+        Reads PRESCAN_NUM_CHUNKS chunks spread across the audio file, runs each
+        through the CWT, and takes the percentile-based max across all samples.
+        The reader is reset to position 0 after scanning so playback starts from
+        the beginning.
+
+        Args:
+            renderer_config: Carries color_norm.global_intensity_percentile.
+
+        Returns:
+            float: Fixed intensity_max to use for the entire playback session.
+        """
+        reader = self.audio._reader
+        total_samples = reader.total_samples
+        chunk_size = reader.chunk_size
+        percentile = renderer_config.color_norm.global_intensity_percentile
+
+        # Compute evenly-spaced seek positions (hop to each sample point)
+        step = max(1, (total_samples - chunk_size) // PRESCAN_NUM_CHUNKS)
+        seek_positions = [i * step for i in range(PRESCAN_NUM_CHUNKS) if i * step + chunk_size <= total_samples]
+
+        intensity_max = 0.0
+        for pos in seek_positions:
+            reader.file_pos = pos
+            chunk = reader.get_chunk()
+            if chunk is None:
+                continue
+            coefs = self.dsp.process(chunk)
+            frame_value = float(np.percentile(np.abs(coefs), percentile))
+            intensity_max = max(intensity_max, frame_value)
+
+        # Reset reader to start of file for normal playback
+        reader.file_pos = 0
+
+        # Floor to avoid division-by-zero in shader
+        intensity_max = max(intensity_max, 1e-8)
+
+        log.info(f"Pre-scan complete: fixed intensity_max = {intensity_max:.4f}")
+        return intensity_max
 
     def run(self) -> None:
         """Main visualization loop.

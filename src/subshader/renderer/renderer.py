@@ -19,7 +19,6 @@ from subshader.utils.timing import timed
 from subshader.config import RendererConfig
 from subshader.exceptions import WindowCloseException
 from .frame_buffer import CircularFrameBuffer
-from .intensity import IntensityTracker
 
 log = get_logger(__name__)
 
@@ -406,7 +405,7 @@ class GPURenderer:
 # =============================================================================
 
 class Renderer:
-    def __init__(self, file_path: str, frame_shape: tuple[int, int], config: RendererConfig):
+    def __init__(self, frame_shape: tuple[int, int], config: RendererConfig):
         """
         Real-time GPU visualization orchestrator.
 
@@ -419,17 +418,19 @@ class Renderer:
             frame_shape (tuple[int, int]): Shape (height, width) of each CWT frame.
             config (RendererConfig): Renderer configuration (num_frames, color norm, gamma).
         """
-        self.file_path = file_path
         self.frame_shape = frame_shape
         self.config = config
+        self.file_path = config.file_path
+
+        # Fixed intensity reference — set by set_fixed_intensity_max() before run()
+        self._fixed_intensity_max = 1.0
 
         # Circular buffer to store data frames in chronological order
         self.frame_buffer = CircularFrameBuffer(frame_shape=self.frame_shape,
-                                                num_frames=self.config.num_frames,
-                                                color_norm_config=self.config.color_norm)
+                                                num_frames=self.config.num_frames)
 
         # ModernGL Context - window creation and OpenGL context setup
-        self.gl_context = GLContext(title=f"SubShader - {os.path.basename(file_path)}")
+        self.gl_context = GLContext(title=f"SubShader - {os.path.basename(self.file_path)}")
 
         # GPU Renderer - shader compilation, texture management, and rendering
         self.gpu_renderer = GPURenderer(ctx=self.gl_context.ctx,
@@ -447,15 +448,29 @@ class Renderer:
         Args:
             coefs (np.ndarray): 2D CWT coefficient array (height × width).
         """
-        # Append new frame to circular buffer (also updates intensity tracker)
+        # Append new frame to circular buffer
         self.frame_buffer.push_frame(coefs)
 
-        # Upload and render entire chronologically ordered buffer to the texture
+        # Upload and render entire chronologically ordered buffer to the texture.
+        # intensity_max was set once via set_fixed_intensity_max() — shader uniform persists.
         self.gpu_renderer.update_texture(self.frame_buffer.get_flattened_buffer())
-        self.gpu_renderer.set_intensity_max(self.frame_buffer.get_intensity_max())
         self.gl_context.clear_graphic()
         self.gpu_renderer.render_graphic()
         self.gl_context.display_graphic()
+
+    def set_fixed_intensity_max(self, value: float) -> None:
+        """
+        Set the fixed intensity normalization reference for the shader.
+
+        Called once after pre-scan, before the render loop starts. The shader
+        uniform is set here and never updated during playback.
+
+        Args:
+            value: Fixed intensity max from the pre-scan percentile computation.
+        """
+        self._fixed_intensity_max = value
+        self.gpu_renderer.set_intensity_max(value)
+        log.info(f"Renderer: fixed intensity_max = {value:.4f}")
 
     def should_close(self) -> bool:
         """
