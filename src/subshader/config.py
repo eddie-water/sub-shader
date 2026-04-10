@@ -71,8 +71,8 @@ class ColorNormalizationConfig:
     # Percentile used to normalize each individual frame
     frame_intensity_percentile: float = 95.0
 
-    # Exponential decay rate applied to global intensity per frame
-    decay_rate: float = 0.95
+    # Fraction of global intensity retained per frame (0.95 = retain 95%)
+    retention_rate: float = 0.95
 
     # Initial global intensity estimate (prevents division by zero at startup)
     initial_intensity: float = 0.1
@@ -96,8 +96,8 @@ class ColorNormalizationConfig:
                 f"must be between 0 and 100"
             )
 
-        if not (0.0 < self.decay_rate < 1.0):
-            errors.append(f"decay_rate ({self.decay_rate}) must be strictly between 0 and 1")
+        if not (0.0 < self.retention_rate < 1.0):
+            errors.append(f"retention_rate ({self.retention_rate}) must be strictly between 0 and 1")
 
         if self.initial_intensity <= 0:
             errors.append(f"initial_intensity ({self.initial_intensity}) must be positive")

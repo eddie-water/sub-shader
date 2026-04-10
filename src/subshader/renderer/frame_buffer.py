@@ -22,7 +22,7 @@ class CircularFrameBuffer:
             frame_shape (tuple[int, int]): Shape (height, width) of each frame.
             num_frames (int): Number of frames to store.
             color_norm_config: Color normalization configuration with percentile,
-                decay_rate, floor_value, and warmup_frames fields.
+                retention_rate, floor_value, and warmup_frames fields.
         """
         self.num_frames = num_frames
         self.height, self.width = frame_shape
@@ -38,7 +38,7 @@ class CircularFrameBuffer:
 
         self.intensity_tracker = IntensityTracker(
             percentile=color_norm_config.global_intensity_percentile,
-            decay_rate=color_norm_config.decay_rate,
+            retention_rate=color_norm_config.retention_rate,
         )
 
     # =========================================================================
