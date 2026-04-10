@@ -62,23 +62,8 @@ class ColorNormalizationConfig:
     # Gamma correction factor for perceptual enhancement (gamma = 1 is no correction)
     gamma: float = 0.5
 
-    # Exponential smoothing weight for global intensity tracking (lower = slower adaptation)
-    global_intensity_smoothing_weight: float = 0.1
-
-    # Percentile of the global intensity distribution used for normalization reference
+    # Percentile of the audio file used by the pre-scan to compute the fixed intensity reference
     global_intensity_percentile: float = 99.0
-
-    # Percentile used to normalize each individual frame
-    frame_intensity_percentile: float = 95.0
-
-    # Fraction of global intensity retained per frame (0.95 = retain 95%)
-    retention_rate: float = 0.95
-
-    # Initial global intensity estimate (prevents division by zero at startup)
-    initial_intensity: float = 0.1
-
-    # Percentile used to set per-frame brightness ceiling
-    frame_brightness_percentile: float = 99.0
 
     def validate(self) -> List[str]:
         """Validate color normalization configuration parameters."""
@@ -89,18 +74,6 @@ class ColorNormalizationConfig:
                 f"global_intensity_percentile ({self.global_intensity_percentile}) "
                 f"must be between 0 and 100"
             )
-
-        if not (0.0 < self.frame_intensity_percentile <= 100.0):
-            errors.append(
-                f"frame_intensity_percentile ({self.frame_intensity_percentile}) "
-                f"must be between 0 and 100"
-            )
-
-        if not (0.0 < self.retention_rate < 1.0):
-            errors.append(f"retention_rate ({self.retention_rate}) must be strictly between 0 and 1")
-
-        if self.initial_intensity <= 0:
-            errors.append(f"initial_intensity ({self.initial_intensity}) must be positive")
 
         return errors
 
@@ -123,7 +96,7 @@ class PipelineConfig:
     # --- User-settable ---
 
     # Path to the audio file for processing (per D-04: reference dir default)
-    file_path: str = "assets/audio/reference/beltran_sc_rip.wav"
+    file_path: str = "assets/audio/reference/prospa_murda_baby_sc_rip.wav"
 
     # Number of samples per chunk. 1<<14 = 16384 samples at 44100 Hz covers
     # the full 10-octave chromatic range needed for low-frequency wavelet support.
@@ -241,7 +214,7 @@ class RendererConfig(PipelineConfig):
     """
 
     # Number of time frames stored in the circular frame buffer
-    num_frames: int = 256
+    num_frames: int = 32
 
     # Color normalization parameters (gamma, percentiles, decay)
     color_norm: ColorNormalizationConfig = field(default_factory=ColorNormalizationConfig)
