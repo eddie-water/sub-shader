@@ -157,6 +157,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260322-j2b | Fix overlap redundancy in CWT-to-plotter pipeline | 2026-03-22 | 019078b | [260322-j2b-fix-overlap-redundancy-in-cwt-to-plotter](./quick/260322-j2b-fix-overlap-redundancy-in-cwt-to-plotter/) |
+| 260409-tpg | Fix IntensityTracker decay_rate semantic inversion | 2026-04-09 | 8acd68a | [260409-tpg-fix-intensitytracker-decay-rate-semantic](./quick/260409-tpg-fix-intensitytracker-decay-rate-semantic/) |
 
 ### Roadmap Evolution
 
