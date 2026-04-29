@@ -47,7 +47,6 @@ class STFT(DSP):
 
         # Pre-compute the STFT frequency axis and frequency mask covering the CWT range
         from scipy.signal import stft as scipy_stft
-        import numpy as np
 
         # Frequency axis for a full STFT at this nperseg
         stft_freqs = np.fft.rfftfreq(self.nperseg, d=1.0 / self.sample_rate)
