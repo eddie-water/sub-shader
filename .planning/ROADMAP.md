@@ -60,8 +60,9 @@ Plans:
 - [x] 03-01-PLAN.md — Create AudioPlayer class with sounddevice, add dependency, unit tests
 - [x] 03-02-PLAN.md — Wire AudioPlayer into orchestrator with CLI arg, sync loop, and human verification
 
-### Phase 4: Install Experience
-**Goal**: A developer with Python and a compatible GPU can clone the repo, install, and run the visualization without reading source code
+### Phase 4: Install Experience — DEFERRED TO v2
+**Status**: Deferred to v2 (hosted demo milestone). Not required for v1 README authoring.
+**Goal (when revived)**: A developer with Python and a compatible GPU can clone the repo, install, and run the visualization without reading source code
 **Depends on**: Phase 3
 **Requirements**: INST-01, INST-02, INST-03
 **Success Criteria** (what must be TRUE):
@@ -70,9 +71,9 @@ Plans:
   3. Running without a GPU (or with GPU unavailable) prints a clear message stating CPU fallback is active — it does not crash or silently degrade
 **Plans**: TBD
 
-### Phase 5: Documentation
+### Phase 5: Documentation — ACTIVE
 **Goal**: Each module has a README that explains what it does, why it does it that way, and how to use it — written in the user's voice
-**Depends on**: Phase 4
+**Depends on**: (Phase 4 dependency dropped — install experience deferred to v2)
 **Requirements**: DOCS-01, DOCS-02, DOCS-03, DOCS-04, DOCS-05, DOCS-06
 **Success Criteria** (what must be TRUE):
   1. The top-level README lets a reader with no prior context understand what SubShader is, see benchmark figures, and get it running — without reading source code
@@ -80,30 +81,34 @@ Plans:
   3. The rendering and audio module READMEs exist and explain their respective pipelines at the same depth — not placeholder stubs
   4. Every code example in every README is accurate and runnable — no illustrative filler that silently fails
   5. The prose reads in the user's voice — Claude's scaffold is not detectable as generated text
-**Plans:** 4 plans
-Plans:
+
+**Authoring approach**: Workshop a high-level scaffold of major sections (storyline / narrative arc) → then go section-by-section with prose + inline figure generation. Foundations figures are NOT generated in batch — each is tailored to the section it precedes.
+
+**Plans:**
 - [x] 05-01-PLAN.md — Comparison grid figure + benchmark.py figure pipeline
 - [x] 05-02-PLAN.md — DSP.md scaffold from wavelet foundations outline
 - [x] 05-03-PLAN.md — README.md update + AUDIO.md + RENDERER.md scaffolds
-- [ ] 05-04-PLAN.md — DSP.md foundation figures via benchmark.py --foundations-figures
+- [ ] 05-04-PLAN.md — DSP.md authoring + inline foundation figure generation (workshop high-level shape, then section-by-section)
+- [x] 05-05 — RENDERER.md scaffold rewrite at `src/subshader/renderer/RENDERER.md` (current code paths, fixed-reference IntensityTracker, simpler 3-section shape) — completed inline 2026-04-28
+- [ ] 05-06 — Future Applications blurb in DSP.md §7: CWT for non-stationary signals (financial time series, heartbeat, brain signals) — small addition, user-authored
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+**Execution Order (post-2026-04-28 reset):**
+Phase 5 (Documentation) is the active phase. Phase 4 deferred to v2. All other phases complete; polish residue parked in the Polish Backlog (post-MVP) section below.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Codebase Hardening | 1/2 | In Progress|  |
-| 2. CWT Pipeline Polish | 2/2 | Complete   | 2026-03-21 |
-| 3. Audio-Visual Sync | 0/2 | Not started | - |
-| 4. Install Experience | 0/TBD | Not started | - |
-| 5. Documentation | 3/4 | In Progress | - |
+| 1. Codebase Hardening | 2/2 | Complete | - |
+| 2. CWT Pipeline Polish | 2/2 | Complete | 2026-03-21 |
+| 3. Audio-Visual Sync | 2/2 | Complete | - |
+| 4. Install Experience | 0/TBD | **Deferred to v2** | - |
+| 5. Documentation | 4/6 | **Active — authoring** | - |
 | 5.1 Research Toolkit | 2/2 | Complete | - |
-| 5.2 Timing & Grid Polish | 0/2 | Not started | - |
-| 6. Finalize Audio & Figures | 2/3 | In Progress|  |
-| 7. Visual Style & Config | 2/4 | In Progress|  |
-| 8. Codebase Refactoring | 7/8 | In Progress | - |
+| 5.2 Timing & Grid Polish | 2/2 | Complete | - |
+| 6. Finalize Audio & Figures | 3/3 | Complete | - |
+| 7. Visual Style & Config | 4/4 | Complete | - |
+| 8. Codebase Refactoring | 8/8 | Complete | 2026-04-10 |
 
 ### Phase 05.2: Benchmark timing profiling and comparison grid polish (INSERTED)
 
@@ -168,3 +173,44 @@ Plans:
 - [x] 08-06-PLAN.md — Test suite restructure (signal registry, 4 modes, timing template)
 - [x] 08-07-PLAN.md — Archive unused files + update documentation paths
 - [x] 08-08-PLAN.md — Gap closure: add @timed decorator to Renderer.update() (D-21, D-24)
+
+---
+
+## Polish Backlog (post-MVP)
+
+Items parked here do NOT block the v1 Demo Ready milestone. Revisit after Phase 5 authoring is complete.
+
+### Code/Behavior
+
+- **Intensity normalization rethink** (renderer/intensity.py)
+  - Recent `260409-uan` quick fix replaced adaptive IntensityTracker with a fixed pre-scan reference
+  - User flagged 2026-04-28: the original goal was *frame-to-frame consistency* (frame N's largest coefficient should map to a color the same way frame M's largest does). Fixed pre-scan max may be solving a different problem than what's actually needed
+  - Re-examine after DSP.md authoring; may want per-frame normalization, running max with bounded decay, or a different formulation entirely
+
+- **Pipeline latency profiling** (`.planning/debug/pipeline-latency-profiling.md`)
+  - Active debug session paused — resume via `/gsd:debug` after authoring
+
+- **Source code drift not yet committed**
+  - `__main__.py` `CWTConfig` → `PipelineConfig` migration (post-Phase-08 follow-up)
+  - `research/comparison.py`, `research/figures.py`, `research/test_suite.py`, `research/timing.py`, `research/utilities/dsp_helpers.py`, `research/utilities/style.py`, `research/tests/audio/test_audio_overlap.py`, `research/tests/dsp/test_wavelet_kernel.py` — modifications uncommitted as of 2026-04-28
+  - Verify intent and commit before milestone close
+
+### Verification Debt
+
+- **`06-UAT.md` (status: diagnosed)** — gaps need fix plans; review with `/gsd:audit-uat`
+- **`08-HUMAN-UAT.md` (status: partial)** — testing incomplete; resume with `/gsd:verify-work 08`
+
+### Documentation/Figures Polish
+
+- **Comparison grid decorator utilities** — referenced as "future phase" in `06-CONTEXT.md`, `05.2-CONTEXT.md`, `05.2-RESEARCH.md`. Not pinned to any phase.
+- **Comparison grid axis label/title styling** — referenced as "future phase" in `05.2-CONTEXT.md`, `05.2-DISCUSSION-LOG.md`
+- **Full grid polish pass** (font consistency, color tuning, spacing) — referenced as "future phase" in `05.2-CONTEXT.md`, `05.2-RESEARCH.md`
+
+### Untracked Planning Files (need triage)
+
+- New phase-CONTEXT renames: `01-codebase-hardening/1-CONTEXT.md`, `02-cwt-pipeline-polish/2-CONTEXT.md` (alongside existing `01-CONTEXT.md`/`02-CONTEXT.md` — duplicates?)
+- `02-VERIFICATION.md`, `05.1-UAT.md`, `05.2-VALIDATION.md` — untracked verification artifacts
+- 4× `.gitkeep` placeholders
+- New audio asset: `assets/audio/reference/prospa_murda_baby_sc_rip.wav`
+- New images: `assets/images/architecture_flowchart.md`, `architecture_overview.md`, `claude/`, `diagnostics/`, `figures/`
+- Timing output: `assets/timing/20260409_223307_timing.txt`

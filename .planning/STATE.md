@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Executing Phase 08
-stopped_at: "Completed 08-07: archive and cleanup"
-last_updated: "2026-04-07T00:03:59.901Z"
-last_activity: 2026-04-10
+status: Authoring Phase 05 (Documentation)
+stopped_at: "2026-04-28 roadmap reset: Phase 04 deferred to v2; Phase 05 active; polish residue parked in ROADMAP Polish Backlog section"
+last_updated: "2026-04-28T00:00:00.000Z"
+last_activity: 2026-04-28
 progress:
   total_phases: 10
-  completed_phases: 7
-  total_plans: 29
-  completed_plans: 27
+  completed_phases: 8
+  total_plans: 33
+  completed_plans: 32
 ---
 
 # Project State
@@ -20,12 +20,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** The visualization accurately tracks audio input in real time with minimal latency
-**Current focus:** Phase 08 — codebase-refactoring-and-module-cleanup
+**Current focus:** Phase 05 — documentation (user-authored READMEs in user's voice; Claude scaffolds + generates figures inline)
 
 ## Current Position
 
-Phase: 08 (codebase-refactoring-and-module-cleanup) — EXECUTING
-Plan: 1 of 8
+Phase: 05 (documentation) — AUTHORING
+Plans:
+- 05-04 — DSP.md authoring + inline foundation figures (workshop high-level shape next)
+- 05-05 — RENDERER.md scaffold rewrite (DONE 2026-04-28)
+- 05-06 — DSP.md "Future Applications" blurb (non-stationary signals: financial time series, heartbeat, brain) — small user-authored addition
+
+Phase 04 (install-experience) deferred to v2 — does not block v1 Demo Ready.
 
 ## Performance Metrics
 
