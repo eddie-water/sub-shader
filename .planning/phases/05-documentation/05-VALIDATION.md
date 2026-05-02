@@ -42,7 +42,7 @@ created: 2026-03-23
 | 05-01-02 | 01 | 1 | DOCS-05 | structural | `grep -c "\[IMAGE" README.md` | ❌ W0 | ⬜ pending |
 | 05-02-01 | 02 | 1 | DOCS-02 | structural | `test -f DSP.md && grep -c "##" DSP.md` | ❌ W0 | ⬜ pending |
 | 05-03-01 | 03 | 1 | DOCS-03, DOCS-04 | structural | `test -f AUDIO.md && test -f RENDERER.md` | ❌ W0 | ⬜ pending |
-| 05-04-01 | 04 | 2 | DOCS-05 | execution | `python research/benchmark.py --figures` | ✅ | ⬜ pending |
+| 05-04-01 | 04 | 2 | DOCS-05 | execution | `python research/test_suite.py --figures` | ✅ | ⬜ pending |
 | 05-05-01 | 05 | 2 | DOCS-06 | manual | visual inspection of scaffold quality | N/A | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
