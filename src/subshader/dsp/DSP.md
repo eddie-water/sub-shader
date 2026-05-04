@@ -1,24 +1,13 @@
-# DSP: Wavelet Transform Foundations
-
-> **Scaffold document.** Markers guide the author:
-> - `[WRITE: "topic"]` — blank section needing prose in your voice
-> - `[DONE: text]` — content from the outline that is ready as-is
-> - `[PLACEHOLDER: figure — "description"]` — image to be generated
-> - `candidate analogy:` — suggested analogy; accept, reject, or rewrite it
-
----
+# Foundations: Wavelet Transform
 
 ## 1. Motivation
 
-[WRITE: "Why time-frequency analysis matters — what frequencies are present and when they occur"]
-
-[WRITE: "Why the Fourier Transform has limitations for this task"]
-
-[WRITE: "Why the Wavelet Transform is better suited — signal decomposition as the common foundation for both"]
-
-[WRITE: "Introduce the structure: simple examples first, building up to a comprehensive and intuitive understanding of how these methods decompose signals, and where each excels and falls short"]
-
-candidate analogy: "unmixing paint" — figuring out how much of each color contributed to the final result
+- We want to analyze audio signals with precision 
+- Need to know **what** frequencies are present and **when** they occur - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
+- The standard approach is to use the **Fourier Transform**, but it has limitations in this context
+- The **Wavelet Transform** is much better suited for this kind of task
+- Both are built upon the same foundation - **signal decomposition** 
+- Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of how these methods are used to decompose signals, and explore the different areas where they excel and where they fall short
 
 ---
 
@@ -26,343 +15,788 @@ candidate analogy: "unmixing paint" — figuring out how much of each color cont
 
 ### 2.1 Signal Decomposition
 
-[WRITE: "The end goal is decomposing an arbitrary composite signal into its fundamental components — its basic building blocks — and measuring how much of each exists in the overall signal"]
-
-[WRITE: "This motivates two things: (1) define what a signal's fundamental components are, (2) measure how much of each component is present in the signal"]
-
-candidate analogy: "unmixing paint" — trying to figure out how much of each color ingredient contributed to the overall color; where would you even begin?
-
-[WRITE: "Bridge to the Inner Product as the tool that lets us do both"]
-
----
+- The end goal is to decompose an arbitrary signal into its **fundamental components**
+- In simpler terms, we want to break down a composite signal into its basic **building blocks** and see how much of each exists in the overall signal 
+- It's like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
+- This type of problem motivates us to find a way to do two things:
+    1. **Define what a signal's fundamental components are** 
+    2. **Measure how much of each component is present in the signal** 
+- This is where the **Inner Product** comes into play - it's a general-purpose tool for measuring signal components, and we will explore these two motivations in different contexts
 
 ### 2.2 Inner Product
 
-[WRITE: "Signal decomposition really depends on the signal being analyzed and the *properties* we're interested in measuring"]
+- Accomplishing signal decomposition really depends on the signal being analyzed and the properties we're interested in measuring
+- The **Inner Product** gives us a quantitative way to calculate a "similarity score" between a function **f** and a reference function **g** you compare it to
 
-> **TERMINOLOGY NOTE:** Use "properties" here, NOT "features" or "patterns" — those are ML-level terminology that comes later in Section 7+. "Properties" is the right level of abstraction for this section (per discussion_summary.md).
+<div align="center">
 
-[WRITE: "The Inner Product gives a quantitative way to calculate a similarity score between function f and a reference function g"]
+$$
+\langle \, 
+\mathbf{f} \, , \, 
+\mathbf{g} \,
+\rangle 
+$$
 
-[Include inner product notation:]
+<em>Inner Product Notation</em>
 
-$$\langle \, \mathbf{f} \, , \, \mathbf{g} \, \rangle$$
+</div>
 
-*Inner Product Notation*
-
-[WRITE: "The result is a measurement of how aligned the two functions are, reflecting their similarity"]
-
-[WRITE: "Set up the bridge for audio contexts (save full explanation for Sections 3-5): function = signal, reference = signal properties we want to measure — but first, see it in its simplest form: the Dot Product"]
-
----
+- The result is a measurement of how aligned the two functions are, reflecting their similarity
+- Eventually we will bridge the gap for audio contexts where 
+    - The **function** being analyzed is an **audio signal** 
+    - The **reference function** has the **signal properties** we want to measure
+    - The Inner Product is performed between the signal and a set of reference functions to measure how much of each property is present in the overall signal
+- But to understand how all that works, it's helpful to see how it works in its simplest form: the **Dot Product**, which has a nice geometric visualization
 
 ### 2.3 Dot Product (Discrete Case)
 
-[WRITE: "The Inner Product is a generalization of what the Dot Product does to vectors in real numbers — no imaginary numbers, no abstract math domains, just basic multiplication and addition"]
+- The Inner Product is a generalization of what the **Dot Product** does to **vectors** in $\mathbb{R}$ (domain for  **R**eal Numbers)
+- For now we are just sticking with real, regular numbers - no imaginary numbers (yet) or weird abstract numbers in weird abstract math domains
 
-[WRITE: "Walk through the Dot Product formula: take first term of a, multiply by first term of b, repeat for each term, add them all up"]
+<div align="center">
 
-[PLACEHOLDER: figure — "2D vector dot product geometric interpretation — parallel same direction, parallel opposite direction, perpendicular vectors"]
-<!-- CANDIDATES: A=dot_product_geometry — show the dot product's sign and magnitude come from the angle between two vectors; parallel-same → positive, parallel-opposite → negative, perpendicular → zero | B=dot_product_geometry — visual proof that the dot product is a signed similarity score, anchoring the §2.4 inner-product generalization | C=dot_product_geometry — three canonical vector pairs (same / opposite / perpendicular) showing how angle drives the sign of the result -->
+$$
+\vec{a} \cdot\vec{b} = \sum_{i=0}^{n} a_i b_i
+$$
 
-[WRITE: "What does the result actually mean? The result indicates how parallel the two vectors are — that's the key insight for understanding how it measures alignment between two things"]
+<em>Dot Product Notation</em>
+</div>
 
----
+- The Dot Product is typically taught in the early chapters of Vector Calculus, but as long as you know basic **multiplication** and **addition**, it's really not too bad
+
+<div align="center">
+
+$$
+\vec{a} = 
+    ( \,
+    a_0 \, , \,
+    a_1 \, , \,
+    a_2 \, , \, 
+    \ldots \, , \,
+    a_n \, )
+$$
+
+</div>
+
+<div align="center">
+
+$$
+\vec{b} = 
+    ( \,
+    b_0 \, , \,
+    b_1 \, , \,
+    b_2 \, , \, 
+    \ldots \, , \,
+    b_n \, )
+$$
+
+</div>
+
+<div align="center">
+
+$$
+\vec{a} \cdot\vec{b} = 
+    a_0 \cdot b_0 \, + \,
+    a_1 \cdot b_1 \, + \,
+    a_2 \cdot b_2 \, + \, 
+    \ldots \, + \,
+    a_n \cdot b_n \, 
+$$
+
+<em> Dot Product Operation </em>
+</div>
+
+- If you have two vectors **a** and **b**
+    - Take the first term from **a** 
+    - Take the first term from **b**
+    - **Multiply** them together
+    - Repeat for each vector's second term, third term, and so on... until the final term
+    - **Add** them all up
+
+- But what does this even really do? What does the result mean? The result indicates how parallel the two vectors are, and this is the key insight to understanding how it measures the alignment two different *things*
 
 ### 2.4 Vector Projection
 
 #### 2.4.1 Geometric Interpretation
 
-[WRITE: "Review what a vector is: an arrow with magnitude (how long) and direction (where it points)"]
+- We'll be using these terms a lot so to brush up on our basic calculus, every **vector** looks like an **arrow**, each having a 
+    - **magnitude** - how long it is (a single / scalar value, always positive)
+    - **direction** - where it points (its angle / orientation in space)
 
-[WRITE: "The Dot Product's geometric interpretation: how parallel two vectors are — parallel same direction = strongly similar (positive), parallel opposite = strongly opposite (negative), perpendicular = no similarity (zero)"]
+*[Figure: Basic vectors with different magnitudes and directions]*
 
-[PLACEHOLDER: figure — "Parallel same/opposite and perpendicular vector pairs — visual comparison of similarity outcomes"]
-<!-- CANDIDATES: A=vector_similarity — extend the dot-product intuition to a continuum of angles, motivating projection in §2.4.2 | B=vector_similarity — show that similarity varies smoothly with angle, not just at the three canonical cases | C=vector_similarity — bridge from the discrete §2.3 cases to the general projection-based view that §2.4.2 builds on -->
+- What does the Dot Product do?
+    1. Takes a pair of vectors
+    2. Performs a set of operations on them, using their magnitudes and directions
+    3. Produces a scalar result 
 
-[WRITE: "What about oblique vectors — neither completely parallel nor perpendicular? Introduce the idea of decomposing one vector using the other's dimensions to see how much of each component aligns"]
+- Geometrically, the Dot Product tells us how parallel the two vectors are
+- We can all agree that a pair of **parallel** vectors appear more **similar** than a **non-parallel** pair
+- Even if the parallel vectors' lengths (magnitudes) are different, the result still implies these vectors are aligned in the same direction, reflecting their alikeness
 
----
+- For two vectors **a** and **b**
+    - parallel + same direction = strongly similar = positive result
+    - parallel + opposite direction = strongly opposite = negative result
+    - perpendicular / perfectly un-parallel = no similarity / unrelated = zero result
+
+*[Graphic: Visualize Parallel Same Direction, Parallel Opposite Direction, and Perpendicular Vectors]*
+
+- What if these vectors were **oblique** (neither completely parallel nor completely perpendicular)?
+    - oblique + any direction = potentially kind of similar or not that similar
+
+*[Graphic: Oblique Vectors - one kind of similar, one not so similar]*
+
+- So how does it do that exactly? 
+    - Well if we took one vector's orientation, and composed the other vector using the dimensions of the first, we can see that the second vector can be composed of two basic vectors, one of them being largely parallel with the other, visually showing us why we can say the second vector is very similar to the first one, but the third one is not so similar
+- This is the heart of the Dot Product and is formally called Vector Projection
 
 #### 2.4.2 Projection Mechanics
 
-[WRITE: "Through the lens of Vector Projection: a vector's components contribute values in the same direction as the other vector"]
+- There are many ways to look at it, but through the lens of Vector Projection, we can see how a vector's components contribute values in the same direction as the other 
+- The more a vector's component contributes 
+    - **Values** in the **same direction** as the other **increases the similarity score** 
+    - **Values** in the **opposite direction** as the other **decreases the similarity score**
+    - **No values** in the **direction** as the other **do not affect the similarity score** 
+- In all of these cases, the magnitudes of each vector will scale the Dot Product's result to be bigger or smaller (hence the name *scalar*)
+- Geometrically, the Dot Product tells us how one vector is 'projected' onto the other
+- This is another way saying 'How much of one vector is present in the other'
+- More specifically, it tells us which of the first vector's **basic components** are **aligned** in the same direction of the other
+- Almost like how much of one vector "casts its shadow" onto the other 
 
-[WRITE: "The mechanics: values in the same direction increase the similarity score; values in the opposite direction decrease it; values perpendicular to the other do not affect it"]
+#### 2.4.3 2D Vectors
 
-[WRITE: "Magnitudes of each vector scale the result bigger or smaller"]
+- At this point, we've been saying we need a way to define the fundamental components of the *thing* we're analyzing
+- What are the fundamental components of vectors? In a coordinate system like the xy plane, the components of a vector are its dimension components - the x dimension (the x axis) and the y dimension (the y axis)
+- Before getting too crazy with it, we'll start with the basics: vectors with two dimensions
 
-candidate analogy: "casting a shadow" — how much of one vector's shadow falls along the direction of the other
+- Simplest case: **a** · **b** = a₁b₁ + a₂b₂
+- The components that make up these vectors are its **basis vectors** - the values along each dimension (the x and y axes)
+- The dot product compares how much each component is aligned with the other
 
----
+*[Visual: 2D projection]*
 
-#### 2.4.3 Basis Decomposition (2D → ND)
+#### 2.4.4 3D Vectors
 
-[WRITE: "What are the fundamental components of vectors? In a coordinate system, the components are the basis vectors — the x and y dimensions. Start with 2D: a · b = a₁b₁ + a₂b₂"]
+- The Dot Product still works if you add a third dimension, you just continue the pattern
+- Direct extension: **a** · **b** = a₁b₁ + a₂b₂ + a₃b₃
+- Now three **basis vectors** (x, y, z axes), three **components** per vector
 
-[PLACEHOLDER: figure — "Basis decomposition of a 2D vector into x and y components — projection visualization"]
-<!-- CANDIDATES: A=basis_decomposition — show a 2D vector as the sum of x- and y-component projections, motivating the move from 2D to N-dimensional inner products | B=basis_decomposition — make the 'any vector is the sum of its projections onto a basis' claim visual before generalizing to N dimensions | C=basis_decomposition — render the projection-onto-axes view that prepares the reader for treating any signal as a sum of basis components -->
+*[Visual: 3D projection]*
 
-[WRITE: "The pattern extends to 3D (a · b = a₁b₁ + a₂b₂ + a₃b₃) and to N dimensions — the math is the same, we just run out of ways to visualize it"]
+#### 2.4.5 ND Vectors - From Dimensions to Elements
 
-[WRITE: "At high dimensions, drop the spatial language: think 'elements ordered by index' instead of 'dimensions'. The vector becomes a sequence or array."]
+- Yep, still works if you add a bunch more dimensions, even 100 for example
+- It's hard to think what a 100D Vector looks like because we don't really have a way to visualize 100 dimensions
+- Drop "dimension" language - think "**elements**" ordered by some kind of **index**
+- Instead of the x-dimension, Element 1 pairs with element 1, element 99 pairs with element 99
+- At this point, we stop calling them "components" and start calling them **elements** or **samples**
+- The vector becomes a **sequence** or **array**
 
----
+*[Example: Two 10-element vectors]*
 
 ### 2.5 Sign Accumulation
 
-[WRITE: "The dot product is a signed similarity accumulator: same signs contribute positive (agreement), opposite signs contribute negative (disagreement), and the final sum is the net agreement across all elements"]
+- Dot product is a signed similarity accumulator
+- Same signs → positive contribution (agreement)
+- Opposite signs → negative contribution (disagreement)
+- Final sum = net agreement across all elements
+- This process of measuring similarity between two sequences is called **correlation**
 
-[WRITE: "This process — measuring similarity between two sequences by multiply-accumulate — is called correlation"]
-
-[PLACEHOLDER: figure — "Color-coded element products showing sign accumulation: positive pairs (green), negative pairs (red), net sum result"]
-<!-- CANDIDATES: A=sign_accumulation — show element-wise products as signed contributions and the running sum that produces the final similarity score | B=sign_accumulation — make the 'inner product = sum of signed pairwise products' formula concrete with color-coded contributions | C=sign_accumulation — demonstrate that aligned regions add and misaligned regions cancel, the mechanism behind §3 frequency detection -->
-
----
+*[Interactive: color-coded element products]*
 
 ### 2.6 Continuous Extension
 
-[WRITE: "Bridge from discrete dot product (Σᵢ aᵢbᵢ) to continuous inner product (∫ a(t) b(t) dt) — the same multiply-accumulate operation, but now operating on functions instead of vectors"]
-
-[WRITE: "The function we compare against is the basis function — a known reference with a property we want to measure. The scalar result of this comparison is a coefficient — it tells you how much of that basis function is present"]
-
-[WRITE: "The choice of basis function determines what properties we can detect — this is the key that unlocks Sections 3, 4, and 5"]
-
----
+- Discrete: Σᵢ aᵢbᵢ
+- Continuous: ∫ a(t) b(t) dt
+- Same operation, continuous domain - the multiply-add is exactly the dot product, except now the operands are functions instead of vectors
+- How much of one function's shape is present in the other
+- This generalization is the inner product
+- The function we compare against is called a **basis function** - a known reference **pattern** or **template**
+- The choice of basis function determines what features we can detect
+- The scalar result of this comparison is called a **coefficient** - it tells you "how much" of that basis function is present
 
 ### 2.7 Inner vs Outer Product (Brief Note)
 
-[WRITE: "Conceptual note on naming: Inner product contracts (rank 1 × rank 1 → rank 0, a scalar), outer product expands (rank 1 × rank 1 → rank 2, a matrix). Named relative to operand rank — inner goes inward toward scalars."]
+- Inner product: contracts (rank 1 × rank 1 → rank 0)
+- Outer product: expands (rank 1 × rank 1 → rank 2)
+- Named relative to operand rank - inner goes inward toward scalars
 
 ---
 
-## 3. Fourier Transform
+## 3. Fourier Transform: Frequency Templates
 
 ### 3.1 The Template Question
 
-[WRITE: "We have a signal (sequence of samples) and the inner product measures similarity to some reference — but what should that reference be?"]
-
-[WRITE: "Answer: known basis functions. So what basis functions are well-suited to audio analysis?"]
-
----
+- We have a signal (sequence of samples)
+- Inner product measures similarity to... what?
+- Answer: known reference patterns (basis functions)
+- So what basis functions should we use?
 
 ### 3.2 Sine Waves as Templates
 
-[WRITE: "What if the basis function is a pure sine wave? Comparing the signal to a sine wave at a particular frequency: high similarity = that frequency is present (large coefficient), low similarity = that frequency is absent (small coefficient)"]
-
-[WRITE: "To get a complete picture, repeat for many frequencies — sweep through all of them"]
-
----
+- What if we made the basis function a pure sine wave?
+- Compare signal to a sine wave at a particular frequency
+- High similarity score → that frequency is present (large **coefficient**)
+- Low similarity score → that frequency is absent (small **coefficient**)
+- To get a full picture, repeat for many frequencies
 
 ### 3.3 The Fourier Transform
 
-[WRITE: "The Fourier Transform is the inner product of the signal with sine waves at every frequency. Each frequency gets a similarity score (a Fourier coefficient). The collection of all coefficients is the spectrum — a map of frequency content"]
+- Inner product of signal with sine waves at every frequency
+- Each frequency gets a similarity score (a **Fourier coefficient**)
+- Result: frequency spectrum
+- The collection of all coefficients forms the **spectrum** - a map of frequency content
 
-[PLACEHOLDER: figure — "Fourier basis functions — several sine waves at different frequencies overlaid on a composite signal"]
-<!-- CANDIDATES: A=fourier_basis — show the family of sine-wave templates the FFT compares against, motivating the §3.4 stationarity limitation | B=fourier_basis — render the fixed sinusoidal basis the Fourier transform uses, making the time-invariance trade-off visible | C=fourier_basis — visualize how a composite signal decomposes into a basis of sines at different frequencies, motivating §3.4's "no time info" critique -->
+### 3.4 How FFT Actually Works
+
+- Infinite sine wave templates (no start/end)
+- Accumulates similarity across entire signal duration
+- Produces magnitude and phase for each frequency
+- In signal processing terms, this is **correlation** between the signal and each sinusoidal template
+
+*[Example: Sign Accumulation of a sine wave]*
+
+### 3.5 FFT Limitations
+
+#### 3.5.1 Temporal Information Loss
+
+- Sine templates span entire signal
+- Result: knows *what* frequencies exist, not *when*
+- A note at the beginning vs end → same FFT result
+
+#### 3.5.2 Stationarity Assumption
+
+- Assumes signal properties don't change over time
+- Music is full of non-stationarities (attacks, decays, transitions)
+- FFT smears these together
+
+#### 3.5.3 Examples
+
+- Two close notes played sequentially vs simultaneously
+- Chirp (frequency sweep)
+- Transient vs sustained sounds
 
 ---
 
-### 3.4 FFT Limitations
+## 4. STFT: Windowed Compromise
 
-[WRITE: "Sine wave templates span the entire signal — the FFT knows *what* frequencies exist, but not *when*. A note at the beginning vs the end produces the same FFT result"]
+### 4.1 Windowing Approach
 
-[WRITE: "The stationarity assumption: the FFT assumes signal properties don't change over time. Music is full of non-stationarities — attacks, decays, transitions — and the FFT smears them together"]
-
-[WRITE: "Concrete examples: two close notes played sequentially vs simultaneously; a chirp (frequency sweep); a transient attack vs a sustained tone"]
-
----
-
-## 4. Short-Time Fourier Transform (STFT)
-
-### 4.1 Windowed Compromise
-
-[WRITE: "The STFT's solution: chop the signal into short overlapping segments and apply FFT to each segment. Now we have time information (which window) + frequency information"]
-
-[WRITE: "The window function acts as a filter — it selects which portion of the signal to analyze at each step"]
-
-[PLACEHOLDER: figure — "STFT windowing illustration — signal chopped into overlapping windows, FFT applied to each"]
-<!-- CANDIDATES: A=stft_windowing — show fixed-width windows tiling a non-stationary signal, motivating the §4.2 resolution tradeoff | B=stft_windowing — visualize the STFT's "chop and FFT" approach so the §4.2 fixed-resolution problem is obvious | C=stft_windowing — render windowed sub-signals next to a non-stationary input, setting up why a single window width can't serve all frequencies -->
-
-candidate analogy: "measuring with one ruler size for everything" — the window is fixed, so you're using the same ruler whether you're measuring a whole note or a fast drum hit
-
----
+- Chop signal into short segments
+- Apply FFT to each segment
+- Now have time information (which window) + frequency information
+- The window function acts as a **filter** - it selects which portion of the signal to analyze
 
 ### 4.2 The Resolution Tradeoff
 
-[WRITE: "Window size is fixed — and this is the fundamental limitation. Short window → good time resolution but poor frequency resolution. Long window → good frequency resolution but poor time resolution"]
+- Window size is fixed
+- Short window → good time resolution, poor frequency resolution
+- Long window → good frequency resolution, poor time resolution
 
-[WRITE: "Why this tradeoff exists: you need enough cycles to accurately measure a frequency. Low frequencies have slow cycles — they need longer windows. High frequencies have fast cycles — they need shorter windows. A fixed window can't serve both optimally"]
+### 4.3 Why This Tradeoff Exists
 
-[WRITE: "Practical impact on audio: 100 Hz vs 200 Hz is a 100% frequency difference (very audible), while 10,000 Hz vs 10,100 Hz is a 1% difference (barely audible). Fixed resolution wastes precision where it's not needed and lacks it where it is"]
+- Need enough cycles to measure a frequency accurately
+- Low frequencies need longer windows (slower cycles)
+- High frequencies need shorter windows (fast cycles)
+- Fixed window can't serve both optimally
+
+### 4.4 Practical Impact
+
+- 100 Hz vs 200 Hz = 100% difference (very audible)
+- 10,000 Hz vs 10,100 Hz = 1% difference (barely audible)
+- Fixed resolution wastes precision where it's not needed, lacks it where it is
 
 ---
 
-## 5. Wavelet Transform
+## 5. Wavelet Transform: Adaptive Resolution
 
-### 5.1 Core Idea: Adaptive Resolution
+### 5.1 Core Idea
 
-[WRITE: "What if the template's width varied with frequency? Low frequencies → wide template (good frequency resolution), high frequencies → narrow template (good time resolution). This is the wavelet transform's key insight"]
-
-candidate analogy: "measuring with different rulers at different frequencies" — longer rulers for low frequencies, shorter rulers for high frequencies
-
----
+- What if the "template" width varied with frequency?
+- Low frequencies → wide template (good frequency resolution)
+- High frequencies → narrow template (good time resolution)
 
 ### 5.2 Wavelets as Templates
 
-[WRITE: "Wavelets are localized oscillations — unlike infinite sine waves, they have a start and end. The prototype shape is called the mother wavelet — the base pattern before any scaling. Scaled (stretched/compressed) copies detect different frequencies"]
-
-[WRITE: "Still using the inner product — same fundamental operation as the Fourier Transform. The wavelet becomes the kernel — the pattern we slide across the signal"]
-
----
+- Localized oscillations (not infinite like sine waves)
+- The prototype shape is called the **mother wavelet** - the base pattern before any scaling
+- Scaled (stretched/compressed) versions detect different frequencies
+- Still using inner product - same fundamental operation
+- In implementation, the wavelet becomes the **kernel** - the pattern we slide across the signal
 
 ### 5.3 Why This Works for Audio
 
-[WRITE: "Adaptive resolution matches how human hearing perceives frequency differences — we're more sensitive to relative changes (ratios) than absolute differences, especially in the low frequencies"]
-
-[WRITE: "It also matches how musical information is structured: the chromatic scale is logarithmic, and SubShader's frequency list follows it exactly"]
-
-[WRITE: "Computational cost is higher than STFT, but the results are more meaningful for audio"]
-
----
+- Matches how human hearing perceives frequency differences
+- Matches how musical information is structured (chromatic scale)
+- Computational cost is higher, but results are more meaningful
 
 ### 5.4 Convolution Implementation
 
-[WRITE: "To get coefficients at every time point, we slide the kernel across the signal. At each position: compute inner product → coefficient for that time and frequency. This sliding inner product operation is convolution"]
-
-[WRITE: "The kernel is also called the impulse response — what the filter outputs when given a single spike as input. Convolution with a wavelet kernel = full time-frequency map = scalogram"]
-
-[PLACEHOLDER: figure — "Wavelet scaling at different frequencies — mother wavelet stretched for low freq (wide, slow), compressed for high freq (narrow, fast)"]
-<!-- CANDIDATES: A=wavelet_scaling — show the mother wavelet at multiple scales to make the adaptive-resolution claim of §5.1 concrete | B=wavelet_scaling — visualize the wavelet stretching/compressing across frequency, the mechanism behind §5.1's "adaptive window" claim | C=wavelet_scaling — contrast a wide low-freq wavelet against a narrow high-freq wavelet so the §4.2 STFT tradeoff is visibly resolved -->
+- To get coefficients at every time point, we slide the kernel across the signal
+- At each position: compute inner product → get coefficient for that time and frequency
+- This sliding inner product operation is called **convolution**
+- The kernel is also called the **impulse response** - what you'd get if you fed a single spike through a filter
+- Convolution with a wavelet kernel = correlation at every time point = full time-frequency map
 
 ---
 
 ## 6. Implementation Deep Dive
 
-<p align="center"><img src="assets/images/generated/timing_bar_chart.png" width="60%"></p>
-
-[WRITE: "SubShader pipeline timing breakdown — per-stage costs for CWT computation, normalization, and rendering"]
-
 ### 6.1 Wavelet Construction
 
-[WRITE: "How SubShader builds wavelet kernels: starting from the mother wavelet (Morlet/Gaussian-modulated sinusoid) and scaling it for each frequency in the chromatic scale"]
+- Gaussian envelope
+- Carrier frequency
+- Admissibility conditions
+- Mother wavelet → daughter wavelets (scaled versions)
 
-[WRITE: "Key parameters from CWTConfig (`src/subshader/config.py`; `WaveletConfig` retained as an alias):"]
+### 6.2 Post-Processing Pipeline
 
-| Parameter | Default | Controls |
-|-----------|---------|----------|
-| `notes_per_octave` | `12` | Number of semitones per octave (chromatic scale) |
-| `num_octaves` | `10` | How many octaves to cover |
-| `root_note_a0_hz` | `27.5` | Root note frequency (A0 on piano) — lowest frequency analyzed |
-| `typical_sampling_freq` | `44100.0` | Expected audio sample rate (Hz) |
-| `num_cycles` | `6` | Number of carrier cycles per wavelet kernel |
-| `num_fwhm_cycles` | `3` | Gaussian FWHM width in cycles — controls time-frequency tradeoff |
-| `target_width` | `64` | Output time dimension after downsampling |
+#### 6.2.1 Scale Normalization
 
-[WRITE: "What each parameter controls and when you'd change it"]
+- Why normalization is needed
+- Different approaches (1/√f vs other methods)
+- Impact on visualization
 
-[WRITE: "Admissibility conditions — what makes a valid mother wavelet (zero mean, finite energy)"]
+#### 6.2.2 Edge Effects
+
+- Cone of Influence (COI)
+- Why edges are unreliable
+- Strategies for handling edge artifacts
+
+#### 6.2.3 Magnitude Conversion
+
+- Complex → magnitude
+- Magnitude vs power (|CWT| vs |CWT|²)
+- dB scaling for visualization
+
+#### 6.2.4 Downsampling
+
+- From full resolution to target width
+- Interpolation strategies
+- Preserving temporal accuracy
+
+### 6.3 GPU Acceleration
+
+- Memory bandwidth bottlenecks
+- Ring buffer optimization
+- CPU-GPU transfer reduction
+- Performance benchmarks
 
 ---
 
-### 6.2 CWT Pipeline
+## 7. Beyond Time-Frequency: Hierarchical Feature Extraction
 
-Each chunk flows through the `DSP` ABC's three-stage contract — `pre()` validates and casts, `transform()` does the backend-specific CWT (CPU or GPU), `post()` runs the shared post-processing chain. `pre()` and `post()` live on the `CWT` base class in `src/subshader/dsp/cwt.py`; `transform()` is implemented by `CpuCWT` and `GpuCWT`.
+### 7.1 The Feature Hierarchy
 
-The post-processing chain — `CWT.post()` in `src/subshader/dsp/cwt.py`:
+Understanding audio analysis requires thinking in layers of abstraction:
 
-```python
-# Source: src/subshader/dsp/cwt.py — CWT.post()
-normed = self._normalize_by_scale(raw)
-mag = self._compute_mag(normed)
-reliable = self.discard_unreliable_coefs(mag)
-hop_center = self.extract_hop_center(reliable)
-return self.downsample(hop_center, self.output_n)
+#### Low-Level Features (What CWT Gives You)
+
+- **Time-frequency coefficients**: Raw CWT output matrix
+- **Spectral energy distribution**: Power across frequency bands
+- **Onset/offset detection**: Sharp changes in energy
+- **Zero-crossing rates**: Rapid oscillations vs smooth signals
+- **Spectral flux**: Change in spectrum over time
+
+These are direct measurements from the signal - no interpretation yet.
+
+#### Mid-Level Features (Built on CWT Output)
+
+- **Tempo/BPM**: Periodic patterns in coefficient envelope
+  - Look for regularity in low-frequency energy peaks
+  - Autocorrelation of energy over time
+  
+- **Pitch tracking**: Frequency trajectory over time
+  - Follow the dominant frequency ridge in the scalogram
+  - Harmonics appear as parallel ridges
+  
+- **Harmonic structure**: Overtone relationships
+  - Integer multiples of fundamental frequency
+  - Strength and spacing of harmonics define timbre
+  
+- **Timbre descriptors**: Spectral shape statistics
+  - Spectral centroid (brightness)
+  - Spectral rolloff (bandwidth)
+  - Spectral contrast (peaks vs valleys)
+  - MFCC (Mel-Frequency Cepstral Coefficients)
+
+These require aggregating and interpreting low-level features.
+
+#### High-Level Features (Semantic Understanding)
+
+- **Genre classification**: Rock vs Jazz vs Classical
+- **Mood/emotion detection**: Happy, sad, energetic, calm
+- **Speech recognition**: Phoneme patterns → words
+- **Instrument identification**: Piano vs guitar vs violin
+- **Music similarity**: "Sounds like..." recommendations
+
+These require machine learning models trained on mid-level features.
+
+### 7.2 CWT as a Feature Extractor
+
+**Why wavelets matter for ML:**
+
+1. **Non-stationary signal handling**
+   - Music, speech, and biological signals change constantly
+   - CWT captures time-varying features FFT misses
+   - Essential for: onset detection, transient analysis, dynamic events
+
+2. **Adaptive resolution**
+   - Efficient feature space representation
+   - Fewer coefficients needed vs raw audio samples
+   - Better than fixed-resolution STFT for variable-rate phenomena
+
+3. **Perceptual relevance**
+   - Logarithmic frequency spacing matches human hearing
+   - Better ML generalization - features align with perception
+   - Improves classification accuracy for audio tasks
+
+**Practical Examples:**
+
+**Beat Tracking**
+```
+Audio → CWT → Extract low-freq coefficients (< 200 Hz)
+      → Find periodic peaks in energy envelope
+      → Estimate tempo from peak spacing
 ```
 
-[WRITE: "Walk through each step — what it does and why it's in the pipeline in this order"]
-
----
-
-### 6.3 Post-Processing Pipeline
-
-[WRITE: "L1 kernel normalization at construction: the bias is structural (wider wavelets physically collect more energy), so the fix belongs at the source — kernel construction — not as a post-hoc correction"]
-
-[WRITE: "Cone of influence and edge contamination: the wavelet kernel extends beyond the signal boundaries at the edges; these boundary regions accumulate artificial energy contributions. The widest (lowest-frequency) wavelet determines the worst-case contamination region"]
-
-[WRITE: "Center-keep slice instead of per-scale masking: rather than producing an irregular cone-shaped output, SubShader trims to a uniform central region using the widest wavelet's time support. Some valid data from high-frequency wavelets is discarded, but the output shape is clean and rectangular"]
-
-[WRITE: "Hop center extraction: when consecutive audio chunks overlap (default 50%), the trailing hop_size columns of the reliable region represent the newest audio content not seen in the previous frame. Taking this slice tiles consecutive frames contiguously"]
-
-[WRITE: "Downsampling to target_width (default 64): fractional hop size reduces the time dimension to the target output resolution for the shader renderer"]
-
----
-
-### 6.4 GPU Acceleration
-
-[WRITE: "CuPyWavelet runs the same algorithm as NumPyWavelet — the difference is execution location. All wavelet kernels are uploaded to GPU at init. Each CWT call stays entirely on GPU: input FFT → frequency-domain multiply → iFFT. Only the trimmed result (num_freqs × input_n) transfers back to host"]
-
-[WRITE: "Why GPU matters for real-time: FFT-based convolution is embarrassingly parallel — each frequency row is independent. The GPU runs all rows simultaneously, achieving 40+ FPS where CPU would be far too slow"]
-
-![NumPy vs CuPy Coefficient Difference](assets/images/reference/numpy_vs_cupy_diff.png)
-
-*Figure: Coefficient difference between NumPy and CuPy implementations — numerical equivalence validates that GPU path produces the same result*
-
----
-
-### 6.5 Class Hierarchy
-
-The DSP class hierarchy spanning `src/subshader/dsp/`:
-
+**Onset Detection**
 ```
-DSP (ABC, in dsp.py)
-├── CWT (ABC, in cwt.py)            — manual CWT, shared pre()/post() pipeline
-│   ├── CpuCWT (in cwt.py)          — NumPy execution
-│   └── GpuCWT (in cwt.py)          — CuPy/GPU execution
-├── PywaveletCWT (in pywavelet.py)  — PyWavelets reference implementation
-└── STFT (in stft.py)               — Short-Time Fourier Transform (scipy.signal)
+Audio → CWT → High-freq coefficients (> 2000 Hz)
+      → Compute spectral flux (frame-to-frame change)
+      → Threshold crossings = note onsets
 ```
 
-[WRITE: "When to use each: GpuCWT for real-time rendering, CpuCWT as CPU fallback when GPU not available, PywaveletCWT and STFT for research/comparison only"]
+**Pitch Estimation**
+```
+Audio → CWT → Track dominant frequency ridge
+      → Smooth trajectory over time
+      → Output: F0 (fundamental frequency) contour
+```
 
 ---
 
-## 7. Future
+## 8. Future Directions: Machine Learning Integration
 
-> This section preserves the roadmap for topics deferred from the foundations outline (Sections 7-10). Full treatment of each is out of scope for this document.
+### 8.1 Classical ML Pipeline
 
-[WRITE: "Forward pointer: where does SubShader's output fit in the larger audio analysis picture?"]
+```
+Audio → CWT → Feature Engineering → ML Model → Prediction
+```
 
-**Feature Hierarchy (Section 7 of foundations outline)**
+**Example Workflow:**
 
-[WRITE: "CWT output is low-level: raw time-frequency coefficients, spectral energy distribution, onset/offset transitions. Mid-level features (tempo, pitch, harmonic structure, timbre descriptors) are built on top of CWT output. High-level features (genre, mood, speech recognition) require ML models trained on mid-level features"]
+1. **CWT coefficients** → 2D time-frequency representation
+   - Input: audio waveform (e.g., 3 seconds @ 44.1kHz = 132,300 samples)
+   - CWT output: (120 frequencies × 512 time bins) matrix
+   
+2. **Statistical features** per frequency band:
+   - **Temporal statistics**: mean, variance, skewness, kurtosis
+   - **Derivatives**: rate of change over time
+   - **Spectral moments**: centroid, spread, rolloff, flux
+   - **Energy ratios**: low/mid/high frequency balance
+   
+3. **Dimensionality reduction**: 
+   - PCA (Principal Component Analysis): Find main variance directions
+   - LDA (Linear Discriminant Analysis): Maximize class separation
+   - Feature selection: Keep most informative coefficients
+   
+4. **Classification**: 
+   - **SVM** (Support Vector Machines): Find optimal decision boundary
+   - **Random Forest**: Ensemble of decision trees
+   - **kNN** (k-Nearest Neighbors): Classify by similarity to training examples
+   
+**Use cases:** Genre classification, mood detection, speaker identification
 
-> NOTE: "features" is the correct term from here forward — we've passed the Section 2 threshold where "properties" was appropriate.
+### 8.2 Deep Learning Approaches
 
-**ML Integration (Section 8 of foundations outline)**
+```
+Audio → CWT → CNN/RNN → End-to-End Learning
+```
 
-[WRITE: "Brief roadmap: classical ML pipeline (CWT → feature engineering → classifier), deep learning approaches (2D CNNs treating scalogram as image, LSTMs for temporal sequence modeling), why wavelets + neural networks work well together"]
+**Modern Architectures:**
 
-**Applications (Section 9 of foundations outline)**
+#### 2D CNNs on Spectrograms
 
-[WRITE: "Brief roadmap: music information retrieval (fingerprinting, auto-tagging, recommendation), audio production (source separation, noise reduction), health applications (cardiac analysis, seizure detection), scientific applications (bioacoustics, seismology, gravitational waves)"]
+- **Treat CWT output as "images"**
+  - Each pixel = coefficient at (time, frequency)
+  - Convolutional layers learn local time-frequency patterns
+  - Pooling layers reduce dimensionality
+  
+- **Architecture example:**
+  ```
+  CWT Spectrogram (120×512)
+    ↓ Conv2D (32 filters, 3×3)
+    ↓ MaxPool2D (2×2)
+    ↓ Conv2D (64 filters, 3×3)
+    ↓ MaxPool2D (2×2)
+    ↓ Flatten → Dense(128) → Dense(num_classes)
+  ```
+
+- **Applications:**
+  - Music genre tagging (10-50 genres)
+  - Environmental sound classification (dog bark, car horn, etc.)
+  - Acoustic scene classification (park, office, street)
+
+#### Recurrent Networks (LSTM/GRU)
+
+- **Temporal sequence modeling**
+  - Process time slices sequentially
+  - Maintain memory of past context
+  - Natural for evolving patterns
+  
+- **Architecture example:**
+  ```
+  CWT Spectrogram (120×512)
+    ↓ Slice into 512 frames of 120 features
+    ↓ LSTM(256 units, return_sequences=True)
+    ↓ LSTM(128 units)
+    ↓ Dense(num_classes)
+  ```
+
+- **Applications:**
+  - Pitch/melody tracking over time
+  - Speech recognition (phoneme sequences)
+  - Music generation (predict next time slice)
+
+#### Hybrid Models
+
+- **CNN for spatial + RNN for temporal**
+  ```
+  CWT Spectrogram
+    ↓ CNN: Extract frequency patterns per time frame
+    ↓ RNN: Model temporal evolution of patterns
+    ↓ Output: High-level prediction
+  ```
+
+- **Example: Music Transcription**
+  1. CNN detects notes present at each time
+  2. LSTM models note sequences
+  3. Output: MIDI note events
+
+- **Modern variants:**
+  - **WaveNet**: Dilated convolutions for raw audio synthesis
+  - **Transformer models**: Self-attention on time-frequency patches
+  - **U-Net**: Encoder-decoder for source separation
+
+### 8.3 Why Wavelets + Neural Networks?
+
+**Computational Advantages:**
+
+1. **Reduce input dimensionality**
+   - Raw audio: 132,300 samples (3s @ 44.1kHz)
+   - CWT: 61,440 coefficients (120 × 512)
+   - ~50% reduction, even before network compression
+
+2. **Faster convergence**
+   - Networks learn from structured features, not raw samples
+   - Fewer parameters needed
+   - Training time reduces significantly
+
+**Perceptual Advantages:**
+
+3. **Meaningful representations**
+   - CWT features align with human perception
+   - Better generalization across datasets
+   - More robust to noise and distortion
+
+4. **Multi-scale analysis**
+   - Single representation captures:
+     - Transients (high frequencies, short time)
+     - Sustained tones (low frequencies, long time)
+   - No need for multiple parallel networks
+
+**Practical Advantages:**
+
+5. **Real-time capable**
+   - GPU-accelerated CWT is fast (40+ FPS achievable)
+   - Smaller networks = faster inference
+   - Suitable for interactive applications
+
+**Example: Speech Recognition**
+
+```
+Traditional Approach:
+Raw Audio (16kHz) → MFCC (39 features) → HMM/DNN → Phonemes → Words
+
+Wavelet Approach:
+Raw Audio → CWT (5-50ms resolution) 
+         → CNN (phonetic patterns) 
+         → LSTM (temporal context) 
+         → Phonemes → Words
+
+Benefits:
+- Captures formant transitions better (vocal tract dynamics)
+- Robust to speaking rate variations (adaptive resolution)
+- Fewer hand-crafted features (network learns from CWT)
+```
 
 ---
 
-## Appendix: Concept Ladder
+## 9. Practical Applications
 
-Same ideas, different contexts — use this as a terminology reference while writing:
+### 9.1 Music Information Retrieval (MIR)
 
-| Stage | What you have | What you compare against | The operation | The result |
-|-------|---------------|--------------------------|---------------|------------|
+**Audio Fingerprinting (Shazam-style)**
+- Hash unique spectral patterns from CWT
+- Create robust signatures invariant to:
+  - Background noise
+  - Compression artifacts
+  - Tempo/pitch variations
+- Database lookup for song identification
+
+**Auto-Tagging**
+- Train classifiers on CWT features for:
+  - **Genre**: Rock, Jazz, Electronic, Classical, Hip-Hop
+  - **Mood**: Happy, Sad, Energetic, Calm, Aggressive
+  - **Instrumentation**: Vocals, Guitar, Drums, Strings
+- Use cases: music library organization, playlist generation
+
+**Recommendation Systems**
+- Compute similarity metrics in wavelet space
+- "Sounds like..." suggestions based on:
+  - Spectral similarity (timbre)
+  - Rhythmic patterns (tempo, groove)
+  - Harmonic content (chord progressions)
+
+### 9.2 Audio Production
+
+**Source Separation**
+- Isolate vocals, drums, bass from mixed tracks
+- Time-frequency masking:
+  1. CWT of mixed signal
+  2. Identify frequency regions for each source
+  3. Create masks to extract individual sources
+- Applications: remixing, karaoke, sampling
+
+**Noise Reduction**
+- Adaptive filtering in wavelet domain
+- Distinguish between:
+  - Signal (music, speech)
+  - Noise (hiss, hum, clicks)
+- Threshold wavelet coefficients to remove noise
+
+**Dynamic Range Compression**
+- Frequency-dependent gain control
+- Compress loud parts, boost quiet parts
+- Per-band processing for natural sound
+
+### 9.3 Health & Accessibility
+
+**Cardiac Sound Analysis**
+- Heart murmur detection from phonocardiogram
+- CWT reveals:
+  - S1/S2 heart sounds (normal)
+  - Abnormal clicks, murmurs (pathological)
+- Early detection of valve disorders
+
+**Seizure Detection**
+- EEG time-frequency patterns
+- Identify seizure signatures:
+  - Spike-wave discharges
+  - Rhythmic oscillations
+- Real-time monitoring for epilepsy patients
+
+**Hearing Aid Signal Processing**
+- Selective amplification by frequency
+- Adaptive to environment:
+  - Boost speech frequencies in noise
+  - Compress loud transients
+- Improve speech intelligibility
+
+### 9.4 Research & Science
+
+**Bioacoustics**
+- Whale song analysis
+  - Track frequency modulation patterns
+  - Identify individual whales by vocalizations
+- Bird call classification
+  - Species identification from recordings
+  - Population monitoring
+
+**Seismology**
+- Earthquake waveform analysis
+- Distinguish:
+  - P-waves (primary, compression)
+  - S-waves (secondary, shear)
+  - Surface waves
+- Early warning systems
+
+**Astronomy**
+- Gravitational wave detection (LIGO)
+- CWT reveals:
+  - Chirp signals from black hole mergers
+  - Frequency sweep as objects spiral inward
+- Nobel Prize-winning application (2017)
+
+---
+
+## 10. Appendix: Terminology Reference
+
+### Concept Ladder
+
+Same ideas, different contexts:
+
+| Stage | What you have | What you compare against | The comparison operation | The result |
+|-------|---------------|--------------------------|--------------------------|------------|
 | 2D/3D Vectors | vector | basis vector | dot product | component, projection |
-| N-Element Vectors | sequence, array | template | dot product | similarity score |
-| Discrete Signals | signal, samples | template | correlation | correlation value |
+| N-Element Vectors | sequence, array | pattern, template | dot product | similarity score |
+| Discrete Signals | signal, samples | template, pattern | correlation | correlation value |
 | Continuous Functions | function, waveform | basis function | inner product | coefficient |
-| Fourier Analysis | signal | sinusoid | Fourier transform | Fourier coefficient, spectrum |
+| Fourier Analysis | signal | sinusoid, harmonic | Fourier transform | Fourier coefficient, spectrum |
 | STFT | windowed signal | windowed sinusoid | windowed FFT | spectrogram bin |
 | Wavelet Analysis | signal | wavelet, mother wavelet | convolution, CWT | wavelet coefficient, scalogram |
-| Implementation | input | kernel, impulse response | convolution | output, filtered signal |
+| Implementation | input | kernel, filter, impulse response | convolution | output, filtered signal |
 | Machine Learning | audio | learned features | neural network | prediction, classification |
 
-*Source: wavelet_foundations_outline.md Section 10*
+### Key Terms
+
+**Basis vector / Basis function**  
+The reference direction (vectors) or reference pattern (functions) you compare against. The "ruler" you use to measure.
+
+**Component / Coefficient**  
+The scalar result of the comparison. "How much" of the basis is present.
+
+**Correlation**  
+Measuring similarity between two signals by multiply-accumulate. Same as inner product for signals.
+
+**Convolution**  
+Correlation applied at every position - sliding the kernel across the signal.
+
+**Kernel**  
+The pattern used in convolution. Implementation term for basis function / wavelet / filter.
+
+**Filter**  
+A kernel designed to keep certain features and remove others.
+
+**Impulse Response**  
+What a system outputs when given a single spike input. Characterizes the system's behavior. Becomes the kernel in convolution.
+
+**Mother Wavelet**  
+The prototype wavelet shape at a reference scale. Scaled copies (daughter wavelets) detect different frequencies.
+
+**Spectrum**  
+The collection of Fourier coefficients. Shows frequency content without time information.
+
+**Scalogram**  
+The collection of wavelet coefficients across time and scale/frequency. The time-frequency map.
+
+**Feature**  
+A measurable property extracted from a signal. Can be low-level (spectral energy), mid-level (tempo), or high-level (genre).
+
+**Feature Engineering**  
+The process of transforming raw data into features suitable for machine learning.
+
+**Feature Extraction**  
+Using the inner product (or other operations) to measure how much of each pattern/template is present in the data.
+
+---
+
+## Notes for Future Development
+
+- Add interactive visualizations for vector projection
+- Include audio examples comparing FFT vs STFT vs CWT
+- Provide code examples for feature extraction pipeline
+- Add case studies from real-world applications
+- Include links to relevant research papers
+- Develop Jupyter notebooks with hands-on exercises
