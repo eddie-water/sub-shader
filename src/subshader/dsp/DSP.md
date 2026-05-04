@@ -63,6 +63,7 @@ $$\langle \, \mathbf{f} \, , \, \mathbf{g} \, \rangle$$
 [WRITE: "Walk through the Dot Product formula: take first term of a, multiply by first term of b, repeat for each term, add them all up"]
 
 [PLACEHOLDER: figure — "2D vector dot product geometric interpretation — parallel same direction, parallel opposite direction, perpendicular vectors"]
+<!-- CANDIDATES: A=dot_product_geometry — show the dot product's sign and magnitude come from the angle between two vectors; parallel-same → positive, parallel-opposite → negative, perpendicular → zero | B=dot_product_geometry — visual proof that the dot product is a signed similarity score, anchoring the §2.4 inner-product generalization | C=dot_product_geometry — three canonical vector pairs (same / opposite / perpendicular) showing how angle drives the sign of the result -->
 
 [WRITE: "What does the result actually mean? The result indicates how parallel the two vectors are — that's the key insight for understanding how it measures alignment between two things"]
 
@@ -77,6 +78,7 @@ $$\langle \, \mathbf{f} \, , \, \mathbf{g} \, \rangle$$
 [WRITE: "The Dot Product's geometric interpretation: how parallel two vectors are — parallel same direction = strongly similar (positive), parallel opposite = strongly opposite (negative), perpendicular = no similarity (zero)"]
 
 [PLACEHOLDER: figure — "Parallel same/opposite and perpendicular vector pairs — visual comparison of similarity outcomes"]
+<!-- CANDIDATES: A=vector_similarity — extend the dot-product intuition to a continuum of angles, motivating projection in §2.4.2 | B=vector_similarity — show that similarity varies smoothly with angle, not just at the three canonical cases | C=vector_similarity — bridge from the discrete §2.3 cases to the general projection-based view that §2.4.2 builds on -->
 
 [WRITE: "What about oblique vectors — neither completely parallel nor perpendicular? Introduce the idea of decomposing one vector using the other's dimensions to see how much of each component aligns"]
 
@@ -99,6 +101,7 @@ candidate analogy: "casting a shadow" — how much of one vector's shadow falls 
 [WRITE: "What are the fundamental components of vectors? In a coordinate system, the components are the basis vectors — the x and y dimensions. Start with 2D: a · b = a₁b₁ + a₂b₂"]
 
 [PLACEHOLDER: figure — "Basis decomposition of a 2D vector into x and y components — projection visualization"]
+<!-- CANDIDATES: A=basis_decomposition — show a 2D vector as the sum of x- and y-component projections, motivating the move from 2D to N-dimensional inner products | B=basis_decomposition — make the 'any vector is the sum of its projections onto a basis' claim visual before generalizing to N dimensions | C=basis_decomposition — render the projection-onto-axes view that prepares the reader for treating any signal as a sum of basis components -->
 
 [WRITE: "The pattern extends to 3D (a · b = a₁b₁ + a₂b₂ + a₃b₃) and to N dimensions — the math is the same, we just run out of ways to visualize it"]
 
@@ -113,6 +116,7 @@ candidate analogy: "casting a shadow" — how much of one vector's shadow falls 
 [WRITE: "This process — measuring similarity between two sequences by multiply-accumulate — is called correlation"]
 
 [PLACEHOLDER: figure — "Color-coded element products showing sign accumulation: positive pairs (green), negative pairs (red), net sum result"]
+<!-- CANDIDATES: A=sign_accumulation — show element-wise products as signed contributions and the running sum that produces the final similarity score | B=sign_accumulation — make the 'inner product = sum of signed pairwise products' formula concrete with color-coded contributions | C=sign_accumulation — demonstrate that aligned regions add and misaligned regions cancel, the mechanism behind §3 frequency detection -->
 
 ---
 
@@ -155,6 +159,7 @@ candidate analogy: "casting a shadow" — how much of one vector's shadow falls 
 [WRITE: "The Fourier Transform is the inner product of the signal with sine waves at every frequency. Each frequency gets a similarity score (a Fourier coefficient). The collection of all coefficients is the spectrum — a map of frequency content"]
 
 [PLACEHOLDER: figure — "Fourier basis functions — several sine waves at different frequencies overlaid on a composite signal"]
+<!-- CANDIDATES: A=fourier_basis — show the family of sine-wave templates the FFT compares against, motivating the §3.4 stationarity limitation | B=fourier_basis — render the fixed sinusoidal basis the Fourier transform uses, making the time-invariance trade-off visible | C=fourier_basis — visualize how a composite signal decomposes into a basis of sines at different frequencies, motivating §3.4's "no time info" critique -->
 
 ---
 
@@ -177,6 +182,7 @@ candidate analogy: "casting a shadow" — how much of one vector's shadow falls 
 [WRITE: "The window function acts as a filter — it selects which portion of the signal to analyze at each step"]
 
 [PLACEHOLDER: figure — "STFT windowing illustration — signal chopped into overlapping windows, FFT applied to each"]
+<!-- CANDIDATES: A=stft_windowing — show fixed-width windows tiling a non-stationary signal, motivating the §4.2 resolution tradeoff | B=stft_windowing — visualize the STFT's "chop and FFT" approach so the §4.2 fixed-resolution problem is obvious | C=stft_windowing — render windowed sub-signals next to a non-stationary input, setting up why a single window width can't serve all frequencies -->
 
 candidate analogy: "measuring with one ruler size for everything" — the window is fixed, so you're using the same ruler whether you're measuring a whole note or a fast drum hit
 
@@ -227,12 +233,13 @@ candidate analogy: "measuring with different rulers at different frequencies" �
 [WRITE: "The kernel is also called the impulse response — what the filter outputs when given a single spike as input. Convolution with a wavelet kernel = full time-frequency map = scalogram"]
 
 [PLACEHOLDER: figure — "Wavelet scaling at different frequencies — mother wavelet stretched for low freq (wide, slow), compressed for high freq (narrow, fast)"]
+<!-- CANDIDATES: A=wavelet_scaling — show the mother wavelet at multiple scales to make the adaptive-resolution claim of §5.1 concrete | B=wavelet_scaling — visualize the wavelet stretching/compressing across frequency, the mechanism behind §5.1's "adaptive window" claim | C=wavelet_scaling — contrast a wide low-freq wavelet against a narrow high-freq wavelet so the §4.2 STFT tradeoff is visibly resolved -->
 
 ---
 
 ## 6. Implementation Deep Dive
 
-<p align="center"><img src="assets/images/benchmarks/timing_bar_chart.png" width="60%"></p>
+<p align="center"><img src="assets/images/generated/timing_bar_chart.png" width="60%"></p>
 
 [WRITE: "SubShader pipeline timing breakdown — per-stage costs for CWT computation, normalization, and rendering"]
 
@@ -240,7 +247,7 @@ candidate analogy: "measuring with different rulers at different frequencies" �
 
 [WRITE: "How SubShader builds wavelet kernels: starting from the mother wavelet (Morlet/Gaussian-modulated sinusoid) and scaling it for each frequency in the chromatic scale"]
 
-[WRITE: "Key parameters from WaveletConfig:"]
+[WRITE: "Key parameters from CWTConfig (`src/subshader/config.py`; `WaveletConfig` retained as an alias):"]
 
 | Parameter | Default | Controls |
 |-----------|---------|----------|
@@ -260,16 +267,17 @@ candidate analogy: "measuring with different rulers at different frequencies" �
 
 ### 6.2 CWT Pipeline
 
-The full pipeline from `Wavelet.cwt()` in `src/subshader/dsp/wavelet.py`:
+Each chunk flows through the `DSP` ABC's three-stage contract — `pre()` validates and casts, `transform()` does the backend-specific CWT (CPU or GPU), `post()` runs the shared post-processing chain. `pre()` and `post()` live on the `CWT` base class in `src/subshader/dsp/cwt.py`; `transform()` is implemented by `CpuCWT` and `GpuCWT`.
+
+The post-processing chain — `CWT.post()` in `src/subshader/dsp/cwt.py`:
 
 ```python
-# Source: src/subshader/dsp/wavelet.py — Wavelet.cwt()
-cwt_coefs = self.class_specific_cwt(np.asarray(input_data, dtype=np.float64))
-cwt_coefs = self.normalize_by_scale(cwt_coefs)
-mag_coefs = self.compute_mag(cwt_coefs)
-reliable_coefs = self.discard_unreliable_coefs(mag_coefs)
-hop_center_coefs = self.extract_hop_center(reliable_coefs)
-downsampled_coefs = self.downsample(hop_center_coefs, self.output_n)
+# Source: src/subshader/dsp/cwt.py — CWT.post()
+normed = self._normalize_by_scale(raw)
+mag = self._compute_mag(normed)
+reliable = self.discard_unreliable_coefs(mag)
+hop_center = self.extract_hop_center(reliable)
+return self.downsample(hop_center, self.output_n)
 ```
 
 [WRITE: "Walk through each step — what it does and why it's in the pipeline in this order"]
@@ -296,7 +304,7 @@ downsampled_coefs = self.downsample(hop_center_coefs, self.output_n)
 
 [WRITE: "Why GPU matters for real-time: FFT-based convolution is embarrassingly parallel — each frequency row is independent. The GPU runs all rows simultaneously, achieving 40+ FPS where CPU would be far too slow"]
 
-![NumPy vs CuPy Coefficient Difference](assets/images/benchmarks/numpy_vs_cupy_diff.png)
+![NumPy vs CuPy Coefficient Difference](assets/images/reference/numpy_vs_cupy_diff.png)
 
 *Figure: Coefficient difference between NumPy and CuPy implementations — numerical equivalence validates that GPU path produces the same result*
 
@@ -304,17 +312,18 @@ downsampled_coefs = self.downsample(hop_center_coefs, self.output_n)
 
 ### 6.5 Class Hierarchy
 
-The wavelet class hierarchy in `src/subshader/dsp/wavelet.py`:
+The DSP class hierarchy spanning `src/subshader/dsp/`:
 
 ```
-Wavelet (ABC)
-├── PyWavelet          — PyWavelets library (reference implementation)
-└── AntsWavelet (ABC)  — Manual implementation (ANTS method)
-    ├── NumPyWavelet   — CPU execution (NpWavelet alias)
-    └── CuPyWavelet    — GPU execution via CuPy (CuWavelet alias)
+DSP (ABC, in dsp.py)
+├── CWT (ABC, in cwt.py)            — manual CWT, shared pre()/post() pipeline
+│   ├── CpuCWT (in cwt.py)          — NumPy execution
+│   └── GpuCWT (in cwt.py)          — CuPy/GPU execution
+├── PywaveletCWT (in pywavelet.py)  — PyWavelets reference implementation
+└── STFT (in stft.py)               — Short-Time Fourier Transform (scipy.signal)
 ```
 
-[WRITE: "When to use each: CuWavelet for real-time rendering, NpWavelet as CPU fallback when GPU not available, PyWavelet for research/comparison only"]
+[WRITE: "When to use each: GpuCWT for real-time rendering, CpuCWT as CPU fallback when GPU not available, PywaveletCWT and STFT for research/comparison only"]
 
 ---
 
