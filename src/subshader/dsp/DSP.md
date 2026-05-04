@@ -6,27 +6,27 @@
 - Need to know **what** frequencies are present and **when** they occur - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
 - The standard approach is to use the **Fourier Transform**, but it has limitations in this context
 - The **Wavelet Transform** is much better suited for this kind of task
-- Both are built upon the same foundation - **signal decomposition** 
+- Both are built on the same foundation - **signal decomposition** 
 - Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of how these methods are used to decompose signals, and explore the different areas where they excel and where they fall short
 
 ---
 
-## 2. Foundations: Inner Product
+## 2. Foundations
 
-### 2.1 Signal Decomposition
+### 2.1 Signal Decomposition - The Goal
 
 - The end goal is to decompose an arbitrary signal into its **fundamental components**
-- In simpler terms, we want to break down a composite signal into its basic **building blocks** and see how much of each exists in the overall signal 
-- It's like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
+- In simpler terms, we want to break down a composite signal into its **basic building blocks** and see how much of each is present in the overall signal 
+- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
 - This type of problem motivates us to find a way to do two things:
     1. **Define what a signal's fundamental components are** 
-    2. **Measure how much of each component is present in the signal** 
+    2. **Measure the presence of each component in the signal** 
 - This is where the **Inner Product** comes into play - it's a general-purpose tool for measuring signal components, and we will explore these two motivations in different contexts
+- Accomplishing this really depends on the signal being analyzed and the properties we're interested in measuring
 
-### 2.2 Inner Product
+### 2.2 Inner Product - The Tool
 
-- Accomplishing signal decomposition really depends on the signal being analyzed and the properties we're interested in measuring
-- The **Inner Product** gives us a quantitative way to calculate a "similarity score" between a function **f** and a reference function **g** you compare it to
+- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (embodies the signal properties we want to measure) and calculate a "**similarity score**"
 
 <div align="center">
 
@@ -41,17 +41,14 @@ $$
 
 </div>
 
-- The result is a measurement of how aligned the two functions are, reflecting their similarity
-- Eventually we will bridge the gap for audio contexts where 
-    - The **function** being analyzed is an **audio signal** 
-    - The **reference function** has the **signal properties** we want to measure
-    - The Inner Product is performed between the signal and a set of reference functions to measure how much of each property is present in the overall signal
-- But to understand how all that works, it's helpful to see how it works in its simplest form: the **Dot Product**, which has a nice geometric visualization
+- The result is a measurement of how **aligned** the two functions are, reflecting their similarity
+- To understand how this actually works, it's helpful to see how the Inner Product operates in its simplest form: the **Dot Product**
 
-### 2.3 Dot Product (Discrete Case)
+### 2.3 Dot Product - The Basic Case
 
-- The Inner Product is a generalization of what the **Dot Product** does to **vectors** in $\mathbb{R}$ (domain for  **R**eal Numbers)
-- For now we are just sticking with real, regular numbers - no imaginary numbers (yet) or weird abstract numbers in weird abstract math domains
+- The Inner Product is a generalization of what the **Dot Product** does to **vectors** in $\mathbb{R}^n$ 
+- This may sound a little mathy, but all it means is that we are sticking to plain, regular, real numbers - no imaginary numbers (yet) or abstract numbers in weird math domains 
+- As long as you can do basic **multiplication** and **addition**, it's really not too bad
 
 <div align="center">
 
@@ -62,7 +59,13 @@ $$
 <em>Dot Product Notation</em>
 </div>
 
-- The Dot Product is typically taught in the early chapters of Vector Calculus, but as long as you know basic **multiplication** and **addition**, it's really not too bad
+- Read this as - multiply each term in vector **a** with each term in vector **b** and sum them all up
+    1. Take the first term from **a** 
+    2. Take the first term from **b**
+    3. **Multiply** them together
+    4. Repeat 1-3 for each pair of terms
+    5. **Add** up all the multiplied terms together
+- Which looks like:
 
 <div align="center">
 
@@ -106,20 +109,16 @@ $$
 <em> Dot Product Operation </em>
 </div>
 
-- If you have two vectors **a** and **b**
-    - Take the first term from **a** 
-    - Take the first term from **b**
-    - **Multiply** them together
-    - Repeat for each vector's second term, third term, and so on... until the final term
-    - **Add** them all up
 
-- But what does this even really do? What does the result mean? The result indicates how parallel the two vectors are, and this is the key insight to understanding how it measures the alignment two different *things*
+- But what does this operation even really do and what does the result even really mean? 
+- The result indicates how **parallel** vectors **a** and **b** are, and is the key insight to understanding how the Dot Product operation measures **alignment** or **similarity**
+- The Dot Product can be geometrically visualized during **vector projection** and 
 
-### 2.4 Vector Projection
+### 2.4 Vector Projection - The Geometric Interpretation
 
-#### 2.4.1 Geometric Interpretation
+#### 2.4.1 Basic Vectors
 
-- We'll be using these terms a lot so to brush up on our basic calculus, every **vector** looks like an **arrow**, each having a 
+- Every **vector** looks like an **arrow**, each having a 
     - **magnitude** - how long it is (a single / scalar value, always positive)
     - **direction** - where it points (its angle / orientation in space)
 
