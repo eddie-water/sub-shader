@@ -163,11 +163,13 @@ $$
 - More specifically, it tells us which of the first vector's **basic components** are **aligned** in the same direction of the other
 - Almost like how much of one vector "casts its shadow" onto the other 
 
-#### 2.4.3 2D Vectors
+#### 2.4.3 From 2D to N Dimensions
 
 - At this point, we've been saying we need a way to define the fundamental components of the *thing* we're analyzing
 - What are the fundamental components of vectors? In a coordinate system like the xy plane, the components of a vector are its dimension components - the x dimension (the x axis) and the y dimension (the y axis)
 - Before getting too crazy with it, we'll start with the basics: vectors with two dimensions
+
+**2D**
 
 - Simplest case: **a** · **b** = a₁b₁ + a₂b₂
 - The components that make up these vectors are its **basis vectors** - the values along each dimension (the x and y axes)
@@ -175,7 +177,7 @@ $$
 
 *[Visual: 2D projection]*
 
-#### 2.4.4 3D Vectors
+**3D**
 
 - The Dot Product still works if you add a third dimension, you just continue the pattern
 - Direct extension: **a** · **b** = a₁b₁ + a₂b₂ + a₃b₃
@@ -183,7 +185,7 @@ $$
 
 *[Visual: 3D projection]*
 
-#### 2.4.5 ND Vectors - From Dimensions to Elements
+**ND**
 
 - Yep, still works if you add a bunch more dimensions, even 100 for example
 - It's hard to think what a 100D Vector looks like because we don't really have a way to visualize 100 dimensions
@@ -214,12 +216,6 @@ $$
 - The function we compare against is called a **basis function** - a known reference **pattern** or **template**
 - The choice of basis function determines what features we can detect
 - The scalar result of this comparison is called a **coefficient** - it tells you "how much" of that basis function is present
-
-### 2.7 Inner vs Outer Product (Brief Note)
-
-- Inner product: contracts (rank 1 × rank 1 → rank 0)
-- Outer product: expands (rank 1 × rank 1 → rank 2)
-- Named relative to operand rank - inner goes inward toward scalars
 
 ---
 
