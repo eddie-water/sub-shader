@@ -80,12 +80,13 @@ VECTOR_A_COLOR = "#fcfeaa"      # warm yellow — matches GRID_WAVEFORM_COLOR
 VECTOR_B_COLOR = "#7ec8ff"      # cool blue — distinct from a
 VECTOR_PROJ_COLOR = "#ff8c66"   # orange — projection / "shadow"
 VECTOR_NEUTRAL_COLOR = "#888888"  # for misc / sample vectors with no role
-VECTOR_AXIS_COLOR = "#444444"
+VECTOR_AXIS_COLOR = "#cccccc"
 VECTOR_AXIS_ALPHA = 0.6
 VECTOR_DROPLINE_COLOR = "#888888"   # dashed perpendicular from b to projection
 VECTOR_DROPLINE_ALPHA = 0.55
 
 VECTOR_LINEWIDTH = 2.4
+VECTOR_BOLD_LINEWIDTH = 3.6     # for emphasized "primary" vectors
 VECTOR_HEAD_WIDTH = 0.10        # in data units, axes are typically [-1, 1]
 VECTOR_HEAD_LENGTH = 0.14
 VECTOR_LABEL_FONT_SIZE = 18
@@ -96,6 +97,16 @@ VECTOR_PANEL_RESULT_COLOR = "#dddddd"
 VECTOR_DEFAULT_LIM = 1.25       # symmetric ±lim axis range
 VECTOR_FIGSIZE_PER_PANEL = 5.0  # square panel width in inches
 VECTOR_FIGSIZE_HEIGHT = 5.0
+
+# Matplotlib's tableau palette — lets named-color picks do the heavy lifting
+# instead of hand-tuned hex.
+VECTOR_ORANGE = "tab:orange"
+VECTOR_BLUE = "tab:blue"
+
+# When axes are drawn as +x / +y arrows instead of full axhline/axvline.
+VECTOR_AXIS_ARROW_INSET = 0.05      # gap between arrow tip and axis limit
+VECTOR_AXIS_LABEL_OFFSET = 0.08     # offset of "x"/"y" labels from axis lines
+VECTOR_AXIS_LABEL_SIZE = 14
 
 # ===== DSP.md MOTIVATOR FIGURE =====
 # Compact 3-row layout for the §1 motivator. All "MOTIVATOR_*" knobs in one

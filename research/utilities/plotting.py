@@ -381,11 +381,17 @@ def create_panel_row(n_panels, *, panel_size=None, height=None,
 # constants routed through style.py.
 # =============================================================================
 
-def setup_vector_axes(ax, *, lim=None, panel_title=None, result_text=None):
+def setup_vector_axes(ax, *, lim=None, panel_title=None, result_text=None,
+                       show_border=True, axis_style="line", axis_labels=False):
     """Square axes with origin crosshair, no ticks, equal aspect.
 
     `panel_title` lands above the panel (left-aligned). `result_text` lands
     bottom-center as the dot-product result annotation (e.g. `a · b = +1.0`).
+
+    `show_border=False` hides the four spines for a clean axes-only look.
+    `axis_style="arrow"` replaces axhline/axvline with +x and +y arrows from
+    origin to axis limit (negative axes hidden).
+    `axis_labels=True` places "x" in Q-IV and "y" in Q-I near the limits.
     """
     if lim is None:
         lim = style.VECTOR_DEFAULT_LIM
@@ -396,10 +402,42 @@ def setup_vector_axes(ax, *, lim=None, panel_title=None, result_text=None):
     ax.set_xticks([])
     ax.set_yticks([])
 
-    ax.axhline(0, color=style.VECTOR_AXIS_COLOR,
-               alpha=style.VECTOR_AXIS_ALPHA, linewidth=0.8, zorder=0)
-    ax.axvline(0, color=style.VECTOR_AXIS_COLOR,
-               alpha=style.VECTOR_AXIS_ALPHA, linewidth=0.8, zorder=0)
+    if not show_border:
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+    inset = style.VECTOR_AXIS_ARROW_INSET
+    if axis_style == "arrow":
+        for tail, head in (
+            ((-lim + inset, 0.0), (lim - inset, 0.0)),
+            ((0.0, -lim + inset), (0.0, lim - inset)),
+        ):
+            ax.annotate(
+                "", xy=head, xytext=tail,
+                arrowprops=dict(arrowstyle="<|-|>",
+                                color=style.VECTOR_AXIS_COLOR,
+                                alpha=style.VECTOR_AXIS_ALPHA,
+                                linewidth=0.9,
+                                mutation_scale=14,
+                                shrinkA=0, shrinkB=0),
+                zorder=0,
+            )
+    else:
+        ax.axhline(0, color=style.VECTOR_AXIS_COLOR,
+                   alpha=style.VECTOR_AXIS_ALPHA, linewidth=0.8, zorder=0)
+        ax.axvline(0, color=style.VECTOR_AXIS_COLOR,
+                   alpha=style.VECTOR_AXIS_ALPHA, linewidth=0.8, zorder=0)
+
+    if axis_labels:
+        offset = style.VECTOR_AXIS_LABEL_OFFSET
+        ax.text(lim - inset, -offset, "x",
+                color=style.VECTOR_AXIS_COLOR, alpha=0.9,
+                fontsize=style.VECTOR_AXIS_LABEL_SIZE,
+                ha="center", va="top", style="italic")
+        ax.text(offset, lim - inset, "y",
+                color=style.VECTOR_AXIS_COLOR, alpha=0.9,
+                fontsize=style.VECTOR_AXIS_LABEL_SIZE,
+                ha="left", va="center", style="italic")
 
     if panel_title is not None:
         ax.set_title(panel_title, color=style.TICK_LABEL_COLOR,

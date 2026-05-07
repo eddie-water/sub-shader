@@ -1,10 +1,10 @@
 # Foundations: Wavelet Transform
 
-## 1. Motivation
+## 1. Motivations
 
-- We want to analyze audio signals with precision 
-- Need to know **what** frequencies are present and **when** they occur - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
-- The standard approach is to use the **Fourier Transform**, but it has limitations in this context, whereas the **Wavelet Transform** is much better suited for this kind of task 
+- To properly visualize an audio signal, we need a method for precisely representing the signal's behavior
+- More specifically, we want to know **what** frequencies are present and **when** they occur in the signal - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
+- The standard approach is to use the **Fourier Transform**, but it has limitations in this context, whereas the **Wavelet Transform** is better suited for this kind of task 
 
   *[TODO Insert CWT vs STFT Figure]*
 - Both are built on the same foundation - **signal decomposition** 
@@ -17,9 +17,8 @@
 ### 2.1 Signal Decomposition - The Goal
 
 - The end goal is to **decompose** any given signal into its **fundamental components**
-- In simpler terms, we want to break down a composite signal into its **basic building blocks** and see how much of each is present in the overall signal 
-- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
-<!-- Already said "overall" find better synonyms -->
+- In simpler terms, we want to break down a signal into its **basic building blocks** and see how much of each exists in it originally 
+- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the final color of the paint - where would you even begin?
 - This type of problem motivates us to do two things:
     1. **Define what a signal's fundamental components are** 
     2. **Measure the presence of each component in the signal** 
@@ -110,7 +109,7 @@ $$
 </div>
 
 - But what does this operation even really do? And what does the result even really mean? 
-- The result indicates how **parallel** vectors **a** and **b** are - this is the key insight to understanding that the Dot Product measures **"similarity"** by  calculating how **aligned** **a** and **b** are in terms of their "**parallel**-ness" we can say for now
+- The result indicates how **parallel** vectors **a** and **b** are - this is the key insight to understanding that the Dot Product measures **"similarity"** by  calculating how **aligned** **a** and **b** are in terms of their **parallel**-ness so to speak
 - This clicks more visually during **Vector Projection**, our first attempt at any form of  decomposition
 
 ### 2.4 Vector Projection - The Geometric Interpretation
@@ -125,8 +124,9 @@ $$
 - Think of it as the vector casting its shadow on each axis, where the length of each shadow reveals the vector's **component** for that dimension - how much of that dimension contributes to the original vector as a whole 
 - We can call these its basic components because they can be **recombined in any order** to reconstruct the original vector
 
-*[Figure - I want a new figure - left panel = vector projection onot x and y aces with the components tip to tail x then y, right panel showing the other way they reconstruct the original ]
 <!-- ![Vector a decomposed into its x and y components via projection onto each axis](../../../assets/images/dsp/vector_xy_projection.png) -->
+
+![The same components recombined tip-to-tail in opposite orders both reconstruct a](../../../assets/images/dsp/vector_xy_reconstruction.png)
 
 - That tells us which components of a exist in the x and y dimensions, but to continue towards signal decomposition and measuring similarity between two things, we take one vector and project it onto the other - this does decomposition along **b**'s direction instead of along x or y
 - It tells you the component of **a** that points the same way as **b**

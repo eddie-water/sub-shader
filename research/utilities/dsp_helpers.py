@@ -1,5 +1,7 @@
 """DSP helper functions for the benchmark suite."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 import numpy as np

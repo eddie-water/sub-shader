@@ -9,6 +9,8 @@ Each figure config is an explicit dataclass entry — easy to tweak parameters
 and re-render any single version without touching others.
 """
 
+from __future__ import annotations
+
 import math
 import os
 from dataclasses import dataclass
@@ -477,6 +479,68 @@ def _plot_vector_xy_projection(output_dir: str = None,
     return _save(fig, output_dir, filename)
 
 
+def _plot_vector_xy_reconstruction(output_dir: str = None,
+                                    filename: str = "vector_xy_reconstruction.png") -> str:
+    """§2.4.1 — Components recombine in any order to reconstruct **a**.
+
+    Two panels: a unit vector at angle pi/6 decomposed tip-to-tail in opposite
+    orders (x then y vs y then x). Bold a + dashed components in the same
+    color show the chain converges on the same tip either way.
+    """
+    if output_dir is None:
+        output_dir = IMAGES_DSP_DIR
+
+    fig, axes = create_panel_row(
+        n_panels=2,
+        panel_size=style.VECTOR_FIGSIZE_PER_PANEL * 1.3,
+        height=style.VECTOR_FIGSIZE_HEIGHT * 1.05,
+    )
+
+    a = (math.cos(math.pi / 6), math.sin(math.pi / 6))
+    ax_comp = (a[0], 0.0)
+    ay_comp = (0.0, a[1])
+    vec_color = style.VECTOR_PROJ_COLOR
+
+    for ax, order in zip(axes, ("xy", "yx")):
+        setup_vector_axes(ax, lim=1.15,
+                          show_border=False,
+                          axis_style="arrow",
+                          axis_labels=True)
+
+        plot_vector(ax, a, color=vec_color, label="a",
+                    alpha=1.0, zorder=4,
+                    linewidth=style.VECTOR_BOLD_LINEWIDTH)
+
+        if order == "xy":
+            plot_vector(ax, ax_comp, color=vec_color,
+                        alpha=0.95, zorder=3, linestyle="--")
+            plot_vector(ax, ay_comp, origin=ax_comp,
+                        color=vec_color, alpha=0.95, zorder=3, linestyle="--")
+            ax.text(a[0] / 2, -0.10, "aₓ",
+                    color=vec_color, fontweight="bold",
+                    fontsize=style.VECTOR_LABEL_FONT_SIZE,
+                    ha="center", va="top")
+            ax.text(a[0] + 0.08, a[1] / 2, "aᵧ",
+                    color=vec_color, fontweight="bold",
+                    fontsize=style.VECTOR_LABEL_FONT_SIZE,
+                    ha="left", va="center")
+        else:
+            plot_vector(ax, ay_comp, color=vec_color,
+                        alpha=0.95, zorder=3, linestyle="--")
+            plot_vector(ax, ax_comp, origin=ay_comp,
+                        color=vec_color, alpha=0.95, zorder=3, linestyle="--")
+            ax.text(-0.10, a[1] / 2, "aᵧ",
+                    color=vec_color, fontweight="bold",
+                    fontsize=style.VECTOR_LABEL_FONT_SIZE,
+                    ha="right", va="center")
+            ax.text(a[0] / 2, a[1] + 0.08, "aₓ",
+                    color=vec_color, fontweight="bold",
+                    fontsize=style.VECTOR_LABEL_FONT_SIZE,
+                    ha="center", va="bottom")
+
+    return _save(fig, output_dir, filename)
+
+
 def _plot_vector_basics(output_dir: str = None,
                         filename: str = "vector_basics.png") -> str:
     """§2.4.1 — Several arrows of varying magnitude and direction.
@@ -630,6 +694,7 @@ def generate_foundations_figures(output_dir: str = None) -> list:
     paths = [
         _plot_vector_basics(output_dir),
         _plot_vector_xy_projection(output_dir),
+        _plot_vector_xy_reconstruction(output_dir),
         _plot_dot_product_geometry(output_dir),
         _plot_vector_similarity(output_dir),
         _plot_vector_projection(output_dir),
