@@ -9,6 +9,7 @@ AUDIO_GENERATED_DIR = "assets/audio/generated"
 
 IMAGES_REFERENCE_DIR = "assets/images/reference"
 IMAGES_GENERATED_DIR = "assets/images/generated"
+IMAGES_DSP_DIR = "assets/images/dsp"
 
 TIMING_DIR = "assets/timing"
 

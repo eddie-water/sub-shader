@@ -9,6 +9,7 @@ from .constants import (
     AUDIO_GENERATED_DIR,
     IMAGES_REFERENCE_DIR,
     IMAGES_GENERATED_DIR,
+    IMAGES_DSP_DIR,
     TIMING_DIR,
     AUDIO_BOUNCING_CHIRP,
     AUDIO_MIDI_SINE_WAVES,
@@ -64,17 +65,32 @@ from . import style
 from .plotting import (
     compute_freq_yticks,
     create_figure_scaffold,
+    create_grid_scaffold,
     render_top_row,
     render_spectrogram_row,
+    render_image_row,
+    plot_time_series,
+    plot_inst_freq,
+    plot_fft_magnitude,
+    plot_stft_spectrogram,
+    plot_cwt_spectrogram,
+    compute_full_cwt,
+    create_panel_row,
+    setup_vector_axes,
+    plot_vector,
+    plot_projection,
 )
 
 # Export DSP helpers
 from .dsp_helpers import (
+    BouncingChirpConfig,
+    WaypointChirpConfig,
     build_chirp_chunks,
     build_wandering_chirp_chunks,
     build_fm_chirp_chunks,
     build_bouncing_chirp,
     build_bouncing_chirp_chunks,
+    build_waypoint_chirp,
 )
 
 # Export WAV utilities
@@ -86,6 +102,7 @@ __all__ = [
     "AUDIO_GENERATED_DIR",
     "IMAGES_REFERENCE_DIR",
     "IMAGES_GENERATED_DIR",
+    "IMAGES_DSP_DIR",
     "TIMING_DIR",
     # Constants — audio files
     "AUDIO_BOUNCING_CHIRP",
@@ -137,14 +154,29 @@ __all__ = [
     # Plotting
     "compute_freq_yticks",
     "create_figure_scaffold",
+    "create_grid_scaffold",
     "render_top_row",
     "render_spectrogram_row",
+    "render_image_row",
+    "plot_time_series",
+    "plot_inst_freq",
+    "plot_fft_magnitude",
+    "plot_stft_spectrogram",
+    "plot_cwt_spectrogram",
+    "compute_full_cwt",
+    "create_panel_row",
+    "setup_vector_axes",
+    "plot_vector",
+    "plot_projection",
     # DSP
+    "BouncingChirpConfig",
+    "WaypointChirpConfig",
     "build_chirp_chunks",
     "build_wandering_chirp_chunks",
     "build_fm_chirp_chunks",
     "build_bouncing_chirp",
     "build_bouncing_chirp_chunks",
+    "build_waypoint_chirp",
     # WAV export
     "export_signal_to_wav",
     # Signal registry

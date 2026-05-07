@@ -4,10 +4,11 @@
 
 - We want to analyze audio signals with precision 
 - Need to know **what** frequencies are present and **when** they occur - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
-- The standard approach is to use the **Fourier Transform**, but it has limitations in this context
-- The **Wavelet Transform** is much better suited for this kind of task
+- The standard approach is to use the **Fourier Transform**, but it has limitations in this context, whereas the **Wavelet Transform** is much better suited for this kind of task 
+
+  *[TODO Insert CWT vs STFT Figure]*
 - Both are built on the same foundation - **signal decomposition** 
-- Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of how these methods are used to decompose signals, and explore the different areas where they excel and where they fall short
+- Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of how these methods actually work, and explore the different areas where they excel and fall short
 
 ---
 
@@ -15,18 +16,18 @@
 
 ### 2.1 Signal Decomposition - The Goal
 
-- The end goal is to decompose an arbitrary signal into its **fundamental components**
+- The end goal is to **decompose** any given signal into its **fundamental components**
 - In simpler terms, we want to break down a composite signal into its **basic building blocks** and see how much of each is present in the overall signal 
 - This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
-- This type of problem motivates us to find a way to do two things:
+<!-- Already said "overall" find better synonyms -->
+- This type of problem motivates us to do two things:
     1. **Define what a signal's fundamental components are** 
     2. **Measure the presence of each component in the signal** 
 - This is where the **Inner Product** comes into play - it's a general-purpose tool for measuring signal components, and we will explore these two motivations in different contexts
-- Accomplishing this really depends on the signal being analyzed and the properties we're interested in measuring
 
 ### 2.2 Inner Product - The Tool
 
-- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (embodies the signal properties we want to measure) and calculate a "**similarity score**"
+- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (embodies the signal properties we want to measure) to calculate, effectively, a "**similarity score**"
 
 <div align="center">
 
@@ -41,13 +42,13 @@ $$
 
 </div>
 
-- The result is a measurement of how **aligned** the two functions are, reflecting their similarity
-- To understand how this actually works, it's helpful to see how the Inner Product operates in its simplest form: the **Dot Product**
+- The result is a measurement of how **correlated** these function are, indicating their **similarity**
+- But to understand this actually works, it's helpful to see how the Inner Product operates in its simplest form: the **Dot Product**
 
 ### 2.3 Dot Product - The Basic Case
 
 - The Inner Product is a generalization of what the **Dot Product** does to **vectors** in $\mathbb{R}^n$ 
-- This may sound a little mathy, but all it means is that we are sticking to plain, regular, real numbers - no imaginary numbers (yet) or abstract numbers in weird math domains 
+- This may sound a little mathy, but all that means is we are just going to be applying these concepts to plain, regular, real numbers - no imaginary numbers (yet) or abstract numbers in weird math domains 
 - As long as you can do basic **multiplication** and **addition**, it's really not too bad
 
 <div align="center">
@@ -59,13 +60,12 @@ $$
 <em>Dot Product Notation</em>
 </div>
 
-- Read this as - multiply each term in vector **a** with each term in vector **b** and sum them all up
-    1. Take the first term from **a** 
+- Read this as: "Multiply each term in vector **a** with each term in vector **b** and sum them all up"
+    <!-- 1. Take the first term from **a** 
     2. Take the first term from **b**
     3. **Multiply** them together
     4. Repeat 1-3 for each pair of terms
-    5. **Add** up all the multiplied terms together
-- Which looks like:
+    5. **Add** up all the multiplied terms together -->
 
 <div align="center">
 
@@ -109,93 +109,64 @@ $$
 <em> Dot Product Operation </em>
 </div>
 
-
-- But what does this operation even really do and what does the result even really mean? 
-- The result indicates how **parallel** vectors **a** and **b** are, and is the key insight to understanding how the Dot Product operation measures **alignment** or **similarity**
-- The Dot Product can be geometrically visualized during **vector projection** and 
+- But what does this operation even really do? And what does the result even really mean? 
+- The result indicates how **parallel** vectors **a** and **b** are - this is the key insight to understanding that the Dot Product measures **"similarity"** by  calculating how **aligned** **a** and **b** are in terms of their "**parallel**-ness" we can say for now
+- This clicks more visually during **Vector Projection**, our first attempt at any form of  decomposition
 
 ### 2.4 Vector Projection - The Geometric Interpretation
 
-#### 2.4.1 Basic Vectors
+#### 2.4.1 Decomposing Basic Vectors
 
-- Every **vector** looks like an **arrow**, each having a 
-    - **magnitude** - how long it is (a single / scalar value, always positive)
-    - **direction** - where it points (its angle / orientation in space)
+- A **vector** can be thought of as an **arrow** described by its two properties
+  - **magnitude** - how long it is 
+  - **direction** - where it points
 
-*[Figure: Basic vectors with different magnitudes and directions]*
+- To **decompose** a vector (break it down into its basic components), we **project it along the directions** of its coordinate system - typically the x and y axes for 2D vectors
+- Think of it as the vector casting its shadow on each axis, where the length of each shadow reveals the vector's **component** for that dimension - how much of that dimension contributes to the original vector as a whole 
+- We can call these its basic components because they can be **recombined in any order** to reconstruct the original vector
 
-- What does the Dot Product do?
-    1. Takes a pair of vectors
-    2. Performs a set of operations on them, using their magnitudes and directions
-    3. Produces a scalar result 
+*[Figure - I want a new figure - left panel = vector projection onot x and y aces with the components tip to tail x then y, right panel showing the other way they reconstruct the original ]
+<!-- ![Vector a decomposed into its x and y components via projection onto each axis](../../../assets/images/dsp/vector_xy_projection.png) -->
 
-- Geometrically, the Dot Product tells us how parallel the two vectors are
-- We can all agree that a pair of **parallel** vectors appear more **similar** than a **non-parallel** pair
-- Even if the parallel vectors' lengths (magnitudes) are different, the result still implies these vectors are aligned in the same direction, reflecting their alikeness
+- That tells us which components of a exist in the x and y dimensions, but to continue towards signal decomposition and measuring similarity between two things, we take one vector and project it onto the other - this does decomposition along **b**'s direction instead of along x or y
+- It tells you the component of **a** that points the same way as **b**
 
-- For two vectors **a** and **b**
-    - parallel + same direction = strongly similar = positive result
-    - parallel + opposite direction = strongly opposite = negative result
-    - perpendicular / perfectly un-parallel = no similarity / unrelated = zero result
+*[Figure - two vectors projected on to each other - symmetrical proejctions]*
 
-*[Graphic: Visualize Parallel Same Direction, Parallel Opposite Direction, and Perpendicular Vectors]*
+- Segue into more than 2D dimensiosn
 
-- What if these vectors were **oblique** (neither completely parallel nor completely perpendicular)?
-    - oblique + any direction = potentially kind of similar or not that similar
 
-*[Graphic: Oblique Vectors - one kind of similar, one not so similar]*
+#### 2.4.2 Projection - The Geometric Meaning
 
-- So how does it do that exactly? 
-    - Well if we took one vector's orientation, and composed the other vector using the dimensions of the first, we can see that the second vector can be composed of two basic vectors, one of them being largely parallel with the other, visually showing us why we can say the second vector is very similar to the first one, but the third one is not so similar
-- This is the heart of the Dot Product and is formally called Vector Projection
+- The Dot Product has a geometric meaning: it measures how much of one vector "lives along" another vector's direction
+- This operation is called **vector projection**
+- Think of it like a shadow — if the sun were directly overhead, the shadow that **b** casts onto **a** is the projection
 
-#### 2.4.2 Projection Mechanics
+![Vector projection: long shadow on a means b is similar to a; short shadow means barely similar](../../../assets/images/dsp/vector_projection.png)
 
-- There are many ways to look at it, but through the lens of Vector Projection, we can see how a vector's components contribute values in the same direction as the other 
-- The more a vector's component contributes 
-    - **Values** in the **same direction** as the other **increases the similarity score** 
-    - **Values** in the **opposite direction** as the other **decreases the similarity score**
-    - **No values** in the **direction** as the other **do not affect the similarity score** 
-- In all of these cases, the magnitudes of each vector will scale the Dot Product's result to be bigger or smaller (hence the name *scalar*)
-- Geometrically, the Dot Product tells us how one vector is 'projected' onto the other
-- This is another way saying 'How much of one vector is present in the other'
-- More specifically, it tells us which of the first vector's **basic components** are **aligned** in the same direction of the other
-- Almost like how much of one vector "casts its shadow" onto the other 
+- The projection's magnitude tells us how aligned **b** and **a** are. Three extreme cases:
+    - **parallel + same direction** → full projection → large positive result
+    - **parallel + opposite direction** → flipped projection → large negative result
+    - **perpendicular** → no projection → zero result
 
-#### 2.4.3 From 2D to N Dimensions
+![Dot product sign by angle: parallel-same → positive, parallel-opposite → negative, perpendicular → zero](../../../assets/images/dsp/dot_product_geometry.png)
 
-- At this point, we've been saying we need a way to define the fundamental components of the *thing* we're analyzing
-- What are the fundamental components of vectors? In a coordinate system like the xy plane, the components of a vector are its dimension components - the x dimension (the x axis) and the y dimension (the y axis)
-- Before getting too crazy with it, we'll start with the basics: vectors with two dimensions
+- And the in-between case — when vectors are **oblique** (neither parallel nor perpendicular):
+    - **oblique** → partial projection → partial similarity
 
-**2D**
+#### 2.4.3 Same Operation, More Dimensions
 
-- Simplest case: **a** · **b** = a₁b₁ + a₂b₂
-- The components that make up these vectors are its **basis vectors** - the values along each dimension (the x and y axes)
-- The dot product compares how much each component is aligned with the other
+- Let's run a quick example in 2D where both vectors have two components each
+    - **a** = (3, 4), **b** = (1, 1)
+    - **a** · **b** = (3 · 1) + (4 · 1) = **7**
+- The mechanics extend cleanly to higher dimensions — same multiply-and-sum, just more terms
+    - 3D: a₁b₁ + a₂b₂ + a₃b₃
+    - ND: a₁b₁ + a₂b₂ + ... + aₙbₙ
+- Honestly, from here on, don't try too hard to picture x, y, z anymore — past 3D you can't picture it anyway
+- What's actually doing the work: **pair the elements, multiply, sum**
+- This element-by-element pairing is the root of the **orthogonality** principle — we'll come back to it in §2.6
 
-*[Visual: 2D projection]*
-
-**3D**
-
-- The Dot Product still works if you add a third dimension, you just continue the pattern
-- Direct extension: **a** · **b** = a₁b₁ + a₂b₂ + a₃b₃
-- Now three **basis vectors** (x, y, z axes), three **components** per vector
-
-*[Visual: 3D projection]*
-
-**ND**
-
-- Yep, still works if you add a bunch more dimensions, even 100 for example
-- It's hard to think what a 100D Vector looks like because we don't really have a way to visualize 100 dimensions
-- Drop "dimension" language - think "**elements**" ordered by some kind of **index**
-- Instead of the x-dimension, Element 1 pairs with element 1, element 99 pairs with element 99
-- At this point, we stop calling them "components" and start calling them **elements** or **samples**
-- The vector becomes a **sequence** or **array**
-
-*[Example: Two 10-element vectors]*
-
-### 2.5 Sign Accumulation
+### 2.5 Sign Accumulation - The Agreement Mechanism
 
 - Dot product is a signed similarity accumulator
 - Same signs → positive contribution (agreement)
@@ -205,29 +176,25 @@ $$
 
 *[Interactive: color-coded element products]*
 
-### 2.6 Continuous Extension
+### 2.6 Basis Functions - Achieving Signal Decomposition
 
-- Discrete: Σᵢ aᵢbᵢ
-- Continuous: ∫ a(t) b(t) dt
-- Same operation, continuous domain - the multiply-add is exactly the dot product, except now the operands are functions instead of vectors
-- How much of one function's shape is present in the other
-- This generalization is the inner product
-- The function we compare against is called a **basis function** - a known reference **pattern** or **template**
+- Accomplishing this really depends on the signal being analyzed and the properties we're interested in measuring
+- The function we compare against is called a **basis function** - a known reference **pattern**
 - The choice of basis function determines what features we can detect
 - The scalar result of this comparison is called a **coefficient** - it tells you "how much" of that basis function is present
 
 ---
 
-## 3. Fourier Transform: Frequency Templates
+## 3. Fourier Transform: Sinusoidal Basis Functions
 
-### 3.1 The Template Question
+### 3.1 The Basis Function Question
 
 - We have a signal (sequence of samples)
 - Inner product measures similarity to... what?
 - Answer: known reference patterns (basis functions)
 - So what basis functions should we use?
 
-### 3.2 Sine Waves as Templates
+### 3.2 Sine Waves as Basis Functions
 
 - What if we made the basis function a pure sine wave?
 - Compare signal to a sine wave at a particular frequency
@@ -244,10 +211,10 @@ $$
 
 ### 3.4 How FFT Actually Works
 
-- Infinite sine wave templates (no start/end)
+- Infinite sine wave basis functions (no start/end)
 - Accumulates similarity across entire signal duration
 - Produces magnitude and phase for each frequency
-- In signal processing terms, this is **correlation** between the signal and each sinusoidal template
+- In signal processing terms, this is **correlation** between the signal and each sinusoidal basis function
 
 *[Example: Sign Accumulation of a sine wave]*
 
@@ -255,7 +222,7 @@ $$
 
 #### 3.5.1 Temporal Information Loss
 
-- Sine templates span entire signal
+- Sine basis functions span entire signal
 - Result: knows *what* frequencies exist, not *when*
 - A note at the beginning vs end → same FFT result
 
@@ -307,11 +274,11 @@ $$
 
 ### 5.1 Core Idea
 
-- What if the "template" width varied with frequency?
-- Low frequencies → wide template (good frequency resolution)
-- High frequencies → narrow template (good time resolution)
+- What if the basis function's width varied with frequency?
+- Low frequencies → wide basis function (good frequency resolution)
+- High frequencies → narrow basis function (good time resolution)
 
-### 5.2 Wavelets as Templates
+### 5.2 Wavelets as Basis Functions
 
 - Localized oscillations (not infinite like sine waves)
 - The prototype shape is called the **mother wavelet** - the base pattern before any scaling
@@ -735,8 +702,8 @@ Same ideas, different contexts:
 | Stage | What you have | What you compare against | The comparison operation | The result |
 |-------|---------------|--------------------------|--------------------------|------------|
 | 2D/3D Vectors | vector | basis vector | dot product | component, projection |
-| N-Element Vectors | sequence, array | pattern, template | dot product | similarity score |
-| Discrete Signals | signal, samples | template, pattern | correlation | correlation value |
+| N-Element Vectors | sequence, array | pattern, basis function | dot product | similarity score |
+| Discrete Signals | signal, samples | basis function, pattern | correlation | correlation value |
 | Continuous Functions | function, waveform | basis function | inner product | coefficient |
 | Fourier Analysis | signal | sinusoid, harmonic | Fourier transform | Fourier coefficient, spectrum |
 | STFT | windowed signal | windowed sinusoid | windowed FFT | spectrogram bin |
@@ -783,7 +750,7 @@ A measurable property extracted from a signal. Can be low-level (spectral energy
 The process of transforming raw data into features suitable for machine learning.
 
 **Feature Extraction**  
-Using the inner product (or other operations) to measure how much of each pattern/template is present in the data.
+Using the inner product (or other operations) to measure how much of each pattern (basis function) is present in the data.
 
 ---
 

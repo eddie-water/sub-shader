@@ -1,50 +1,43 @@
 """DSP helper functions for the benchmark suite."""
 
+from dataclasses import dataclass
+
 import numpy as np
 from scipy.signal import stft as scipy_stft, resample as scipy_resample, chirp as scipy_chirp
 
 from . import constants
 
 
-def compute_stft_frame(chunk, sr, nperseg, freq_mask, cropped_freqs, cwt_freqs, target_w):
+@dataclass
+class BouncingChirpConfig:
+    sr: int = 44_100
+    duration_s: float = 2.0
+    f_decades: tuple[float, ...] = (20.0, 200.0, 2000.0, 20000.0)
+    bounces_per_decade: int = 3
+    seed: int | None = None
+
+
+@dataclass
+class WaypointChirpConfig:
+    """Inst-freq curve defined by user-specified (time_frac, freq_hz) waypoints.
+
+    Time fractions are in [0, 1] of duration_s. Waypoints are cubic-splined in
+    log-frequency space. Waypoints must be strictly increasing in time and
+    must include both endpoints (0 and 1).
+
+    `clip_to_waypoints` clamps the resulting curve to [min_wp_freq,
+    max_wp_freq]. Set False when an endpoint waypoint sits AT the desired
+    extreme (e.g. ending at 20 kHz) — the cubic spline will tend to overshoot
+    that extreme inside the last segment, and the clamp pins the curve into
+    a visible plateau. With clip off, brief spline overshoot just clips
+    against the panel edge in the plot.
     """
-    Run STFT on one audio chunk, resample to log-freq bins matching cwt_freqs.
-
-    Performs:
-      1. STFT with scipy.signal.stft
-      2. Magnitude extraction and frequency masking
-      3. Time-domain resampling to target_w bins
-      4. Log-frequency interpolation to cwt_freqs
-
-    Args:
-        chunk: Input audio chunk (1D array)
-        sr: Sample rate in Hz
-        nperseg: STFT window size
-        freq_mask: Boolean mask for frequency filtering
-        cropped_freqs: STFT frequencies after masking
-        cwt_freqs: Target frequency bins (log-spaced CWT frequencies)
-        target_w: Target number of time bins
-
-    Returns:
-        (n_cwt_freqs, target_w) float32 array with log-interpolated STFT magnitudes
-    """
-    # Compute STFT and extract magnitude
-    _, _, Zxx = scipy_stft(chunk, fs=sr, nperseg=nperseg)
-    stft_mag = np.abs(Zxx)[freq_mask, :]
-
-    # Resample to target width (number of time bins)
-    stft_resampled = scipy_resample(stft_mag, target_w, axis=1)
-    stft_resampled = np.clip(stft_resampled, 0, None)
-
-    # Interpolate from STFT frequencies to log-spaced CWT frequencies
-    n_cwt_freqs = len(cwt_freqs)
-    stft_log = np.zeros((n_cwt_freqs, target_w))
-    for col in range(target_w):
-        stft_log[:, col] = np.interp(
-            cwt_freqs, cropped_freqs, stft_resampled[:, col], left=0.0, right=0.0
-        )
-
-    return stft_log.astype(np.float32)
+    sr: int = 44_100
+    duration_s: float = 0.5
+    waypoints: tuple[tuple[float, float], ...] = ()
+    bc_type: str = "natural"
+    clip_to_waypoints: bool = True
+    seed: int | None = None  # unused, kept for API symmetry
 
 
 def build_fm_chirp(sr: int, duration_s: float, fc: float, delta_f: float,
@@ -270,6 +263,64 @@ def build_bouncing_chirp(sr: int, duration_s: float,
         t = t[:cut]
 
     # Integrate instantaneous frequency to get phase
+    phase = 2 * np.pi * np.cumsum(inst_freq) / sr
+    signal = np.sin(phase)
+
+    return signal.astype(np.float64), inst_freq, t
+
+
+def build_waypoint_chirp(sr: int, duration_s: float,
+                         waypoints: tuple[tuple[float, float], ...],
+                         *, bc_type: str = "natural",
+                         clip_to_waypoints: bool = True) -> tuple:
+    """Generate a chirp by cubic-splining log-frequency through user waypoints.
+
+    Args:
+        sr: Sample rate in Hz
+        duration_s: Signal duration in seconds
+        waypoints: Sequence of (time_frac, freq_hz). Time fractions are in
+                   [0, 1] of duration_s, must be strictly increasing, and must
+                   include both endpoints (0 and 1).
+        bc_type: scipy.interpolate.CubicSpline boundary condition. "natural"
+                 (zero second derivative at endpoints) gives a soft start/end;
+                 "clamped" (zero first derivative) gives flat takeoff/landing.
+
+    Returns:
+        (signal, inst_freq, t) — all 1-D arrays of length int(sr * duration_s)
+    """
+    if len(waypoints) < 2:
+        raise ValueError(f"Need at least 2 waypoints, got {len(waypoints)}")
+
+    wp = np.asarray(waypoints, dtype=np.float64)
+    wp_times = wp[:, 0] * duration_s
+    wp_log_freqs = np.log(wp[:, 1])
+
+    if not np.isclose(wp[0, 0], 0.0) or not np.isclose(wp[-1, 0], 1.0):
+        raise ValueError(
+            f"Waypoints must span [0, 1] in time_frac; "
+            f"got [{wp[0, 0]}, {wp[-1, 0]}]"
+        )
+    if not np.all(np.diff(wp_times) > 0):
+        raise ValueError("Waypoint time fractions must be strictly increasing")
+
+    n = int(sr * duration_s)
+    t = np.arange(n, dtype=np.float64) / sr
+
+    # CubicSpline (C^2 continuous, smooth second derivative across waypoints)
+    # gives the cleanest bounded humps for gently-paced chirps. Akima and
+    # Pchip both produce visible "kinks" at waypoints (discontinuous second
+    # derivative) — fine for protecting against ringing on aggressive slope
+    # flips, but visibly angular on smoother shapes. CubicSpline's only
+    # weakness is overshoot when slopes flip sharply between waypoints; for
+    # moderate chirps that risk is low and the smoother visual wins.
+    from scipy.interpolate import CubicSpline
+    cs = CubicSpline(wp_times, wp_log_freqs, bc_type=bc_type)
+    log_inst_freq = cs(t)
+
+    if clip_to_waypoints:
+        log_inst_freq = np.clip(log_inst_freq, wp_log_freqs.min(), wp_log_freqs.max())
+    inst_freq = np.exp(log_inst_freq)
+
     phase = 2 * np.pi * np.cumsum(inst_freq) / sr
     signal = np.sin(phase)
 
