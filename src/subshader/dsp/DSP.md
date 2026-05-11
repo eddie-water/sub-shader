@@ -47,7 +47,7 @@ $$
 ### 2.3 Dot Product - The Basic Case
 
 - The Inner Product is a generalization of what the **Dot Product** does to **vectors** in $\mathbb{R}^n$ 
-- This may sound a little mathy, but all that means is we are just going to be applying these concepts to plain, regular, real numbers - no imaginary numbers (yet) or abstract numbers in weird math domains 
+- This may sound a little mathy, but all it means is we are just going to be applying these concepts to plain, regular, real numbers - no imaginary numbers (yet) or abstract numbers in weird math domains 
 - As long as you can do basic **multiplication** and **addition**, it's really not too bad
 
 <div align="center">
@@ -122,7 +122,7 @@ $$
 
 - To **decompose** a vector (break it down into its basic components), we **project it along the directions** of its coordinate system - typically the x and y axes for 2D vectors
 - Think of it as the vector casting its shadow on each axis, where the length of each shadow reveals the vector's **component** for that dimension - how much of that dimension contributes to the original vector as a whole 
-- We can call these its basic components because they can be **recombined in any order** to reconstruct the original vector
+- Notice how the components can be **recombined in any order** to reconstruct the original vector
 
 <!-- ![Vector a decomposed into its x and y components via projection onto each axis](../../../assets/images/dsp/vector_xy_projection.png) -->
 

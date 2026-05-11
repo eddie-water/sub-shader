@@ -685,6 +685,79 @@ def _plot_vector_projection(output_dir: str = None,
     return _save(fig, output_dir, filename)
 
 
+def _plot_vector_symmetric_projection(
+        output_dir: str = None,
+        filename: str = "vector_symmetric_projection.png") -> str:
+    """§2.4.1 — Two equal-magnitude vectors project onto each other symmetrically.
+
+    Single panel: a (orange) along +x, b (slate blue) at 45°, both unit length.
+    Each vector's projection onto the other is rendered along the target's
+    direction in the SOURCE color (b's shadow on a is slate blue; a's shadow on
+    b is orange). Both projections have identical length (cos 45° ≈ 0.707), so
+    symmetry reads at a glance. Dashed gray droplines from each tip to its
+    projection foot make the right-angle decomposition explicit.
+
+    Colors are inlined for now ("orange + slate blue" placeholder until the
+    palette schema work in research/palette_schema.py locks).
+    """
+    if output_dir is None:
+        output_dir = IMAGES_DSP_DIR
+
+    ORANGE = "#ff8c66"
+    SLATE_BLUE = "#6b8fb5"
+
+    fig, axes = create_panel_row(
+        n_panels=1,
+        panel_size=style.VECTOR_FIGSIZE_PER_PANEL * 1.3,
+        height=style.VECTOR_FIGSIZE_HEIGHT * 1.05,
+    )
+    ax = axes[0]
+    setup_vector_axes(ax, lim=1.15,
+                      show_border=False,
+                      axis_style="arrow",
+                      axis_labels=True)
+
+    a = (1.0, 0.0)
+    theta = math.pi / 4
+    b = (math.cos(theta), math.sin(theta))
+
+    # Equal magnitudes → projection scalar = a·b = cos(45°)
+    proj_scalar = a[0] * b[0] + a[1] * b[1]
+    foot_b_on_a = (proj_scalar * a[0], proj_scalar * a[1])
+    foot_a_on_b = (proj_scalar * b[0], proj_scalar * b[1])
+
+    # Droplines first so projection/vector arrows sit on top.
+    ax.plot([b[0], foot_b_on_a[0]], [b[1], foot_b_on_a[1]],
+            color=style.VECTOR_DROPLINE_COLOR,
+            alpha=style.VECTOR_DROPLINE_ALPHA,
+            linewidth=1.2, linestyle="--", zorder=1)
+    ax.plot([a[0], foot_a_on_b[0]], [a[1], foot_a_on_b[1]],
+            color=style.VECTOR_DROPLINE_COLOR,
+            alpha=style.VECTOR_DROPLINE_ALPHA,
+            linewidth=1.2, linestyle="--", zorder=1)
+
+    # Parent vectors first; projections (dashed, source-colored) sit on top
+    # of the OTHER vector with no offset so they read as "the part of b that
+    # lies along a" / "the part of a that lies along b".
+    plot_vector(ax, a, color=ORANGE, label="a",
+                alpha=1.0, zorder=3,
+                linewidth=style.VECTOR_BOLD_LINEWIDTH)
+    plot_vector(ax, b, color=SLATE_BLUE, label="b",
+                alpha=1.0, zorder=3,
+                linewidth=style.VECTOR_BOLD_LINEWIDTH)
+
+    plot_vector(ax, foot_b_on_a,
+                color=SLATE_BLUE, alpha=1.0,
+                linewidth=style.VECTOR_LINEWIDTH,
+                linestyle="--", zorder=4)
+    plot_vector(ax, foot_a_on_b,
+                color=ORANGE, alpha=1.0,
+                linewidth=style.VECTOR_LINEWIDTH,
+                linestyle="--", zorder=4)
+
+    return _save(fig, output_dir, filename)
+
+
 def generate_foundations_figures(output_dir: str = None) -> list:
     """Render all §2 foundation figures. Returns list of output paths."""
     if output_dir is None:
@@ -695,6 +768,7 @@ def generate_foundations_figures(output_dir: str = None) -> list:
         _plot_vector_basics(output_dir),
         _plot_vector_xy_projection(output_dir),
         _plot_vector_xy_reconstruction(output_dir),
+        _plot_vector_symmetric_projection(output_dir),
         _plot_dot_product_geometry(output_dir),
         _plot_vector_similarity(output_dir),
         _plot_vector_projection(output_dir),
