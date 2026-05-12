@@ -290,9 +290,9 @@ def render_motivator(cfg: ChirpFigureConfig, output_dir: str) -> str:
     label_col_pos = axes[0][0].get_position()
     label_x = (label_col_pos.x0 + label_col_pos.x1) / 2
     row_titles = (
-        "Time Series +\nInst. Frequency",
-        "Fourier",
-        "Wavelet",
+        "Time Series + \nInst. Frequency",
+        "Fourier (STFT) \nAnalysis",
+        "Wavelet Analysis",
     )
     for r, title in enumerate(row_titles):
         row_pos = axes[r][1].get_position()
@@ -575,15 +575,18 @@ def _plot_vector_basics(output_dir: str = None,
 
 def _plot_dot_product_geometry(output_dir: str = None,
                                filename: str = "dot_product_geometry.png") -> str:
-    """§2.3 / §2.4.1 — Three canonical pairs: same-dir, opposite-dir, perpendicular.
+    """§2.4.1 — Four canonical angle cases: parallel-same, parallel-opposite,
+    perpendicular, oblique.
 
     Each panel shows two unit-ish vectors a, b plus the sign-of-result
-    annotation underneath, so the reader sees angle → sign at a glance.
+    annotation underneath, so the reader sees angle → sign at a glance. The
+    oblique panel (added 2026-05) absorbs the standalone vector_similarity
+    figure: same in-between case, fewer separate images.
     """
     if output_dir is None:
         output_dir = IMAGES_DSP_DIR
 
-    fig, axes = create_panel_row(n_panels=3)
+    fig, axes = create_panel_row(n_panels=4)
 
     # Panel 1 — parallel, same direction (positive)
     setup_vector_axes(
@@ -614,6 +617,15 @@ def _plot_dot_product_geometry(output_dir: str = None,
     plot_vector(axes[2], (0.90, 0.45), color=style.VECTOR_A_COLOR, label="a")
     # b is rotated +90° from a → (-0.45, 0.90) is perpendicular
     plot_vector(axes[2], (-0.45, 0.90), color=style.VECTOR_B_COLOR, label="b")
+
+    # Panel 4 — oblique (partial)
+    setup_vector_axes(
+        axes[3],
+        panel_title="Oblique",
+        result_text="a · b  >  0  (partial)",
+    )
+    plot_vector(axes[3], (0.95, 0.20), color=style.VECTOR_A_COLOR, label="a")
+    plot_vector(axes[3], (0.55, 0.75), color=style.VECTOR_B_COLOR, label="b")
 
     return _save(fig, output_dir, filename)
 
@@ -685,93 +697,364 @@ def _plot_vector_projection(output_dir: str = None,
     return _save(fig, output_dir, filename)
 
 
-def _plot_vector_symmetric_projection(
+def _plot_projection_reference_directions(
         output_dir: str = None,
-        filename: str = "vector_symmetric_projection.png") -> str:
-    """§2.4.1 — Two equal-magnitude vectors project onto each other symmetrically.
+        filename: str = "projection_reference_directions.png") -> str:
+    """§2.4.1 — Projection onto a reference direction (3 panels juxtaposed).
 
-    Single panel: a (orange) along +x, b (slate blue) at 45°, both unit length.
-    Each vector's projection onto the other is rendered along the target's
-    direction in the SOURCE color (b's shadow on a is slate blue; a's shadow on
-    b is orange). Both projections have identical length (cos 45° ≈ 0.707), so
-    symmetry reads at a glance. Dashed gray droplines from each tip to its
-    projection foot make the right-angle decomposition explicit.
+    Panel 1 ("onto x and y axes"):
+        Vector a projected onto the x and y axes — the axes are just a
+        convenient pair of reference directions, and a's components along
+        them ARE the projections (aₓ along x, aᵧ along y). Establishes
+        that "projection" is the same operation whether the reference is
+        a coordinate axis or another vector.
 
-    Colors are inlined for now ("orange + slate blue" placeholder until the
-    palette schema work in research/palette_schema.py locks).
+    Panel 2 ("a onto b"):
+        Vector a projected onto vector b. The shadow lands along b's
+        direction; its length is the dot-product magnitude.
+
+    Panel 3 ("b onto a"):
+        Reverses panel 2 — vector b projected onto vector a. The shadow
+        looks visually different (different length, different direction)
+        but the dot product comes out IDENTICAL: a·b = b·a = 1.00. This
+        is the symmetry of the dot product made visible.
+
+    Color palette (sourced from style.PALETTE_*):
+      - Vector a   → PALETTE_PRIMARY   (orange) — stable identity in every panel
+      - Vector b   → PALETTE_SECONDARY (purple) — stable identity in every panel
+      - Components (panel 1)            → neutral off-white (shadows)
+      - Projection arrows (panels 2-3)  → neutral off-white (shadows)
+      - Spines / droplines / labels     → neutral grey (scaffolding)
+
+    The pedagogical contract for color:
+      - PRIMARY/SECONDARY paint vector IDENTITY: a is always orange, b is
+        always purple, regardless of which direction the projection runs.
+      - Anything that's a *projection result* (shadow) is neutral, so the
+        viewer's eye sees "real thing" vs "shadow of a real thing" without
+        having to read color labels.
+      - The third palette color (TERTIARY gold) does NOT appear here — it's
+        reserved for the third dimension and surfaces only in the 3D figure.
+
+    Math sits in the markdown beneath the figure as LaTeX blocks (so \\vec{a}
+    renders correctly via the markdown viewer's MathJax/KaTeX), not inside
+    the figure as monospace text. Numbers chosen so the dot product lands
+    on a clean integer:
+      a = (1.0, 0.5),  b = (0.6, 0.8)
+      a · b = (1.0)(0.6) + (0.5)(0.8) = 0.6 + 0.4 = 1.00
     """
     if output_dir is None:
         output_dir = IMAGES_DSP_DIR
 
-    ORANGE = "#ff8c66"
-    SLATE_BLUE = "#6b8fb5"
-
     fig, axes = create_panel_row(
-        n_panels=1,
-        panel_size=style.VECTOR_FIGSIZE_PER_PANEL * 1.3,
-        height=style.VECTOR_FIGSIZE_HEIGHT * 1.05,
+        n_panels=3,
+        panel_size=style.VECTOR_FIGSIZE_PER_PANEL * 1.25,
+        height=style.VECTOR_FIGSIZE_HEIGHT,
     )
-    ax = axes[0]
-    setup_vector_axes(ax, lim=1.15,
-                      show_border=False,
-                      axis_style="arrow",
-                      axis_labels=True)
 
-    a = (1.0, 0.0)
-    theta = math.pi / 4
-    b = (math.cos(theta), math.sin(theta))
+    # Spines + axis crosshairs are neutral; role colors are reserved for the
+    # vectors themselves. Per-axis x_color / y_color overrides therefore both
+    # resolve to the neutral spine color.
+    axis_kwargs = dict(
+        x_color=_DIM_SPINE,
+        y_color=_DIM_SPINE,
+        axis_alpha=0.55,
+        axis_linewidth=1.2,
+    )
 
-    # Equal magnitudes → projection scalar = a·b = cos(45°)
-    proj_scalar = a[0] * b[0] + a[1] * b[1]
-    foot_b_on_a = (proj_scalar * a[0], proj_scalar * a[1])
-    foot_a_on_b = (proj_scalar * b[0], proj_scalar * b[1])
+    # Same a, b vectors used across all 3 panels so the pedagogy is uniform:
+    # the components shown in panel 1 are exactly the numbers that appear
+    # inside the dot product expressions in panels 2 & 3.
+    a = (1.0, 0.5)
+    b = (0.6, 0.8)
 
-    # Droplines first so projection/vector arrows sit on top.
-    ax.plot([b[0], foot_b_on_a[0]], [b[1], foot_b_on_a[1]],
-            color=style.VECTOR_DROPLINE_COLOR,
-            alpha=style.VECTOR_DROPLINE_ALPHA,
-            linewidth=1.2, linestyle="--", zorder=1)
-    ax.plot([a[0], foot_a_on_b[0]], [a[1], foot_a_on_b[1]],
-            color=style.VECTOR_DROPLINE_COLOR,
-            alpha=style.VECTOR_DROPLINE_ALPHA,
-            linewidth=1.2, linestyle="--", zorder=1)
+    # Color tokens for this figure (2D — only PRIMARY + SECONDARY surface):
+    a_color = _DIM_X_COLOR    # primary  — vector a, in every panel
+    b_color = _DIM_Y_COLOR    # secondary — vector b, in every panel
 
-    # Parent vectors first; projections (dashed, source-colored) sit on top
-    # of the OTHER vector with no offset so they read as "the part of b that
-    # lies along a" / "the part of a that lies along b".
-    plot_vector(ax, a, color=ORANGE, label="a",
+    # ----- Panel 1: a projected onto x and y axes -----
+    # Math annotations live in the markdown beneath the figure as LaTeX.
+    # Panel intent: a is the subject (primary color); its components on the
+    # axes are SHADOWS — neutral, just like the projection arrows in P2/P3.
+    setup_vector_axes(axes[0], lim=1.25,
+                      panel_title="onto x and y axes",
+                      **axis_kwargs)
+
+    axes[0].plot([a[0], a[0]], [a[1], 0],
+                 color=style.VECTOR_DROPLINE_COLOR,
+                 alpha=style.VECTOR_DROPLINE_ALPHA,
+                 linewidth=1.2, linestyle="--", zorder=1)
+    axes[0].plot([a[0], 0], [a[1], a[1]],
+                 color=style.VECTOR_DROPLINE_COLOR,
+                 alpha=style.VECTOR_DROPLINE_ALPHA,
+                 linewidth=1.2, linestyle="--", zorder=1)
+
+    # x and y component arrows: neutral shadows.
+    plot_vector(axes[0], (a[0], 0.0),
+                color=_DIM_NEUTRAL, alpha=0.9, zorder=2)
+    plot_vector(axes[0], (0.0, a[1]),
+                color=_DIM_NEUTRAL, alpha=0.9, zorder=2)
+    axes[0].text(a[0] / 2, -0.10, "aₓ",
+                 color=_DIM_NEUTRAL, fontweight="bold",
+                 fontsize=style.VECTOR_LABEL_FONT_SIZE,
+                 ha="center", va="top")
+    axes[0].text(-0.10, a[1] / 2, "aᵧ",
+                 color=_DIM_NEUTRAL, fontweight="bold",
+                 fontsize=style.VECTOR_LABEL_FONT_SIZE,
+                 ha="right", va="center")
+    # Vector a in PRIMARY orange — the subject of this panel.
+    plot_vector(axes[0], a, color=a_color, label="a",
                 alpha=1.0, zorder=3,
                 linewidth=style.VECTOR_BOLD_LINEWIDTH)
-    plot_vector(ax, b, color=SLATE_BLUE, label="b",
-                alpha=1.0, zorder=3,
-                linewidth=style.VECTOR_BOLD_LINEWIDTH)
 
-    plot_vector(ax, foot_b_on_a,
-                color=SLATE_BLUE, alpha=1.0,
-                linewidth=style.VECTOR_LINEWIDTH,
-                linestyle="--", zorder=4)
-    plot_vector(ax, foot_a_on_b,
-                color=ORANGE, alpha=1.0,
-                linewidth=style.VECTOR_LINEWIDTH,
-                linestyle="--", zorder=4)
+    # ----- Panels 2 & 3: same a, b; reference flips -----
+    # Math goes in the markdown beneath the figure (LaTeX block).
+    # Vector identity stays stable across panels: a is always primary orange,
+    # b is always secondary purple. The shadow (the projection result) is
+    # neutral in both panels — projections are shadows, shadows are neutral.
+    def _draw_proj(ax, *, source, target,
+                   source_color, target_color,
+                   source_label, target_label):
+        src = np.asarray(source, dtype=float)
+        tgt = np.asarray(target, dtype=float)
+        scale = float(np.dot(tgt, src)) / float(np.dot(tgt, tgt))
+        foot = scale * tgt
+
+        plot_vector(ax, target, color=target_color, label=target_label,
+                    alpha=1.0, zorder=2,
+                    linewidth=style.VECTOR_BOLD_LINEWIDTH)
+        plot_vector(ax, source, color=source_color, label=source_label,
+                    alpha=1.0, zorder=3,
+                    linewidth=style.VECTOR_BOLD_LINEWIDTH)
+        plot_vector(ax, tuple(foot), origin=(0.0, -0.04),
+                    color=_DIM_NEUTRAL,
+                    linewidth=style.VECTOR_LINEWIDTH + 0.4,
+                    alpha=0.9, zorder=4)
+        ax.plot([foot[0], src[0]], [foot[1], src[1]],
+                color=style.VECTOR_DROPLINE_COLOR,
+                alpha=style.VECTOR_DROPLINE_ALPHA,
+                linewidth=1.2, linestyle="--", zorder=1)
+
+    setup_vector_axes(axes[1], lim=1.25,
+                      panel_title="a onto b",
+                      **axis_kwargs)
+    _draw_proj(axes[1], source=a, target=b,
+               source_color=a_color, target_color=b_color,
+               source_label="a", target_label="b")
+
+    setup_vector_axes(axes[2], lim=1.25,
+                      panel_title="b onto a",
+                      **axis_kwargs)
+    _draw_proj(axes[2], source=b, target=a,
+               source_color=b_color, target_color=a_color,
+               source_label="b", target_label="a")
+
+    return _save(fig, output_dir, filename)
+
+
+# Per-dimension palette aliases — pull from the centralized PALETTE_* constants
+# in style.py so the 2D and 3D figures share one source of truth. Spines and
+# decorators stay neutral; the role colors only paint pedagogically meaningful
+# elements (vectors in 2D, dimension components in 3D).
+_DIM_NEUTRAL = style.VECTOR_NEUTRAL_COLOR
+_DIM_SPINE   = style.VECTOR_AXIS_COLOR        # spines, droplines, axis labels
+_DIM_X_COLOR = style.PALETTE_PRIMARY          # vector a (2D) | x dim (3D)
+_DIM_Y_COLOR = style.PALETTE_SECONDARY        # vector b (2D) | y dim (3D)
+_DIM_Z_COLOR = style.PALETTE_TERTIARY         # 3rd dim only, surfaces in 3D
+
+
+def _plot_vector_projection_3d(
+        output_dir: str = None,
+        filename: str = "vector_projection_3d.png") -> str:
+    """§2.4.2 — 3D vector decomposed into x/y/z components, with two
+    reconstruction paths in different orders both terminating at the same tip.
+
+    Showcases two ideas in one image:
+      1. Projection onto reference directions extends from 2D (axes) to 3D
+         (still axes) with no change in operation.
+      2. The component arrows can be added in any order and still reach the
+         original vector — superposition is order-independent. Shown via two
+         dashed reconstruction paths (x→y→z and z→y→x) whose segments are
+         colored by dimension, so the viewer sees the SAME components
+         rearranged in a different sequence.
+
+    Color palette (sourced from style.PALETTE_*):
+      - x-component segments  → PALETTE_PRIMARY   (orange) — same color as
+                                                              vector a in 2D
+      - y-component segments  → PALETTE_SECONDARY (purple) — same color as
+                                                              vector b in 2D
+      - z-component segments  → PALETTE_TERTIARY  (gold)   — surfaces ONLY
+                                                              when a third
+                                                              dimension exists
+      - Spines (x, y, z lines through origin)  → neutral grey
+      - Spine labels (x, y, z text)            → neutral grey
+      - Vector a itself                        → neutral off-white
+
+    The pedagogical contract for color:
+      - Role colors paint MEANING (vector identity in 2D, dimension identity
+        in 3D); they never paint scaffolding (spines, decorators).
+      - The third color (gold) is reserved for the third dimension and only
+        appears in 3D figures — its arrival signals "we just added a
+        dimension," reinforcing the §2.4.1 → §2.4.2 transition.
+
+    Visual style:
+      - All default 3D axis machinery (panes, ticks, bounding box) is hidden
+        via set_axis_off(). Three neutral axis SPINES are drawn manually
+        through the origin, extending in BOTH directions (negative + positive)
+        so the origin sits centered in the plot.
+      - View angle (elev=38, azim=-55) keeps z roughly vertical and splays
+        x and y forward toward the viewer, matching the reference perspective
+        in assets/images/claude/3d_vector plot.png. Avoids matplotlib 3.10's
+        positive-azim projection collapse.
+    """
+    if output_dir is None:
+        output_dir = IMAGES_DSP_DIR
+
+    fig = plt.figure(
+        figsize=(style.VECTOR_FIGSIZE_PER_PANEL * 1.6,
+                 style.VECTOR_FIGSIZE_HEIGHT * 1.4),
+        dpi=style.DEFAULT_DPI,
+    )
+    fig.patch.set_facecolor(style.BG_COLOR)
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_facecolor(style.BG_COLOR)
+    # Honour our own zorder; otherwise mpl's depth-sort can hide the
+    # diagonal a-line behind segments with overlapping projection bounds.
+    ax.computed_zorder = False
+    # Hide every piece of default 3D axis chrome (panes, gridlines, ticks,
+    # bounding-box edges). The spine look is rebuilt manually below.
+    ax.set_axis_off()
+
+    # Same vector a = (1.0, 0.5) used in the 2D projection figure
+    # (projection_reference_directions.png), now extended into the third
+    # dimension with z = 0.4 — "the same vector, plus depth out of the page."
+    # Reusing the 2D vector keeps the §2.4.1 → §2.4.2 transition visually
+    # continuous: the reader sees a familiar arrow gain a third component
+    # rather than a brand-new vector with new numbers to track.
+    a = np.array([1.0, 0.5, 0.4])
+
+    # Symmetric lims matched to the 2D foundation figures' VECTOR_DEFAULT_LIM
+    # (= 1.25) so the 3D plot reads at the same scale as the 2D panels it
+    # extends. Origin sits centered in the plot; spines extend equally in
+    # the negative and positive directions through (0, 0, 0).
+    lim = style.VECTOR_DEFAULT_LIM
+    ax.set_xlim(-lim, lim)
+    ax.set_ylim(-lim, lim)
+    ax.set_zlim(-lim, lim)
+
+    # ----- Three muted axis spines through origin (both directions) -----
+    spine_lw = 2.4
+    ax.plot([-lim, lim], [0, 0], [0, 0],
+            color=_DIM_SPINE, linewidth=spine_lw, zorder=1)
+    ax.plot([0, 0], [-lim, lim], [0, 0],
+            color=_DIM_SPINE, linewidth=spine_lw, zorder=1)
+    ax.plot([0, 0], [0, 0], [-lim, lim],
+            color=_DIM_SPINE, linewidth=spine_lw, zorder=1)
+
+    # Spine labels at the positive ends, in the matching MUTED hue.
+    label_size = style.VECTOR_LABEL_FONT_SIZE + 2
+    ax.text(lim + 0.06, 0, 0, "x",
+            color=_DIM_SPINE, fontsize=label_size,
+            fontweight="bold", fontstyle="italic",
+            ha="left", va="center")
+    ax.text(0, lim + 0.06, 0, "y",
+            color=_DIM_SPINE, fontsize=label_size,
+            fontweight="bold", fontstyle="italic",
+            ha="left", va="center")
+    ax.text(0, 0, lim + 0.07, "z",
+            color=_DIM_SPINE, fontsize=label_size,
+            fontweight="bold", fontstyle="italic",
+            ha="center", va="bottom")
+
+    # ----- Reconstruction paths — SPOTLIGHT segments per dimension -----
+    # Path 1: x → y → z (along the bottom-front edges of the parallelepiped)
+    p1 = [
+        np.array([0, 0, 0]),
+        np.array([a[0], 0, 0]),
+        np.array([a[0], a[1], 0]),
+        np.array([a[0], a[1], a[2]]),
+    ]
+    p1_segment_colors = [_DIM_X_COLOR,
+                         _DIM_Y_COLOR,
+                         _DIM_Z_COLOR]
+    for (p, q), seg_color in zip(zip(p1, p1[1:]), p1_segment_colors):
+        ax.plot([p[0], q[0]], [p[1], q[1]], [p[2], q[2]],
+                color=seg_color, linewidth=2.4,
+                linestyle="--", alpha=0.95, zorder=3)
+
+    # Path 2: z → y → x (along the back-top edges of the parallelepiped)
+    p2 = [
+        np.array([0, 0, 0]),
+        np.array([0, 0, a[2]]),
+        np.array([0, a[1], a[2]]),
+        np.array([a[0], a[1], a[2]]),
+    ]
+    p2_segment_colors = [_DIM_Z_COLOR,
+                         _DIM_Y_COLOR,
+                         _DIM_X_COLOR]
+    for (p, q), seg_color in zip(zip(p2, p2[1:]), p2_segment_colors):
+        ax.plot([p[0], q[0]], [p[1], q[1]], [p[2], q[2]],
+                color=seg_color, linewidth=2.4,
+                linestyle="--", alpha=0.95, zorder=3)
+
+    # ----- Vector a — neutral off-white, single solid line -----
+    # ax.quiver in 3D under-renders thin lines on dark backgrounds, so use
+    # ax.plot for the spine and a scatter dot for the tip "head".
+    ax.plot([0, a[0]], [0, a[1]], [0, a[2]],
+            color=_DIM_NEUTRAL,
+            linewidth=style.VECTOR_BOLD_LINEWIDTH + 0.6,
+            solid_capstyle="round",
+            zorder=5)
+    ax.scatter([a[0]], [a[1]], [a[2]],
+               color=_DIM_NEUTRAL,
+               s=80, zorder=6, depthshade=False)
+    ax.text(a[0] + 0.05, a[1] + 0.05, a[2] + 0.04, "a",
+            color=_DIM_NEUTRAL, fontweight="bold",
+            fontsize=style.VECTOR_LABEL_FONT_SIZE)
+
+    # ----- Order legend — top-left, neutral text since paths share colors -----
+    ax.text2D(0.02, 0.97, "Path 1:  x → y → z",
+              transform=ax.transAxes,
+              color=style.VECTOR_PANEL_RESULT_COLOR,
+              fontsize=13, family="monospace", va="top")
+    ax.text2D(0.02, 0.92, "Path 2:  z → y → x",
+              transform=ax.transAxes,
+              color=style.VECTOR_PANEL_RESULT_COLOR,
+              fontsize=13, family="monospace", va="top")
+
+    # elev=38 + azim=-55 keeps z near vertical with x/y splayed forward,
+    # matching the reference image's perspective. Positive azim (e.g. 35)
+    # triggers a matplotlib 3.10 projection collapse — keep azim negative.
+    ax.view_init(elev=38, azim=-55)
 
     return _save(fig, output_dir, filename)
 
 
 def generate_foundations_figures(output_dir: str = None) -> list:
-    """Render all §2 foundation figures. Returns list of output paths."""
+    """Render all §2 foundation figures. Returns list of output paths.
+
+    Lineup as of 2026-05 §2.4 consolidation:
+      - vector_basics.png ............... §2.4.1 beat 1 (vector = arrow)
+      - projection_reference_directions . §2.4.1 beats 2-4 (axes / a→b / b→a)
+      - dot_product_geometry.png (4 pan) . §2.4.1 beat 5 (angle → sign)
+      - vector_projection_3d.png ........ §2.4.2 (3D + superposition)
+      - vector_xy_reconstruction.png .... §2.6 (basis-function recombination)
+
+    Helpers retained but not dispatched here (available for future re-use):
+      _plot_vector_xy_projection (replaced by panel 1 of the 3-panel figure),
+      _plot_vector_similarity (absorbed by the oblique panel of the 4-panel
+      sign-cases figure), _plot_vector_projection (long/short shadow — its
+      message is now carried by the 4-panel figure's parallel + oblique cases).
+    """
     if output_dir is None:
         output_dir = IMAGES_DSP_DIR
 
     print_section_start(f"Generating §2 foundation figures -> {output_dir}/")
     paths = [
         _plot_vector_basics(output_dir),
-        _plot_vector_xy_projection(output_dir),
-        _plot_vector_xy_reconstruction(output_dir),
-        _plot_vector_symmetric_projection(output_dir),
+        _plot_projection_reference_directions(output_dir),
         _plot_dot_product_geometry(output_dir),
-        _plot_vector_similarity(output_dir),
-        _plot_vector_projection(output_dir),
+        _plot_vector_projection_3d(output_dir),
+        _plot_vector_xy_reconstruction(output_dir),
     ]
     for p in paths:
         print(f"  Saved -> {p}")

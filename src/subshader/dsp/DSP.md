@@ -114,9 +114,9 @@ $$
 
 ### 2.4 Vector Projection - The Geometric Interpretation
 
-#### 2.4.1 Decomposing Basic Vectors
+#### 2.4.1 Projection onto a Reference Direction
 
-- A **vector** can be thought of as an **arrow** described by its two properties
+- A **vector** can be thought of as an **arrow** described by two properties
   - **magnitude** - how long it is 
   - **direction** - where it points
 
@@ -124,49 +124,94 @@ $$
 - Think of it as the vector casting its shadow on each axis, where the length of each shadow reveals the vector's **component** for that dimension - how much of that dimension contributes to the original vector as a whole 
 - Notice how the components can be **recombined in any order** to reconstruct the original vector
 
-<!-- ![Vector a decomposed into its x and y components via projection onto each axis](../../../assets/images/dsp/vector_xy_projection.png) -->
+![Projection onto a reference direction: x/y axes (left), a onto b (middle), b onto a (right) — both arbitrary-vector cases produce the same a · b = 1.00](../../../assets/images/dsp/projection_reference_directions_v6_combo5_palette.png)
 
-![The same components recombined tip-to-tail in opposite orders both reconstruct a](../../../assets/images/dsp/vector_xy_reconstruction.png)
+<div align="center">
 
-- That tells us which components of a exist in the x and y dimensions, but to continue towards signal decomposition and measuring similarity between two things, we take one vector and project it onto the other - this does decomposition along **b**'s direction instead of along x or y
-- It tells you the component of **a** that points the same way as **b**
+$$
+\vec{a} = (a_x,\, a_y) = (1.0,\, 0.5) \qquad \vec{b} = (b_x,\, b_y) = (0.6,\, 0.8)
+$$
 
-*[Figure - two vectors projected on to each other - symmetrical proejctions]*
+$$
+\vec{a} \cdot \vec{b} = a_x b_x + a_y b_y = (1.0)(0.6) + (0.5)(0.8) = 0.60 + 0.40 = 1.00
+$$
 
-- Segue into more than 2D dimensiosn
+$$
+\vec{b} \cdot \vec{a} = b_x a_x + b_y a_y = (0.6)(1.0) + (0.8)(0.5) = 0.60 + 0.40 = 1.00
+$$
 
+</div>
 
-#### 2.4.2 Projection - The Geometric Meaning
+- When we project vector **a** onto another vector **b**, we take the direction of **b** to be the reference axis - their Dot Product reveals which part of **a** points along the same direction as **b** 
 
-- The Dot Product has a geometric meaning: it measures how much of one vector "lives along" another vector's direction
-- This operation is called **vector projection**
-- Think of it like a shadow — if the sun were directly overhead, the shadow that **b** casts onto **a** is the projection
+- Notice how when we project **a** onto **b** or **b** onto **a**, the resulting __ [the visual annotates each component of each projection - do the math for each exmaple - display how the dot product in either case produces the same result - this basically means we don't really care which one is the reference dimension - show math example in the with each - ]
 
-![Vector projection: long shadow on a means b is similar to a; short shadow means barely similar](../../../assets/images/dsp/vector_projection.png)
+<!-- WRITE 2.4.1 beat 4 — symmetry of the dot product (right panel).
+     Even though "a onto b" and "b onto a" produce visibly different
+     shadows (different lengths along different reference directions), the
+     scalar dot product comes out the same: a · b = b · a. The reference
+     direction is your choice; the answer doesn't care.
+     The figure carries this in three juxtaposed panels — same a, same b,
+     three different reference directions, with the matching a · b = 1.00
+     annotation under panels 2 and 3. -->
+
+- [This actually works because of the symmetry found the geometry of the triangle these two vectors make - this the area equation of a triangle - watch this video to see how it relates to the Dot Product - but otherwise just trust they can be derived from each other link - https://www.youtube.com/watch?v=PnJoKGynu_U]
+
+![Four canonical angles between a and b: parallel-same → positive, parallel-opposite → negative, perpendicular → zero, oblique → partial](../../../assets/images/dsp/dot_product_geometry.png)
 
 - The projection's magnitude tells us how aligned **b** and **a** are. Three extreme cases:
     - **parallel + same direction** → full projection → large positive result
     - **parallel + opposite direction** → flipped projection → large negative result
     - **perpendicular** → no projection → zero result
+    
+<!-- WRITE 2.4.1 beat 5 — angle controls sign and magnitude.
+     The projection's magnitude AND sign depend on the angle between the
+     two vectors. Four canonical cases land it:
+       - parallel + same direction → max positive result
+       - parallel + opposite direction → max negative result
+       - perpendicular → zero
+       - oblique (anything in between) → partial result, sign matches
+         whether they "lean toward each other" or "lean apart"
+     This is the angle → sign mapping the dot product gives you for free. -->
 
-![Dot product sign by angle: parallel-same → positive, parallel-opposite → negative, perpendicular → zero](../../../assets/images/dsp/dot_product_geometry.png)
 
-- And the in-between case — when vectors are **oblique** (neither parallel nor perpendicular):
-    - **oblique** → partial projection → partial similarity
+#### 2.4.2 Beyond 2D — Same Operation, More Dimensions
 
-#### 2.4.3 Same Operation, More Dimensions
+<!-- WRITE 2.4.2 beat 1 — 3D, with the figure as the visual proof.
+     The same operation extends to 3D unchanged: pick reference directions
+     (now x, y, z), project a onto each, get three components. Concrete
+     example to walk through:
+       a · b = a₁b₁ + a₂b₂ + a₃b₃    (same multiply-and-sum, one more term)
+     Then call out what the figure also reveals: the components can be
+     recombined in any order — the orange path (x → y → z) and the blue
+     path (z → y → x) both arrive at the same tip a. Order independence
+     is a property of the projection, not an accident of 2D. -->
 
-- Let's run a quick example in 2D where both vectors have two components each
-    - **a** = (3, 4), **b** = (1, 1)
-    - **a** · **b** = (3 · 1) + (4 · 1) = **7**
-- The mechanics extend cleanly to higher dimensions — same multiply-and-sum, just more terms
-    - 3D: a₁b₁ + a₂b₂ + a₃b₃
-    - ND: a₁b₁ + a₂b₂ + ... + aₙbₙ
-- Honestly, from here on, don't try too hard to picture x, y, z anymore — past 3D you can't picture it anyway
-- What's actually doing the work: **pair the elements, multiply, sum**
-- This element-by-element pairing is the root of the **orthogonality** principle — we'll come back to it in §2.6
+![Vector a in 3D, decomposed into x/y/z components, recombined in two different orders (x→y→z and z→y→x) — both paths arrive at the same tip](../../../assets/images/dsp/vector_projection_3d_v2_combo5_palette.png)
+
+<!-- WRITE 2.4.2 beat 2 — ND reframe (locked bridge sentence).
+     Polish this sentence — the locked phrasing is:
+       "Notice how the pattern in two dimensions applied to three
+        dimensions, and the pattern expands to any number of n — but we
+        can't really visualize n dimensions, so we'll drop that
+        terminology and think of it in terms of N pair-wise multiplications
+        whose sign agreements accumulate into one running total."
+     Let "n dimensions" be the geometric framing we leave behind, and
+     "N pair-wise multiplications" be the algebraic framing we carry into
+     §2.5. -->
+
+<!-- WRITE 2.4.2 beat 3 — handoff into §2.5.
+     One-sentence pivot: we've been treating the dot product as one
+     number, but it's built from N signed products — and the signs do
+     most of the work. The next section opens up the sum and watches the
+     agreement accumulate. -->
 
 ### 2.5 Sign Accumulation - The Agreement Mechanism
+
+<!-- WRITE 2.5 lead-in — pick up where §2.4.2 left off.
+     The dot product is a signed similarity accumulator. Each pair of
+     matching components contributes one signed product to a running
+     total. The signs do the voting. -->
 
 - Dot product is a signed similarity accumulator
 - Same signs → positive contribution (agreement)
@@ -182,6 +227,15 @@ $$
 - The function we compare against is called a **basis function** - a known reference **pattern**
 - The choice of basis function determines what features we can detect
 - The scalar result of this comparison is called a **coefficient** - it tells you "how much" of that basis function is present
+
+<!-- FIGURE relocated here from §2.4 per the consolidation pass — once §2.6
+     is being authored, place the tip-to-tail recombination panel where it
+     reinforces "components form a basis": the same components recombined
+     in different orders both reconstruct a, which is exactly the property
+     a basis function family relies on.
+     ![Same components recombined tip-to-tail in opposite orders both reconstruct a](../../../assets/images/dsp/vector_xy_reconstruction.png)
+-->
+
 
 ---
 

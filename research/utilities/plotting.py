@@ -382,7 +382,9 @@ def create_panel_row(n_panels, *, panel_size=None, height=None,
 # =============================================================================
 
 def setup_vector_axes(ax, *, lim=None, panel_title=None, result_text=None,
-                       show_border=True, axis_style="line", axis_labels=False):
+                       show_border=True, axis_style="line", axis_labels=False,
+                       x_color=None, y_color=None,
+                       axis_alpha=None, axis_linewidth=None):
     """Square axes with origin crosshair, no ticks, equal aspect.
 
     `panel_title` lands above the panel (left-aligned). `result_text` lands
@@ -392,9 +394,22 @@ def setup_vector_axes(ax, *, lim=None, panel_title=None, result_text=None,
     `axis_style="arrow"` replaces axhline/axvline with +x and +y arrows from
     origin to axis limit (negative axes hidden).
     `axis_labels=True` places "x" in Q-IV and "y" in Q-I near the limits.
+
+    `x_color` / `y_color` override the per-axis crosshair color (default both
+    use style.VECTOR_AXIS_COLOR). `axis_alpha` and `axis_linewidth` adjust
+    the crosshair weight uniformly. Useful when the figure assigns each axis
+    a per-dimension hue (e.g. orange = x, purple = y).
     """
     if lim is None:
         lim = style.VECTOR_DEFAULT_LIM
+    if x_color is None:
+        x_color = style.VECTOR_AXIS_COLOR
+    if y_color is None:
+        y_color = style.VECTOR_AXIS_COLOR
+    if axis_alpha is None:
+        axis_alpha = style.VECTOR_AXIS_ALPHA
+    if axis_linewidth is None:
+        axis_linewidth = 0.8
 
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
@@ -408,25 +423,25 @@ def setup_vector_axes(ax, *, lim=None, panel_title=None, result_text=None,
 
     inset = style.VECTOR_AXIS_ARROW_INSET
     if axis_style == "arrow":
-        for tail, head in (
-            ((-lim + inset, 0.0), (lim - inset, 0.0)),
-            ((0.0, -lim + inset), (0.0, lim - inset)),
+        for (tail, head), color in (
+            (((-lim + inset, 0.0), (lim - inset, 0.0)), x_color),
+            (((0.0, -lim + inset), (0.0, lim - inset)), y_color),
         ):
             ax.annotate(
                 "", xy=head, xytext=tail,
                 arrowprops=dict(arrowstyle="<|-|>",
-                                color=style.VECTOR_AXIS_COLOR,
-                                alpha=style.VECTOR_AXIS_ALPHA,
-                                linewidth=0.9,
+                                color=color,
+                                alpha=axis_alpha,
+                                linewidth=max(axis_linewidth, 0.9),
                                 mutation_scale=14,
                                 shrinkA=0, shrinkB=0),
                 zorder=0,
             )
     else:
-        ax.axhline(0, color=style.VECTOR_AXIS_COLOR,
-                   alpha=style.VECTOR_AXIS_ALPHA, linewidth=0.8, zorder=0)
-        ax.axvline(0, color=style.VECTOR_AXIS_COLOR,
-                   alpha=style.VECTOR_AXIS_ALPHA, linewidth=0.8, zorder=0)
+        ax.axhline(0, color=x_color,
+                   alpha=axis_alpha, linewidth=axis_linewidth, zorder=0)
+        ax.axvline(0, color=y_color,
+                   alpha=axis_alpha, linewidth=axis_linewidth, zorder=0)
 
     if axis_labels:
         offset = style.VECTOR_AXIS_LABEL_OFFSET

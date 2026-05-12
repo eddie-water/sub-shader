@@ -73,13 +73,22 @@ VMAX_PERCENTILE = 99.0
 # vector_similarity, vector_projection). All knobs in one place so the look
 # stays consistent across panels.
 
+# Pedagogical palette — three role colors that propagate across all vector
+# figures (2D and 3D). In 2D, primary/secondary are vector identities (a, b);
+# tertiary is reserved for the third dimension and only surfaces in 3D.
+# Spines, droplines, axes, and component shadows stay neutral.
+PALETTE_PRIMARY   = "#e1641a"   # vector a (2D); 1st dim / x-component (3D)
+PALETTE_SECONDARY = "#7b6fe1"   # vector b (2D); 2nd dim / y-component (3D)
+PALETTE_TERTIARY  = "#ffd27d"   # 3rd dim / z-component (3D only)
+
 # Vector colors — `a` is the reference vector; `b` is the one being compared
 # to / projected onto a. PROJECTION is b's shadow on a (the dot-product
 # magnitude visualized).
-VECTOR_A_COLOR = "#fcfeaa"      # warm yellow — matches GRID_WAVEFORM_COLOR
-VECTOR_B_COLOR = "#7ec8ff"      # cool blue — distinct from a
-VECTOR_PROJ_COLOR = "#ff8c66"   # orange — projection / "shadow"
-VECTOR_NEUTRAL_COLOR = "#888888"  # for misc / sample vectors with no role
+VECTOR_A_COLOR = PALETTE_PRIMARY
+VECTOR_B_COLOR = PALETTE_SECONDARY
+VECTOR_PROJ_COLOR = "#ff8c66"   # legacy — projection / "shadow"; new figures
+                                # render projections as neutral shadows instead
+VECTOR_NEUTRAL_COLOR = "#EEEEEE"  # off-white — vectors / shadows with no role
 VECTOR_AXIS_COLOR = "#cccccc"
 VECTOR_AXIS_ALPHA = 0.6
 VECTOR_DROPLINE_COLOR = "#888888"   # dashed perpendicular from b to projection
