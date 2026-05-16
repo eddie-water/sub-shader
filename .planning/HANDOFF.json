@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-16T12:07:17-04:00",
+  "phase": "05",
+  "phase_name": "documentation",
+  "phase_dir": ".planning/phases/05-documentation",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "context_summary": "Mid-authoring of DSP.md §2.4.1 — vector projection / dot product symmetry. Figure 1 (components_recombine) is locked in. Figure 2 (symmetry demo) is the open decision: a 3-candidate comparison has been rendered to a temp diagnostic PNG and is awaiting the user's pick on (a, b) values.",
+  "completed_tasks": [
+    {"id": 1, "name": "Figure 1: regen _plot_vector_xy_reconstruction with canonical a=(1.0, 0.5), lim=1.25, new filename", "status": "done", "commit": null},
+    {"id": 2, "name": "Figure 2 (first attempt): _plot_projection_reconstruction_either_order — 2-panel with perpendicular complement + parallelogram reconstruction paths", "status": "done_but_superseded", "commit": null, "note": "User found it confusing — too complex for the symmetry message. Will be retired."},
+    {"id": 3, "name": "DSP.md §2.4.1 structural swap: new figures slotted figure-leads-bullets, LaTeX block moved to pair with symmetry beat, broken alt-text markdown fixed", "status": "done", "commit": null},
+    {"id": 4, "name": "Temp comparison: 3 candidate (a,b) pairs rendered to assets/images/diagnostics/dot_product_symmetry_candidates_temp.png via research/_temp_dot_product_symmetry_candidates.py", "status": "done", "commit": null},
+    {"id": 5, "name": "Audited VS Code terminal-bell setup — preferredNotifChannel:terminal_bell already in ~/.claude/settings.json; only VS Code's terminal.integrated.enableBell still needs flipping (user-side)", "status": "done", "commit": null}
+  ],
+  "remaining_tasks": [
+    {"id": 6, "name": "User picks symmetry-demo (a, b): Option A (b=(1,1), a·b=1.5), Option B (b=(0.4,1.2), a·b=1.0), Option C (b=(0.3,0.6), a·b=0.6), or custom", "status": "blocked_on_user"},
+    {"id": 7, "name": "Write simpler _plot_dot_product_symmetry_v2_<chosen> function — drop parallelogram + perpendicular complement; just show shadow (parallel component only) for each panel", "status": "not_started"},
+    {"id": 8, "name": "Retire _plot_projection_reconstruction_either_order from generate_all_dsp_figures dispatch list (keep function defined for reference)", "status": "not_started"},
+    {"id": 9, "name": "Update LaTeX block in DSP.md §2.4.1 to match chosen a·b (only if Option A or C — Option B keeps the existing 1.00)", "status": "not_started"},
+    {"id": 10, "name": "Update DSP.md figure-2 reference + alt text to point at new symmetry PNG", "status": "not_started"},
+    {"id": 11, "name": "§2.4.1 prose placeholders (user-authored): symmetry bullet (line ~134), geometric-trust bullet + 3blue1brown link (line ~161), beat 5 magnitude/sign expansion to 4 cases", "status": "blocked_on_user_authoring"},
+    {"id": 12, "name": "§2.4.2 prose authoring — WRITE markers for beats 1 (3D extension), 2 (ND reframe with locked bridge sentence), 3 (handoff into §2.5)", "status": "not_started"},
+    {"id": 13, "name": "§2.5 (sign accumulation) — planning + figures not started", "status": "not_started"},
+    {"id": 14, "name": "Top-of-file typos in DSP.md lines 1-2 ('itAAAAaaa# Foundations: Wavelet Transform' and 'fdA') — likely accidental IDE keystrokes, user's call whether to clean up", "status": "advisory_user_decision"}
+  ],
+  "blockers": [
+    {"description": "Awaiting user decision on symmetry-demo (a, b) candidate from temp comparison figure", "type": "human_action", "workaround": "View assets/images/diagnostics/dot_product_symmetry_candidates_temp.png and select A/B/C/custom"}
+  ],
+  "human_actions_pending": [
+    {"action": "Pick figure 2 (a, b) candidate — A, B, C, or propose custom", "context": "Drives the symmetry-demo figure's pedagogy. Visual contrast vs LaTeX-rewrite tradeoff documented in candidates.", "blocking": true},
+    {"action": "Flip terminal.integrated.enableBell in VS Code User Settings (Ctrl+, → search 'terminal bell')", "context": "Claude Code side already wired via preferredNotifChannel:terminal_bell. Only the IDE setting remains.", "blocking": false},
+    {"action": "Author the three prose placeholders in §2.4.1 — symmetry bullet, geometric-trust bullet, beat 5", "context": "User authors final prose per project doc voice policy", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Figure 1 stays as the 2-panel tip-to-tail reconstruction of `a` in xy/yx orders", "rationale": "User confirmed this is the right pedagogy when shown the alternative simpler one-panel design", "phase": "05"},
+    {"decision": "Figure 1 uses canonical a=(1.0, 0.5)", "rationale": "Aligns with §2.4.1 LaTeX block and shares same `a` with figure 2", "phase": "05"},
+    {"decision": "Figure 2 abandons the parallelogram + perpendicular complement design", "rationale": "User: 'I don't get what figure 2 is trying to show me' — extra geometry obscured the symmetry message", "phase": "05"},
+    {"decision": "Figure 2 must show VISIBLY DIFFERENT projection shadows in panel 1 vs panel 2, with same scalar annotated", "rationale": "Pedagogy: 'different operation, same number' is the symmetry insight", "phase": "05"},
+    {"decision": "Old 3-panel projection_reference_directions retired in favor of two narrower figures (components_recombine + symmetry-demo)", "rationale": "Figure-leads-bullets pattern — each figure now leads only the bullets that read it", "phase": "05"}
+  ],
+  "uncommitted_files": [
+    {"path": "src/subshader/dsp/DSP.md", "status": "modified", "note": "§2.4.1 restructured by Claude + further user edits to consolidate definitional bullets; top-of-file has typo lines from IDE editing"},
+    {"path": "research/dsp_figures.py", "status": "modified", "note": "Figure 1 edit (canonical numbers + lim 1.25) + Figure 2 new function (parallelogram version, will be retired)"},
+    {"path": "research/_temp_dot_product_symmetry_candidates.py", "status": "untracked", "note": "Throwaway diagnostic script. Delete after candidate decision is locked."},
+    {"path": "assets/images/dsp/components_recombine_either_order.png", "status": "untracked", "note": "Pre-canonical-numbers version; superseded but kept per never-overwrite policy"},
+    {"path": "assets/images/dsp/components_recombine_either_order_v2_canonical_numbers.png", "status": "untracked", "note": "Current canonical figure 1"},
+    {"path": "assets/images/dsp/projection_reconstruction_either_order.png", "status": "untracked", "note": "Parallelogram-design figure 2 — will be retired once symmetry-demo replacement is rendered"},
+    {"path": "assets/images/diagnostics/dot_product_symmetry_candidates_temp.png", "status": "untracked", "note": "Decision aid for the symmetry-demo (a, b) pick. Delete after decision."},
+    {"path": "assets/images/dsp/{dot_product_geometry,vector_basics,vector_projection_3d}.png", "status": "modified", "note": "Touched as side effects of running generate_all_dsp_figures()"}
+  ],
+  "next_action": "When resuming: (1) re-open assets/images/diagnostics/dot_product_symmetry_candidates_temp.png with user, (2) get the A/B/C/custom pick, (3) write _plot_dot_product_symmetry_v2_<chosen> (simple 2-panel shadow-only, no parallelogram), (4) update dispatch list, (5) re-render, (6) swap DSP.md figure reference, (7) update LaTeX block if needed.",
+  "context_notes": "User is in authoring momentum mode on §2.4.1 prose + figures. Per project conventions: propose-don't-apply, granularity-matching, user authors final prose. Claude's role: scaffold figures and structural edits. The session also surfaced one important lesson logged in advisories — avoid over-engineering pedagogical figures with extras the bullet doesn't read."
+}
