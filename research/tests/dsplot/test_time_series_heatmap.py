@@ -72,10 +72,11 @@ def test_time_series_default_color_resolves_to_neutral() -> None:
 
     # fill_between produces a PolyCollection; default color must be NEUTRAL_COLOR
     # (the dsplot palette reserves PRIMARY/SECONDARY for vector identity; bare
-    # TimeSeries is non-identity data).
-    facecolor = ax.collections[0].get_facecolor()[0]
-    expected = matplotlib.colors.to_rgba(style.NEUTRAL_COLOR)
-    assert facecolor == pytest.approx(expected, abs=1e-6)
+    # TimeSeries is non-identity data). Alpha is set independently by alpha=0.75,
+    # so compare RGB channels only.
+    rgba = ax.collections[0].get_facecolor()[0]
+    expected_rgb = matplotlib.colors.to_rgb(style.NEUTRAL_COLOR)
+    assert tuple(rgba[:3]) == pytest.approx(expected_rgb, abs=1e-6)
     plt.close(fig)
 
 
