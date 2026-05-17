@@ -57,8 +57,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # Defer imports until after sys.path is wired so ``import dsplot`` succeeds.
     from . import (
+        alignment_diagnostic,
         components_recombine,
         dot_product_geometry,
+        motivator,
         projection_reconstruction,
         vector_basics,
         vector_projection_3d,
@@ -88,7 +90,17 @@ def main(argv: list[str] | None = None) -> int:
         _with_suffix("vector_projection_3d_v2_combo5_palette.png", args.suffix),
     ))
 
-    # Task 3 will add: motivator (all 6 versions), alignment_diagnostic
+    # Motivator figures land in assets/images/generated/ by canonical
+    # convention (they're DSP.md hero figures, not foundation diagrams).
+    motivator_out = os.path.abspath(
+        os.path.join(_RESEARCH_DIR, "..", "assets", "images", "generated")
+    )
+    paths.extend(motivator.render_all(motivator_out, suffix=args.suffix))
+
+    paths.append(alignment_diagnostic.render(
+        motivator_out,
+        _with_suffix("dsp_alignment_diagnostic.png", args.suffix),
+    ))
 
     for p in paths:
         print(f"  Saved -> {p}")
