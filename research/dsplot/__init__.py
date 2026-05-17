@@ -23,8 +23,8 @@ uses the NEW value.
 """
 
 from . import freq_axis, style
-from .figure import Figure
-from .panels import Panel, StaticPanel
+from .figure import Figure, apply_jupyter_dark
+from .panels import DynamicPanel, InteractivePanel, Panel, StaticPanel
 from .plottables import (
     Annotation,
     Dropline,
@@ -47,5 +47,8 @@ __all__ = [
     "Dropline",
     "Panel",
     "StaticPanel",
+    "DynamicPanel",
+    "InteractivePanel",
     "Figure",
+    "apply_jupyter_dark",
 ]
