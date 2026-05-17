@@ -25,7 +25,15 @@ uses the NEW value.
 from . import freq_axis, style
 from .figure import Figure
 from .panels import Panel, StaticPanel
-from .plottables import Annotation, Heatmap, TimeSeries, Vector, VectorComponents
+from .plottables import (
+    Annotation,
+    Dropline,
+    Heatmap,
+    Spotlight,
+    TimeSeries,
+    Vector,
+    VectorComponents,
+)
 
 __all__ = [
     "style",
@@ -35,6 +43,8 @@ __all__ = [
     "Annotation",
     "TimeSeries",
     "Heatmap",
+    "Spotlight",
+    "Dropline",
     "Panel",
     "StaticPanel",
     "Figure",
