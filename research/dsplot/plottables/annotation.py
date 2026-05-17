@@ -75,13 +75,27 @@ class Annotation(Plottable):
             )
             return
 
+        # Axes3D requires text2D (or text with 3 coords). Detect via the
+        # presence of get_zlim — Annotation is 2D semantically but the
+        # axes-relative form is still useful for 3D legends.
+        is_3d = hasattr(ax, "get_zlim")
+
         if self.transform == "axes":
-            ax.text(
-                self.xy[0], self.xy[1], self.text,
-                color=color, fontsize=fontsize, fontweight=self.fontweight,
-                ha=self.ha, va=self.va, transform=ax.transAxes,
-                alpha=self.alpha, zorder=self.zorder,
-            )
+            if is_3d:
+                ax.text2D(
+                    self.xy[0], self.xy[1], self.text,
+                    transform=ax.transAxes,
+                    color=color, fontsize=fontsize, fontweight=self.fontweight,
+                    ha=self.ha, va=self.va,
+                    alpha=self.alpha, zorder=self.zorder,
+                )
+            else:
+                ax.text(
+                    self.xy[0], self.xy[1], self.text,
+                    color=color, fontsize=fontsize, fontweight=self.fontweight,
+                    ha=self.ha, va=self.va, transform=ax.transAxes,
+                    alpha=self.alpha, zorder=self.zorder,
+                )
         else:
             ax.text(
                 self.xy[0], self.xy[1], self.text,

@@ -59,7 +59,9 @@ def main(argv: list[str] | None = None) -> int:
     from . import (
         components_recombine,
         dot_product_geometry,
+        projection_reconstruction,
         vector_basics,
+        vector_projection_3d,
     )
 
     paths: list[str] = []
@@ -77,8 +79,15 @@ def main(argv: list[str] | None = None) -> int:
         args.out,
         _with_suffix("vector_xy_reconstruction.png", args.suffix),
     ))
+    paths.append(projection_reconstruction.render(
+        args.out,
+        _with_suffix("projection_reconstruction_either_order_v9.png", args.suffix),
+    ))
+    paths.append(vector_projection_3d.render(
+        args.out,
+        _with_suffix("vector_projection_3d_v2_combo5_palette.png", args.suffix),
+    ))
 
-    # Task 2 will add: projection_reconstruction, vector_projection_3d
     # Task 3 will add: motivator (all 6 versions), alignment_diagnostic
 
     for p in paths:

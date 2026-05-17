@@ -67,17 +67,19 @@ class StaticPanel(Panel):
 
         # When BOTH title and subtitle are present, stack them vertically
         # (title on top, subtitle below) so they don't overlap. Y-positions
-        # are axes-relative — title at 1.10, subtitle at 1.02. When only one
-        # is present, place it at the title's default location (1.02).
+        # are axes-relative — title at 1.07, subtitle at 1.00. The 0.07
+        # gap (≈one line height at DEFAULT_TITLE_FONT_SIZE) keeps the title
+        # clear of the panel's top spine without pushing into a containing
+        # figure's suptitle band.
         if self.title is not None and self.subtitle is not None:
             self.ax.set_title(
                 self.title,
                 fontsize=style.DEFAULT_TITLE_FONT_SIZE,
                 color=style.TICK_LABEL_COLOR,
-                y=1.10,
+                y=1.07,
             )
             self.ax.text(
-                0.5, 1.02, self.subtitle,
+                0.5, 1.00, self.subtitle,
                 transform=self.ax.transAxes,
                 ha="center", va="bottom",
                 fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,

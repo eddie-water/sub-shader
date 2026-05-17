@@ -96,7 +96,10 @@ def test_static_panel_title_and_subtitle_use_style_defaults():
         subtitle = subtitle_texts[0]
         assert subtitle.get_fontsize() == style.DEFAULT_SUBTITLE_FONT_SIZE
         xy = subtitle.get_position()
-        assert abs(xy[1] - 1.02) < 1e-6
+        # When both title and subtitle are set, StaticPanel stacks them:
+        # title at y=1.07, subtitle at y=1.00 (panel-fidelity layout introduced
+        # in 09-05 so panel titles don't collide with subtitles).
+        assert abs(xy[1] - 1.00) < 1e-6
     finally:
         plt.close(fig)
 
