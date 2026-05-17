@@ -98,6 +98,7 @@ class Figure:
         self._fill_width = fill_width
         self._show_toolbar = show_toolbar
         self._display_width = display_width
+        self._has_suptitle = suptitle is not None
         self._mpl_fig = plt.figure(figsize=figsize, dpi=dpi)
         self._mpl_fig.patch.set_facecolor(style.BG_COLOR)
         self._gs = self._mpl_fig.add_gridspec(
@@ -136,8 +137,17 @@ class Figure:
             (panel.requires_bottom_pad for panel, *_ in self.panels),
             default=0.0,
         )
+        # Reserve top space when a suptitle is set so panel titles don't
+        # collide with the suptitle text. 0.88 mirrors mpl's tight-layout
+        # default for suptitle clearance and matches the visual spacing
+        # used by the legacy dsp_figures.py multi-panel figures.
+        adjust_kwargs: dict[str, float] = {}
         if max_bottom_pad > 0.0:
-            self._mpl_fig.subplots_adjust(bottom=max_bottom_pad + 0.05)
+            adjust_kwargs["bottom"] = max_bottom_pad + 0.05
+        if self._has_suptitle:
+            adjust_kwargs["top"] = 0.88
+        if adjust_kwargs:
+            self._mpl_fig.subplots_adjust(**adjust_kwargs)
 
         for panel, row, col, rowspan, colspan, projection in self.panels:
             cell = self._gs[row:row + rowspan, col:col + colspan]
@@ -164,7 +174,14 @@ class Figure:
         - Injects a one-time dark-theme CSS rule for the cell-output container
         """
         canvas = getattr(self._mpl_fig, "canvas", None)
-        if canvas is None or not hasattr(canvas, "layout"):
+        if canvas is None:
+            return
+        # ipympl canvases expose a `layout` attribute holding a widget Layout
+        # with a writable `width` field. Qt/Agg canvases expose `layout` as a
+        # bound method (PyQt's QWidget.layout()) — distinguish by checking
+        # for the widget-Layout-specific `width` attribute.
+        layout = getattr(canvas, "layout", None)
+        if layout is None or not hasattr(layout, "width"):
             return  # not an ipympl Canvas widget — non-interactive backend
 
         if self._fill_width:
