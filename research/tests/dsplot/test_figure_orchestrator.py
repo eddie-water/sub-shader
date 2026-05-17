@@ -108,17 +108,32 @@ def test_figure_end_to_end_with_real_vector(tmp_path):
 
 
 def test_figure_rowspan_colspan_spans_multiple_cells():
+    """A panel placed at row=0, col=0 with rowspan=2/colspan=2 on a 3x3 grid
+    must span a larger bbox than a single-cell panel — proving the spanned
+    cell really is multi-cell."""
     from dsplot import Figure
-    fig = Figure(n_rows=3, n_cols=3)
+    fig_span = Figure(n_rows=3, n_cols=3)
+    fig_one = Figure(n_rows=3, n_cols=3)
     try:
         big = _make_blank_panel()
-        fig.add_panel(big, row=0, col=0, rowspan=2, colspan=2)
-        fig.render()
-        bbox = big.ax.get_position()
-        assert bbox.width > 0.5, f"expected wide bbox (~2/3 fig width), got {bbox.width}"
-        assert bbox.height > 0.4, f"expected tall bbox, got {bbox.height}"
+        small = _make_blank_panel()
+        fig_span.add_panel(big, row=0, col=0, rowspan=2, colspan=2)
+        fig_one.add_panel(small, row=0, col=0)
+        fig_span.render()
+        fig_one.render()
+        big_bbox = big.ax.get_position()
+        small_bbox = small.ax.get_position()
+        assert big_bbox.width > small_bbox.width * 1.5, (
+            f"expected spanned-cell width > 1.5x single-cell width; "
+            f"big={big_bbox.width}, small={small_bbox.width}"
+        )
+        assert big_bbox.height > small_bbox.height * 1.5, (
+            f"expected spanned-cell height > 1.5x single-cell height; "
+            f"big={big_bbox.height}, small={small_bbox.height}"
+        )
     finally:
-        fig.close()
+        fig_span.close()
+        fig_one.close()
 
 
 def test_figure_projection_3d_creates_axes3d():
