@@ -22,16 +22,29 @@ time (lazy lookup), so a global reassignment between construction and draw
 uses the NEW value.
 """
 
-from . import style
+from . import freq_axis, style
 from .figure import Figure
 from .panels import Panel, StaticPanel
-from .plottables import Annotation, Vector, VectorComponents
+from .plottables import (
+    Annotation,
+    Dropline,
+    Heatmap,
+    Spotlight,
+    TimeSeries,
+    Vector,
+    VectorComponents,
+)
 
 __all__ = [
     "style",
+    "freq_axis",
     "Vector",
     "VectorComponents",
     "Annotation",
+    "TimeSeries",
+    "Heatmap",
+    "Spotlight",
+    "Dropline",
     "Panel",
     "StaticPanel",
     "Figure",
