@@ -23,6 +23,6 @@ uses the NEW value.
 """
 
 from . import style
-from .plottables import Vector, VectorComponents
+from .plottables import Annotation, Vector, VectorComponents
 
-__all__ = ["style", "Vector", "VectorComponents"]
+__all__ = ["style", "Vector", "VectorComponents", "Annotation"]
