@@ -55,11 +55,13 @@ Each Plottable has style knobs (color, linewidth, linestyle, alpha, label, z-ord
 - **`matplotlib.widgets`** for interactive controls (D-07 amendment to original ipywidgets choice — see Layer 2 above)
 - No other backends (no plotly, bokeh, etc.)
 
-### Consumers (LOCKED — the library serves all four; library itself depends on none of them)
-1. `src/subshader/dsp/dsp.ipynb` — notebook cell 01 renders figure 1 as a `DynamicPanel` (5-frame loop: vector `a` stays anchored at A=(2,3) across every frame, sibling `a'` cycles its x-component through [+2, +1, 0, -1, -2] while `a'.y` stays fixed at 3 — orthogonality made visible)
-2. README figure generation — static PNG/GIF export
-3. Test suites (unit + timing) — **one** example test showing the integration pattern; not full coverage
-4. Future external projects — importable as standalone
+### Consumers (LOCKED, with D-08 amendment)
+1. `src/subshader/dsp/dsp.ipynb` — notebook is the primary surface where dsplot's Static/Dynamic/Interactive Panel composition shines. **D-08 amendment (2026-05-17):** the notebook is built up **incrementally, one §2.4 subsection at a time, in lockstep with the user's prose authoring**. Each subsection's figure is converted from a static PNG to the appropriate Static-or-Dynamic-or-Interactive Panel composition as the user writes the prose around it. dsplot itself amends/expands as new figure needs surface.
+   - **Cell 01 — §2.4 Figure 1 (`components_recombine_either_order`)** is a 1×3 mixed Figure: `[StaticPanel(xy projection), DynamicPanel(reconstruction order, ~6 frames), DynamicPanel(orthogonality, 5 a' frames cycling x through [+2, +1, 0, -1, -2] while y stays fixed at 3 — orthogonality made visible)]`. Vector `a` stays anchored at A=(2,3) across every dynamic frame.
+   - **Subsequent cells** are populated by follow-up plans (09-07, 09-08, …) as the user's authoring proceeds. Each plan is scoped to one §2.4 subsection's figure conversion + any dsplot amendments needed for that figure.
+2. README figure generation — static PNG/GIF export (covered for foundation figures by 09-05).
+3. Test suites (unit + timing) — **one** example test showing the integration pattern; not full coverage.
+4. Future external projects — importable as standalone.
 
 ### First Delivery Scope (LOCKED)
 Full port of everything in `research/dsp_figures.py` into the new Panel/Plottable structure:
@@ -182,4 +184,4 @@ The two override modes both work:
 
 *Phase: 09-dsplot-library-architecture*
 *Context gathered: 2026-05-17 via inline discussion (no formal /gsd:discuss-phase invoked — decisions captured directly in conversation and consolidated here)*
-*Revised: 2026-05-17 — applied 5 locked decisions (D-01 boundary, D-02 polymorphic Vector, D-03 orphan retire, D-04 3D projection kwarg, D-05 style template with override). Second revision: D-06 asymmetric Vector dispatch (2D→3D implicit, 3D→2D strict). Third revision (post-execution): D-07 amendment — InteractivePanel uses `matplotlib.widgets` (not ipywidgets) for prev/next/slider/checkbox controls. Anchored inset_axes keep controls inside the figure canvas, column-aligned under their panel; drops the runtime ipywidgets dependency. Amendment recorded after user verification of 09-04 smoke tests including the LOCKED primary mixed-type goal (Dynamic + Interactive on one Figure).*
+*Revised: 2026-05-17 — applied 5 locked decisions (D-01 boundary, D-02 polymorphic Vector, D-03 orphan retire, D-04 3D projection kwarg, D-05 style template with override). Second revision: D-06 asymmetric Vector dispatch (2D→3D implicit, 3D→2D strict). Third revision (post-execution): D-07 amendment — InteractivePanel uses `matplotlib.widgets` (not ipywidgets) for prev/next/slider/checkbox controls. Anchored inset_axes keep controls inside the figure canvas, column-aligned under their panel; drops the runtime ipywidgets dependency. Amendment recorded after user verification of 09-04. Fourth revision (post-09-05): D-08 amendment — notebook cell 01 expanded from a single DynamicPanel (orthogonality only) to a 1×3 mixed Figure (Static xy projection + Dynamic reconstruction + Dynamic orthogonality). Subsequent §2.4 figures are built incrementally via follow-up plans (09-07, 09-08, …) one subsection at a time, in lockstep with prose authoring. Phase 9 ships when 09-06 lands; remaining §2.4 figure conversions are scheduled as separate plans on the active milestone roadmap, not bundled into 09-06.*
