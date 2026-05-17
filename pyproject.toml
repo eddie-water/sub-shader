@@ -32,5 +32,5 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src", "src/subshader", "research/tests"]
+pythonpath = ["src", "src/subshader", "research", "research/tests"]
 testpaths = ["research/tests"]
