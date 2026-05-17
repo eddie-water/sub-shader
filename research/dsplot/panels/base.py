@@ -31,6 +31,12 @@ class Panel(ABC):
     ax: "Optional[Axes]"
     _plottables: "List[Plottable]"
 
+    # Fraction of figure height that this panel needs reserved below its
+    # gridspec cell for in-figure controls (mpl widgets etc.). The Figure
+    # orchestrator takes the max across panels and applies
+    # `subplots_adjust(bottom=...)`. Default 0 means no extra reservation.
+    requires_bottom_pad: float = 0.0
+
     def __init__(self) -> None:
         self.ax = None
         self._plottables = []

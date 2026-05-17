@@ -42,7 +42,7 @@ Each Plottable has style knobs (color, linewidth, linestyle, alpha, label, z-ord
 **Layer 2 — Panels** (containers; each owns one mpl Axes):
 - `StaticPanel` — single state, just renders
 - `DynamicPanel` — `frames: list[State]`; advances on timer via mpl `FuncAnimation`; loops with auto-reset
-- `InteractivePanel` — same frame model; advances on `ipywidgets` controls (next/prev buttons, checkbox, slider)
+- `InteractivePanel` — same frame model; advances on `matplotlib.widgets` controls (next/prev buttons always present; slider and checkbox optional). **AMENDED — D-07 (post-execution):** original LOCKED choice was `ipywidgets`; pivoted to `matplotlib.widgets` after user verification of 09-04. Rationale: the widgets render in inset axes anchored to the panel's `transAxes`, so controls live INSIDE the figure canvas and stay column-aligned under their panel in multi-panel Figures. Side benefit: drops the runtime ipywidgets dependency from the library proper.
 
 **Composition:** `panel.add(plottable)` stacks elements on the same axes. Overlays are free (e.g., a `TimeSeries` plus a `Spotlight` on the same panel; or a `Heatmap` under a `TimeSeries`).
 
@@ -50,9 +50,9 @@ Each Plottable has style knobs (color, linewidth, linestyle, alpha, label, z-ord
 
 **3D axes support (LOCKED — D-04):** `Figure.add_panel(panel, *, row, col, rowspan=1, colspan=1, projection: str | None = None)` accepts a `projection` kwarg. When `projection="3d"`, the gridspec cell is created via `add_subplot(..., projection="3d")` and the panel receives an `Axes3D`. Panels that accept 3D axes must do their own 2D-vs-3D branching (or be subclassed — e.g. `StaticPanel3D` for the 3D foundation figure).
 
-### Backend (LOCKED)
+### Backend (LOCKED, with D-07 amendment)
 - **matplotlib** for static + dynamic (`FuncAnimation`)
-- **ipywidgets** for interactive controls
+- **`matplotlib.widgets`** for interactive controls (D-07 amendment to original ipywidgets choice — see Layer 2 above)
 - No other backends (no plotly, bokeh, etc.)
 
 ### Consumers (LOCKED — the library serves all four; library itself depends on none of them)
@@ -182,4 +182,4 @@ The two override modes both work:
 
 *Phase: 09-dsplot-library-architecture*
 *Context gathered: 2026-05-17 via inline discussion (no formal /gsd:discuss-phase invoked — decisions captured directly in conversation and consolidated here)*
-*Revised: 2026-05-17 — applied 5 locked decisions (D-01 boundary, D-02 polymorphic Vector, D-03 orphan retire, D-04 3D projection kwarg, D-05 style template with override). Second revision: D-06 asymmetric Vector dispatch (2D→3D implicit, 3D→2D strict).*
+*Revised: 2026-05-17 — applied 5 locked decisions (D-01 boundary, D-02 polymorphic Vector, D-03 orphan retire, D-04 3D projection kwarg, D-05 style template with override). Second revision: D-06 asymmetric Vector dispatch (2D→3D implicit, 3D→2D strict). Third revision (post-execution): D-07 amendment — InteractivePanel uses `matplotlib.widgets` (not ipywidgets) for prev/next/slider/checkbox controls. Anchored inset_axes keep controls inside the figure canvas, column-aligned under their panel; drops the runtime ipywidgets dependency. Amendment recorded after user verification of 09-04 smoke tests including the LOCKED primary mixed-type goal (Dynamic + Interactive on one Figure).*

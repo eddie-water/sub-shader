@@ -29,6 +29,39 @@ from . import style
 from .panels.base import Panel
 
 
+_JUPYTER_DARK_CSS_INJECTED = False
+
+
+def apply_jupyter_dark(bg_color: Optional[str] = None) -> None:
+    """Inject one-time CSS into the current Jupyter session that paints the
+    cell-output container behind ipympl figures (and other widget outputs)
+    dark, matching `style.BG_COLOR`. Safe to call multiple times — the
+    injection is idempotent within a session.
+
+    No-op outside Jupyter (silently returns).
+    """
+    global _JUPYTER_DARK_CSS_INJECTED
+    if _JUPYTER_DARK_CSS_INJECTED:
+        return
+    try:
+        from IPython.display import display, HTML
+    except ImportError:
+        return
+    bg = bg_color if bg_color is not None else style.BG_COLOR
+    css = (
+        "<style>"
+        ".cell-output-ipywidget-background,"
+        ".jupyter-matplotlib,"
+        ".jupyter-widgets.widget-container,"
+        ".jp-OutputArea-output {"
+        f"  background-color: {bg} !important;"
+        "}"
+        "</style>"
+    )
+    display(HTML(css))
+    _JUPYTER_DARK_CSS_INJECTED = True
+
+
 class Figure:
     """Compose Panels into one matplotlib Figure with a gridspec layout."""
 
@@ -44,6 +77,9 @@ class Figure:
         width_ratios: Optional[List[float]] = None,
         height_ratios: Optional[List[float]] = None,
         dpi: Optional[int] = None,
+        fill_width: bool = True,
+        show_toolbar: bool = False,
+        display_width: Optional[str] = None,
     ) -> None:
         if figsize is None:
             figsize = (
@@ -59,6 +95,9 @@ class Figure:
 
         self.n_rows = n_rows
         self.n_cols = n_cols
+        self._fill_width = fill_width
+        self._show_toolbar = show_toolbar
+        self._display_width = display_width
         self._mpl_fig = plt.figure(figsize=figsize, dpi=dpi)
         self._mpl_fig.patch.set_facecolor(style.BG_COLOR)
         self._gs = self._mpl_fig.add_gridspec(
@@ -93,6 +132,13 @@ class Figure:
         return panel
 
     def render(self) -> None:
+        max_bottom_pad = max(
+            (panel.requires_bottom_pad for panel, *_ in self.panels),
+            default=0.0,
+        )
+        if max_bottom_pad > 0.0:
+            self._mpl_fig.subplots_adjust(bottom=max_bottom_pad + 0.05)
+
         for panel, row, col, rowspan, colspan, projection in self.panels:
             cell = self._gs[row:row + rowspan, col:col + colspan]
             if projection is None:
@@ -106,6 +152,31 @@ class Figure:
                 ax.set_facecolor(style.BG_COLOR)
             panel.attach(ax)
             panel.render()
+
+        self._apply_jupyter_display_styling()
+
+    def _apply_jupyter_display_styling(self) -> None:
+        """Style the ipympl canvas widget and cell-output container — only
+        meaningful under `%matplotlib widget` / ipympl. No-op otherwise.
+
+        - Hides the ipympl toolbar/header/footer chrome unless show_toolbar
+        - Sets the canvas widget width to fill the cell or to display_width
+        - Injects a one-time dark-theme CSS rule for the cell-output container
+        """
+        canvas = getattr(self._mpl_fig, "canvas", None)
+        if canvas is None or not hasattr(canvas, "layout"):
+            return  # not an ipympl Canvas widget — non-interactive backend
+
+        if self._fill_width:
+            canvas.layout.width = self._display_width or "100%"
+        elif self._display_width is not None:
+            canvas.layout.width = self._display_width
+
+        for attr in ("toolbar_visible", "header_visible", "footer_visible"):
+            if hasattr(canvas, attr):
+                setattr(canvas, attr, self._show_toolbar)
+
+        apply_jupyter_dark()
 
     def savefig(self, path: str, **kwargs) -> str:
         directory = os.path.dirname(path)
