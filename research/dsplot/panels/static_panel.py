@@ -65,14 +65,32 @@ class StaticPanel(Panel):
             axis_labels=self.axis_labels,
         )
 
-        if self.title is not None:
+        # When BOTH title and subtitle are present, stack them vertically
+        # (title on top, subtitle below) so they don't overlap. Y-positions
+        # are axes-relative — title at 1.10, subtitle at 1.02. When only one
+        # is present, place it at the title's default location (1.02).
+        if self.title is not None and self.subtitle is not None:
+            self.ax.set_title(
+                self.title,
+                fontsize=style.DEFAULT_TITLE_FONT_SIZE,
+                color=style.TICK_LABEL_COLOR,
+                y=1.10,
+            )
+            self.ax.text(
+                0.5, 1.02, self.subtitle,
+                transform=self.ax.transAxes,
+                ha="center", va="bottom",
+                fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
+                color=style.TICK_LABEL_COLOR,
+                style="italic",
+            )
+        elif self.title is not None:
             self.ax.set_title(
                 self.title,
                 fontsize=style.DEFAULT_TITLE_FONT_SIZE,
                 color=style.TICK_LABEL_COLOR,
             )
-
-        if self.subtitle is not None:
+        elif self.subtitle is not None:
             self.ax.text(
                 0.5, 1.02, self.subtitle,
                 transform=self.ax.transAxes,
