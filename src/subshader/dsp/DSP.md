@@ -1,10 +1,11 @@
-# Foundations: Wavelet Transform
+# Signal Decomposition
 
 ## 1. Motivations
 
-- To properly visualize an audio signal, we need a method for precisely representing the signal's behavior
-- More specifically, we want to know **what** frequencies are present and **when** they occur in the signal - this is the primary motivation for finding a method for highly accurate **time-frequency** analysis 
-- The standard approach is to use the **Fourier Transform**, but it has limitations in this context, whereas the **Wavelet Transform** is better suited for this kind of task 
+- To visualize an audio signal effectively, we need an extremely precise method for representing it's behavior
+- Specifically, we want to know **what** frequencies are present and **when** they occur in the signal - this is the primary motivation for finding a highly accurate **time-frequency** analysis method 
+  - The standard approach is to use the **Fourier Transform**, but in this context it has limitations
+  - The more recent **Wavelet Transform** was basically designed for this kind of task
 
   *[TODO Insert CWT vs STFT Figure]*
 - Both are built on the same foundation - **signal decomposition** 
@@ -16,9 +17,9 @@
 
 ### 2.1 Signal Decomposition - The Goal
 
-- The end goal is to **decompose** any given signal into its **fundamental components**
-- In simpler terms, we want to break down a signal into its **basic building blocks** and see how much of each exists in it originally 
-- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the final color of the paint - where would you even begin?
+- The end goal is to **decompose** any given signal into its fundamental **components**
+- In simpler terms, we want to break it down into its **basic building blocks** and see how much of each exists in the signal originally 
+- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
 - This type of problem motivates us to do two things:
     1. **Define what a signal's fundamental components are** 
     2. **Measure the presence of each component in the signal** 
@@ -26,7 +27,7 @@
 
 ### 2.2 Inner Product - The Tool
 
-- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (embodies the signal properties we want to measure) to calculate, effectively, a "**similarity score**"
+- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (something that embodies the signal properties we want to measure) to calculate, effectively, a "**similarity score**"
 
 <div align="center">
 
@@ -42,12 +43,12 @@ $$
 </div>
 
 - The result is a measurement of how **correlated** these function are, indicating their **similarity**
-- But to understand this actually works, it's helpful to see how the Inner Product operates in its simplest form: the **Dot Product**
+- But to understand how this actually works, it's helpful to see how the Inner Product operates in its simplest form: the **Dot Product**
 
 ### 2.3 Dot Product - The Basic Case
 
 - The Inner Product is a generalization of what the **Dot Product** does to **vectors** in $\mathbb{R}^n$ 
-- This may sound a little mathy, but all it means is we are just going to be applying these concepts to plain, regular, real numbers - no imaginary numbers (yet) or abstract numbers in weird math domains 
+- All this means is we'll be applying these concepts to just plain, regular, real numbers - no imaginary or abstract numbers in weird math domains (yet)
 - As long as you can do basic **multiplication** and **addition**, it's really not too bad
 
 <div align="center">
@@ -108,52 +109,60 @@ $$
 <em> Dot Product Operation </em>
 </div>
 
-- But what does this operation even really do? And what does the result even really mean? 
-- The result indicates how **parallel** vectors **a** and **b** are - this is the key insight to understanding that the Dot Product measures **"similarity"** by  calculating how **aligned** **a** and **b** are in terms of their **parallel**-ness so to speak
-- This clicks more visually during **Vector Projection**, our first attempt at any form of  decomposition
+- But what does this result even really mean? And what does this operation even really do? 
+- The result indicates how **parallel** vectors **a** and **b** are - this is the key insight to understanding that the Dot Product operation measures **"similarity"** by  calculating how **aligned** **a** and **b** are in terms of their parallel-ness so to speak
+- This clicks more visually during **Vector Projection**, our first attempt at any form of **decomposition**
 
 ### 2.4 Vector Projection - The Geometric Interpretation
 
 #### 2.4.1 Projection onto a Reference Direction
 
-- A **vector** can be thought of as an **arrow** described by two properties
+- A **vector** can be thought of as an **arrow** described by two of its properties
   - **magnitude** - how long it is 
   - **direction** - where it points
 
-- To **decompose** a vector (break it down into its basic components), we **project it along the directions** of its coordinate system - typically the x and y axes for 2D vectors
-- Think of it as the vector casting its shadow on each axis, where the length of each shadow reveals the vector's **component** for that dimension - how much of that dimension contributes to the original vector as a whole 
-- Notice how the components can be **recombined in any order** to reconstruct the original vector
+- To decompose a vector into its basic components, we **project it along the directions** of all the dimensions it exists in - think of it like the vector casting its **"shadow"** onto the x and y reference axes - this is how we break the vector down into its x and y components
 
-![Projection onto a reference direction: x/y axes (left), a onto b (middle), b onto a (right) — both arbitrary-vector cases produce the same a · b = 1.00](../../../assets/images/dsp/projection_reference_directions_v6_combo5_palette.png)
+- The **length** of each "shadow" *is* its **component** for that dimension and reveals how much each dimension **contributes** to the original vector as a whole - we designate these "shadows" as the vector's **basic components** since they 
+  - **Can be combined in any order** to reconstruct the original - when rebuilding them tip-to-tail, if you start with x first and then y, or y first then x, regardlessly, you still end up with the original  
+  - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component goes completely unnoticed by, and does not affect, the y component
 
-<div align="center">
+![Basic Vector Projection (3 panels): projection of vector a onto x/y axes (left); tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); two vectors a and a' (same orange family) sharing the same y-component but with opposite-sign x-components, demonstrating that measuring y is independent of x — the perpendicularity / orthogonality beat (right)](../../../assets/images/dsp/components_recombine_either_order_v18.png)
 
-$$
-\vec{a} = (a_x,\, a_y) = (1.0,\, 0.5) \qquad \vec{b} = (b_x,\, b_y) = (0.6,\, 0.8)
-$$
+#### 2.4.2 Projection onto the Direction of Another Vector
+- When projecting one vector onto another, like **a** onto **b**, we use **b** as the **reference direction** - this reveals which parts of **a** are **aligned** with, or point along the **same direction**, as **b** 
 
-$$
-\vec{a} \cdot \vec{b} = a_x b_x + a_y b_y = (1.0)(0.6) + (0.5)(0.8) = 0.60 + 0.40 = 1.00
-$$
-
-$$
-\vec{b} \cdot \vec{a} = b_x a_x + b_y a_y = (0.6)(1.0) + (0.8)(0.5) = 0.60 + 0.40 = 1.00
-$$
-
-</div>
-
-- When we project vector **a** onto another vector **b**, we take the direction of **b** to be the reference axis - their Dot Product reveals which part of **a** points along the same direction as **b** 
+- When performing the Dot Product on these vector components, using b as the direction
+ TODO how does the dot product intuitively come into play here? sure we know how to decompose into dimensional components, but lets tie it back to the idea
 
 - Notice how when we project **a** onto **b** or **b** onto **a**, the resulting __ [the visual annotates each component of each projection - do the math for each exmaple - display how the dot product in either case produces the same result - this basically means we don't really care which one is the reference dimension - show math example in the with each - ]
+
+![Projection of a onto b (left) and b onto a (right), each shown with both reconstruction paths — parallel-then-perp and perp-then-parallel — demonstrating order independence for any reference direction](../../../assets/images/dsp/projection_reconstruction_either_order_v9.png)
 
 <!-- WRITE 2.4.1 beat 4 — symmetry of the dot product (right panel).
      Even though "a onto b" and "b onto a" produce visibly different
      shadows (different lengths along different reference directions), the
      scalar dot product comes out the same: a · b = b · a. The reference
      direction is your choice; the answer doesn't care.
-     The figure carries this in three juxtaposed panels — same a, same b,
-     three different reference directions, with the matching a · b = 1.00
-     annotation under panels 2 and 3. -->
+     The figure carries this in two juxtaposed panels — same a, same b,
+     reference direction flipped, with the matching a · b = 12 dot
+     product result substituted in the LaTeX block below. -->
+
+<div align="center">
+
+$$
+\vec{a} = (a_x,\, a_y) = (2,\, 3) \qquad \vec{b} = (b_x,\, b_y) = (3,\, 2)
+$$
+
+$$
+\vec{a} \cdot \vec{b} = a_x b_x + a_y b_y = (2)(3) + (3)(2) = 6 + 6 = 12
+$$
+
+$$
+\vec{b} \cdot \vec{a} = b_x a_x + b_y a_y = (3)(2) + (2)(3) = 6 + 6 = 12
+$$
+
+</div>
 
 - [This actually works because of the symmetry found the geometry of the triangle these two vectors make - this the area equation of a triangle - watch this video to see how it relates to the Dot Product - but otherwise just trust they can be derived from each other link - https://www.youtube.com/watch?v=PnJoKGynu_U]
 
@@ -175,7 +184,7 @@ $$
      This is the angle → sign mapping the dot product gives you for free. -->
 
 
-#### 2.4.2 Beyond 2D — Same Operation, More Dimensions
+#### 2.4.3 Beyond 2D — Same Operation, More Dimensions
 
 <!-- WRITE 2.4.2 beat 1 — 3D, with the figure as the visual proof.
      The same operation extends to 3D unchanged: pick reference directions
@@ -236,6 +245,7 @@ $$
      ![Same components recombined tip-to-tail in opposite orders both reconstruct a](../../../assets/images/dsp/vector_xy_reconstruction.png)
 -->
 
+This is all about re-representing **all the information** from the original signal into a **different format**, while also being able to perform the **reverse process** to **reconstruct** the original  
 
 ---
 
@@ -247,6 +257,7 @@ $$
 - Inner product measures similarity to... what?
 - Answer: known reference patterns (basis functions)
 - So what basis functions should we use?
+
 
 ### 3.2 Sine Waves as Basis Functions
 
