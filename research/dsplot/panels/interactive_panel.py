@@ -42,7 +42,7 @@ class InteractivePanel(Panel):
     (`checkbox=("label", callback)`) for plot-element toggling.
     """
 
-    requires_bottom_pad: float = 0.18
+    _base_bottom_pad: float = 0.18
 
     def __init__(
         self,
@@ -108,22 +108,7 @@ class InteractivePanel(Panel):
             axis_labels=self.axis_labels,
         )
 
-        if self.title is not None:
-            ax.set_title(
-                self.title,
-                fontsize=style.DEFAULT_TITLE_FONT_SIZE,
-                color=style.TICK_LABEL_COLOR,
-            )
-
-        if self.subtitle is not None:
-            ax.text(
-                0.5, 1.02, self.subtitle,
-                transform=ax.transAxes,
-                ha="center", va="bottom",
-                fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
-                color=style.TICK_LABEL_COLOR,
-                style="italic",
-            )
+        self._render_chrome_titles()
 
         for plottable in self.base_plottables:
             plottable.draw(ax)

@@ -30,7 +30,8 @@ def test_mixed_static_dynamic_figure_renders():
     Pins:
       - Figure.render() walks both panels without crashing
       - Each panel's plottables actually draw onto their own axes
-      - DynamicPanel._anim reference survives Figure.render()
+      - Figure._anim (the master clock that drives every DynamicPanel) is
+        held on the Figure after render()
     """
     from dsplot import Figure, StaticPanel, DynamicPanel, Vector
 
@@ -55,8 +56,12 @@ def test_mixed_static_dynamic_figure_renders():
         dyn_labels = [t.get_text() for t in dyn_panel.ax.texts]
         assert "a" in static_labels, f"static panel missing 'a': {static_labels}"
         assert "b" in dyn_labels, f"dynamic panel missing 'b': {dyn_labels}"
-        assert dyn_panel._anim is not None, (
-            "FuncAnimation reference dropped — would freeze on frame 0"
+        assert fig._anim is not None, (
+            "Figure master FuncAnimation reference dropped — would freeze on frame 0"
+        )
+        assert dyn_panel._anim is None, (
+            "DynamicPanel inside a Figure should defer to the figure clock; "
+            "its own FuncAnimation must not be created."
         )
     finally:
         fig.close()

@@ -27,6 +27,14 @@ import matplotlib.pyplot as plt
 
 from . import style
 from .panels.base import Panel
+from .panels.dynamic_panel import DynamicPanel
+
+
+# Trailing hold ticks appended to the master clock cycle: the longest panel
+# (and therefore every shorter panel that already reached its final frame)
+# stays put for this many ticks before the cycle wraps. Gives the eye a
+# moment to read the completed state before the next loop starts.
+_FIGURE_CLOCK_HOLD_TICKS = 2
 
 
 _JUPYTER_DARK_CSS_INJECTED = False
@@ -72,6 +80,9 @@ class Figure:
         n_cols: int = 1,
         figsize: Optional[Tuple[float, float]] = None,
         suptitle: Optional[str] = None,
+        suptitle_fontsize: Optional[float] = None,
+        suptitle_y: Optional[float] = None,
+        top_pad: Optional[float] = None,
         hspace: Optional[float] = None,
         wspace: Optional[float] = None,
         width_ratios: Optional[List[float]] = None,
@@ -99,6 +110,7 @@ class Figure:
         self._show_toolbar = show_toolbar
         self._display_width = display_width
         self._has_suptitle = suptitle is not None
+        self._top_pad = top_pad
         self._mpl_fig = plt.figure(figsize=figsize, dpi=dpi)
         self._mpl_fig.patch.set_facecolor(style.BG_COLOR)
         self._gs = self._mpl_fig.add_gridspec(
@@ -112,12 +124,20 @@ class Figure:
             self._mpl_fig.suptitle(
                 suptitle,
                 color=style.TICK_LABEL_COLOR,
-                fontsize=style.DEFAULT_SUPTITLE_FONT_SIZE,
+                fontsize=(
+                    suptitle_fontsize
+                    if suptitle_fontsize is not None
+                    else style.DEFAULT_SUPTITLE_FONT_SIZE
+                ),
                 fontweight="bold",
-                y=0.975,
+                y=(suptitle_y if suptitle_y is not None else 0.975),
             )
 
         self.panels: List[Tuple[Panel, int, int, int, int, Optional[str]]] = []
+        # Master FuncAnimation when any DynamicPanels are present; load-bearing
+        # for matplotlib timer GC the same way DynamicPanel._anim is in the
+        # standalone path.
+        self._anim = None
 
     def add_panel(
         self,
@@ -145,7 +165,9 @@ class Figure:
         if max_bottom_pad > 0.0:
             adjust_kwargs["bottom"] = max_bottom_pad + 0.05
         if self._has_suptitle:
-            adjust_kwargs["top"] = 0.88
+            adjust_kwargs["top"] = (
+                self._top_pad if self._top_pad is not None else 0.88
+            )
         if adjust_kwargs:
             self._mpl_fig.subplots_adjust(**adjust_kwargs)
 
@@ -160,10 +182,53 @@ class Figure:
             else:
                 ax = self._mpl_fig.add_subplot(cell, projection=projection)
                 ax.set_facecolor(style.BG_COLOR)
+            # Hand control of the animation clock to the figure for any
+            # DynamicPanel — the panel itself skips FuncAnimation construction
+            # in its render() when this flag is set.
+            if isinstance(panel, DynamicPanel):
+                panel._managed_externally = True
             panel.attach(ax)
             panel.render()
 
+        self._install_master_clock()
         self._apply_jupyter_display_styling()
+
+    def _install_master_clock(self) -> None:
+        """Create a single FuncAnimation that ticks every DynamicPanel in this
+        figure from one shared clock.
+
+        Cycle length: ``max(panel.total_frames) + _FIGURE_CLOCK_HOLD_TICKS``.
+        Shorter panels naturally hold their final frame (DynamicPanel.tick
+        clamps), and every panel sits on its final frame for the trailing
+        hold ticks before the cycle wraps.
+        """
+        dynamic_panels = [
+            p for p, *_ in self.panels if isinstance(p, DynamicPanel)
+        ]
+        if not dynamic_panels:
+            return
+
+        cycle_length = (
+            max(p._total_frames() for p in dynamic_panels)
+            + _FIGURE_CLOCK_HOLD_TICKS
+        )
+        # All DynamicPanels share the first panel's interval — they're meant
+        # to be in lockstep; mismatched intervals would be a user error.
+        interval = dynamic_panels[0].interval_ms
+
+        def _tick(global_idx: int) -> None:
+            for panel in dynamic_panels:
+                panel.tick(global_idx)
+
+        from matplotlib.animation import FuncAnimation
+        self._anim = FuncAnimation(
+            self._mpl_fig,
+            _tick,
+            frames=cycle_length,
+            interval=interval,
+            repeat=True,
+            blit=False,
+        )
 
     def _apply_jupyter_display_styling(self) -> None:
         """Style the ipympl canvas widget and cell-output container — only

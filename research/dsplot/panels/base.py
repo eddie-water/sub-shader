@@ -20,6 +20,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional
 
+from .. import style
+
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from ..plottables.base import Plottable
@@ -31,11 +33,25 @@ class Panel(ABC):
     ax: "Optional[Axes]"
     _plottables: "List[Plottable]"
 
-    # Fraction of figure height that this panel needs reserved below its
-    # gridspec cell for in-figure controls (mpl widgets etc.). The Figure
-    # orchestrator takes the max across panels and applies
-    # `subplots_adjust(bottom=...)`. Default 0 means no extra reservation.
-    requires_bottom_pad: float = 0.0
+    # Base reservation (subclasses override) for in-figure controls — e.g.
+    # InteractivePanel sets _base_bottom_pad = 0.18 for its prev/next
+    # buttons. Subtitle bottom padding is added on top at instance level
+    # via the requires_bottom_pad property.
+    _base_bottom_pad: float = 0.0
+
+    @property
+    def requires_bottom_pad(self) -> float:
+        """Fraction of figure height to reserve below this panel.
+
+        Combines the subclass control-bar reservation with an additional
+        per-instance subtitle reservation (when self.subtitle is set), so a
+        below-plot subtitle isn't clipped by Figure.savefig's tight bbox.
+        Figure.render() takes max() across panels.
+        """
+        pad = self._base_bottom_pad
+        if getattr(self, "subtitle", None) is not None:
+            pad += style.DEFAULT_SUBTITLE_BOTTOM_PAD
+        return pad
 
     def __init__(self) -> None:
         self.ax = None
@@ -51,3 +67,40 @@ class Panel(ABC):
     @abstractmethod
     def render(self) -> None:
         ...
+
+    def _render_chrome_titles(self) -> None:
+        """Render this panel's title (above the plot) and subtitle (below).
+
+        Library-wide convention enforced here so every Panel subclass picks
+        up the same layout: title sits just above the axes box at
+        ``style.DEFAULT_TITLE_Y``, subtitle sits just below the axes box at
+        ``style.DEFAULT_SUBTITLE_Y``. Subclasses set ``self.title`` and
+        ``self.subtitle`` and call this from their background-setup path.
+
+        Axes3D requires ``text2D`` instead of ``text`` for axes-relative
+        placement; the helper detects via ``hasattr(ax, "get_zlim")``.
+        """
+        title = getattr(self, "title", None)
+        subtitle = getattr(self, "subtitle", None)
+        ax = self.ax
+        if ax is None:
+            return
+
+        if title is not None:
+            ax.set_title(
+                title,
+                fontsize=style.DEFAULT_TITLE_FONT_SIZE,
+                color=style.TICK_LABEL_COLOR,
+                y=style.DEFAULT_TITLE_Y,
+            )
+
+        if subtitle is not None:
+            text_fn = ax.text2D if hasattr(ax, "get_zlim") else ax.text
+            text_fn(
+                0.5, style.DEFAULT_SUBTITLE_Y, subtitle,
+                transform=ax.transAxes,
+                ha="center", va="top",
+                fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
+                color=style.TICK_LABEL_COLOR,
+                style="italic",
+            )
