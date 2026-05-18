@@ -77,22 +77,7 @@ class StaticPanel3D(Panel):
             self._draw_spines(ax)
             self._draw_axis_labels(ax)
 
-        if self.title is not None:
-            ax.set_title(
-                self.title,
-                fontsize=style.DEFAULT_TITLE_FONT_SIZE,
-                color=style.TICK_LABEL_COLOR,
-            )
-        if self.subtitle is not None:
-            # ``Axes3D.text2D`` places in axes-relative coords (transAxes).
-            ax.text2D(
-                0.5, 1.02, self.subtitle,
-                transform=ax.transAxes,
-                ha="center", va="bottom",
-                fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
-                color=style.TICK_LABEL_COLOR,
-                style="italic",
-            )
+        self._render_chrome_titles()
 
         for plottable in self._plottables:
             plottable.draw(ax)

@@ -118,6 +118,8 @@ class Vector(Plottable):
                 alpha=self.alpha,
                 mutation_scale=style.DEFAULT_ARROW_MUTATION,
                 shrinkA=0, shrinkB=0,
+                joinstyle="miter",
+                capstyle="butt",
                 zorder=self.zorder,
             )
             ax.add_patch(patch)
@@ -128,6 +130,7 @@ class Vector(Plottable):
                 linewidth=linewidth,
                 linestyle=self.linestyle,
                 alpha=self.alpha,
+                solid_capstyle="butt",
                 zorder=self.zorder,
             )
             norm = math.hypot(vx, vy)
@@ -147,6 +150,8 @@ class Vector(Plottable):
                 alpha=self.alpha,
                 mutation_scale=style.DEFAULT_ARROW_MUTATION,
                 shrinkA=0, shrinkB=0,
+                joinstyle="miter",
+                capstyle="butt",
                 zorder=self.zorder,
             )
             ax.add_patch(head_patch)

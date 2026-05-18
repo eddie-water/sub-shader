@@ -85,6 +85,13 @@ class DynamicPanel(Panel):
 
         self._anim = None
         self._frame_artists: List = []
+        # When a Figure orchestrates multiple DynamicPanels, it owns the
+        # master FuncAnimation and drives each panel via tick(global_tick).
+        # Figure sets this flag before calling render() so we skip our own
+        # FuncAnimation construction; the figure's master timer keeps every
+        # panel in lockstep.
+        self._managed_externally: bool = False
+        self._last_drawn_frame: int = -1
 
     def _scalar_lim(self) -> Optional[float]:
         if self.lim is None:
@@ -129,22 +136,7 @@ class DynamicPanel(Panel):
             axis_labels=self.axis_labels,
         )
 
-        if self.title is not None:
-            ax.set_title(
-                self.title,
-                fontsize=style.DEFAULT_TITLE_FONT_SIZE,
-                color=style.TICK_LABEL_COLOR,
-            )
-
-        if self.subtitle is not None:
-            ax.text(
-                0.5, 1.02, self.subtitle,
-                transform=ax.transAxes,
-                ha="center", va="bottom",
-                fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
-                color=style.TICK_LABEL_COLOR,
-                style="italic",
-            )
+        self._render_chrome_titles()
 
         for plottable in self.base_plottables:
             plottable.draw(ax)
@@ -197,10 +189,19 @@ class DynamicPanel(Panel):
         self._render_background()
         self._frame_artists = []
         self._animate(0)
+        self._last_drawn_frame = 0
 
-        # LOAD-BEARING: hold the FuncAnimation reference on self so the timer
-        # thread isn't garbage-collected when render() returns. Stripping this
-        # assignment freezes the animation on frame 0 with no error.
+        # When a Figure is orchestrating this panel (e.g. multi-panel mixed
+        # Figure), it installs its own master FuncAnimation that ticks every
+        # DynamicPanel from a shared clock. Skip the per-panel FuncAnimation
+        # in that case — the figure-level timer is the single source of truth.
+        if self._managed_externally:
+            return
+
+        # Standalone path: hold the FuncAnimation reference on self so the
+        # timer thread isn't garbage-collected when render() returns.
+        # Stripping this assignment freezes the animation on frame 0 with no
+        # error.
         from matplotlib.animation import FuncAnimation
         self._anim = FuncAnimation(
             self.ax.figure,
@@ -210,6 +211,20 @@ class DynamicPanel(Panel):
             repeat=self.repeat,
             blit=False,
         )
+
+    def tick(self, global_tick: int) -> None:
+        """Render the frame indexed by ``global_tick`` on the figure clock.
+
+        Clamped to the panel's last frame: if the figure clock ticks past
+        ``total_frames - 1``, the panel holds its final frame. No-ops when the
+        target frame is already on screen so trailing holds don't churn
+        artists.
+        """
+        target = min(global_tick, self._total_frames() - 1)
+        if target == self._last_drawn_frame:
+            return
+        self._animate(target)
+        self._last_drawn_frame = target
 
     def save_gif(self, path: str, *, fps: int = 4, dpi: Optional[int] = None) -> str:
         """Save the animation as a GIF via PillowWriter. Returns the path."""

@@ -56,9 +56,17 @@ DEFAULT_ARROW_MUTATION    = 22
 # ============================================================
 # TYPOGRAPHY
 # ============================================================
-DEFAULT_TITLE_FONT_SIZE    = 24
-DEFAULT_SUBTITLE_FONT_SIZE = 18
+DEFAULT_TITLE_FONT_SIZE    = 20
+DEFAULT_SUBTITLE_FONT_SIZE = 14
 DEFAULT_LABEL_FONT_SIZE    = 18
+# Y position (axes coords) for the subtitle. Negative = below the plot box.
+# Panels with a subtitle declare a bottom_pad so the figure reserves room.
+DEFAULT_SUBTITLE_Y         = -0.12
+# Y position (axes coords) for the title (a hair above the plot box).
+DEFAULT_TITLE_Y            = 1.04
+# Extra figure-bottom pad reserved when any panel has a subtitle, so the
+# below-plot subtitle isn't clipped by Figure.savefig's tight bbox.
+DEFAULT_SUBTITLE_BOTTOM_PAD = 0.08
 DEFAULT_TICK_LABEL_SIZE    = 14
 DEFAULT_AXIS_LABEL_SIZE    = 14
 DEFAULT_SUPTITLE_FONT_SIZE = 32
