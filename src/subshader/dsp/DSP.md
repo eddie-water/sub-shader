@@ -5,7 +5,7 @@
 - To visualize an audio signal effectively, we need an extremely precise method for representing it's behavior
 - Specifically, we want to know **what** frequencies are present and **when** they occur in the signal - this is the primary motivation for finding a highly accurate **time-frequency** analysis method 
   - The standard approach is to use the **Fourier Transform**, but in this context it has limitations
-  - The more recently  **Wavelet Transform** was basically designed for this kind of task
+  - The more recent **Wavelet Transform** was basically designed for this kind of task
 
   *[TODO Insert CWT vs STFT Figure]*
 - Both are built on the same foundation - **signal decomposition** 
@@ -19,7 +19,7 @@
 
 - The end goal is to **decompose** any given signal into its fundamental **components**
 - In simpler terms, we want to break it down into its **basic building blocks** and see how much of each exists in the signal originally 
-- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall final color of the paint - where would you even begin?
+- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
 - This type of problem motivates us to do two things:
     1. **Define what a signal's fundamental components are** 
     2. **Measure the presence of each component in the signal** 
@@ -27,7 +27,7 @@
 
 ### 2.2 Inner Product - The Tool
 
-- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (embodies the signal properties we want to measure) to calculate, effectively, a "**similarity score**"
+- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (something that embodies the signal properties we want to measure) to calculate, effectively, a "**similarity score**"
 
 <div align="center">
 
@@ -125,11 +125,11 @@ $$
 
 - The **length** of each "shadow" *is* its **component** for that dimension and reveals how much each dimension **contributes** to the original vector as a whole - we designate these "shadows" as the vector's **basic components** since they 
   - **Can be combined in any order** to reconstruct the original - when rebuilding them tip-to-tail, if you start with x first and then y, or y first then x, regardlessly, you still end up with the original  
-  - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component does not affect, and goes completely unnoticed by the y component
+  - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component goes completely unnoticed by, and does not affect, the y component
 
 ![Basic Vector Projection (3 panels): projection of vector a onto x/y axes (left); tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); two vectors a and a' (same orange family) sharing the same y-component but with opposite-sign x-components, demonstrating that measuring y is independent of x — the perpendicularity / orthogonality beat (right)](../../../assets/images/dsp/components_recombine_either_order_v18.png)
 
-#### 2.4.2 Reference Direction is another Vector
+#### 2.4.2 Projection onto the Direction of Another Vector
 - When projecting one vector onto another, like **a** onto **b**, we use **b** as the **reference direction** - this reveals which parts of **a** are **aligned** with, or point along the **same direction**, as **b** 
 
 - When performing the Dot Product on these vector components, using b as the direction
