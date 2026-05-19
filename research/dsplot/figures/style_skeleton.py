@@ -59,13 +59,18 @@ def _panel_static_vector_arrow_axes() -> StaticPanel:
         axis_labels=True,
         show_border=False,
     )
-    ax_val, ay_val = A2
-    panel.add(Dropline(start=(ax_val, ay_val), end=(ax_val, 0.0)))
-    panel.add(Dropline(start=(ax_val, ay_val), end=(0.0, ay_val)))
     panel.add(
         VectorComponents(
             A2,
             first_axis="x",
+            show_droplines=False,
+            component_color=style.NEUTRAL_COLOR,
+        )
+    )
+    panel.add(
+        VectorComponents(
+            A2,
+            first_axis="y",
             show_droplines=False,
             component_color=style.NEUTRAL_COLOR,
         )
@@ -76,17 +81,6 @@ def _panel_static_vector_arrow_axes() -> StaticPanel:
             color=style.PRIMARY_COLOR,
             label="a",
             linewidth=style.DEFAULT_VECTOR_BOLD_LINEWIDTH,
-        )
-    )
-    panel.add(
-        Annotation(
-            "a",
-            xy=(ax_val + 0.30, ay_val / 2.0),
-            color=style.PRIMARY_COLOR,
-            fontsize=style.DEFAULT_LABEL_FONT_SIZE,
-            fontweight="bold",
-            ha="left",
-            va="center",
         )
     )
     return panel
@@ -108,10 +102,10 @@ def _panel_static_timeseries() -> StaticPanel:
     panel.add(
         Annotation(
             "peak",
-            xy=(t_peak, y_peak),
+            xy=(t_peak + 0.06, y_peak + 0.18),
             arrow_to=(t_peak, y_peak),
             color=style.HIGHLIGHT_COLOR,
-            fontsize=style.DEFAULT_LABEL_FONT_SIZE,
+            fontsize=style.DEFAULT_ANNOTATION_FONT_SIZE,
             fontweight="bold",
         )
     )
@@ -136,10 +130,10 @@ def _panel_static_heatmap() -> StaticPanel:
     panel.add(
         Annotation(
             "centroid",
-            xy=(0.5, 0.92),
+            xy=(0.5, 0.94),
             transform="axes",
             color=style.HIGHLIGHT_COLOR,
-            fontsize=style.DEFAULT_LABEL_FONT_SIZE,
+            fontsize=style.DEFAULT_ANNOTATION_FONT_SIZE,
             fontweight="bold",
         )
     )
@@ -284,6 +278,167 @@ def build_figure(*, static_export: bool = False) -> Figure:
         fig.add_panel(_panel_dynamic_buildup(),          row=1, col=1)
         fig.add_panel(_panel_interactive_sigma_sweep(),  row=1, col=2)
     return fig
+
+
+def overlay_layout_guides(fig: Figure) -> None:
+    """Draw dashed guide lines at every layout boundary and label each with
+    the controlling ``dsplot.style.*`` constant. Call after ``fig.render()``.
+
+    Turns the skeleton into a self-documenting blueprint: every gap,
+    margin, font size, and panel-internal chrome line is labeled with
+    the constant or matplotlib knob that sets it.
+    """
+    import matplotlib.lines as mlines
+    import matplotlib.patches as mpatches
+    mpl_fig = fig._mpl_fig
+    gs = fig._gs
+    suptitle_y = 0.975
+    top_pad = 0.84
+    # All four margins now come from style.DEFAULT_MARGIN_* constants —
+    # Figure.render() applies them via subplots_adjust(). With
+    # Figure.savefig() now defaulting to bbox_inches=None, these constants
+    # are the SOLE source of layout padding; pad_inches is no longer used.
+    left_pad = style.DEFAULT_MARGIN_LEFT
+    right_pad = style.DEFAULT_MARGIN_RIGHT
+    bottom_pad = style.DEFAULT_MARGIN_BOTTOM
+
+    guide_kwargs = dict(
+        color=style.HIGHLIGHT_COLOR,
+        alpha=0.55,
+        linewidth=0.8,
+        linestyle="--",
+        transform=mpl_fig.transFigure,
+        figure=mpl_fig,
+    )
+    label_kwargs = dict(
+        color=style.HIGHLIGHT_COLOR,
+        fontsize=style.DEFAULT_ANNOTATION_FONT_SIZE,
+        fontweight="bold",
+        family="monospace",
+        transform=mpl_fig.transFigure,
+    )
+
+    # --- Figure perimeter (PNG edge after savefig pad_inches crop) ---
+    mpl_fig.add_artist(mpatches.Rectangle(
+        (0.0, 0.0), 1.0, 1.0,
+        fill=False,
+        edgecolor=style.HIGHLIGHT_COLOR,
+        linewidth=0.8,
+        linestyle="--",
+        alpha=0.45,
+        transform=mpl_fig.transFigure,
+        figure=mpl_fig,
+    ))
+    mpl_fig.text(
+        0.5, 0.992, "figure perimeter — savefig saves at figsize × dpi exactly",
+        ha="center", va="top",
+        **{k: v for k, v in label_kwargs.items() if k not in ("ha", "va")},
+    )
+
+    # --- Horizontal margin lines ---
+    # Labels anchored inward (left edge of the panel area) so they stay
+    # inside the figure even if savefig is called with tight-bbox later.
+    text_label_kw = {k: v for k, v in label_kwargs.items() if k not in ("ha", "va")}
+    for y, lbl in (
+        (suptitle_y, f"suptitle_y = {suptitle_y} | DEFAULT_SUPTITLE_FONT_SIZE = {style.DEFAULT_SUPTITLE_FONT_SIZE}"),
+        (top_pad,    f"top_pad = {top_pad}"),
+        (bottom_pad, f"DEFAULT_MARGIN_BOTTOM = {bottom_pad}"),
+    ):
+        mpl_fig.add_artist(mlines.Line2D([0.0, 1.0], [y, y], **guide_kwargs))
+        mpl_fig.text(
+            left_pad + 0.005, y + 0.005, lbl,
+            ha="left", va="bottom",
+            **text_label_kw,
+        )
+
+    # --- Vertical margin lines ---
+    for x, lbl, anchor_ha in (
+        (left_pad,  f"DEFAULT_MARGIN_LEFT = {left_pad}",   "left"),
+        (right_pad, f"DEFAULT_MARGIN_RIGHT = {right_pad}", "right"),
+    ):
+        mpl_fig.add_artist(mlines.Line2D([x, x], [0.0, 1.0], **guide_kwargs))
+        x_offset = 0.005 if anchor_ha == "left" else -0.005
+        mpl_fig.text(
+            x + x_offset, top_pad - 0.005, lbl,
+            ha=anchor_ha, va="top",
+            **text_label_kw,
+        )
+
+    # --- HSPACE (inter-row gap) ---
+    row_bounds = [gs[r, 0].get_position(mpl_fig) for r in range(gs.nrows)]
+    if len(row_bounds) >= 2:
+        gap_y = (row_bounds[0].y0 + row_bounds[1].y1) / 2.0
+        mpl_fig.add_artist(mlines.Line2D([left_pad, right_pad], [gap_y, gap_y], **guide_kwargs))
+        mpl_fig.text(
+            left_pad + 0.005, gap_y + 0.005,
+            f"DEFAULT_HSPACE = {style.DEFAULT_HSPACE}",
+            **label_kwargs,
+        )
+
+    # --- WSPACE markers (between every pair of columns) ---
+    col_bounds = [gs[0, c].get_position(mpl_fig) for c in range(gs.ncols)]
+    for c in range(len(col_bounds) - 1):
+        gap_x = (col_bounds[c].x1 + col_bounds[c + 1].x0) / 2.0
+        mpl_fig.add_artist(mlines.Line2D(
+            [gap_x, gap_x], [bottom_pad, top_pad], **guide_kwargs,
+        ))
+        mpl_fig.text(
+            gap_x + 0.003, bottom_pad + 0.010,
+            f"DEFAULT_WSPACE = {style.DEFAULT_WSPACE}",
+            **label_kwargs,
+        )
+
+    # --- Per-panel chrome (title-Y, subtitle-Y) — sampled from row-0 col-0
+    # which uses the canonical StaticPanel chrome. ---
+    if row_bounds:
+        bb = gs[0, 0].get_position(mpl_fig)
+        # Title sits at axes-relative y=DEFAULT_TITLE_Y above the axes box,
+        # so figure-y = bb.y1 + (DEFAULT_TITLE_Y - 1.0) * bb.height
+        title_fig_y = bb.y1 + (style.DEFAULT_TITLE_Y - 1.0) * bb.height
+        mpl_fig.add_artist(mlines.Line2D(
+            [bb.x0, bb.x1], [title_fig_y, title_fig_y], **guide_kwargs,
+        ))
+        mpl_fig.text(
+            bb.x0 - 0.003, title_fig_y,
+            f"DEFAULT_TITLE_Y = {style.DEFAULT_TITLE_Y} | DEFAULT_TITLE_FONT_SIZE = {style.DEFAULT_TITLE_FONT_SIZE}",
+            ha="right", va="center",
+            **{k: v for k, v in label_kwargs.items() if k not in ("ha", "va")},
+        )
+        # Subtitle sits at axes-relative y=DEFAULT_SUBTITLE_Y (negative,
+        # below the axes box).
+        bb2 = gs[1, 1].get_position(mpl_fig)
+        subtitle_fig_y = bb2.y0 + style.DEFAULT_SUBTITLE_Y * bb2.height
+        mpl_fig.add_artist(mlines.Line2D(
+            [bb2.x0, bb2.x1], [subtitle_fig_y, subtitle_fig_y], **guide_kwargs,
+        ))
+        mpl_fig.text(
+            bb2.x1 + 0.003, subtitle_fig_y,
+            f"DEFAULT_SUBTITLE_Y = {style.DEFAULT_SUBTITLE_Y} | DEFAULT_SUBTITLE_FONT_SIZE = {style.DEFAULT_SUBTITLE_FONT_SIZE}",
+            ha="left", va="center",
+            **{k: v for k, v in label_kwargs.items() if k not in ("ha", "va")},
+        )
+
+    # --- Constants legend (bottom-left, below bottom margin) ---
+    legend_lines = [
+        f"DEFAULT_LABEL_FONT_SIZE       = {style.DEFAULT_LABEL_FONT_SIZE}",
+        f"DEFAULT_ANNOTATION_FONT_SIZE  = {style.DEFAULT_ANNOTATION_FONT_SIZE}",
+        f"DEFAULT_VECTOR_LINEWIDTH      = {style.DEFAULT_VECTOR_LINEWIDTH}",
+        f"DEFAULT_VECTOR_BOLD_LINEWIDTH = {style.DEFAULT_VECTOR_BOLD_LINEWIDTH}",
+        f"DEFAULT_DPI                   = {style.DEFAULT_DPI}",
+        f"DEFAULT_HEATMAP_CMAP          = {style.DEFAULT_HEATMAP_CMAP!r}",
+        f"PRIMARY_COLOR    = {style.PRIMARY_COLOR}",
+        f"HIGHLIGHT_COLOR  = {style.HIGHLIGHT_COLOR}",
+        f"NEUTRAL_COLOR    = {style.NEUTRAL_COLOR}",
+        f"BG_COLOR         = {style.BG_COLOR}",
+    ]
+    mpl_fig.text(
+        0.005, 0.005, "\n".join(legend_lines),
+        color=style.TICK_LABEL_COLOR,
+        fontsize=style.DEFAULT_ANNOTATION_FONT_SIZE - 1,
+        family="monospace",
+        ha="left", va="bottom",
+        transform=mpl_fig.transFigure,
+    )
 
 
 def show() -> "Figure":

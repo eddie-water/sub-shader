@@ -56,9 +56,13 @@ DEFAULT_ARROW_MUTATION    = 22
 # ============================================================
 # TYPOGRAPHY
 # ============================================================
-DEFAULT_TITLE_FONT_SIZE    = 20
-DEFAULT_SUBTITLE_FONT_SIZE = 14
-DEFAULT_LABEL_FONT_SIZE    = 18
+DEFAULT_TITLE_FONT_SIZE      = 16
+DEFAULT_SUBTITLE_FONT_SIZE   = 14
+DEFAULT_LABEL_FONT_SIZE      = 18
+# Decorator/callout text inside a panel (e.g. "peak", "centroid" labels
+# that annotate a feature). Distinct from DEFAULT_LABEL_FONT_SIZE, which
+# is for in-figure math labels like "aₓ" / "aᵧ" component labels.
+DEFAULT_ANNOTATION_FONT_SIZE = 11
 # Y position (axes coords) for the subtitle. Negative = below the plot box.
 # Panels with a subtitle declare a bottom_pad so the figure reserves room.
 DEFAULT_SUBTITLE_Y         = -0.12
@@ -85,6 +89,17 @@ DEFAULT_PANEL_MARGIN      = 0.05
 DEFAULT_HSPACE      = 0.18
 DEFAULT_WSPACE      = 0.04
 DEFAULT_LABEL_RATIO = 0.18
+
+# Outer figure margins (subplots_adjust knobs). These define the gutter
+# between the panel-grid extent and the figure perimeter — analogous to
+# CSS margins. Since `Figure.savefig()` saves at exact `figsize × dpi`,
+# these margins are the SOLE source of "breathing room" around the
+# panel grid. Decorators anchored outside this gutter will clip.
+DEFAULT_MARGIN_LEFT   = 0.06
+DEFAULT_MARGIN_RIGHT  = 0.94
+DEFAULT_MARGIN_BOTTOM = 0.07
+# DEFAULT_MARGIN_TOP is computed by Figure.render() from suptitle presence
+# (top_pad reserves room for the suptitle when one is set).
 
 # ============================================================
 # VECTOR-AXES DECORATION

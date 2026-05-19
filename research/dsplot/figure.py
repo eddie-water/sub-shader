@@ -93,8 +93,15 @@ class Figure:
         display_width: Optional[str] = None,
     ) -> None:
         if figsize is None:
+            # Width scales by sum(width_ratios) so non-uniform columns produce
+            # cells that match the panel's natural aspect ratio. Without this,
+            # a column with width_ratio=1 inside a 3-column figsize=(15,10) is
+            # 5x5 inches but a column with width_ratio=2 is 10x5 — and square
+            # aspect="equal" panels in the wide column leave dead vertical
+            # space that pushes panel titles away from their content.
+            width_units = sum(width_ratios) if width_ratios else n_cols
             figsize = (
-                style.DEFAULT_PANEL_SIZE_INCHES * n_cols,
+                style.DEFAULT_PANEL_SIZE_INCHES * width_units,
                 style.DEFAULT_PANEL_SIZE_INCHES * n_rows,
             )
         if hspace is None:
@@ -157,16 +164,20 @@ class Figure:
             (panel.requires_bottom_pad for panel, *_ in self.panels),
             default=0.0,
         )
-        # Reserve top space when a suptitle is set so panel titles don't
-        # collide with the suptitle text. 0.88 mirrors mpl's tight-layout
-        # default for suptitle clearance and matches the visual spacing
-        # used by the legacy dsp_figures.py multi-panel figures.
-        adjust_kwargs: dict[str, float] = {}
-        if max_bottom_pad > 0.0:
-            adjust_kwargs["bottom"] = max_bottom_pad + 0.05
+        # All four margins resolve from style.DEFAULT_MARGIN_* constants
+        # — these are the SOLE source of figure padding because
+        # Figure.savefig() saves at exact figsize × dpi (no tight-bbox).
+        adjust_kwargs: dict[str, float] = {
+            "left":   style.DEFAULT_MARGIN_LEFT,
+            "right":  style.DEFAULT_MARGIN_RIGHT,
+            "bottom": (
+                max_bottom_pad + 0.05 if max_bottom_pad > 0.0
+                else style.DEFAULT_MARGIN_BOTTOM
+            ),
+        }
         if self._has_suptitle:
             adjust_kwargs["top"] = (
-                self._top_pad if self._top_pad is not None else 0.88
+                self._top_pad if self._top_pad is not None else 0.84
             )
         if adjust_kwargs:
             self._mpl_fig.subplots_adjust(**adjust_kwargs)
@@ -261,11 +272,33 @@ class Figure:
         apply_jupyter_dark()
 
     def savefig(self, path: str, **kwargs) -> str:
+        """Save the figure at exactly ``figsize × dpi`` pixels.
+
+        Defaults are ``bbox_inches=None, pad_inches=0`` deliberately: the
+        figure's pixel dimensions are derived solely from ``figsize`` and
+        ``dpi``, never from the bounding boxes of drawn artists. This
+        guarantees that:
+
+          * Decorators (labels, callouts, annotations) cannot expand the
+            saved canvas. Anything anchored outside [0, 1] figure-coord
+            space clips at the figure edge — visibly and predictably.
+          * All margins and padding are governed solely by the
+            ``subplots_adjust(left=, right=, top=, bottom=)`` knobs the
+            Figure already sets (the ``top_pad`` reserved for suptitle,
+            mpl defaults for left/right/bottom). Margins do NOT shift
+            based on what content was drawn.
+          * Two renders of the same Figure produce PNGs of identical
+            dimensions, regardless of any decorators added between
+            ``render()`` and ``savefig()``.
+
+        Callers can opt back into matplotlib's tight-bbox auto-crop by
+        passing ``bbox_inches="tight"`` explicitly.
+        """
         directory = os.path.dirname(path)
         if directory:
             os.makedirs(directory, exist_ok=True)
-        bbox_inches = kwargs.pop("bbox_inches", "tight")
-        pad_inches = kwargs.pop("pad_inches", 0.15)
+        bbox_inches = kwargs.pop("bbox_inches", None)
+        pad_inches = kwargs.pop("pad_inches", 0)
         self._mpl_fig.savefig(
             path,
             facecolor=self._mpl_fig.get_facecolor(),
