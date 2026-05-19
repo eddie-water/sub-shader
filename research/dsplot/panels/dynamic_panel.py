@@ -45,6 +45,7 @@ class DynamicPanel(Panel):
     def __init__(
         self,
         *,
+        units: Optional[Tuple[int, int]] = None,
         frames: Optional[List[Frame]] = None,
         frame_fn: Optional[Callable[[int], Frame]] = None,
         num_frames: Optional[int] = None,
@@ -59,7 +60,7 @@ class DynamicPanel(Panel):
         axis_labels: bool = False,
         show_border: bool = True,
     ) -> None:
-        super().__init__()
+        super().__init__(units=units)
         if frames is None and frame_fn is None:
             raise ValueError(
                 "DynamicPanel requires either `frames` or `frame_fn` to be set"

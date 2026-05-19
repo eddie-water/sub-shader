@@ -82,6 +82,7 @@ DEFAULT_ROW_LABEL_SIZE     = 16
 DEFAULT_DPI               = 150
 DEFAULT_PANEL_SIZE_INCHES = 5.0
 DEFAULT_PANEL_MARGIN      = 0.05
+DEFAULT_PANEL_UNIT_INCHES = 4.0
 
 # ============================================================
 # ROW / GRID LAYOUT

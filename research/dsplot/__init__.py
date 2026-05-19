@@ -25,11 +25,14 @@ uses the NEW value.
 from . import freq_axis, style
 from .figure import Figure, apply_jupyter_dark
 from .panels import (
+    CompositePanel,
     DynamicPanel,
+    HeatmapPanel,
     InteractivePanel,
     Panel,
     StaticPanel,
     StaticPanel3D,
+    TimeSeriesPanel,
 )
 from .plottables import (
     Annotation,
@@ -56,6 +59,9 @@ __all__ = [
     "StaticPanel3D",
     "DynamicPanel",
     "InteractivePanel",
+    "TimeSeriesPanel",
+    "HeatmapPanel",
+    "CompositePanel",
     "Figure",
     "apply_jupyter_dark",
 ]

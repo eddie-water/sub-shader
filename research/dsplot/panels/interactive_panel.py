@@ -47,6 +47,7 @@ class InteractivePanel(Panel):
     def __init__(
         self,
         *,
+        units: Optional[Tuple[int, int]] = None,
         frames: List[Frame],
         base_plottables: Optional[List["Plottable"]] = None,  # noqa: F821
         slider: bool = False,
@@ -58,7 +59,7 @@ class InteractivePanel(Panel):
         axis_labels: bool = False,
         show_border: bool = True,
     ) -> None:
-        super().__init__()
+        super().__init__(units=units)
         if not frames or len(frames) < 1:
             raise ValueError(
                 "InteractivePanel requires at least one frame in `frames`"
