@@ -129,6 +129,6 @@ DEFAULT_HEATMAP_VMAX_PERCENTILE = 99.0
 # ============================================================
 # INST FREQ OVERLAY
 # ============================================================
-INST_FREQ_COLOR     = NEUTRAL_COLOR
-INST_FREQ_LINEWIDTH = 1.8
+INST_FREQ_COLOR     = PRIMARY_COLOR
+INST_FREQ_LINEWIDTH = 2.4
 INST_FREQ_ALPHA     = 0.9

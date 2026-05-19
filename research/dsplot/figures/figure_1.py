@@ -173,7 +173,7 @@ def build_figure() -> Figure:
         twin_ytick_labels=twin_ytick_labels,
         twin_ylim=twin_ylim,
     )
-    row1.add(TimeSeries(data["signal"], SR, color=style.NEUTRAL_COLOR))
+    row1.add(TimeSeries(data["signal"], SR, color=style.TICK_LABEL_COLOR))
     row1.add_twin(Line(
         t_axis,
         inst_freq_bins,
@@ -202,6 +202,13 @@ def build_figure() -> Figure:
         tick_freqs=DISPLAY_FREQ_TICKS,
         extent=spec_extent,
     ))
+    row2.add(Line(
+        t_axis,
+        inst_freq_bins,
+        color=style.INST_FREQ_COLOR,
+        linewidth=style.INST_FREQ_LINEWIDTH,
+        alpha=style.INST_FREQ_ALPHA,
+    ))
 
     # Row 3 — CWT magnitude.
     row3 = HeatmapPanel(
@@ -218,6 +225,13 @@ def build_figure() -> Figure:
         log_freq=True,
         tick_freqs=DISPLAY_FREQ_TICKS,
         extent=spec_extent,
+    ))
+    row3.add(Line(
+        t_axis,
+        inst_freq_bins,
+        color=style.INST_FREQ_COLOR,
+        linewidth=style.INST_FREQ_LINEWIDTH,
+        alpha=style.INST_FREQ_ALPHA,
     ))
 
     return Figure.compose(
