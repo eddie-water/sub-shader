@@ -125,3 +125,10 @@ DEFAULT_AXIS_LABEL_OFFSET   = 0.08
 # ============================================================
 DEFAULT_HEATMAP_CMAP            = "inferno"
 DEFAULT_HEATMAP_VMAX_PERCENTILE = 99.0
+
+# ============================================================
+# INST FREQ OVERLAY
+# ============================================================
+INST_FREQ_COLOR     = NEUTRAL_COLOR
+INST_FREQ_LINEWIDTH = 1.8
+INST_FREQ_ALPHA     = 0.9
