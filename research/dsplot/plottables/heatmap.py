@@ -49,6 +49,7 @@ class Heatmap(Plottable):
         vmax_percentile: float | None = None,
         origin: str = "lower",
         aspect: str = "auto",
+        extent: tuple[float, float, float, float] | None = None,
         zorder: int = 1,
     ) -> None:
         super().__init__(
@@ -70,6 +71,7 @@ class Heatmap(Plottable):
         self.vmax_percentile = vmax_percentile
         self.origin = origin
         self.aspect = aspect
+        self.extent = extent
 
     def draw(self, ax: Axes) -> None:
         cmap = self.cmap if self.cmap is not None else style.DEFAULT_HEATMAP_CMAP
@@ -84,7 +86,9 @@ class Heatmap(Plottable):
             )
             vmax = float(np.percentile(self.data, percentile))
 
-        if self.duration_s is not None and self.freqs is not None:
+        if self.extent is not None:
+            extent = list(self.extent)
+        elif self.duration_s is not None and self.freqs is not None:
             extent = [0.0, float(self.duration_s), 0.0, float(len(self.freqs))]
         else:
             h, w = self.data.shape

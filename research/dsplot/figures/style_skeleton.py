@@ -118,17 +118,26 @@ def _panel_static_timeseries() -> StaticPanel:
     return panel
 
 
+def _heatmap_in_panel_coords(sigma: float) -> Heatmap:
+    return Heatmap(
+        _build_gaussian(sigma=sigma),
+        extent=(-1.0, 1.0, -1.0, 1.0),
+        aspect="equal",
+        vmax_percentile=100.0,
+    )
+
+
 def _panel_static_heatmap() -> StaticPanel:
     panel = StaticPanel(
         title="Heatmap + Annotation",
         show_border=True,
     )
-    data = _build_gaussian(sigma=0.3)
-    panel.add(Heatmap(data))
+    panel.add(_heatmap_in_panel_coords(sigma=0.45))
     panel.add(
         Annotation(
             "centroid",
-            xy=(GRID_N / 2.0, GRID_N / 2.0),
+            xy=(0.5, 0.92),
+            transform="axes",
             color=style.HIGHLIGHT_COLOR,
             fontsize=style.DEFAULT_LABEL_FONT_SIZE,
             fontweight="bold",
@@ -188,7 +197,7 @@ def _panel_static_3d_vector() -> StaticPanel3D:
     return panel
 
 
-def _panel_dynamic_buildup() -> DynamicPanel:
+def _buildup_frames() -> list[list]:
     _, signal = _build_sinusoid()
     n = len(signal)
     frames: list[list] = []
@@ -199,8 +208,12 @@ def _panel_dynamic_buildup() -> DynamicPanel:
         frames.append(
             [TimeSeries(window, SAMPLE_RATE, color=style.PRIMARY_COLOR)]
         )
+    return frames
+
+
+def _panel_dynamic_buildup() -> DynamicPanel:
     return DynamicPanel(
-        frames=frames,
+        frames=_buildup_frames(),
         interval_ms=400,
         title="Animated Buildup",
         subtitle="cumulative sinusoid",
@@ -209,13 +222,26 @@ def _panel_dynamic_buildup() -> DynamicPanel:
     )
 
 
+def _panel_static_buildup_final() -> StaticPanel:
+    panel = StaticPanel(
+        title="Animated Buildup",
+        subtitle="final frame",
+        axis_style="line",
+        show_border=True,
+    )
+    for plottable in _buildup_frames()[-1]:
+        panel.add(plottable)
+    return panel
+
+
+def _sigma_sweep_frames() -> list[list]:
+    sigmas = np.linspace(0.20, 0.60, SLIDER_FRAMES)
+    return [[_heatmap_in_panel_coords(sigma=float(sigma))] for sigma in sigmas]
+
+
 def _panel_interactive_sigma_sweep() -> InteractivePanel:
-    sigmas = np.linspace(0.15, 0.45, SLIDER_FRAMES)
-    frames: list[list] = []
-    for sigma in sigmas:
-        frames.append([Heatmap(_build_gaussian(sigma=float(sigma)))])
     return InteractivePanel(
-        frames=frames,
+        frames=_sigma_sweep_frames(),
         slider=True,
         title="Sigma Sweep",
         subtitle="interactive Heatmap",
@@ -223,8 +249,24 @@ def _panel_interactive_sigma_sweep() -> InteractivePanel:
     )
 
 
-def build_figure() -> Figure:
-    """Build the canonical 2x3 kitchen-sink Figure (un-rendered)."""
+def _panel_static_sigma_sweep_final() -> StaticPanel:
+    panel = StaticPanel(
+        title="Sigma Sweep",
+        subtitle="final frame",
+        show_border=True,
+    )
+    for plottable in _sigma_sweep_frames()[-1]:
+        panel.add(plottable)
+    return panel
+
+
+def build_figure(*, static_export: bool = False) -> Figure:
+    """Build the canonical 2x3 kitchen-sink Figure (un-rendered).
+
+    static_export=True swaps the DynamicPanel + InteractivePanel for
+    StaticPanels showing their final frame, so the saved PNG is free of
+    animation flicker and slider UI chrome.
+    """
     fig = Figure(
         n_rows=2,
         n_cols=3,
@@ -235,8 +277,12 @@ def build_figure() -> Figure:
     fig.add_panel(_panel_static_timeseries(),        row=0, col=1)
     fig.add_panel(_panel_static_heatmap(),           row=0, col=2)
     fig.add_panel(_panel_static_3d_vector(),         row=1, col=0, projection="3d")
-    fig.add_panel(_panel_dynamic_buildup(),          row=1, col=1)
-    fig.add_panel(_panel_interactive_sigma_sweep(),  row=1, col=2)
+    if static_export:
+        fig.add_panel(_panel_static_buildup_final(),     row=1, col=1)
+        fig.add_panel(_panel_static_sigma_sweep_final(), row=1, col=2)
+    else:
+        fig.add_panel(_panel_dynamic_buildup(),          row=1, col=1)
+        fig.add_panel(_panel_interactive_sigma_sweep(),  row=1, col=2)
     return fig
 
 
