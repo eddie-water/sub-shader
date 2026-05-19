@@ -168,6 +168,7 @@ None yet.
 | 260409-tpg | Fix IntensityTracker decay_rate semantic inversion | 2026-04-09 | 8acd68a | [260409-tpg-fix-intensitytracker-decay-rate-semantic](./quick/260409-tpg-fix-intensitytracker-decay-rate-semantic/) |
 | 260409-uan | Replace adaptive IntensityTracker with fixed pre-scan reference | 2026-04-10 | 9115c26 | [260409-uan-fix-intensitytracker-normalization-strat](./quick/260409-uan-fix-intensitytracker-normalization-strat/) |
 | 260518-tts | Add canonical dsplot style skeleton figure | 2026-05-19 | c3d86b6 | [260518-tts-add-canonical-dsplot-style-skeleton-figu](./quick/260518-tts-add-canonical-dsplot-style-skeleton-figu/) |
+| 260518-vk6 | Add panel-unit OOP layer to dsplot (Figure.compose + CompositePanel) | 2026-05-19 | ce71541 | [260518-vk6-add-panel-unit-oop-layer-to-dsplot-figur](./quick/260518-vk6-add-panel-unit-oop-layer-to-dsplot-figur/) |
 
 ### Roadmap Evolution
 
@@ -184,6 +185,6 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Completed quick task 260518-tts: dsplot style skeleton figure
+Last activity: 2026-05-19 - Completed quick task 260518-vk6: dsplot panel-unit OOP layer
 Stopped at: Completed 08-07: archive and cleanup
 Resume file: None
