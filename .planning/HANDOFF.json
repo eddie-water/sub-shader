@@ -1,57 +1,50 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-16T12:07:17-04:00",
-  "phase": "05",
-  "phase_name": "documentation",
-  "phase_dir": ".planning/phases/05-documentation",
+  "timestamp": "2026-05-19T22:32:46.821Z",
+  "phase": "08",
+  "phase_name": "codebase-refactoring-and-module-cleanup",
+  "phase_dir": ".planning/phases/08-codebase-refactoring-and-module-cleanup",
   "plan": null,
   "task": null,
   "total_tasks": null,
   "status": "paused",
-  "context_summary": "Mid-authoring of DSP.md §2.4.1 — vector projection / dot product symmetry. Figure 1 (components_recombine) is locked in. Figure 2 (symmetry demo) is the open decision: a 3-candidate comparison has been rendered to a temp diagnostic PNG and is awaiting the user's pick on (a, b) values.",
+  "context_summary": "Two concurrent sessions on phase-08 branch. THIS session: iterative fine-tuning of dsplot style template via lego_demo + style_skeleton renders. Promoted lego_demo to canonical style template (replacing older style_skeleton). OTHER session (separate terminal): quick 260519-a1p adding twin-axis support to TimeSeriesPanel for figure_1 inst-freq overlay — now DONE per memory update.",
   "completed_tasks": [
-    {"id": 1, "name": "Figure 1: regen _plot_vector_xy_reconstruction with canonical a=(1.0, 0.5), lim=1.25, new filename", "status": "done", "commit": null},
-    {"id": 2, "name": "Figure 2 (first attempt): _plot_projection_reconstruction_either_order — 2-panel with perpendicular complement + parallelogram reconstruction paths", "status": "done_but_superseded", "commit": null, "note": "User found it confusing — too complex for the symmetry message. Will be retired."},
-    {"id": 3, "name": "DSP.md §2.4.1 structural swap: new figures slotted figure-leads-bullets, LaTeX block moved to pair with symmetry beat, broken alt-text markdown fixed", "status": "done", "commit": null},
-    {"id": 4, "name": "Temp comparison: 3 candidate (a,b) pairs rendered to assets/images/diagnostics/dot_product_symmetry_candidates_temp.png via research/_temp_dot_product_symmetry_candidates.py", "status": "done", "commit": null},
-    {"id": 5, "name": "Audited VS Code terminal-bell setup — preferredNotifChannel:terminal_bell already in ~/.claude/settings.json; only VS Code's terminal.integrated.enableBell still needs flipping (user-side)", "status": "done", "commit": null}
+    {"id": "style-bump", "name": "Bump tick dimensions (length 6.0->8.0, width 1.2->1.5, label 16->18)", "status": "done", "commit": null},
+    {"id": "subtitle-bold", "name": "Make panel subtitle text bold in panels/base.py", "status": "done", "commit": null},
+    {"id": "lego-decoration", "name": "Decorate every panel in lego_demo (StaticPanel axis_labels=True, composite inner panels get x/y labels + ticks)", "status": "done", "commit": null},
+    {"id": "lego-canonical-decision", "name": "Promote lego_demo to canonical style template; demote style_skeleton to legacy reference", "status": "done", "commit": null},
+    {"id": "memory-update", "name": "Update project_dsplot_framework memory with v13 state + canonical-template decision", "status": "done", "commit": null}
   ],
   "remaining_tasks": [
-    {"id": 6, "name": "User picks symmetry-demo (a, b): Option A (b=(1,1), a·b=1.5), Option B (b=(0.4,1.2), a·b=1.0), Option C (b=(0.3,0.6), a·b=0.6), or custom", "status": "blocked_on_user"},
-    {"id": 7, "name": "Write simpler _plot_dot_product_symmetry_v2_<chosen> function — drop parallelogram + perpendicular complement; just show shadow (parallel component only) for each panel", "status": "not_started"},
-    {"id": 8, "name": "Retire _plot_projection_reconstruction_either_order from generate_all_dsp_figures dispatch list (keep function defined for reference)", "status": "not_started"},
-    {"id": 9, "name": "Update LaTeX block in DSP.md §2.4.1 to match chosen a·b (only if Option A or C — Option B keeps the existing 1.00)", "status": "not_started"},
-    {"id": 10, "name": "Update DSP.md figure-2 reference + alt text to point at new symmetry PNG", "status": "not_started"},
-    {"id": 11, "name": "§2.4.1 prose placeholders (user-authored): symmetry bullet (line ~134), geometric-trust bullet + 3blue1brown link (line ~161), beat 5 magnitude/sign expansion to 4 cases", "status": "blocked_on_user_authoring"},
-    {"id": 12, "name": "§2.4.2 prose authoring — WRITE markers for beats 1 (3D extension), 2 (ND reframe with locked bridge sentence), 3 (handoff into §2.5)", "status": "not_started"},
-    {"id": 13, "name": "§2.5 (sign accumulation) — planning + figures not started", "status": "not_started"},
-    {"id": 14, "name": "Top-of-file typos in DSP.md lines 1-2 ('itAAAAaaa# Foundations: Wavelet Transform' and 'fdA') — likely accidental IDE keystrokes, user's call whether to clean up", "status": "advisory_user_decision"}
+    {"id": "user-review-v13", "name": "User reviews lego_demo_v13.png + style_skeleton_v13_*.png and confirms (or requests another nudge)", "status": "not_started"},
+    {"id": "commit-style-edits", "name": "Commit the three uncommitted dsplot edits once user approves v13", "status": "not_started"},
+    {"id": "port-dynamic-interactive", "name": "Optionally port DynamicPanel + InteractivePanel demos from style_skeleton into lego_demo, then retire style_skeleton", "status": "not_started"},
+    {"id": "stale-png-cleanup", "name": "Delete superseded style_skeleton_v8/v9 PNGs once v13 is approved", "status": "not_started"},
+    {"id": "verify-twin-axis-style", "name": "With twin-axis hook landed (260519-a1p), verify it renders cleanly at current style constants", "status": "not_started"}
   ],
-  "blockers": [
-    {"description": "Awaiting user decision on symmetry-demo (a, b) candidate from temp comparison figure", "type": "human_action", "workaround": "View assets/images/diagnostics/dot_product_symmetry_candidates_temp.png and select A/B/C/custom"}
-  ],
+  "blockers": [],
   "human_actions_pending": [
-    {"action": "Pick figure 2 (a, b) candidate — A, B, C, or propose custom", "context": "Drives the symmetry-demo figure's pedagogy. Visual contrast vs LaTeX-rewrite tradeoff documented in candidates.", "blocking": true},
-    {"action": "Flip terminal.integrated.enableBell in VS Code User Settings (Ctrl+, → search 'terminal bell')", "context": "Claude Code side already wired via preferredNotifChannel:terminal_bell. Only the IDE setting remains.", "blocking": false},
-    {"action": "Author the three prose placeholders in §2.4.1 — symmetry bullet, geometric-trust bullet, beat 5", "context": "User authors final prose per project doc voice policy", "blocking": false}
+    {"action": "Eyeball lego_demo_v13.png and style_skeleton_v13_*.png against v12 to confirm bold subtitles + tick bumps land well", "context": "User explicitly said 'don't commit until I say I like it and to commit'", "blocking": true}
   ],
   "decisions": [
-    {"decision": "Figure 1 stays as the 2-panel tip-to-tail reconstruction of `a` in xy/yx orders", "rationale": "User confirmed this is the right pedagogy when shown the alternative simpler one-panel design", "phase": "05"},
-    {"decision": "Figure 1 uses canonical a=(1.0, 0.5)", "rationale": "Aligns with §2.4.1 LaTeX block and shares same `a` with figure 2", "phase": "05"},
-    {"decision": "Figure 2 abandons the parallelogram + perpendicular complement design", "rationale": "User: 'I don't get what figure 2 is trying to show me' — extra geometry obscured the symmetry message", "phase": "05"},
-    {"decision": "Figure 2 must show VISIBLY DIFFERENT projection shadows in panel 1 vs panel 2, with same scalar annotated", "rationale": "Pedagogy: 'different operation, same number' is the symmetry insight", "phase": "05"},
-    {"decision": "Old 3-panel projection_reference_directions retired in favor of two narrower figures (components_recombine + symmetry-demo)", "rationale": "Figure-leads-bullets pattern — each figure now leads only the bullets that read it", "phase": "05"}
+    {"decision": "lego_demo.py is now the canonical style template; style_skeleton.py demoted to legacy reference", "rationale": "lego_demo exercises Figure.compose (the current API); style_skeleton predates it. Only unique value left in style_skeleton: DynamicPanel + InteractivePanel demos and overlay_layout_guides() blueprint variant.", "phase": "08"},
+    {"decision": "PNG version numbers stay synced between lego_demo and style_skeleton iterations", "rationale": "Lets the two be compared at the same style-epoch. Currently v13.", "phase": "08"},
+    {"decision": "Tick bumps: length 6.0->8.0, width 1.2->1.5, label 16->18", "rationale": "Larger ticks improve legibility at typical DSP.md render size; eyeballed by user.", "phase": "08"},
+    {"decision": "Subtitle text rendered fontweight='bold'", "rationale": "Better distinguished from tick/axis labels at DEFAULT_SUBTITLE_FONT_SIZE=14.", "phase": "08"}
   ],
   "uncommitted_files": [
-    {"path": "src/subshader/dsp/DSP.md", "status": "modified", "note": "§2.4.1 restructured by Claude + further user edits to consolidate definitional bullets; top-of-file has typo lines from IDE editing"},
-    {"path": "research/dsp_figures.py", "status": "modified", "note": "Figure 1 edit (canonical numbers + lim 1.25) + Figure 2 new function (parallelogram version, will be retired)"},
-    {"path": "research/_temp_dot_product_symmetry_candidates.py", "status": "untracked", "note": "Throwaway diagnostic script. Delete after candidate decision is locked."},
-    {"path": "assets/images/dsp/components_recombine_either_order.png", "status": "untracked", "note": "Pre-canonical-numbers version; superseded but kept per never-overwrite policy"},
-    {"path": "assets/images/dsp/components_recombine_either_order_v2_canonical_numbers.png", "status": "untracked", "note": "Current canonical figure 1"},
-    {"path": "assets/images/dsp/projection_reconstruction_either_order.png", "status": "untracked", "note": "Parallelogram-design figure 2 — will be retired once symmetry-demo replacement is rendered"},
-    {"path": "assets/images/diagnostics/dot_product_symmetry_candidates_temp.png", "status": "untracked", "note": "Decision aid for the symmetry-demo (a, b) pick. Delete after decision."},
-    {"path": "assets/images/dsp/{dot_product_geometry,vector_basics,vector_projection_3d}.png", "status": "modified", "note": "Touched as side effects of running generate_all_dsp_figures()"}
+    {"path": "research/dsplot/style.py", "change": "Tick constant bumps (length, width, label size)"},
+    {"path": "research/dsplot/panels/base.py", "change": "Subtitle fontweight='bold'"},
+    {"path": "research/dsplot/figures/lego_demo.py", "change": "static_vec axis_labels=True; composite inner panels decorated"},
+    {"path": "assets/images/dsp/lego_demo_v11.png", "change": "intermediate render — tick bumps only"},
+    {"path": "assets/images/dsp/lego_demo_v12.png", "change": "intermediate render — every panel decorated"},
+    {"path": "assets/images/dsp/lego_demo_v13.png", "change": "current render — adds bold subtitles (lego has no subtitles, parity render)"},
+    {"path": "assets/images/dsp/style_skeleton_v12_clean.png", "change": "intermediate render"},
+    {"path": "assets/images/dsp/style_skeleton_v12_guides.png", "change": "intermediate render"},
+    {"path": "assets/images/dsp/style_skeleton_v13_clean.png", "change": "current render — bold subtitles visible"},
+    {"path": "assets/images/dsp/style_skeleton_v13_guides.png", "change": "current render — bold subtitles visible"}
   ],
-  "next_action": "When resuming: (1) re-open assets/images/diagnostics/dot_product_symmetry_candidates_temp.png with user, (2) get the A/B/C/custom pick, (3) write _plot_dot_product_symmetry_v2_<chosen> (simple 2-panel shadow-only, no parallelogram), (4) update dispatch list, (5) re-render, (6) swap DSP.md figure reference, (7) update LaTeX block if needed.",
-  "context_notes": "User is in authoring momentum mode on §2.4.1 prose + figures. Per project conventions: propose-don't-apply, granularity-matching, user authors final prose. Claude's role: scaffold figures and structural edits. The session also surfaced one important lesson logged in advisories — avoid over-engineering pedagogical figures with extras the bullet doesn't read."
+  "next_action": "User confirms v13 looks right (compare to v12), then commit the three source edits as one or two atomic commits. Then decide on style_skeleton retirement plan.",
+  "context_notes": "User is running two concurrent sessions and this one became laggy — wants clean exit and resume in fresh terminal. Style work is feature-flag-style: changes are tiny constant nudges, not architecture. The CRITICAL piece is that lego_demo is now the canonical artifact — any future figure should use Figure.compose with the panel types lego exercises. Decoration knobs documented in project_dsplot_framework.md memory file. The other session's twin-axis quick (260519-a1p) has completed per the memory file — TimeSeriesPanel now supports twin_y= kwargs plus add_twin() method."
 }
