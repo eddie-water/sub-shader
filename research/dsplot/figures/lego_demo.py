@@ -1,7 +1,7 @@
 """lego_demo — exercises Figure.compose with the panel-unit OOP layer.
 
-Two 5-unit rows: row 1 = StaticPanel + TimeSeriesPanel(3) + HeatmapPanel;
-row 2 = StaticPanel3D + CompositePanel(3, 3-row stack) + HeatmapPanel.
+Two 4-unit rows: row 1 = StaticPanel + HeatmapPanel(2) + HeatmapPanel;
+row 2 = StaticPanel3D + CompositePanel(2, 3-row stack) + HeatmapPanel.
 """
 from __future__ import annotations
 
@@ -45,30 +45,43 @@ def _build_gaussian(sigma: float) -> np.ndarray:
 
 
 def build_figure() -> Figure:
-    """Compose the lego_demo Figure: two 5-unit rows.
+    """Compose the lego_demo Figure: two 4-unit rows.
 
-    Row 1 — three side-by-side panels (Vector, Signal, Field).
-    Row 2 — StaticPanel3D, a 3-row CompositePanel (Field / Signal / Field),
-            and a trailing HeatmapPanel.
+    Row 1 — Vector, 2-unit Heatmap, Field.
+    Row 2 — StaticPanel3D, a 3-row CompositePanel (Field / Signal / Field)
+            occupying 2 units, and a trailing HeatmapPanel.
     """
     _, sin = _build_sine()
     gaussian = _build_gaussian(0.4)
 
-    # --- Row 1: 1 + 3 + 1 = 5 units ---
+    # --- Row 1: 1 + 2 + 1 = 4 units ---
     static_vec = StaticPanel(title="Vector")
     static_vec.add(Vector(A3[:2], color=style.PRIMARY_COLOR))
 
-    ts_panel = TimeSeriesPanel(title="Signal")
-    ts_panel.add(TimeSeries(sin, SAMPLE_RATE, color=style.PRIMARY_COLOR))
+    wide_signal = TimeSeriesPanel(
+        title="Signal (2u)",
+        units=(2, 1),
+        x_label="time (s)",
+        y_label="amplitude",
+        xticks=[0.0, 0.25, 0.5, 0.75, 1.0],
+        yticks=[-1.0, 0.0, 1.0],
+    )
+    wide_signal.add(TimeSeries(sin, SAMPLE_RATE, color=style.PRIMARY_COLOR))
 
-    field_panel = HeatmapPanel(title="Field")
+    field_panel = HeatmapPanel(
+        title="Field",
+        x_label="x",
+        y_label="y",
+        xticks=[-1.0, 0.0, 1.0],
+        yticks=[-1.0, 0.0, 1.0],
+    )
     field_panel.add(
         Heatmap(gaussian, extent=(-1.0, 1.0, -1.0, 1.0), aspect="equal")
     )
 
-    row1 = [static_vec, ts_panel, field_panel]
+    row1 = [static_vec, wide_signal, field_panel]
 
-    # --- Row 2: 1 + 3 + 1 = 5 units ---
+    # --- Row 2: 1 + 2 + 1 = 4 units ---
     panel_3d = StaticPanel3D(title="3D", lim_3d=LIM_3D)
     panel_3d.add(
         Vector(
@@ -78,24 +91,30 @@ def build_figure() -> Figure:
         )
     )
 
-    # Composite: 3-row stack inside a 3-wide outer cell. Each inner row spans
-    # the full 3-unit width (units=(3, 1)) so the row widths agree.
-    inner_top = HeatmapPanel(units=(3, 1))
+    # Composite: 3-row stack inside a 2-wide outer cell. Each inner row spans
+    # the full 2-unit width so row widths agree.
+    inner_top = HeatmapPanel(units=(2, 1))
     inner_top.add(
         Heatmap(gaussian, extent=(-1.0, 1.0, -1.0, 1.0), aspect="auto")
     )
-    inner_mid = TimeSeriesPanel(units=(3, 1))
+    inner_mid = TimeSeriesPanel(units=(2, 1))
     inner_mid.add(TimeSeries(sin, SAMPLE_RATE, color=style.PRIMARY_COLOR))
-    inner_bot = HeatmapPanel(units=(3, 1))
+    inner_bot = HeatmapPanel(units=(2, 1))
     inner_bot.add(
         Heatmap(gaussian, extent=(-1.0, 1.0, -1.0, 1.0), aspect="auto")
     )
     composite = CompositePanel(
         rows=[[inner_top], [inner_mid], [inner_bot]],
-        units=(3, 1),
+        units=(2, 1),
     )
 
-    trailing_field = HeatmapPanel(title="Field")
+    trailing_field = HeatmapPanel(
+        title="Field",
+        x_label="x",
+        y_label="y",
+        xticks=[-1.0, 0.0, 1.0],
+        yticks=[-1.0, 0.0, 1.0],
+    )
     trailing_field.add(
         Heatmap(gaussian, extent=(-1.0, 1.0, -1.0, 1.0), aspect="equal")
     )

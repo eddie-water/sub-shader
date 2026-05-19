@@ -91,16 +91,19 @@ DEFAULT_HSPACE      = 0.18
 DEFAULT_WSPACE      = 0.04
 DEFAULT_LABEL_RATIO = 0.18
 
-# Outer figure margins (subplots_adjust knobs). These define the gutter
-# between the panel-grid extent and the figure perimeter — analogous to
-# CSS margins. Since `Figure.savefig()` saves at exact `figsize × dpi`,
-# these margins are the SOLE source of "breathing room" around the
-# panel grid. Decorators anchored outside this gutter will clip.
-DEFAULT_MARGIN_LEFT   = 0.06
-DEFAULT_MARGIN_RIGHT  = 0.94
-DEFAULT_MARGIN_BOTTOM = 0.07
-# DEFAULT_MARGIN_TOP is computed by Figure.render() from suptitle presence
-# (top_pad reserves room for the suptitle when one is set).
+# Outer figure margin in INCHES — applied uniformly to all four sides of the
+# panel grid. Figure.render() converts this to subplots_adjust fractions
+# based on figsize, so the absolute gutter between panels and figure edge
+# is consistent regardless of figure aspect ratio. When a suptitle is set,
+# the top reserve becomes (2 × margin + suptitle text height) so the gap
+# from suptitle-to-panels matches the gap from figure-edge-to-suptitle.
+DEFAULT_MARGIN_INCHES = 0.7
+# Inner gutter between adjacent panel cells, also in INCHES. Figure.compose()
+# converts this to wspace/hspace fractions (relative to unit_inches) so the
+# absolute gap between panels matches the outer margin regardless of cell
+# width/height. Decoupled from DEFAULT_MARGIN_INCHES so the two can drift
+# (e.g. tighter inner spacing, looser outer breathing room).
+DEFAULT_GUTTER_INCHES = 0.7
 
 # ============================================================
 # VECTOR-AXES DECORATION

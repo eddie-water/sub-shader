@@ -292,15 +292,18 @@ def overlay_layout_guides(fig: Figure) -> None:
     import matplotlib.patches as mpatches
     mpl_fig = fig._mpl_fig
     gs = fig._gs
-    suptitle_y = 0.975
-    top_pad = 0.84
-    # All four margins now come from style.DEFAULT_MARGIN_* constants —
-    # Figure.render() applies them via subplots_adjust(). With
-    # Figure.savefig() now defaulting to bbox_inches=None, these constants
-    # are the SOLE source of layout padding; pad_inches is no longer used.
-    left_pad = style.DEFAULT_MARGIN_LEFT
-    right_pad = style.DEFAULT_MARGIN_RIGHT
-    bottom_pad = style.DEFAULT_MARGIN_BOTTOM
+    # All boundaries derive from style.DEFAULT_MARGIN_INCHES via
+    # Figure.render() — a single inch value converted to fractions per
+    # figsize. Recompute the fractions here so guide lines land exactly
+    # at the resolved subplots_adjust boundaries.
+    fig_w, fig_h = mpl_fig.get_size_inches()
+    margin_inches = style.DEFAULT_MARGIN_INCHES
+    left_pad = margin_inches / fig_w
+    right_pad = 1.0 - margin_inches / fig_w
+    bottom_pad = margin_inches / fig_h
+    suptitle_h_inches = (style.DEFAULT_SUPTITLE_FONT_SIZE / 72.0) * 1.4
+    suptitle_y = 1.0 - margin_inches / fig_h
+    top_pad = 1.0 - (2.0 * margin_inches + suptitle_h_inches) / fig_h
 
     guide_kwargs = dict(
         color=style.HIGHLIGHT_COLOR,
@@ -336,13 +339,11 @@ def overlay_layout_guides(fig: Figure) -> None:
     )
 
     # --- Horizontal margin lines ---
-    # Labels anchored inward (left edge of the panel area) so they stay
-    # inside the figure even if savefig is called with tight-bbox later.
     text_label_kw = {k: v for k, v in label_kwargs.items() if k not in ("ha", "va")}
     for y, lbl in (
-        (suptitle_y, f"suptitle_y = {suptitle_y} | DEFAULT_SUPTITLE_FONT_SIZE = {style.DEFAULT_SUPTITLE_FONT_SIZE}"),
-        (top_pad,    f"top_pad = {top_pad}"),
-        (bottom_pad, f"DEFAULT_MARGIN_BOTTOM = {bottom_pad}"),
+        (suptitle_y, f"suptitle top = 1 - margin/h = {suptitle_y:.3f}"),
+        (top_pad,    f"top_pad = {top_pad:.3f} (panel-top)"),
+        (bottom_pad, f"bottom margin = margin/h = {bottom_pad:.3f}"),
     ):
         mpl_fig.add_artist(mlines.Line2D([0.0, 1.0], [y, y], **guide_kwargs))
         mpl_fig.text(
@@ -353,8 +354,8 @@ def overlay_layout_guides(fig: Figure) -> None:
 
     # --- Vertical margin lines ---
     for x, lbl, anchor_ha in (
-        (left_pad,  f"DEFAULT_MARGIN_LEFT = {left_pad}",   "left"),
-        (right_pad, f"DEFAULT_MARGIN_RIGHT = {right_pad}", "right"),
+        (left_pad,  f"left margin = margin/w = {left_pad:.3f}",   "left"),
+        (right_pad, f"right margin = 1 - margin/w = {right_pad:.3f}", "right"),
     ):
         mpl_fig.add_artist(mlines.Line2D([x, x], [0.0, 1.0], **guide_kwargs))
         x_offset = 0.005 if anchor_ha == "left" else -0.005

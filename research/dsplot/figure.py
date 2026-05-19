@@ -129,6 +129,11 @@ class Figure:
         )
 
         if suptitle is not None:
+            # Position the suptitle so its TOP sits margin_inches below the
+            # figure's top edge — the same uniform inch-margin used on the
+            # other three sides. va="top" anchors the text top at the given y.
+            _, fig_h = figsize
+            top_margin_fraction = style.DEFAULT_MARGIN_INCHES / fig_h
             self._mpl_fig.suptitle(
                 suptitle,
                 color=style.TICK_LABEL_COLOR,
@@ -138,7 +143,8 @@ class Figure:
                     else style.DEFAULT_SUPTITLE_FONT_SIZE
                 ),
                 fontweight="bold",
-                y=(suptitle_y if suptitle_y is not None else 0.975),
+                y=(suptitle_y if suptitle_y is not None else 1.0 - top_margin_fraction),
+                va="top",
             )
 
         self.panels: List[Tuple[Panel, int, int, int, int, Optional[str]]] = []
@@ -183,7 +189,35 @@ class Figure:
             unit_inches if unit_inches is not None
             else style.DEFAULT_PANEL_UNIT_INCHES
         )
-        figsize = (n_cols * unit_inches, n_rows * unit_inches)
+        # Inflate figsize so each panel cell ends up exactly unit_inches
+        # square AFTER subplots_adjust eats `margin_inches` from each side
+        # (and the suptitle's vertical reserve). matplotlib's wspace/hspace
+        # are fractions of average cell size, so a panel grid of n cells
+        # occupies cell_size × (n + (n-1) × space_fraction).
+        margin = style.DEFAULT_MARGIN_INCHES
+        # Inner gutter resolves from gutter_inches → fraction relative to
+        # unit_inches so the absolute gap between panels matches what was
+        # declared in style.py (default: same as outer margin).
+        gutter_fraction = style.DEFAULT_GUTTER_INCHES / unit_inches
+        wspace_resolved = wspace if wspace is not None else gutter_fraction
+        hspace_resolved = hspace if hspace is not None else gutter_fraction
+        grid_w_inches = unit_inches * (n_cols + (n_cols - 1) * wspace_resolved)
+        grid_h_inches = unit_inches * (n_rows + (n_rows - 1) * hspace_resolved)
+        suptitle_reserve = 0.0
+        if suptitle is not None:
+            suptitle_fontsize_resolved = (
+                suptitle_fontsize if suptitle_fontsize is not None
+                else style.DEFAULT_SUPTITLE_FONT_SIZE
+            )
+            suptitle_reserve = (
+                margin + suptitle_fontsize_resolved / 72.0 * 1.4 + margin
+            )
+        else:
+            suptitle_reserve = margin  # plain top margin when no suptitle
+        figsize = (
+            grid_w_inches + 2 * margin,
+            grid_h_inches + margin + suptitle_reserve,
+        )
 
         fig = cls(
             n_rows=n_rows,
@@ -192,8 +226,8 @@ class Figure:
             suptitle=suptitle,
             suptitle_fontsize=suptitle_fontsize,
             dpi=dpi,
-            hspace=hspace,
-            wspace=wspace,
+            hspace=hspace_resolved,
+            wspace=wspace_resolved,
         )
 
         for r in range(n_rows):
@@ -229,20 +263,33 @@ class Figure:
             (panel.requires_bottom_pad for panel, *_ in self.panels),
             default=0.0,
         )
-        # All four margins resolve from style.DEFAULT_MARGIN_* constants
-        # — these are the SOLE source of figure padding because
-        # Figure.savefig() saves at exact figsize × dpi (no tight-bbox).
+        # All four margins resolve from style.DEFAULT_MARGIN_INCHES — a
+        # single inch-valued constant applied uniformly to all sides.
+        # subplots_adjust takes fractions, so we convert per-figure based
+        # on figsize. This keeps the absolute gutter consistent across
+        # figures of different aspect ratios.
+        fig_w, fig_h = self._mpl_fig.get_size_inches()
+        margin = style.DEFAULT_MARGIN_INCHES
+        margin_h_frac = margin / fig_w
+        margin_v_frac = margin / fig_h
         adjust_kwargs: dict[str, float] = {
-            "left":   style.DEFAULT_MARGIN_LEFT,
-            "right":  style.DEFAULT_MARGIN_RIGHT,
+            "left":   margin_h_frac,
+            "right":  1.0 - margin_h_frac,
             "bottom": (
                 max_bottom_pad + 0.05 if max_bottom_pad > 0.0
-                else style.DEFAULT_MARGIN_BOTTOM
+                else margin_v_frac
             ),
         }
         if self._has_suptitle:
+            # Top reserve = margin (above suptitle) + suptitle text height
+            # + margin (gap below suptitle to panel-top). suptitle height
+            # is derived from DEFAULT_SUPTITLE_FONT_SIZE at 72pt/inch with
+            # a line-height factor for descender + visual breathing room.
+            suptitle_h_inches = (style.DEFAULT_SUPTITLE_FONT_SIZE / 72.0) * 1.4
+            top_reserve_inches = 2.0 * margin + suptitle_h_inches
             adjust_kwargs["top"] = (
-                self._top_pad if self._top_pad is not None else 0.84
+                self._top_pad if self._top_pad is not None
+                else 1.0 - top_reserve_inches / fig_h
             )
         if adjust_kwargs:
             self._mpl_fig.subplots_adjust(**adjust_kwargs)

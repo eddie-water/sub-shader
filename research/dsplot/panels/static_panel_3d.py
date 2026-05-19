@@ -48,6 +48,7 @@ class StaticPanel3D(Panel):
         title: str | None = None,
         subtitle: str | None = None,
         show_spines: bool = True,
+        show_border: bool = True,
     ) -> None:
         super().__init__(units=units)
         self.lim_3d = float(lim_3d)
@@ -55,17 +56,15 @@ class StaticPanel3D(Panel):
         self.title = title
         self.subtitle = subtitle
         self.show_spines = show_spines
+        self.show_border = show_border
 
     def render(self) -> None:
         if self.ax is None:
             raise RuntimeError("StaticPanel3D.render() called before attach()")
 
         ax = self.ax
-        # The 2D chrome from setup_vector_axes is irrelevant in 3D — we
-        # tear down mpl's default 3D chrome and rebuild only what we want.
         ax.set_axis_off()
         ax.set_facecolor(style.BG_COLOR)
-        # Respect plottable zorder over mpl's depth sort.
         ax.computed_zorder = False
 
         lim = self.lim_3d
@@ -82,6 +81,23 @@ class StaticPanel3D(Panel):
 
         for plottable in self._plottables:
             plottable.draw(ax)
+
+        # Border last so it lands on top of plottables. `set_axis_off()` hides
+        # mpl's 3D pane edges, so a 2D Rectangle in figure coords gives the
+        # same border treatment as 2D panels' spine-based border.
+        if self.show_border:
+            import matplotlib.patches as mpatches
+            bbox = ax.get_position()
+            border = mpatches.Rectangle(
+                (bbox.x0, bbox.y0), bbox.width, bbox.height,
+                fill=False,
+                edgecolor=style.SPINE_COLOR,
+                linewidth=style.DEFAULT_SPINE_LINEWIDTH,
+                transform=ax.figure.transFigure,
+                clip_on=False,
+                zorder=100,
+            )
+            ax.figure.add_artist(border)
 
     def _draw_spines(self, ax) -> None:
         """Three neutral axis spines through the origin, both directions.
