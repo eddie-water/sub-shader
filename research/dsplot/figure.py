@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 from . import style
 from .panels.base import Panel
 from .panels.dynamic_panel import DynamicPanel
+from .panels.static_panel_3d import StaticPanel3D
 
 
 # Trailing hold ticks appended to the master clock cycle: the longest panel
@@ -145,6 +146,70 @@ class Figure:
         # for matplotlib timer GC the same way DynamicPanel._anim is in the
         # standalone path.
         self._anim = None
+
+    @classmethod
+    def compose(
+        cls,
+        *,
+        rows: List[List["Panel"]],
+        suptitle: Optional[str] = None,
+        suptitle_fontsize: Optional[float] = None,
+        unit_inches: Optional[float] = None,
+        dpi: Optional[int] = None,
+        hspace: Optional[float] = None,
+        wspace: Optional[float] = None,
+    ) -> "Figure":
+        """Auto-derive figsize, gridspec width-units, and per-panel colspan
+        from each panel's `units` (lego-block composition).
+
+        Every row must have the same total width-units; mismatched rows raise
+        ValueError. The resulting Figure uses a uniform gridspec sized
+        `(n_rows, total_units_per_row)`, with each panel placed via
+        `add_panel(..., colspan=panel.units[0])`. StaticPanel3D children get
+        `projection="3d"` automatically.
+        """
+        n_rows = len(rows)
+        if n_rows == 0:
+            raise ValueError("Figure.compose requires at least one row")
+
+        width_units_per_row = [sum(p.units[0] for p in row) for row in rows]
+        if any(w != width_units_per_row[0] for w in width_units_per_row):
+            raise ValueError(
+                f"Figure.compose row widths mismatch: {width_units_per_row}"
+            )
+
+        n_cols = width_units_per_row[0]
+        unit_inches = (
+            unit_inches if unit_inches is not None
+            else style.DEFAULT_PANEL_UNIT_INCHES
+        )
+        figsize = (n_cols * unit_inches, n_rows * unit_inches)
+
+        fig = cls(
+            n_rows=n_rows,
+            n_cols=n_cols,
+            figsize=figsize,
+            suptitle=suptitle,
+            suptitle_fontsize=suptitle_fontsize,
+            dpi=dpi,
+            hspace=hspace,
+            wspace=wspace,
+        )
+
+        for r in range(n_rows):
+            for p in range(len(rows[r])):
+                panel = rows[r][p]
+                col_start = sum(rows[r][i].units[0] for i in range(p))
+                colspan = rows[r][p].units[0]
+                projection = "3d" if isinstance(panel, StaticPanel3D) else None
+                fig.add_panel(
+                    panel,
+                    row=r,
+                    col=col_start,
+                    colspan=colspan,
+                    projection=projection,
+                )
+        return fig
 
     def add_panel(
         self,

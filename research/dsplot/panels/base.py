@@ -18,7 +18,7 @@ is intentional. Figure.render() handles the attach + render handshake.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Tuple
 
 from .. import style
 
@@ -32,6 +32,11 @@ class Panel(ABC):
 
     ax: "Optional[Axes]"
     _plottables: "List[Plottable]"
+
+    # Class-level default panel-unit footprint (width, height) in lego units.
+    # Figure.compose reads each panel's `units` (instance override) or this
+    # default to derive figsize, gridspec width, and per-panel colspan.
+    default_units: ClassVar[Tuple[int, int]] = (1, 1)
 
     # Base reservation (subclasses override) for in-figure controls — e.g.
     # InteractivePanel sets _base_bottom_pad = 0.18 for its prev/next
@@ -53,7 +58,8 @@ class Panel(ABC):
             pad += style.DEFAULT_SUBTITLE_BOTTOM_PAD
         return pad
 
-    def __init__(self) -> None:
+    def __init__(self, *, units: Optional[Tuple[int, int]] = None) -> None:
+        self.units: Tuple[int, int] = units if units is not None else self.default_units
         self.ax = None
         self._plottables = []
 

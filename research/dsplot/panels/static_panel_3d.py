@@ -17,7 +17,7 @@ silently extends to ``(x, y, 0)`` (D-06).
 """
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 from .. import style
 from ..plottables.vector import Vector
@@ -42,13 +42,14 @@ class StaticPanel3D(Panel):
     def __init__(
         self,
         *,
+        units: Optional[Tuple[int, int]] = None,
         lim_3d: float = 1.0,
         view_init: Tuple[float, float] = (30.0, -60.0),
         title: str | None = None,
         subtitle: str | None = None,
         show_spines: bool = True,
     ) -> None:
-        super().__init__()
+        super().__init__(units=units)
         self.lim_3d = float(lim_3d)
         self.view_init = (float(view_init[0]), float(view_init[1]))
         self.title = title
