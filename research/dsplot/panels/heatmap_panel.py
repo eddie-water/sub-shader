@@ -61,20 +61,18 @@ def _apply_axis_decoration(
     xticks: Optional[Sequence[float]],
     yticks: Optional[Sequence[float]],
 ) -> None:
+    tick_kwargs = dict(
+        colors=style.TICK_LABEL_COLOR,
+        labelsize=style.DEFAULT_TICK_LABEL_SIZE,
+        length=style.DEFAULT_TICK_LENGTH,
+        width=style.DEFAULT_TICK_WIDTH,
+    )
     if xticks is not None:
         ax.set_xticks(list(xticks))
-        ax.tick_params(
-            axis="x",
-            colors=style.TICK_LABEL_COLOR,
-            labelsize=style.DEFAULT_TICK_LABEL_SIZE,
-        )
+        ax.tick_params(axis="x", **tick_kwargs)
     if yticks is not None:
         ax.set_yticks(list(yticks))
-        ax.tick_params(
-            axis="y",
-            colors=style.TICK_LABEL_COLOR,
-            labelsize=style.DEFAULT_TICK_LABEL_SIZE,
-        )
+        ax.tick_params(axis="y", **tick_kwargs)
     if x_label is not None:
         ax.set_xlabel(
             x_label,

@@ -56,7 +56,7 @@ DEFAULT_ARROW_MUTATION    = 22
 # ============================================================
 # TYPOGRAPHY
 # ============================================================
-DEFAULT_TITLE_FONT_SIZE      = 16
+DEFAULT_TITLE_FONT_SIZE      = 20
 DEFAULT_SUBTITLE_FONT_SIZE   = 14
 DEFAULT_LABEL_FONT_SIZE      = 18
 # Decorator/callout text inside a panel (e.g. "peak", "centroid" labels
@@ -71,8 +71,11 @@ DEFAULT_TITLE_Y            = 1.04
 # Extra figure-bottom pad reserved when any panel has a subtitle, so the
 # below-plot subtitle isn't clipped by Figure.savefig's tight bbox.
 DEFAULT_SUBTITLE_BOTTOM_PAD = 0.08
-DEFAULT_TICK_LABEL_SIZE    = 14
-DEFAULT_AXIS_LABEL_SIZE    = 14
+DEFAULT_TICK_LABEL_SIZE    = 16
+DEFAULT_AXIS_LABEL_SIZE    = 17
+# Tick mark dimensions (matplotlib defaults are ~3.5pt length, ~0.8pt width)
+DEFAULT_TICK_LENGTH        = 6.0
+DEFAULT_TICK_WIDTH         = 1.2
 DEFAULT_SUPTITLE_FONT_SIZE = 32
 DEFAULT_ROW_LABEL_SIZE     = 16
 
@@ -101,9 +104,10 @@ DEFAULT_MARGIN_INCHES = 0.7
 # Inner gutter between adjacent panel cells, also in INCHES. Figure.compose()
 # converts this to wspace/hspace fractions (relative to unit_inches) so the
 # absolute gap between panels matches the outer margin regardless of cell
-# width/height. Decoupled from DEFAULT_MARGIN_INCHES so the two can drift
-# (e.g. tighter inner spacing, looser outer breathing room).
-DEFAULT_GUTTER_INCHES = 0.7
+# width/height. Sized to host axis decoration: tick labels (~0.2"), axis
+# label (~0.2"), plus breathing room on each side so labels don't crowd
+# the spines of adjacent panels.
+DEFAULT_GUTTER_INCHES = 1.2
 
 # ============================================================
 # VECTOR-AXES DECORATION
