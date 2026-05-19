@@ -169,6 +169,7 @@ None yet.
 | 260409-uan | Replace adaptive IntensityTracker with fixed pre-scan reference | 2026-04-10 | 9115c26 | [260409-uan-fix-intensitytracker-normalization-strat](./quick/260409-uan-fix-intensitytracker-normalization-strat/) |
 | 260518-tts | Add canonical dsplot style skeleton figure | 2026-05-19 | c3d86b6 | [260518-tts-add-canonical-dsplot-style-skeleton-figu](./quick/260518-tts-add-canonical-dsplot-style-skeleton-figu/) |
 | 260518-vk6 | Add panel-unit OOP layer to dsplot (Figure.compose + CompositePanel) | 2026-05-19 | ce71541 | [260518-vk6-add-panel-unit-oop-layer-to-dsplot-figur](./quick/260518-vk6-add-panel-unit-oop-layer-to-dsplot-figur/) |
+| 260519-a1p | Add twin-axis support + Line plottable to dsplot; figure_1 inst-freq overlay restored across all 3 rows | 2026-05-19 | 39d9e4b | [260519-a1p-add-twin-axis-support-to-dsplot-timeseri](./quick/260519-a1p-add-twin-axis-support-to-dsplot-timeseri/) |
 
 ### Roadmap Evolution
 
@@ -185,6 +186,6 @@ None yet.
 
 ## Session Continuity
 
-Last activity: 2026-05-19 - Completed quick task 260518-vk6: dsplot panel-unit OOP layer
-Stopped at: Completed 08-07: archive and cleanup
+Last activity: 2026-05-19 - Completed quick task 260519-a1p: dsplot twin-axis support + figure_1 inst-freq overlay across all 3 rows
+Stopped at: figure_1 v8 locked; deferred items (CWT low-f delay, COI pre-padding, possible Figure 2 click+drone demo) tracked in [[project-figure-1]] memory
 Resume file: None
