@@ -26,7 +26,7 @@ Naming convention:
 # ============================================================
 # PALETTE (role-named — identity slots, not "defaults")
 # ============================================================
-PRIMARY_COLOR    = "#e1641a"
+PRIMARY_COLOR    = "#ff5a1f"
 SECONDARY_COLOR  = "#7b6fe1"
 TERTIARY_COLOR   = "#ffd27d"
 NEUTRAL_COLOR    = "#EEEEEE"

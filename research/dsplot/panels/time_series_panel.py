@@ -30,6 +30,7 @@ class TimeSeriesPanel(StaticPanel):
         *,
         x_label: Optional[str] = None,
         y_label: Optional[str] = None,
+        y_label_side: str = "left",
         xticks: Optional[Sequence[float]] = None,
         yticks: Optional[Sequence[float]] = None,
         twin_y: bool = False,
@@ -41,12 +42,17 @@ class TimeSeriesPanel(StaticPanel):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
+        if y_label_side not in ("left", "right"):
+            raise ValueError(
+                f"y_label_side must be 'left' or 'right', got {y_label_side!r}"
+            )
         if twin_y_side not in ("left", "right"):
             raise ValueError(
                 f"twin_y_side must be 'left' or 'right', got {twin_y_side!r}"
             )
         self.x_label = x_label
         self.y_label = y_label
+        self.y_label_side = y_label_side
         self.xticks = xticks
         self.yticks = yticks
         self.twin_y = twin_y
@@ -83,8 +89,8 @@ class TimeSeriesPanel(StaticPanel):
             xticks=self.xticks,
             yticks=self.yticks,
         )
-
         if not self.twin_y:
+            self._apply_y_label_side_switch()
             return
 
         self.ax_twin = self.ax.twinx()
@@ -102,6 +108,13 @@ class TimeSeriesPanel(StaticPanel):
 
         self.ax_twin.minorticks_off()
         self.ax_twin.patch.set_visible(False)
+
+        # Defensive: tag the twin's x-tick labels with the style size so any
+        # future visibility flip renders them at the same size as the main
+        # axis ticks rather than matplotlib's 10pt default.
+        self.ax_twin.tick_params(
+            axis="x", labelsize=style.DEFAULT_TICK_LABEL_SIZE,
+        )
 
         for spine in self.ax_twin.spines.values():
             spine.set_edgecolor(style.SPINE_COLOR)
@@ -122,3 +135,29 @@ class TimeSeriesPanel(StaticPanel):
 
         for plottable in self._twin_plottables:
             plottable.draw(self.ax_twin)
+
+        # Run AFTER twinx() + twin axis configuration so the parent's
+        # tick_right() state isn't reset by twinx() internals.
+        self._apply_y_label_side_switch()
+
+    def _apply_y_label_side_switch(self) -> None:
+        """Move the main axis y ticks + label to the right side when
+        ``y_label_side='right'``. Called at the end of render() so the
+        switch survives any later mpl reconfiguration."""
+        if self.y_label_side != "right" or self.ax is None:
+            return
+        self.ax.yaxis.tick_right()
+        self.ax.yaxis.set_label_position("right")
+        self.ax.tick_params(
+            axis="y", which="both",
+            left=False, labelleft=False,
+            right=True, labelright=True,
+        )
+        if self.y_label is not None:
+            fig_w_in = self.ax.figure.get_size_inches()[0]
+            bbox = self.ax.get_position()
+            axes_w_in = max(bbox.width * fig_w_in, 0.1)
+            half_pad_in = style.DEFAULT_GUTTER_INCHES / 4.0
+            self.ax.yaxis.set_label_coords(
+                1.0 + half_pad_in / axes_w_in, 0.5,
+            )

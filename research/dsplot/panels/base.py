@@ -93,15 +93,15 @@ class Panel(ABC):
             return
 
         if title is not None:
-            # Title V-centered in the space above the spine. Uses a fixed
-            # title-band height (DEFAULT_PANEL_TITLE_RESERVE_INCHES) and
-            # divides by the actual axes height so composite inner cells
-            # center the same way as full-size cells.
+            # Title V-centered between the panel spine and the cell border
+            # above. The chrome zone above the spine equals one PAD (= half
+            # the inter-cell gutter), so the title sits PAD/2 above the
+            # spine — exactly midway between the plot and the cell border.
             bbox = ax.get_position()
             fig_h_in = ax.figure.get_size_inches()[1]
             axes_h_in = max(bbox.height * fig_h_in, 0.1)
-            title_band_in = style.DEFAULT_PANEL_TITLE_RESERVE_INCHES
-            y_axes = 1.0 + (title_band_in / 2.0) / axes_h_in
+            chrome_above_in = style.DEFAULT_GUTTER_INCHES / 2.0
+            y_axes = 1.0 + (chrome_above_in / 2.0) / axes_h_in
             text_fn = ax.text2D if hasattr(ax, "get_zlim") else ax.text
             text_fn(
                 0.5, y_axes, title,

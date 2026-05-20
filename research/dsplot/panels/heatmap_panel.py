@@ -73,21 +73,36 @@ def _apply_axis_decoration(
     if yticks is not None:
         ax.set_yticks(list(yticks))
         ax.tick_params(axis="y", **tick_kwargs)
-    # Modest pad in points between tick labels and axis label — enough to
-    # visually separate them without blowing up the gutter into a full
-    # outer-margin unit. The outer perimeter handles the breathing-to-edge.
-    labelpad_pts = 12.0
+    # Axis labels are forced to sit at PAD/2 from the spine (midway between
+    # the inner panel and the cell border) via set_label_coords, so the
+    # label position is independent of tick label widths. labelpad is left
+    # at matplotlib's default since set_label_coords overrides it anyway.
+    fig_w_in, fig_h_in = ax.figure.get_size_inches()
+    bbox = ax.get_position()
+    axes_w_in = max(bbox.width * fig_w_in, 0.1)
+    axes_h_in = max(bbox.height * fig_h_in, 0.1)
+    half_pad_in = style.DEFAULT_GUTTER_INCHES / 4.0  # = PAD / 2
+
     if x_label is not None:
         ax.set_xlabel(
             x_label,
             color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
-            labelpad=labelpad_pts,
         )
+        x_offset_axes = half_pad_in / axes_h_in
+        if ax.xaxis.get_label_position() == "top":
+            ax.xaxis.set_label_coords(0.5, 1.0 + x_offset_axes)
+        else:
+            ax.xaxis.set_label_coords(0.5, -x_offset_axes)
+
     if y_label is not None:
         ax.set_ylabel(
             y_label,
             color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
-            labelpad=labelpad_pts,
         )
+        y_offset_axes = half_pad_in / axes_w_in
+        if ax.yaxis.get_label_position() == "right":
+            ax.yaxis.set_label_coords(1.0 + y_offset_axes, 0.5)
+        else:
+            ax.yaxis.set_label_coords(-y_offset_axes, 0.5)

@@ -5,6 +5,7 @@ from .dropline import Dropline
 from .heatmap import Heatmap
 from .line import Line
 from .spotlight import Spotlight
+from .stem import Stem
 from .time_series import TimeSeries
 from .vector import Vector
 from .vector_components import VectorComponents
@@ -15,6 +16,7 @@ __all__ = [
     "Heatmap",
     "Line",
     "Spotlight",
+    "Stem",
     "TimeSeries",
     "Vector",
     "VectorComponents",

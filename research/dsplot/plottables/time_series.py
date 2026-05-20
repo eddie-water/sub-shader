@@ -37,7 +37,7 @@ class TimeSeries(Plottable):
         sample_rate: float,
         *,
         color: str | None = None,
-        alpha: float = 0.75,
+        alpha: float = 1.0,
         ylim_padding: float = 1.1,
         zorder: int = 2,
     ) -> None:
