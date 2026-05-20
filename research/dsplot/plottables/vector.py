@@ -54,6 +54,7 @@ class Vector(Plottable):
                  label: str | None = None,
                  label_offset=None,
                  show_tip: bool = True,
+                 show_arrowhead: bool = False,
                  zorder: int = 2) -> None:
         vec_t = tuple(vec)
         if len(vec_t) not in (2, 3):
@@ -68,6 +69,7 @@ class Vector(Plottable):
         self.origin = tuple(origin) if origin is not None else (0.0,) * len(vec_t)
         self.label_offset = label_offset
         self.show_tip = show_tip
+        self.show_arrowhead = show_arrowhead
 
     def draw(self, ax: Axes) -> None:
         if len(self.vec) == 3:
@@ -187,23 +189,33 @@ class Vector(Plottable):
         vx, vy, vz = vec
         tip = (ox + vx, oy + vy, oz + vz)
 
-        ax.plot(
-            [ox, tip[0]], [oy, tip[1]], [oz, tip[2]],
-            color=color,
-            linewidth=linewidth,
-            linestyle=self.linestyle,
-            solid_capstyle="round",
-            alpha=self.alpha,
-            zorder=self.zorder,
-        )
-
-        if self.show_tip:
-            ax.scatter(
-                [tip[0]], [tip[1]], [tip[2]],
-                color=color, s=80,
-                zorder=self.zorder + 1,
-                depthshade=False,
+        if self.show_arrowhead and self.linestyle == "-":
+            ax.quiver(
+                ox, oy, oz, vx, vy, vz,
+                color=color,
+                linewidth=linewidth,
+                alpha=self.alpha,
+                arrow_length_ratio=0.15,
+                zorder=self.zorder,
             )
+        else:
+            ax.plot(
+                [ox, tip[0]], [oy, tip[1]], [oz, tip[2]],
+                color=color,
+                linewidth=linewidth,
+                linestyle=self.linestyle,
+                solid_capstyle="round",
+                alpha=self.alpha,
+                zorder=self.zorder,
+            )
+
+            if self.show_tip:
+                ax.scatter(
+                    [tip[0]], [tip[1]], [tip[2]],
+                    color=color, s=80,
+                    zorder=self.zorder + 1,
+                    depthshade=False,
+                )
 
         if self.label is not None:
             xlim = ax.get_xlim()

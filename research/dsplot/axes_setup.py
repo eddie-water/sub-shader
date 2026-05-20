@@ -42,9 +42,9 @@ def setup_vector_axes(
     if y_color is None:
         y_color = style.SPINE_COLOR
     if axis_alpha is None:
-        axis_alpha = 0.55
+        axis_alpha = 0.85
     if axis_linewidth is None:
-        axis_linewidth = 0.8
+        axis_linewidth = 1.8
 
     ax.set_xlim(-lim, lim)
     ax.set_ylim(-lim, lim)
@@ -85,14 +85,20 @@ def setup_vector_axes(
         )
 
     if axis_labels:
+        # Place labels ALONG the spine (inset from the panel border) rather
+        # than at the spine tips, so they read as "axis labels next to the
+        # axis" instead of decorations sitting on the panel edge.
         offset = style.DEFAULT_AXIS_LABEL_OFFSET
-        ax.text(lim - inset, -offset, "x",
-                color=style.SPINE_COLOR, alpha=0.9,
-                fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
+        label_pos_along = lim * 0.92
+        ax.text(label_pos_along, -offset, "x",
+                color=style.TICK_LABEL_COLOR, alpha=0.95,
+                fontsize=style.DEFAULT_AXIS_LABEL_SIZE + 2,
+                fontweight="bold",
                 ha="center", va="top", style="italic")
-        ax.text(offset, lim - inset, "y",
-                color=style.SPINE_COLOR, alpha=0.9,
-                fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
+        ax.text(offset, label_pos_along, "y",
+                color=style.TICK_LABEL_COLOR, alpha=0.95,
+                fontsize=style.DEFAULT_AXIS_LABEL_SIZE + 2,
+                fontweight="bold",
                 ha="left", va="center", style="italic")
 
     if panel_title is not None:

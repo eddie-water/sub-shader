@@ -92,6 +92,8 @@ class Figure:
         fill_width: bool = True,
         show_toolbar: bool = False,
         display_width: Optional[str] = None,
+        debug_guides: bool = False,
+        show_cell_borders: bool = False,
     ) -> None:
         if figsize is None:
             # Width scales by sum(width_ratios) so non-uniform columns produce
@@ -119,6 +121,8 @@ class Figure:
         self._display_width = display_width
         self._has_suptitle = suptitle is not None
         self._top_pad = top_pad
+        self._debug_guides = debug_guides
+        self._show_cell_borders = show_cell_borders
         self._mpl_fig = plt.figure(figsize=figsize, dpi=dpi)
         self._mpl_fig.patch.set_facecolor(style.BG_COLOR)
         self._gs = self._mpl_fig.add_gridspec(
@@ -129,22 +133,27 @@ class Figure:
         )
 
         if suptitle is not None:
-            # Position the suptitle so its TOP sits margin_inches below the
-            # figure's top edge — the same uniform inch-margin used on the
-            # other three sides. va="top" anchors the text top at the given y.
+            # Suptitle lives in a band one `margin` tall at the top of the
+            # figure with its text V-centered in that band — equal breathing
+            # room above and below the text. Below the band is another full
+            # `margin` of gap before the first panel border. So the total
+            # top reserve is `2 * margin`.
             _, fig_h = figsize
-            top_margin_fraction = style.DEFAULT_MARGIN_INCHES / fig_h
+            sup_fontsize_resolved = (
+                suptitle_fontsize if suptitle_fontsize is not None
+                else style.DEFAULT_SUPTITLE_FONT_SIZE
+            )
+            sup_band_center_in = style.DEFAULT_MARGIN_INCHES / 2.0
             self._mpl_fig.suptitle(
                 suptitle,
                 color=style.TICK_LABEL_COLOR,
-                fontsize=(
-                    suptitle_fontsize
-                    if suptitle_fontsize is not None
-                    else style.DEFAULT_SUPTITLE_FONT_SIZE
-                ),
+                fontsize=sup_fontsize_resolved,
                 fontweight="bold",
-                y=(suptitle_y if suptitle_y is not None else 1.0 - top_margin_fraction),
-                va="top",
+                y=(
+                    suptitle_y if suptitle_y is not None
+                    else 1.0 - sup_band_center_in / fig_h
+                ),
+                va="center",
             )
 
         self.panels: List[Tuple[Panel, int, int, int, int, Optional[str]]] = []
@@ -164,6 +173,8 @@ class Figure:
         dpi: Optional[int] = None,
         hspace: Optional[float] = None,
         wspace: Optional[float] = None,
+        debug_guides: bool = False,
+        show_cell_borders: bool = False,
     ) -> "Figure":
         """Auto-derive figsize, gridspec width-units, and per-panel colspan
         from each panel's `units` (lego-block composition).
@@ -189,34 +200,29 @@ class Figure:
             unit_inches if unit_inches is not None
             else style.DEFAULT_PANEL_UNIT_INCHES
         )
-        # Inflate figsize so each panel cell ends up exactly unit_inches
-        # square AFTER subplots_adjust eats `margin_inches` from each side
-        # (and the suptitle's vertical reserve). matplotlib's wspace/hspace
-        # are fractions of average cell size, so a panel grid of n cells
-        # occupies cell_size × (n + (n-1) × space_fraction).
+        # Outer perimeter: `margin` between every panel border and the figure
+        # edge (left, right, bottom). Tick + axis labels render WITHIN that
+        # margin (eating into it from the spine outward).  Suptitle gets its
+        # OWN `margin` of padding above it, plus another `margin` below it
+        # before the panel grid starts.  Inter-cell gutters use a separate
+        # `gutter` sized to host one set of axis labels + one panel title
+        # between adjacent cells.
         margin = style.DEFAULT_MARGIN_INCHES
-        # Inner gutter resolves from gutter_inches → fraction relative to
-        # unit_inches so the absolute gap between panels matches what was
-        # declared in style.py (default: same as outer margin).
-        gutter_fraction = style.DEFAULT_GUTTER_INCHES / unit_inches
-        wspace_resolved = wspace if wspace is not None else gutter_fraction
-        hspace_resolved = hspace if hspace is not None else gutter_fraction
+        column_gutter_fraction = style.DEFAULT_COLUMN_GUTTER_INCHES / unit_inches
+        row_gutter_fraction = style.DEFAULT_GUTTER_INCHES / unit_inches
+        wspace_resolved = wspace if wspace is not None else column_gutter_fraction
+        hspace_resolved = hspace if hspace is not None else row_gutter_fraction
         grid_w_inches = unit_inches * (n_cols + (n_cols - 1) * wspace_resolved)
         grid_h_inches = unit_inches * (n_rows + (n_rows - 1) * hspace_resolved)
-        suptitle_reserve = 0.0
         if suptitle is not None:
-            suptitle_fontsize_resolved = (
-                suptitle_fontsize if suptitle_fontsize is not None
-                else style.DEFAULT_SUPTITLE_FONT_SIZE
-            )
-            suptitle_reserve = (
-                margin + suptitle_fontsize_resolved / 72.0 * 1.4 + margin
-            )
+            # Suptitle band (1 margin tall, text V-centered) + 1 margin gap
+            # below the band before the first panel border.
+            top_reserve = 2.0 * margin
         else:
-            suptitle_reserve = margin  # plain top margin when no suptitle
+            top_reserve = margin
         figsize = (
             grid_w_inches + 2 * margin,
-            grid_h_inches + margin + suptitle_reserve,
+            grid_h_inches + margin + top_reserve,
         )
 
         fig = cls(
@@ -228,6 +234,8 @@ class Figure:
             dpi=dpi,
             hspace=hspace_resolved,
             wspace=wspace_resolved,
+            debug_guides=debug_guides,
+            show_cell_borders=show_cell_borders,
         )
 
         for r in range(n_rows):
@@ -263,15 +271,18 @@ class Figure:
             (panel.requires_bottom_pad for panel, *_ in self.panels),
             default=0.0,
         )
-        # All four margins resolve from style.DEFAULT_MARGIN_INCHES — a
-        # single inch-valued constant applied uniformly to all sides.
-        # subplots_adjust takes fractions, so we convert per-figure based
-        # on figsize. This keeps the absolute gutter consistent across
-        # figures of different aspect ratios.
+        # Outer perimeter: panel-border-to-figure-edge = `margin` on all four
+        # sides. Labels render INSIDE that margin (eating into it). Suptitle
+        # gets its own `margin` padding above it plus another `margin` below
+        # before the first row's panel border.
         fig_w, fig_h = self._mpl_fig.get_size_inches()
         margin = style.DEFAULT_MARGIN_INCHES
         margin_h_frac = margin / fig_w
         margin_v_frac = margin / fig_h
+        if self._has_suptitle:
+            top_reserve = 2.0 * margin
+        else:
+            top_reserve = margin
         adjust_kwargs: dict[str, float] = {
             "left":   margin_h_frac,
             "right":  1.0 - margin_h_frac,
@@ -279,18 +290,11 @@ class Figure:
                 max_bottom_pad + 0.05 if max_bottom_pad > 0.0
                 else margin_v_frac
             ),
-        }
-        if self._has_suptitle:
-            # Top reserve = margin (above suptitle) + suptitle text height
-            # + margin (gap below suptitle to panel-top). suptitle height
-            # is derived from DEFAULT_SUPTITLE_FONT_SIZE at 72pt/inch with
-            # a line-height factor for descender + visual breathing room.
-            suptitle_h_inches = (style.DEFAULT_SUPTITLE_FONT_SIZE / 72.0) * 1.4
-            top_reserve_inches = 2.0 * margin + suptitle_h_inches
-            adjust_kwargs["top"] = (
+            "top": (
                 self._top_pad if self._top_pad is not None
-                else 1.0 - top_reserve_inches / fig_h
-            )
+                else 1.0 - top_reserve / fig_h
+            ),
+        }
         if adjust_kwargs:
             self._mpl_fig.subplots_adjust(**adjust_kwargs)
 
@@ -314,7 +318,208 @@ class Figure:
             panel.render()
 
         self._install_master_clock()
+        if self._show_cell_borders:
+            self._draw_cell_borders()
+        if self._debug_guides:
+            self._draw_debug_guides()
         self._apply_jupyter_display_styling()
+
+    def _draw_cell_borders(self) -> None:
+        """Tile the figure with one bordered Rectangle per gridspec cell.
+
+        Each cell encloses one panel's chrome (title above, x-label below,
+        y-labels on left/right) AND the panel's inner spine border — matching
+        the "ideal template" reference. Cells tile densely: shared edges
+        between adjacent cells appear as a single line.
+
+        Cell boundaries:
+          - Non-perimeter sides: midpoint of the inter-cell gutter
+          - Perimeter sides: figure edge (or suptitle band bottom for top row)
+        """
+        from matplotlib.patches import Rectangle
+
+        fig = self._mpl_fig
+        fig_w, fig_h = fig.get_size_inches()
+        col_gutter = style.DEFAULT_COLUMN_GUTTER_INCHES
+        row_gutter = style.DEFAULT_GUTTER_INCHES
+        margin = style.DEFAULT_MARGIN_INCHES
+        half_col_g_frac = (col_gutter / 2.0) / fig_w
+        half_row_g_frac = (row_gutter / 2.0) / fig_h
+
+        if self._has_suptitle:
+            sup_band_bot_frac = 1.0 - margin / fig_h
+        else:
+            sup_band_bot_frac = 1.0
+
+        border_kwargs = dict(
+            fill=False,
+            edgecolor=style.SPINE_COLOR,
+            linewidth=style.DEFAULT_SPINE_LINEWIDTH,
+            transform=fig.transFigure,
+            zorder=50,
+            clip_on=False,
+        )
+
+        for panel, row, col, rowspan, colspan, _ in self.panels:
+            if panel.ax is None:
+                continue
+            bbox = panel.ax.get_position()
+
+            cell_left = 0.0 if col == 0 else bbox.x0 - half_col_g_frac
+            cell_right = (
+                1.0 if col + colspan == self.n_cols
+                else bbox.x1 + half_col_g_frac
+            )
+            cell_top = (
+                sup_band_bot_frac if row == 0
+                else bbox.y1 + half_row_g_frac
+            )
+            cell_bot = (
+                0.0 if row + rowspan == self.n_rows
+                else bbox.y0 - half_row_g_frac
+            )
+
+            rect = Rectangle(
+                (cell_left, cell_bot),
+                cell_right - cell_left,
+                cell_top - cell_bot,
+                **border_kwargs,
+            )
+            fig.add_artist(rect)
+
+        if self._has_suptitle:
+            rect = Rectangle(
+                (0.0, sup_band_bot_frac),
+                1.0,
+                margin / fig_h,
+                **border_kwargs,
+            )
+            fig.add_artist(rect)
+
+    def _draw_debug_guides(self) -> None:
+        """Overlay colored guide lines at every template boundary so layout
+        math is visible at a glance.
+
+        Lines drawn (in figure-coord [0, 1] space):
+          - magenta: outer perimeter margin (margin inset from all 4 edges)
+          - cyan:    suptitle band (top + bottom of the suptitle text reserve)
+          - yellow:  per-panel title band (top of band + spine top)
+          - orange:  per-panel axes bbox left/right edges (= y-label sit zone)
+          - lime:    inter-cell gutter midlines (h + v)
+        """
+        from matplotlib.lines import Line2D
+        from matplotlib.patches import Rectangle
+
+        fig = self._mpl_fig
+        fig_w, fig_h = fig.get_size_inches()
+        margin = style.DEFAULT_MARGIN_INCHES
+        margin_h_frac = margin / fig_w
+        margin_v_frac = margin / fig_h
+        title_band_v_frac = style.DEFAULT_PANEL_TITLE_RESERVE_INCHES / fig_h
+
+        def hline(y: float, color: str, label: str | None = None) -> None:
+            ln = Line2D(
+                [0.0, 1.0], [y, y],
+                color=color, linewidth=0.6, alpha=0.7,
+                linestyle="--", transform=fig.transFigure,
+                zorder=200,
+            )
+            fig.add_artist(ln)
+            if label is not None:
+                fig.text(
+                    0.002, y, label,
+                    color=color, fontsize=7, alpha=0.85,
+                    ha="left", va="center",
+                    transform=fig.transFigure, zorder=201,
+                )
+
+        def vline(x: float, color: str, label: str | None = None) -> None:
+            ln = Line2D(
+                [x, x], [0.0, 1.0],
+                color=color, linewidth=0.6, alpha=0.7,
+                linestyle="--", transform=fig.transFigure,
+                zorder=200,
+            )
+            fig.add_artist(ln)
+            if label is not None:
+                fig.text(
+                    x, 0.002, label,
+                    color=color, fontsize=7, alpha=0.85,
+                    ha="left", va="bottom", rotation=90,
+                    transform=fig.transFigure, zorder=201,
+                )
+
+        # --- Outer perimeter margin (magenta) ---
+        vline(margin_h_frac, "#ff00ff", "L margin")
+        vline(1.0 - margin_h_frac, "#ff00ff", "R margin")
+        hline(margin_v_frac, "#ff00ff", "B margin")
+
+        # --- Suptitle band (cyan): 1 margin tall at top, text V-centered ---
+        if self._has_suptitle:
+            sup_band_bot_y = 1.0 - margin_v_frac
+            sup_center_y = 1.0 - (margin / 2.0) / fig_h
+            panel_top_y = 1.0 - (2.0 * margin) / fig_h
+            hline(sup_band_bot_y, "#00e5ff", "sup band bot")
+            hline(sup_center_y, "#00e5ff", "sup center")
+            hline(panel_top_y, "#ff00ff", "T margin")
+        else:
+            hline(1.0 - margin_v_frac, "#ff00ff", "T margin")
+
+        # --- Per-panel: title band + axes bbox sides (yellow / orange) ---
+        axes_bboxes: list = []
+        for panel, *_ in self.panels:
+            if panel.ax is None:
+                continue
+            bbox = panel.ax.get_position()
+            axes_bboxes.append(bbox)
+            title_band_top = bbox.y1 + title_band_v_frac
+            hline(title_band_top, "#ffd400", None)
+            hline(bbox.y1, "#ffd400", None)
+            # Orange verticals at axes left/right — y-labels live to the left
+            # of x0, twin y-labels to the right of x1.
+            ln_l = Line2D(
+                [bbox.x0, bbox.x0], [bbox.y0, bbox.y1],
+                color="#ff8800", linewidth=0.6, alpha=0.55,
+                linestyle=":", transform=fig.transFigure, zorder=199,
+            )
+            ln_r = Line2D(
+                [bbox.x1, bbox.x1], [bbox.y0, bbox.y1],
+                color="#ff8800", linewidth=0.6, alpha=0.55,
+                linestyle=":", transform=fig.transFigure, zorder=199,
+            )
+            fig.add_artist(ln_l)
+            fig.add_artist(ln_r)
+
+        # --- Inter-cell gutter midlines (lime) ---
+        # Group bboxes by row (y-center) and column (x-center) to find gutter
+        # midlines between adjacent cells.
+        x_centers = sorted({round((b.x0 + b.x1) / 2.0, 4) for b in axes_bboxes})
+        y_centers = sorted({round((b.y0 + b.y1) / 2.0, 4) for b in axes_bboxes})
+        # Vertical gutter midlines: between adjacent column centers, find the
+        # midpoint of (right edge of left cell, left edge of right cell).
+        for i in range(len(x_centers) - 1):
+            left = max(
+                b.x1 for b in axes_bboxes
+                if round((b.x0 + b.x1) / 2.0, 4) == x_centers[i]
+            )
+            right = min(
+                b.x0 for b in axes_bboxes
+                if round((b.x0 + b.x1) / 2.0, 4) == x_centers[i + 1]
+            )
+            mid = (left + right) / 2.0
+            vline(mid, "#22ff88", None)
+        # Horizontal gutter midlines: between adjacent row centers.
+        for j in range(len(y_centers) - 1):
+            bot = max(
+                b.y1 for b in axes_bboxes
+                if round((b.y0 + b.y1) / 2.0, 4) == y_centers[j]
+            )
+            top = min(
+                b.y0 for b in axes_bboxes
+                if round((b.y0 + b.y1) / 2.0, 4) == y_centers[j + 1]
+            )
+            mid = (bot + top) / 2.0
+            hline(mid, "#22ff88", None)
 
     def _install_master_clock(self) -> None:
         """Create a single FuncAnimation that ticks every DynamicPanel in this

@@ -71,11 +71,11 @@ DEFAULT_TITLE_Y            = 1.04
 # Extra figure-bottom pad reserved when any panel has a subtitle, so the
 # below-plot subtitle isn't clipped by Figure.savefig's tight bbox.
 DEFAULT_SUBTITLE_BOTTOM_PAD = 0.08
-DEFAULT_TICK_LABEL_SIZE    = 16
+DEFAULT_TICK_LABEL_SIZE    = 18
 DEFAULT_AXIS_LABEL_SIZE    = 17
 # Tick mark dimensions (matplotlib defaults are ~3.5pt length, ~0.8pt width)
-DEFAULT_TICK_LENGTH        = 6.0
-DEFAULT_TICK_WIDTH         = 1.2
+DEFAULT_TICK_LENGTH        = 8.0
+DEFAULT_TICK_WIDTH         = 1.5
 DEFAULT_SUPTITLE_FONT_SIZE = 32
 DEFAULT_ROW_LABEL_SIZE     = 16
 
@@ -94,26 +94,39 @@ DEFAULT_HSPACE      = 0.18
 DEFAULT_WSPACE      = 0.04
 DEFAULT_LABEL_RATIO = 0.18
 
-# Outer figure margin in INCHES — applied uniformly to all four sides of the
-# panel grid. Figure.render() converts this to subplots_adjust fractions
-# based on figsize, so the absolute gutter between panels and figure edge
-# is consistent regardless of figure aspect ratio. When a suptitle is set,
-# the top reserve becomes (2 × margin + suptitle text height) so the gap
-# from suptitle-to-panels matches the gap from figure-edge-to-suptitle.
-DEFAULT_MARGIN_INCHES = 0.7
-# Inner gutter between adjacent panel cells, also in INCHES. Figure.compose()
-# converts this to wspace/hspace fractions (relative to unit_inches) so the
-# absolute gap between panels matches the outer margin regardless of cell
-# width/height. Sized to host axis decoration: tick labels (~0.2"), axis
-# label (~0.2"), plus breathing room on each side so labels don't crowd
-# the spines of adjacent panels.
-DEFAULT_GUTTER_INCHES = 1.2
+# THE unitary spacing knob — every cell in the figure has this much padding
+# on all 4 sides (between its cell border and its inner panel spine). Cells
+# tile densely:
+#   - perimeter cells touch the figure edge → perimeter margin = 1 PAD
+#   - adjacent cells share a border at the midpoint of the inter-cell gutter,
+#     so inter-cell gutter = 2 PAD (each adjacent cell contributes 1 PAD)
+# Change this one constant to rescale every padding in the figure.
+DEFAULT_PAD_INCHES = 1.0
+
+# Derived: perimeter cell's outer padding = 1 PAD = the figure margin.
+DEFAULT_MARGIN_INCHES = DEFAULT_PAD_INCHES
+# Derived: inter-cell gutter = two cells × 1 PAD per cell = 2 PAD.
+# Rows and columns share the same gutter unit — uniform spacing.
+DEFAULT_GUTTER_INCHES = 2.0 * DEFAULT_PAD_INCHES
+DEFAULT_COLUMN_GUTTER_INCHES = 2.0 * DEFAULT_PAD_INCHES
+# Reserved title band sitting above the axes spine. Title text V-centers
+# inside this band, so a larger value pushes the title higher above the
+# spine and gives more breathing room between title and content.
+DEFAULT_PANEL_TITLE_RESERVE_INCHES = 0.8
+# Legacy constant retained for any caller that still reads it; not used by
+# the current Figure.compose layout math.
+DEFAULT_AXIS_LABEL_RESERVE_INCHES = 0.75
+# Inner gutter for CompositePanel's nested gridspec. Composite inner cells are
+# physically smaller than top-level cells (they share one outer cell), so the
+# outer gutter would eat too much of the inner real estate. 0.6" is enough to
+# host axis decoration on tightly-stacked inner panels.
+DEFAULT_INNER_GUTTER_INCHES = 0.6
 
 # ============================================================
 # VECTOR-AXES DECORATION
 # ============================================================
 DEFAULT_VECTOR_LABEL_OFFSET = 0.30
-DEFAULT_VECTOR_LIM          = 1.25
+DEFAULT_VECTOR_LIM          = 4.0
 DEFAULT_AXIS_GRID_COLOR     = "white"
 DEFAULT_AXIS_GRID_ALPHA     = 0.08
 DEFAULT_AXIS_GRID_LINEWIDTH = 0.5

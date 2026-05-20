@@ -93,11 +93,23 @@ class Panel(ABC):
             return
 
         if title is not None:
-            ax.set_title(
-                title,
+            # Title V-centered in the space above the spine. Uses a fixed
+            # title-band height (DEFAULT_PANEL_TITLE_RESERVE_INCHES) and
+            # divides by the actual axes height so composite inner cells
+            # center the same way as full-size cells.
+            bbox = ax.get_position()
+            fig_h_in = ax.figure.get_size_inches()[1]
+            axes_h_in = max(bbox.height * fig_h_in, 0.1)
+            title_band_in = style.DEFAULT_PANEL_TITLE_RESERVE_INCHES
+            y_axes = 1.0 + (title_band_in / 2.0) / axes_h_in
+            text_fn = ax.text2D if hasattr(ax, "get_zlim") else ax.text
+            text_fn(
+                0.5, y_axes, title,
+                transform=ax.transAxes,
+                ha="center", va="center",
                 fontsize=style.DEFAULT_TITLE_FONT_SIZE,
+                fontweight="bold",
                 color=style.TICK_LABEL_COLOR,
-                y=style.DEFAULT_TITLE_Y,
             )
 
         if subtitle is not None:
@@ -109,4 +121,5 @@ class Panel(ABC):
                 fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
                 color=style.TICK_LABEL_COLOR,
                 style="italic",
+                fontweight="bold",
             )

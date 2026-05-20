@@ -49,6 +49,7 @@ class StaticPanel3D(Panel):
         subtitle: str | None = None,
         show_spines: bool = True,
         show_border: bool = True,
+        spine_extension: float = 1.0,
     ) -> None:
         super().__init__(units=units)
         self.lim_3d = float(lim_3d)
@@ -57,6 +58,11 @@ class StaticPanel3D(Panel):
         self.subtitle = subtitle
         self.show_spines = show_spines
         self.show_border = show_border
+        # Multiplier on lim_3d for the visible spine length and label position.
+        # 1.0 = spines end at the visible cube faces (±lim_3d). >1 lets spines
+        # extend past the cube so they reach the panel border instead of the
+        # cube interior, giving a more decisive "axes through the box" look.
+        self.spine_extension = float(spine_extension)
 
     def render(self) -> None:
         if self.ax is None:
@@ -72,6 +78,10 @@ class StaticPanel3D(Panel):
         ax.set_ylim(-lim, lim)
         ax.set_zlim(-lim, lim)
         ax.view_init(elev=self.view_init[0], azim=self.view_init[1])
+        # Zoom the 3D scene so the visible cube fills more of the axes bbox.
+        # mpl's default leaves a noticeable interior margin around the cube;
+        # zoom > 1 pushes the cube outward toward the panel border.
+        ax.set_box_aspect((1, 1, 1), zoom=1.55)
 
         if self.show_spines:
             self._draw_spines(ax)
@@ -104,9 +114,11 @@ class StaticPanel3D(Panel):
 
         Uses the polymorphic Vector Plottable with 3-tuples (D-02). Each
         spine is rendered as two Vectors (one positive direction, one
-        negative) so the origin sits in the middle.
+        negative) so the origin sits in the middle. Spine length =
+        ``lim_3d * spine_extension`` so spines can reach past the visible
+        cube into the panel border area.
         """
-        lim = self.lim_3d
+        lim = self.lim_3d * self.spine_extension
         spine_kwargs = dict(
             color=style.SPINE_COLOR,
             linewidth=style.DEFAULT_VECTOR_LINEWIDTH,
@@ -124,15 +136,21 @@ class StaticPanel3D(Panel):
         Vector((0.0, 0.0, -lim), origin=(0.0, 0.0, 0.0), **spine_kwargs).draw(ax)
 
     def _draw_axis_labels(self, ax) -> None:
-        """Italic x / y / z labels at the positive spine tips."""
-        lim = self.lim_3d
-        pad = lim * 0.05
+        """Italic x / y / z labels anchored inside the visible cube at 92% of
+        lim_3d (matches the 2D StaticPanel's 0.92 factor) so they sit next to
+        the spine tips without flying off the projected panel area.
+        """
+        label_at = self.lim_3d * 0.92
+        offset = self.lim_3d * 0.08
         label_kwargs = dict(
-            color=style.SPINE_COLOR,
+            color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE + 2,
             fontweight="bold",
             fontstyle="italic",
         )
-        ax.text(lim + pad, 0.0, 0.0, "x", ha="left", va="center", **label_kwargs)
-        ax.text(0.0, lim + pad, 0.0, "y", ha="left", va="center", **label_kwargs)
-        ax.text(0.0, 0.0, lim + pad, "z", ha="center", va="bottom", **label_kwargs)
+        ax.text(label_at, -offset, 0.0, "x",
+                ha="center", va="top", **label_kwargs)
+        ax.text(-offset, label_at, 0.0, "y",
+                ha="right", va="center", **label_kwargs)
+        ax.text(-offset, 0.0, label_at, "z",
+                ha="right", va="center", **label_kwargs)

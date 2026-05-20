@@ -25,6 +25,7 @@ class VectorComponents(Plottable):
                  vec,
                  *,
                  first_axis: str = "x",
+                 from_origin: bool = False,
                  show_droplines: bool = True,
                  component_color: str | None = None,
                  dropline_color: str | None = None,
@@ -51,6 +52,7 @@ class VectorComponents(Plottable):
         )
         self.vec = vec_t
         self.first_axis = first_axis
+        self.from_origin = from_origin
         self.show_droplines = show_droplines
         self.component_color = component_color
         self.dropline_color = dropline_color
@@ -70,7 +72,11 @@ class VectorComponents(Plottable):
 
         x_comp = (vx, 0.0)
         y_comp = (0.0, vy)
-        if self.first_axis == "x":
+        if self.from_origin:
+            # Both components emanate from origin, landing ON the axes.
+            first_vec, first_origin = x_comp, (0.0, 0.0)
+            second_vec, second_origin = y_comp, (0.0, 0.0)
+        elif self.first_axis == "x":
             first_vec, first_origin = x_comp, (0.0, 0.0)
             second_vec, second_origin = y_comp, (vx, 0.0)
         else:
@@ -95,22 +101,19 @@ class VectorComponents(Plottable):
         ).draw(ax)
 
         if self.show_droplines:
-            ax.plot(
-                [vx, vx], [vy, 0.0],
-                color=dropline_color,
-                alpha=style.DEFAULT_DROPLINE_ALPHA,
+            # Droplines are subordinate to the bold vector + dashed components,
+            # so they're thinner and a darker gray than the components — closer
+            # to the panel background so they read as a quiet "construction
+            # line" not a primary decoration.
+            dropline_kwargs = dict(
+                color=style.SPINE_COLOR,
+                alpha=self.alpha,
                 linewidth=style.DEFAULT_DROPLINE_LINEWIDTH,
-                linestyle=style.DEFAULT_DROPLINE_LINESTYLE,
+                linestyle="--",
                 zorder=self.zorder - 1,
             )
-            ax.plot(
-                [vx, 0.0], [vy, vy],
-                color=dropline_color,
-                alpha=style.DEFAULT_DROPLINE_ALPHA,
-                linewidth=style.DEFAULT_DROPLINE_LINEWIDTH,
-                linestyle=style.DEFAULT_DROPLINE_LINESTYLE,
-                zorder=self.zorder - 1,
-            )
+            ax.plot([vx, vx], [vy, 0.0], **dropline_kwargs)
+            ax.plot([vx, 0.0], [vy, vy], **dropline_kwargs)
 
         if self.label_x is not None:
             ax.text(
@@ -122,11 +125,21 @@ class VectorComponents(Plottable):
                 zorder=self.zorder + 1,
             )
         if self.label_y is not None:
+            # When from_origin, the y-component sits ON the y-axis (x=0), so
+            # the label anchors to the LEFT of that vertical line. In the
+            # staircase mode, it anchors to the RIGHT of the y-component
+            # (which lives at x=vx in that mode).
+            if self.from_origin:
+                label_x = -0.20
+                ha = "right"
+            else:
+                label_x = vx + 0.08
+                ha = "left"
             ax.text(
-                vx + 0.08, vy / 2.0, self.label_y,
+                label_x, vy / 2.0, self.label_y,
                 color=component_color,
                 fontsize=style.DEFAULT_LABEL_FONT_SIZE,
                 fontweight="bold",
-                ha="left", va="center",
+                ha=ha, va="center",
                 zorder=self.zorder + 1,
             )

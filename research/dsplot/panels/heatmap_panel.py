@@ -73,15 +73,21 @@ def _apply_axis_decoration(
     if yticks is not None:
         ax.set_yticks(list(yticks))
         ax.tick_params(axis="y", **tick_kwargs)
+    # Modest pad in points between tick labels and axis label — enough to
+    # visually separate them without blowing up the gutter into a full
+    # outer-margin unit. The outer perimeter handles the breathing-to-edge.
+    labelpad_pts = 12.0
     if x_label is not None:
         ax.set_xlabel(
             x_label,
             color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
+            labelpad=labelpad_pts,
         )
     if y_label is not None:
         ax.set_ylabel(
             y_label,
             color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
+            labelpad=labelpad_pts,
         )

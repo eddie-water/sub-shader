@@ -31,6 +31,9 @@ class CompositePanel(Panel):
         *,
         rows: List[List[Panel]],
         units: Tuple[int, int],
+        title: Optional[str] = None,
+        subtitle: Optional[str] = None,
+        share_x: bool = False,
         hspace: Optional[float] = None,
         wspace: Optional[float] = None,
     ) -> None:
@@ -51,8 +54,26 @@ class CompositePanel(Panel):
             raise ValueError(f"CompositePanel row widths mismatch: {widths}")
 
         self.rows = rows
+        self.title = title
+        self.subtitle = subtitle
+        self.share_x = share_x
         self.hspace = hspace
         self.wspace = wspace
+
+        if share_x:
+            # Vertically stacked panels share a time/x axis — strip x decoration
+            # from every row except the last so only the bottom row carries
+            # xtick labels + xlabel. Done at construction so the children render
+            # without ever drawing the suppressed decoration.
+            last_row_idx = len(rows) - 1
+            for r_idx, row in enumerate(rows):
+                if r_idx == last_row_idx:
+                    continue
+                for p in row:
+                    if hasattr(p, "x_label"):
+                        p.x_label = None
+                    if hasattr(p, "xticks"):
+                        p.xticks = None
 
     def render(self) -> None:
         if self.ax is None:
@@ -61,16 +82,36 @@ class CompositePanel(Panel):
         # Local import avoids module-level cycle through panels/__init__.py.
         from .static_panel_3d import StaticPanel3D
 
-        self.ax.set_visible(False)
+        # Keep outer ax around so its set_title carries the composite title;
+        # strip its body chrome so it doesn't draw a competing background.
+        self.ax.set_xticks([])
+        self.ax.set_yticks([])
+        for spine in self.ax.spines.values():
+            spine.set_visible(False)
+        self.ax.patch.set_alpha(0.0)
+
+        self._render_chrome_titles()
 
         n_rows = len(self.rows)
         n_cols = sum(p.units[0] for p in self.rows[0])
 
+        # Convert the figure-wide inch-based gutter into matplotlib gridspec
+        # fractions for THIS composite's inner cells: gap = gutter_inches /
+        # inner_cell_inches, so absolute gap matches the outer grid regardless
+        # of how the composite was sized.
+        fig_w_in, fig_h_in = self.ax.figure.get_size_inches()
+        bbox = self.ax.get_position()
+        inner_cell_w = (bbox.width * fig_w_in) / n_cols
+        inner_cell_h = (bbox.height * fig_h_in) / n_rows
+        gutter_in = style.DEFAULT_INNER_GUTTER_INCHES
+        derived_hspace = gutter_in / inner_cell_h if inner_cell_h > 0 else style.DEFAULT_HSPACE
+        derived_wspace = gutter_in / inner_cell_w if inner_cell_w > 0 else style.DEFAULT_WSPACE
+
         subgs = self.ax.get_subplotspec().subgridspec(
             n_rows,
             n_cols,
-            hspace=self.hspace if self.hspace is not None else style.DEFAULT_HSPACE,
-            wspace=self.wspace if self.wspace is not None else style.DEFAULT_WSPACE,
+            hspace=self.hspace if self.hspace is not None else derived_hspace,
+            wspace=self.wspace if self.wspace is not None else derived_wspace,
         )
 
         mpl_fig = self.ax.figure
@@ -90,3 +131,12 @@ class CompositePanel(Panel):
                         spine.set_linewidth(style.DEFAULT_SPINE_LINEWIDTH)
                 child.attach(child_ax)
                 child.render()
+                if self.share_x and r != n_rows - 1 and projection is None:
+                    # Suppress matplotlib's auto-drawn x ticks/labels on every
+                    # row except the last, even if the child Panel did not set
+                    # xticks itself — share_x means the bottom row owns x.
+                    child_ax.tick_params(
+                        axis="x", which="both",
+                        bottom=False, labelbottom=False,
+                    )
+                    child_ax.set_xlabel("")
