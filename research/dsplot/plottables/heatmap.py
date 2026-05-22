@@ -47,6 +47,7 @@ class Heatmap(Plottable):
         vmin: float = 0.0,
         vmax: float | None = None,
         vmax_percentile: float | None = None,
+        alpha: float = 1.0,
         origin: str = "lower",
         aspect: str = "auto",
         extent: tuple[float, float, float, float] | None = None,
@@ -55,7 +56,7 @@ class Heatmap(Plottable):
         super().__init__(
             color=None,
             linewidth=None,
-            alpha=1.0,
+            alpha=alpha,
             linestyle="-",
             label=None,
             zorder=zorder,
@@ -102,6 +103,7 @@ class Heatmap(Plottable):
             extent=extent,
             vmin=self.vmin,
             vmax=vmax,
+            alpha=self.alpha,
             zorder=self.zorder,
         )
 

@@ -5,6 +5,19 @@ Overrides `render()` to drive the axes lim from the contained Heatmap's
 extent so the field fills the cell. Optional `x_label`, `y_label`, `xticks`,
 `yticks` kwargs populate axis labels and tick marks at the cell edges; tick
 labels and axis labels land in the surrounding gutter.
+
+**Line overlays on HeatmapPanel:** A `Line` plottable added via
+`panel.add(Line(...))` draws onto the panel's primary axis, which is in
+HEATMAP COORDINATE SPACE — i.e. x is duration (seconds, or whatever
+`Heatmap.extent`'s x-range is) and y is BIN INDEX (0 to `len(freqs)`),
+NOT Hz. Callers overlaying a frequency-domain curve (e.g. instantaneous
+frequency in Hz) must pre-transform the y-values into bin-space before
+constructing the Line, typically via
+`np.interp(inst_freq_hz, freqs, np.arange(len(freqs)))`. HeatmapPanel does
+NOT support a twin y-axis — overlays share the primary axis only. See
+`dsplot/figures/figure_1.py::_build_3row_figure` for the canonical pattern
+(twin-axis Line on row 1's TimeSeriesPanel; primary-axis Line overlays
+available on rows 2/3's HeatmapPanels via the bin-space transform).
 """
 from __future__ import annotations
 

@@ -39,6 +39,7 @@ from .panels import (
     Panel,
     StaticPanel,
     StaticPanel3D,
+    SuptitlePanel,
     TextPanel,
     TimeSeriesPanel,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "HeatmapPanel",
     "CompositePanel",
     "TextPanel",
+    "SuptitlePanel",
     "Figure",
     "apply_jupyter_dark",
 ]

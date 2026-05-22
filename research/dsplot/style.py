@@ -93,6 +93,13 @@ DEFAULT_TICK_WIDTH         = 1.5
 # clear DEFAULT_TICK_LABEL_SIZE tick labels (e.g. "20k" at 22pt is ~0.5" wide).
 DEFAULT_AXIS_LABEL_INSET_INCHES = 0.8
 DEFAULT_SUPTITLE_FONT_SIZE = 32
+# SUPTITLE_* family — sibling constants for SuptitlePanel (mirrors TITLE_*
+# pattern). Defaults preserve the legacy `_mpl_fig.suptitle(...)` rendering
+# contract bit-identically; `DEFAULT_SUPTITLE_FONT_SIZE` is left intact
+# because `figure.py` still reads it in the legacy sugar path.
+SUPTITLE_FONT_SIZE = DEFAULT_SUPTITLE_FONT_SIZE  # 32
+SUPTITLE_COLOR     = TICK_LABEL_COLOR             # "#888888"
+SUPTITLE_WEIGHT    = "bold"
 DEFAULT_ROW_LABEL_SIZE     = 16
 
 # ============================================================
