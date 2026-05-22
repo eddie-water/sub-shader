@@ -329,6 +329,117 @@ def build_waypoint_chirp(sr: int, duration_s: float,
     return signal.astype(np.float64), inst_freq, t
 
 
+def build_click_plus_tone(
+    sr: int,
+    duration_s: float,
+    tone_hz: float = 60.0,
+    click_t: float = 0.7,
+    click_center_hz: float | None = None,
+    click_duration_s: float = 0.008,
+    click_amp: float = 0.7,
+    tone_amp: float = 1.0,
+    click_seed: int = 0,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Sustained sine tone with a single Gaussian-windowed noise click.
+
+    When ``click_center_hz`` is None (default), the click is a true broadband
+    Gaussian-windowed white-noise impulse — energy at every frequency
+    simultaneously, producing a vertical streak across the full spectrogram.
+    When ``click_center_hz`` is a number, the noise is rectangular-bandpassed
+    to a 2 kHz-wide band around that centre (the "spectrally-centred burst"
+    variant — more like a tone burst than a click).
+
+    The instantaneous frequency curve is constant at ``tone_hz`` (the click is
+    broadband and has no single inst-freq). Render-time callers decide whether
+    to mask the click region.
+
+    Args:
+        sr: Sample rate in Hz.
+        duration_s: Total signal duration in seconds.
+        tone_hz: Sustained tone frequency in Hz.
+        click_t: Time of click centre in seconds.
+        click_center_hz: When None, no bandpass — true broadband click. When
+            numeric, centre frequency of a 2 kHz-wide rectangular bandpass.
+        click_duration_s: Gaussian FWHM of the click envelope in seconds.
+        click_amp: Peak absolute amplitude of the click burst.
+        tone_amp: Amplitude of the sustained sine tone.
+        click_seed: RNG seed for reproducibility.
+
+    Returns:
+        (signal, inst_freq, t) — all 1-D float64 arrays of length
+        ``int(sr * duration_s)``.
+    """
+    n = int(sr * duration_s)
+    t = np.arange(n, dtype=np.float64) / sr
+
+    tone = tone_amp * np.sin(2.0 * np.pi * tone_hz * t)
+
+    rng = np.random.default_rng(click_seed)
+    noise = rng.standard_normal(n).astype(np.float64)
+
+    if click_center_hz is not None:
+        noise_fft = np.fft.rfft(noise)
+        freqs = np.fft.rfftfreq(n, d=1.0 / sr)
+        band_lo = click_center_hz - 1000.0
+        band_hi = click_center_hz + 1000.0
+        mask = (freqs >= band_lo) & (freqs <= band_hi)
+        noise_fft[~mask] = 0.0
+        noise = np.fft.irfft(noise_fft, n=n)
+
+    # Gaussian window centred at click_t with FWHM = click_duration_s.
+    sigma = click_duration_s / 2.3548200450309493  # FWHM → sigma
+    envelope = np.exp(-((t - click_t) ** 2) / (2.0 * sigma ** 2))
+    click_burst = noise * envelope
+
+    peak = np.max(np.abs(click_burst))
+    if peak > 0.0:
+        click_burst = click_burst * (click_amp / peak)
+
+    signal = tone + click_burst
+    inst_freq = np.full(n, tone_hz, dtype=np.float64)
+
+    return signal.astype(np.float64), inst_freq, t
+
+
+def build_low_vibrato(
+    sr: int,
+    duration_s: float,
+    carrier_hz: float = 60.0,
+    depth_hz: float = 20.0,
+    mod_hz: float = 8.0,
+    amp: float = 1.0,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """60 Hz carrier with slow sinusoidal vibrato modulation.
+
+    Instantaneous frequency oscillates as::
+
+        f(t) = carrier_hz + depth_hz * sin(2π · mod_hz · t)
+
+    Phase is computed by integrating the inst-freq curve exactly (cumsum),
+    matching the ``build_waypoint_chirp`` convention.
+
+    Args:
+        sr: Sample rate in Hz.
+        duration_s: Signal duration in seconds.
+        carrier_hz: Centre frequency in Hz.
+        depth_hz: Peak frequency deviation in Hz.
+        mod_hz: Vibrato modulation rate in Hz.
+        amp: Signal amplitude.
+
+    Returns:
+        (signal, inst_freq, t) — all 1-D float64 arrays of length
+        ``int(sr * duration_s)``.
+    """
+    n = int(sr * duration_s)
+    t = np.arange(n, dtype=np.float64) / sr
+
+    inst_freq = (carrier_hz + depth_hz * np.sin(2.0 * np.pi * mod_hz * t)).astype(np.float64)
+    phase = 2.0 * np.pi * np.cumsum(inst_freq) / sr
+    signal = amp * np.sin(phase)
+
+    return signal.astype(np.float64), inst_freq, t
+
+
 def build_bouncing_chirp_chunks(sr, chunk_size, overlap_factor, n_frames,
                                 f_decades=None, bounces_per_decade=3, seed=None):
     """Generate a bouncing chirp pre-sliced into overlapping chunks.

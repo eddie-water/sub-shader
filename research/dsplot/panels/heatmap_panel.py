@@ -73,15 +73,14 @@ def _apply_axis_decoration(
     if yticks is not None:
         ax.set_yticks(list(yticks))
         ax.tick_params(axis="y", **tick_kwargs)
-    # Axis labels are forced to sit at PAD/2 from the spine (midway between
-    # the inner panel and the cell border) via set_label_coords, so the
-    # label position is independent of tick label widths. labelpad is left
+    # Axis labels sit ``DEFAULT_AXIS_LABEL_INSET_INCHES`` from the spine via
+    # set_label_coords — independent of tick label widths. labelpad is left
     # at matplotlib's default since set_label_coords overrides it anyway.
     fig_w_in, fig_h_in = ax.figure.get_size_inches()
     bbox = ax.get_position()
     axes_w_in = max(bbox.width * fig_w_in, 0.1)
     axes_h_in = max(bbox.height * fig_h_in, 0.1)
-    half_pad_in = style.DEFAULT_GUTTER_INCHES / 4.0  # = PAD / 2
+    half_pad_in = style.DEFAULT_AXIS_LABEL_INSET_INCHES
 
     if x_label is not None:
         ax.set_xlabel(

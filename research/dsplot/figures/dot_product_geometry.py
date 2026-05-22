@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 
-from dsplot import Annotation, Figure, StaticPanel, Vector, style
+from .. import Annotation, Figure, StaticPanel, Vector, style
 
 
 _PANELS = [

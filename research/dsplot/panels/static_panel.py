@@ -31,6 +31,7 @@ class StaticPanel(Panel):
         units: Optional[Tuple[int, int]] = None,
         title: Optional[str] = None,
         subtitle: Optional[str] = None,
+        caption: Optional[str] = None,
         lim: Optional[Union[float, Tuple[float, float]]] = None,
         axis_style: str = "line",
         axis_labels: bool = False,
@@ -42,6 +43,7 @@ class StaticPanel(Panel):
         super().__init__(units=units)
         self.title = title
         self.subtitle = subtitle
+        self.caption = caption
         self.lim = lim
         self.axis_style = axis_style
         self.axis_labels = axis_labels

@@ -10,7 +10,7 @@ import os
 import numpy as np
 from scipy.signal import chirp
 
-from dsplot import (
+from .. import (
     CompositePanel,
     Figure,
     Heatmap,

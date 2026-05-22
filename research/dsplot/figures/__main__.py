@@ -1,13 +1,13 @@
 """``python -m research.dsplot.figures`` — regenerate all DSP.md figures.
 
 Output convention:
-  - Default mode (no ``--suffix``): overwrites the canonical filenames at
-    ``assets/images/dsp/<name>.png``. This is the "drop-in replacement"
-    mode the orchestrator uses post-merge.
+  - Default mode (no ``--suffix``): writes the canonical filenames into
+    per-family subdirs under ``assets/images/dsp/figures/<family>/<name>.png``.
+    This is the "drop-in replacement" mode the orchestrator uses post-merge.
   - ``--suffix _09_05`` (or any string): writes to
-    ``assets/images/dsp/<stem>_09_05.png`` so the new render coexists
-    with the original for visual diff. This is the executor mode used
-    during plan 09-05 to keep originals available for review.
+    ``assets/images/dsp/figures/<family>/<stem>_09_05.png`` so the new render
+    coexists with the original for visual diff. This is the executor mode
+    used during plan 09-05 to keep originals available for review.
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ if _RESEARCH_DIR not in sys.path:
     sys.path.insert(0, _RESEARCH_DIR)
 
 _OUT_DIR = os.path.abspath(
-    os.path.join(_RESEARCH_DIR, "..", "assets", "images", "dsp")
+    os.path.join(_RESEARCH_DIR, "..", "assets", "images", "figures")
 )
 
 
@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--out",
         default=_OUT_DIR,
-        help="Output directory (default: assets/images/dsp/).",
+        help="Output directory (default: assets/images/dsp/figures/).",
     )
     args = parser.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
@@ -66,40 +66,44 @@ def main(argv: list[str] | None = None) -> int:
         vector_projection_3d,
     )
 
+    # All outputs land under args.out (= assets/images/dsp/figures/) with a
+    # per-family subdir prefix in the filename. os.path.join naturally
+    # produces assets/images/dsp/figures/<family>/<name>.png. Subdirs are
+    # pre-created in the working tree (qbo-260521 Task 1); makedirs in
+    # render() ensures the top-level args.out exists.
     paths: list[str] = []
     paths.append(vector_basics.render(
-        args.out, _with_suffix("vector_basics.png", args.suffix)
+        args.out, _with_suffix("vector_basics/baseline.png", args.suffix)
     ))
     paths.append(dot_product_geometry.render(
-        args.out, _with_suffix("dot_product_geometry.png", args.suffix)
+        args.out, _with_suffix("dot_product/geometry.png", args.suffix)
     ))
     paths.append(components_recombine.render(
         args.out,
-        _with_suffix("components_recombine_either_order_v18.png", args.suffix),
+        _with_suffix("components_recombine/either_order_v19.png", args.suffix),
     ))
     paths.append(components_recombine.render_vector_xy_reconstruction(
         args.out,
-        _with_suffix("vector_xy_reconstruction.png", args.suffix),
+        _with_suffix("vector_xy_reconstruction/baseline.png", args.suffix),
     ))
     paths.append(projection_reconstruction.render(
         args.out,
-        _with_suffix("projection_reconstruction_either_order_v9.png", args.suffix),
+        _with_suffix("projection_reconstruction/either_order_v9.png", args.suffix),
     ))
     paths.append(vector_projection_3d.render(
         args.out,
-        _with_suffix("vector_projection_3d_v2_combo5_palette.png", args.suffix),
+        _with_suffix("vector_projection_3d/v2_combo5_palette.png", args.suffix),
     ))
 
-    # Motivator figures land in assets/images/generated/ by canonical
-    # convention (they're DSP.md hero figures, not foundation diagrams).
+    # Motivator figures live under assets/images/dsp/figures/motivator/.
     motivator_out = os.path.abspath(
-        os.path.join(_RESEARCH_DIR, "..", "assets", "images", "generated")
+        os.path.join(_RESEARCH_DIR, "..", "assets", "images", "figures", "motivator")
     )
     paths.extend(motivator.render_all(motivator_out, suffix=args.suffix))
 
     paths.append(alignment_diagnostic.render(
-        motivator_out,
-        _with_suffix("dsp_alignment_diagnostic.png", args.suffix),
+        args.out,
+        _with_suffix("alignment_diagnostic/baseline.png", args.suffix),
     ))
 
     for p in paths:

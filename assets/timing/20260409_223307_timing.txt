@@ -1,0 +1,22 @@
+============================================================
+SubShader Pipeline Timing Report
+============================================================
+Date:    2026-04-09 22:33:07
+Audio:   assets/audio/reference/beltran_sc_rip.wav
+Frames:  128
+Backend: GpuCWT (GPU)
+
+Stage                     Mean (ms)    Std (ms)    % Total
+-----------------------------------------------------------
+Audio: get_chunk               0.15        0.04       2.0%
+DSP: raw_cwt                   6.11        6.66      82.5%
+DSP: normalize                 0.00        0.00       0.0%
+DSP: magnitude                 0.65        0.28       8.7%
+DSP: edge_trim                 0.00        0.00       0.1%
+DSP: hop_center                0.01        0.01       0.1%
+DSP: downsample                0.10        0.02       1.4%
+Renderer: push_frame           0.39        0.06       5.3%
+-----------------------------------------------------------
+Total per frame                7.41        7.08    100.0%
+Theoretical FPS               134.9
+============================================================

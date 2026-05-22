@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import os
 
-from dsplot import Annotation, Figure, Vector, style
-from dsplot.panels import StaticPanel3D
+from .. import Annotation, Figure, Vector, style
+from ..panels import StaticPanel3D
 
 from .foundation_constants import A, A_Z, FOUND_LIM
 

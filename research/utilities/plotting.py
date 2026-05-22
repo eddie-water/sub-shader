@@ -576,11 +576,16 @@ def compute_full_cwt(signal, sr, *,
     the signal. Lower `num_cycles` to trade frequency resolution for time
     resolution at the low end.
     """
-    from subshader.config import get_default_config
+    from subshader.config import CWTConfig
     from subshader.dsp.cwt import GpuCWT
     from subshader.renderer.frame_buffer import CircularFrameBuffer
 
-    config = get_default_config()
+    # Bypass get_default_config() to skip its audio-file existence check —
+    # figure generation doesn't load any audio file. The dataclass default
+    # field values are all we need for the CWT parameters (chunk_size,
+    # root_note_hz, num_octaves, num_cycles, overlap_factor), and the caller
+    # overrides each one below where it's been explicitly passed.
+    config = CWTConfig()
     if root_note_hz is not None:
         config.root_note_hz = root_note_hz
     if num_octaves is not None:

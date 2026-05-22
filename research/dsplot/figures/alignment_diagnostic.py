@@ -19,7 +19,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from dsplot import style
+from .. import style
 from utilities import (
     compute_full_cwt,
     create_grid_scaffold,

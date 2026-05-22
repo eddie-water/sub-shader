@@ -54,6 +54,7 @@ class InteractivePanel(Panel):
         checkbox: Optional[Tuple[str, Callable[[bool], None]]] = None,
         title: Optional[str] = None,
         subtitle: Optional[str] = None,
+        caption: Optional[str] = None,
         lim: Optional[Union[float, Tuple[float, float]]] = None,
         axis_style: str = "line",
         axis_labels: bool = False,
@@ -71,6 +72,7 @@ class InteractivePanel(Panel):
 
         self.title = title
         self.subtitle = subtitle
+        self.caption = caption
         self.lim = lim
         self.axis_style = axis_style
         self.axis_labels = axis_labels

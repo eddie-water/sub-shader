@@ -1,0 +1,43 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "4e7d6776",
+   "metadata": {},
+   "source": [
+    "### 2.4 Vector Projection - The Geometric Interpretation\n",
+    "\n",
+    "#### 2.4.1 Projection onto a Reference Direction\n",
+    "\n",
+    "- A **vector** can be thought of as an **arrow** described by two of its properties\n",
+    "  - **magnitude** - how long it is \n",
+    "  - **direction** - where it points\n",
+    "\n",
+    "- To decompose a vector into its basic components, we **project it along the directions** of all the dimensions it exists in - think of it like the vector casting its **\"shadow\"** onto the x and y reference axes - this is how we break the vector down into its x and y components\n",
+    "\n",
+    "- The **length** of each \"shadow\" *is* its **component** for that dimension and reveals how much each dimension **contributes** to the original vector as a whole - we designate these \"shadows\" as the vector's **basic components** since they \n",
+    "  - **Can be combined in any order** to reconstruct the original - when rebuilding them tip-to-tail, if you start with x first and then y, or y first then x, regardlessly, you still end up with the original  \n",
+    "  - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component does not affect, and goes completely unnoticed by the y component"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "7ab635e8",
+   "metadata": {
+    "vscode": {
+     "languageId": "plaintext"
+    }
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

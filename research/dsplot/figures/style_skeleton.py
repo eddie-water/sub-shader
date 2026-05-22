@@ -9,7 +9,7 @@ import os
 
 import numpy as np
 
-from dsplot import (
+from .. import (
     Annotation,
     Dropline,
     DynamicPanel,

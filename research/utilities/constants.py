@@ -35,11 +35,11 @@ AUDIO_COMPARISON_3 = AUDIO_BELTRAN_4BAR
 # =============================================================================
 
 # Reference images — curated comparisons, not test suite outputs
-DAW_IMAGE_BOUNCING_CHIRP_EDISON = "assets/images/figures/bouncing_chirp_edison.png"
-DAW_IMAGE_MIDI_SINE_WAVES_EDISON = "assets/images/figures/midi_sine_wave_edison.png"
+DAW_IMAGE_BOUNCING_CHIRP_EDISON = "assets/images/dsp/figures/bouncing_chirp_edison.png"
+DAW_IMAGE_MIDI_SINE_WAVES_EDISON = "assets/images/dsp/figures/midi_sine_wave_edison.png"
 DAW_IMAGE_BELTRAN_16BAR_EDISON = "assets/images/generated/beltran_sc_rip_16_bar.png"
 DAW_IMAGE_BELTRAN_8BAR_EDISON = "assets/images/diagnostics/beltran_sc_rip_8_bar.png"
-DAW_IMAGE_BELTRAN_4BAR_EDISON = "assets/images/figures/beltran_sc_rip_4_bar_edison.png"
+DAW_IMAGE_BELTRAN_4BAR_EDISON = "assets/images/dsp/figures/beltran_sc_rip_4_bar_edison.png"
 
 # Comparison Figure Reference Images
 DAW_IMAGE_COMPARISON_1 = DAW_IMAGE_BOUNCING_CHIRP_EDISON

@@ -47,6 +47,7 @@ class StaticPanel3D(Panel):
         view_init: Tuple[float, float] = (30.0, -60.0),
         title: str | None = None,
         subtitle: str | None = None,
+        caption: str | None = None,
         show_spines: bool = True,
         show_border: bool = True,
         spine_extension: float = 1.0,
@@ -56,6 +57,7 @@ class StaticPanel3D(Panel):
         self.view_init = (float(view_init[0]), float(view_init[1]))
         self.title = title
         self.subtitle = subtitle
+        self.caption = caption
         self.show_spines = show_spines
         self.show_border = show_border
         # Multiplier on lim_3d for the visible spine length and label position.

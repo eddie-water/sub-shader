@@ -7,15 +7,15 @@ Run as:
 Produces three PNGs in ``assets/images/dsp/style_override_demo/``:
 
   * ``default_palette.png``   — baseline, uses the inherited dsplot.style template.
-  * ``global_override.png``   — Mode 1 (D-05): reassigns ``dsplot.style.PRIMARY_COLOR``
+  * ``global_override.png``   — Mode 1 (D-05): reassigns ``style.PRIMARY_COLOR``
                                  etc. Affects every figure rendered after.
   * ``local_override.png``    — Mode 2 (D-05): a single figure module defines its
                                  own module-local constants (``MY_PRIMARY`` etc.)
-                                 and passes them to the renderer. ``dsplot.style.*``
+                                 and passes them to the renderer. ``style.*``
                                  is NOT touched, so other figures keep the inherited
                                  default.
 
-After the demo runs ``main()`` asserts that ``dsplot.style.PRIMARY_COLOR`` equals
+After the demo runs ``main()`` asserts that ``style.PRIMARY_COLOR`` equals
 its original default (proves the global reassignment was reversed in finally
 AND the local override never touched the global).
 
@@ -34,22 +34,18 @@ This demo is consumer code, not library code — it lives at
 from __future__ import annotations
 
 import os
-import sys
 
 import matplotlib
 
 matplotlib.use("Agg")
 
-# Ensure ``import dsplot`` works regardless of cwd: insert research/ on path.
-# Mirrors research/dsplot/figures/__main__.py's bootstrap so this demo can be
-# invoked as ``python -m research.dsplot.figures.style_override_demo`` from
-# the repo root (the canonical invocation pattern).
-_RESEARCH_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if _RESEARCH_DIR not in sys.path:
-    sys.path.insert(0, _RESEARCH_DIR)
-
-import dsplot  # noqa: E402  — must come after sys.path bootstrap
-from dsplot import Figure, StaticPanel, Vector, style  # noqa: E402
+# Invoked as ``python -m research.dsplot.figures.style_override_demo`` from the
+# repo root — the package context lets relative imports resolve without any
+# sys.path bootstrap (qbo-260521: dropped the absolute import + bootstrap).
+# `style` is the module object itself; assigning `style.PRIMARY_COLOR = ...`
+# below mutates the shared module attribute, which is what Mode 1 (global
+# override) demonstrates.
+from .. import Figure, StaticPanel, Vector, style
 
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -100,18 +96,18 @@ def _render_one(filename: str,
 
 
 def _render_global_default(filename: str) -> str:
-    """Render using the CURRENT ``dsplot.style.*`` values.
+    """Render using the CURRENT ``style.*`` values.
 
     A normal figure module would do exactly this: read the template defaults at
     render time. We expose it as its own helper so the demo can call it before
-    AND after reassigning ``dsplot.style.PRIMARY_COLOR`` and observe the
+    AND after reassigning ``style.PRIMARY_COLOR`` and observe the
     difference.
     """
     return _render_one(
         filename,
-        dsplot.style.PRIMARY_COLOR,
-        dsplot.style.SECONDARY_COLOR,
-        dsplot.style.TERTIARY_COLOR,
+        style.PRIMARY_COLOR,
+        style.SECONDARY_COLOR,
+        style.TERTIARY_COLOR,
     )
 
 
@@ -121,27 +117,27 @@ def main() -> int:
     # ------ Baseline ------
     default_path = _render_global_default("default_palette.png")
 
-    original_primary   = dsplot.style.PRIMARY_COLOR
-    original_secondary = dsplot.style.SECONDARY_COLOR
-    original_tertiary  = dsplot.style.TERTIARY_COLOR
+    original_primary   = style.PRIMARY_COLOR
+    original_secondary = style.SECONDARY_COLOR
+    original_tertiary  = style.TERTIARY_COLOR
 
     try:
         # ------ Mode 1: GLOBAL reassignment (per D-05) ------
-        # Reassigning dsplot.style.* affects every figure rendered after.
-        dsplot.style.PRIMARY_COLOR   = "#22c55e"  # green
-        dsplot.style.SECONDARY_COLOR = "#ec4899"  # pink
-        dsplot.style.TERTIARY_COLOR  = "#06b6d4"  # cyan
+        # Reassigning style.* affects every figure rendered after.
+        style.PRIMARY_COLOR   = "#22c55e"  # green
+        style.SECONDARY_COLOR = "#ec4899"  # pink
+        style.TERTIARY_COLOR  = "#06b6d4"  # cyan
         global_path = _render_global_default("global_override.png")
 
         # Restore originals before demonstrating the local-override mode so the
         # local demo's "global is untouched" assertion is meaningful.
-        dsplot.style.PRIMARY_COLOR   = original_primary
-        dsplot.style.SECONDARY_COLOR = original_secondary
-        dsplot.style.TERTIARY_COLOR  = original_tertiary
+        style.PRIMARY_COLOR   = original_primary
+        style.SECONDARY_COLOR = original_secondary
+        style.TERTIARY_COLOR  = original_tertiary
 
         # ------ Mode 2: LOCAL figure override (per D-05) ------
         # Module-local constants for THIS figure only. Other figures still
-        # inherit the global dsplot.style.* defaults — they are NOT touched.
+        # inherit the global style.* defaults — they are NOT touched.
         # This is the same pattern motivator.py uses to derive its own
         # LAYOUT_HSPACE / LAYOUT_LABEL_RATIO / etc. from the defaults.
         MY_PRIMARY   = "#facc15"  # yellow
@@ -152,20 +148,20 @@ def main() -> int:
         )
 
         # Load-bearing assertion: the local-override block must NOT mutate the
-        # global dsplot.style.* template. If this fails, mode 2 leaked into
+        # global style.* template. If this fails, mode 2 leaked into
         # mode 1 (a D-05 violation).
-        assert dsplot.style.PRIMARY_COLOR == original_primary, (
-            "Local override should NOT mutate dsplot.style.PRIMARY_COLOR "
+        assert style.PRIMARY_COLOR == original_primary, (
+            "Local override should NOT mutate style.PRIMARY_COLOR "
             "(D-05 violation: local-mode leaked into global-mode)"
         )
-        assert dsplot.style.SECONDARY_COLOR == original_secondary
-        assert dsplot.style.TERTIARY_COLOR == original_tertiary
+        assert style.SECONDARY_COLOR == original_secondary
+        assert style.TERTIARY_COLOR == original_tertiary
     finally:
         # Belt-and-braces: restore originals even if a raise interrupted the
         # local block. Test-pollution defense.
-        dsplot.style.PRIMARY_COLOR   = original_primary
-        dsplot.style.SECONDARY_COLOR = original_secondary
-        dsplot.style.TERTIARY_COLOR  = original_tertiary
+        style.PRIMARY_COLOR   = original_primary
+        style.SECONDARY_COLOR = original_secondary
+        style.TERTIARY_COLOR  = original_tertiary
 
     print(f"  Saved -> {default_path}")
     print(f"  Saved -> {global_path}   (mode 1: global reassignment, affects all)")

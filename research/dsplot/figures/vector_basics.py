@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 
-from dsplot import Figure, StaticPanel, Vector, style
+from .. import Figure, StaticPanel, Vector, style
 
 
 # Hand-picked radiating hues for visual variety — not part of the canonical

@@ -157,7 +157,7 @@ class TimeSeriesPanel(StaticPanel):
             fig_w_in = self.ax.figure.get_size_inches()[0]
             bbox = self.ax.get_position()
             axes_w_in = max(bbox.width * fig_w_in, 0.1)
-            half_pad_in = style.DEFAULT_GUTTER_INCHES / 4.0
+            half_pad_in = style.DEFAULT_AXIS_LABEL_INSET_INCHES
             self.ax.yaxis.set_label_coords(
                 1.0 + half_pad_in / axes_w_in, 0.5,
             )

@@ -20,4 +20,9 @@ logs/*.txt
 !logs/README.md
 
 # FPS Record (track personal best)
-!fps_record.txt 
+!fps_record.txt
+
+# Claude Code customizations — agent/command/skill markdown isn't worth tracking
+.claude/**/*.md
+# Per-agent worktree checkouts — transient, never source of truth
+.claude/worktrees/ 

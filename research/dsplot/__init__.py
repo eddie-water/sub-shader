@@ -22,6 +22,13 @@ time (lazy lookup), so a global reassignment between construction and draw
 uses the NEW value.
 """
 
+import os as _os
+import sys as _sys
+
+_RESEARCH_DIR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+if _RESEARCH_DIR not in _sys.path:
+    _sys.path.insert(0, _RESEARCH_DIR)
+
 from . import freq_axis, style
 from .figure import Figure, apply_jupyter_dark
 from .panels import (
@@ -32,6 +39,7 @@ from .panels import (
     Panel,
     StaticPanel,
     StaticPanel3D,
+    TextPanel,
     TimeSeriesPanel,
 )
 from .plottables import (
@@ -66,6 +74,7 @@ __all__ = [
     "TimeSeriesPanel",
     "HeatmapPanel",
     "CompositePanel",
+    "TextPanel",
     "Figure",
     "apply_jupyter_dark",
 ]

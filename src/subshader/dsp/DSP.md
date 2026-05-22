@@ -127,17 +127,17 @@ $$
   - **Can be combined in any order** to reconstruct the original - when rebuilding them tip-to-tail, if you start with x first and then y, or y first then x, regardlessly, you still end up with the original  
   - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component goes completely unnoticed by, and does not affect, the y component
 
-![Basic Vector Projection (3 panels): projection of vector a onto x/y axes (left); tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); two vectors a and a' (same orange family) sharing the same y-component but with opposite-sign x-components, demonstrating that measuring y is independent of x — the perpendicularity / orthogonality beat (right)](../../../assets/images/dsp/components_recombine_either_order_v18.png)
+![Basic Vector Projection (3 panels, a = (3, 4)): Figure 2.4.1.a — projection of vector a onto x/y axes (left); Figure 2.4.1.b — tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); Figure 2.4.1.c — vectors a and a' = (-3, 4) sharing the same y-component but with opposite-sign x-components, with a and its x-component muted so a' reads as the spotlight — independence beat (right)](../../../assets/images/dsp/figures/components_recombine/either_order_v19.png)
 
-#### 2.4.2 Projection onto the Direction of Another Vector
-- When projecting one vector onto another, like **a** onto **b**, we use **b** as the **reference direction** - this reveals which parts of **a** are **aligned** with, or point along the **same direction**, as **b** 
-
+#### 2.4.2 Projection onto Another Vector
+- When projecting one vector onto another, like **a** onto **b**, we use **b** as the **reference direction**, revealing which components of **a** are **aligned** with **b** 
+- The more **parallel** the two vectors are, the larger **a**'s projection onto **b** is 
 - When performing the Dot Product on these vector components, using b as the direction
  TODO how does the dot product intuitively come into play here? sure we know how to decompose into dimensional components, but lets tie it back to the idea
 
 - Notice how when we project **a** onto **b** or **b** onto **a**, the resulting __ [the visual annotates each component of each projection - do the math for each exmaple - display how the dot product in either case produces the same result - this basically means we don't really care which one is the reference dimension - show math example in the with each - ]
 
-![Projection of a onto b (left) and b onto a (right), each shown with both reconstruction paths — parallel-then-perp and perp-then-parallel — demonstrating order independence for any reference direction](../../../assets/images/dsp/projection_reconstruction_either_order_v9.png)
+![Projection of a onto b (left) and b onto a (right), each shown with both reconstruction paths — parallel-then-perp and perp-then-parallel — demonstrating order independence for any reference direction](../../../assets/images/dsp/figures/projection_reconstruction/either_order_v9.png)
 
 <!-- WRITE 2.4.1 beat 4 — symmetry of the dot product (right panel).
      Even though "a onto b" and "b onto a" produce visibly different
@@ -166,7 +166,7 @@ $$
 
 - [This actually works because of the symmetry found the geometry of the triangle these two vectors make - this the area equation of a triangle - watch this video to see how it relates to the Dot Product - but otherwise just trust they can be derived from each other link - https://www.youtube.com/watch?v=PnJoKGynu_U]
 
-![Four canonical angles between a and b: parallel-same → positive, parallel-opposite → negative, perpendicular → zero, oblique → partial](../../../assets/images/dsp/dot_product_geometry.png)
+![Four canonical angles between a and b: parallel-same → positive, parallel-opposite → negative, perpendicular → zero, oblique → partial](../../../assets/images/dsp/figures/dot_product/geometry.png)
 
 - The projection's magnitude tells us how aligned **b** and **a** are. Three extreme cases:
     - **parallel + same direction** → full projection → large positive result
@@ -196,7 +196,7 @@ $$
      path (z → y → x) both arrive at the same tip a. Order independence
      is a property of the projection, not an accident of 2D. -->
 
-![Vector a in 3D, decomposed into x/y/z components, recombined in two different orders (x→y→z and z→y→x) — both paths arrive at the same tip](../../../assets/images/dsp/vector_projection_3d_v2_combo5_palette.png)
+![Vector a in 3D, decomposed into x/y/z components, recombined in two different orders (x→y→z and z→y→x) — both paths arrive at the same tip](../../../assets/images/dsp/figures/vector_projection_3d/v2_combo5_palette.png)
 
 <!-- WRITE 2.4.2 beat 2 — ND reframe (locked bridge sentence).
      Polish this sentence — the locked phrasing is:
@@ -242,7 +242,7 @@ $$
      reinforces "components form a basis": the same components recombined
      in different orders both reconstruct a, which is exactly the property
      a basis function family relies on.
-     ![Same components recombined tip-to-tail in opposite orders both reconstruct a](../../../assets/images/dsp/vector_xy_reconstruction.png)
+     ![Same components recombined tip-to-tail in opposite orders both reconstruct a](../../../assets/images/dsp/figures/vector_xy_reconstruction/baseline.png)
 -->
 
 This is all about re-representing **all the information** from the original signal into a **different format**, while also being able to perform the **reverse process** to **reconstruct** the original  

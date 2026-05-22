@@ -33,6 +33,7 @@ class CompositePanel(Panel):
         units: Tuple[int, int],
         title: Optional[str] = None,
         subtitle: Optional[str] = None,
+        caption: Optional[str] = None,
         share_x: bool = False,
         hspace: Optional[float] = None,
         wspace: Optional[float] = None,
@@ -56,6 +57,7 @@ class CompositePanel(Panel):
         self.rows = rows
         self.title = title
         self.subtitle = subtitle
+        self.caption = caption
         self.share_x = share_x
         self.hspace = hspace
         self.wspace = wspace

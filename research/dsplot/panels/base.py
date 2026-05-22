@@ -38,6 +38,10 @@ class Panel(ABC):
     # default to derive figsize, gridspec width, and per-panel colspan.
     default_units: ClassVar[Tuple[int, int]] = (1, 1)
 
+    # Set to True on TextPanel subclasses — Figure.compose excludes these
+    # cells when auto-centering chrome (e.g. figure_number) on the plot area.
+    is_text_only: ClassVar[bool] = False
+
     # Base reservation (subclasses override) for in-figure controls — e.g.
     # InteractivePanel sets _base_bottom_pad = 0.18 for its prev/next
     # buttons. Subtitle bottom padding is added on top at instance level
@@ -56,6 +60,8 @@ class Panel(ABC):
         pad = self._base_bottom_pad
         if getattr(self, "subtitle", None) is not None:
             pad += style.DEFAULT_SUBTITLE_BOTTOM_PAD
+        if getattr(self, "caption", None) is not None:
+            pad += style.DEFAULT_CAPTION_BOTTOM_PAD
         return pad
 
     def __init__(self, *, units: Optional[Tuple[int, int]] = None) -> None:
@@ -119,6 +125,19 @@ class Panel(ABC):
                 transform=ax.transAxes,
                 ha="center", va="top",
                 fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
+                color=style.TICK_LABEL_COLOR,
+                style="italic",
+                fontweight="bold",
+            )
+
+        caption = getattr(self, "caption", None)
+        if caption is not None:
+            text_fn = ax.text2D if hasattr(ax, "get_zlim") else ax.text
+            text_fn(
+                0.5, style.DEFAULT_CAPTION_Y, caption,
+                transform=ax.transAxes,
+                ha="center", va="top",
+                fontsize=style.DEFAULT_CAPTION_FONT_SIZE,
                 color=style.TICK_LABEL_COLOR,
                 style="italic",
                 fontweight="bold",

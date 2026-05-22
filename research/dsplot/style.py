@@ -57,7 +57,7 @@ DEFAULT_ARROW_MUTATION    = 22
 # TYPOGRAPHY
 # ============================================================
 DEFAULT_TITLE_FONT_SIZE      = 20
-DEFAULT_SUBTITLE_FONT_SIZE   = 14
+DEFAULT_SUBTITLE_FONT_SIZE   = 20
 DEFAULT_LABEL_FONT_SIZE      = 18
 # Decorator/callout text inside a panel (e.g. "peak", "centroid" labels
 # that annotate a feature). Distinct from DEFAULT_LABEL_FONT_SIZE, which
@@ -69,13 +69,29 @@ DEFAULT_SUBTITLE_Y         = -0.12
 # Y position (axes coords) for the title (a hair above the plot box).
 DEFAULT_TITLE_Y            = 1.04
 # Extra figure-bottom pad reserved when any panel has a subtitle, so the
-# below-plot subtitle isn't clipped by Figure.savefig's tight bbox.
-DEFAULT_SUBTITLE_BOTTOM_PAD = 0.08
-DEFAULT_TICK_LABEL_SIZE    = 18
-DEFAULT_AXIS_LABEL_SIZE    = 17
+# below-plot subtitle isn't clipped by Figure.savefig's tight bbox. Bumped
+# alongside the subtitle font size (now matches title at 20pt).
+DEFAULT_SUBTITLE_BOTTOM_PAD = 0.10
+# Caption sits below the subtitle. Italic + bold matches the prior subtitle
+# styling; size 14 keeps it visibly smaller than the bumped subtitle (now 20).
+DEFAULT_CAPTION_FONT_SIZE  = 14
+DEFAULT_CAPTION_Y          = -0.26
+# Figure-level caption chrome — `Figure N` identifier + explanatory caption
+# rendered at the bottom of the figure (vs. panel-level subtitle/caption).
+DEFAULT_FIGURE_NUMBER_FONT_SIZE  = 20
+DEFAULT_FIGURE_CAPTION_FONT_SIZE = 14
+# Extra figure-bottom pad reserved when any panel has a caption, on top of
+# whatever the subtitle reserves. Bumped alongside the caption font size
+# (now 14pt italic + bold, matching the prior subtitle styling).
+DEFAULT_CAPTION_BOTTOM_PAD = 0.14
+DEFAULT_TICK_LABEL_SIZE    = 22
+DEFAULT_AXIS_LABEL_SIZE    = 22
 # Tick mark dimensions (matplotlib defaults are ~3.5pt length, ~0.8pt width)
 DEFAULT_TICK_LENGTH        = 8.0
 DEFAULT_TICK_WIDTH         = 1.5
+# Inch-domain offset from the axes spine to the y/x axis-label text. Sized to
+# clear DEFAULT_TICK_LABEL_SIZE tick labels (e.g. "20k" at 22pt is ~0.5" wide).
+DEFAULT_AXIS_LABEL_INSET_INCHES = 0.8
 DEFAULT_SUPTITLE_FONT_SIZE = 32
 DEFAULT_ROW_LABEL_SIZE     = 16
 
@@ -142,6 +158,6 @@ DEFAULT_HEATMAP_VMAX_PERCENTILE = 99.0
 # ============================================================
 # INST FREQ OVERLAY
 # ============================================================
-INST_FREQ_COLOR     = PRIMARY_COLOR
-INST_FREQ_LINEWIDTH = 2.4
-INST_FREQ_ALPHA     = 0.9
+INST_FREQ_COLOR     = TERTIARY_COLOR
+INST_FREQ_LINEWIDTH = 3.0
+INST_FREQ_ALPHA     = 1.0

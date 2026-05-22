@@ -84,6 +84,10 @@ class Figure:
         suptitle_fontsize: Optional[float] = None,
         suptitle_y: Optional[float] = None,
         top_pad: Optional[float] = None,
+        bottom_pad: Optional[float] = None,
+        figure_number: Optional[str] = None,
+        figure_caption: Optional[str] = None,
+        figure_number_x: Optional[float] = None,
         hspace: Optional[float] = None,
         wspace: Optional[float] = None,
         width_ratios: Optional[List[float]] = None,
@@ -121,6 +125,9 @@ class Figure:
         self._display_width = display_width
         self._has_suptitle = suptitle is not None
         self._top_pad = top_pad
+        self._bottom_pad = bottom_pad
+        self._figure_number = figure_number
+        self._figure_caption = figure_caption
         self._debug_guides = debug_guides
         self._show_cell_borders = show_cell_borders
         self._mpl_fig = plt.figure(figsize=figsize, dpi=dpi)
@@ -156,6 +163,50 @@ class Figure:
                 va="center",
             )
 
+        # Figure-level `Figure N` identifier + explanatory caption rendered at
+        # the bottom of the figure. Counterpart to the per-panel subtitle +
+        # caption — same typographic hierarchy (bold italic identifier,
+        # smaller italic-bold caption) but in the figure-bottom reserve band.
+        # `figure_number` is centered horizontally and sits in its own padded
+        # band; `figure_caption` is LEFT-aligned to the leftmost panel cell's
+        # left edge so multi-line captions read like a paragraph caption.
+        if figure_number is not None or figure_caption is not None:
+            fig_w, fig_h = figsize
+            margin = style.DEFAULT_MARGIN_INCHES
+            # Identifier sits in the upper portion of the bottom reserve, with
+            # its own ~margin of padding above and below for visual breathing
+            # room before the caption.
+            # figure_number sits well below the row 3 x-axis label (which
+            # lands ~DEFAULT_AXIS_LABEL_INSET_INCHES below the bottom plot
+            # spine). With breathing room above (x-label gap) and below
+            # (caption gap), the identifier reads as its own padded line.
+            if figure_number is not None:
+                self._mpl_fig.text(
+                    figure_number_x if figure_number_x is not None else 0.5,
+                    1.05 / fig_h,
+                    figure_number,
+                    color=style.TICK_LABEL_COLOR,
+                    fontsize=style.DEFAULT_FIGURE_NUMBER_FONT_SIZE,
+                    fontweight="bold",
+                    style="italic",
+                    ha="center", va="center",
+                )
+            # Caption: left edge anchors to the leftmost panel cell's left
+            # border (figure left margin); top anchored at va="top" so the
+            # first line sits at a known y and subsequent lines extend
+            # downward toward the figure bottom — predictable layout when
+            # the caption is multi-line.
+            if figure_caption is not None:
+                self._mpl_fig.text(
+                    margin / fig_w, 0.75 / fig_h,
+                    figure_caption,
+                    color=style.TICK_LABEL_COLOR,
+                    fontsize=style.DEFAULT_FIGURE_CAPTION_FONT_SIZE,
+                    fontweight="bold",
+                    style="italic",
+                    ha="left", va="top",
+                )
+
         self.panels: List[Tuple[Panel, int, int, int, int, Optional[str]]] = []
         # Master FuncAnimation when any DynamicPanels are present; load-bearing
         # for matplotlib timer GC the same way DynamicPanel._anim is in the
@@ -170,11 +221,16 @@ class Figure:
         suptitle: Optional[str] = None,
         suptitle_fontsize: Optional[float] = None,
         unit_inches: Optional[float] = None,
+        unit_height_inches: Optional[float] = None,
         dpi: Optional[int] = None,
         hspace: Optional[float] = None,
         wspace: Optional[float] = None,
         debug_guides: bool = False,
         show_cell_borders: bool = False,
+        top_reserve_inches: Optional[float] = None,
+        bottom_reserve_inches: Optional[float] = None,
+        figure_number: Optional[str] = None,
+        figure_caption: Optional[str] = None,
     ) -> "Figure":
         """Auto-derive figsize, gridspec width-units, and per-panel colspan
         from each panel's `units` (lego-block composition).
@@ -200,6 +256,10 @@ class Figure:
             unit_inches if unit_inches is not None
             else style.DEFAULT_PANEL_UNIT_INCHES
         )
+        unit_height_inches_resolved = (
+            unit_height_inches if unit_height_inches is not None
+            else unit_inches
+        )
         # Outer perimeter: `margin` between every panel border and the figure
         # edge (left, right, bottom). Tick + axis labels render WITHIN that
         # margin (eating into it from the spine outward).  Suptitle gets its
@@ -209,21 +269,75 @@ class Figure:
         # between adjacent cells.
         margin = style.DEFAULT_MARGIN_INCHES
         column_gutter_fraction = style.DEFAULT_COLUMN_GUTTER_INCHES / unit_inches
-        row_gutter_fraction = style.DEFAULT_GUTTER_INCHES / unit_inches
+        row_gutter_fraction = (
+            style.DEFAULT_GUTTER_INCHES / unit_height_inches_resolved
+        )
         wspace_resolved = wspace if wspace is not None else column_gutter_fraction
         hspace_resolved = hspace if hspace is not None else row_gutter_fraction
         grid_w_inches = unit_inches * (n_cols + (n_cols - 1) * wspace_resolved)
-        grid_h_inches = unit_inches * (n_rows + (n_rows - 1) * hspace_resolved)
-        if suptitle is not None:
-            # Suptitle band (1 margin tall, text V-centered) + 1 margin gap
+        grid_h_inches = unit_height_inches_resolved * (
+            n_rows + (n_rows - 1) * hspace_resolved
+        )
+        if top_reserve_inches is not None:
+            top_reserve = top_reserve_inches
+        elif suptitle is not None:
+            # Default: 1 margin suptitle band (text V-centered) + 1 margin gap
             # below the band before the first panel border.
             top_reserve = 2.0 * margin
         else:
             top_reserve = margin
+        # Default bottom reserve = 1.5" when figure_number/caption are set
+        # (room for 2 stacked text lines), otherwise the standard margin.
+        if bottom_reserve_inches is not None:
+            bottom_reserve = bottom_reserve_inches
+        elif figure_number is not None or figure_caption is not None:
+            bottom_reserve = 1.5
+        else:
+            bottom_reserve = margin
         figsize = (
             grid_w_inches + 2 * margin,
-            grid_h_inches + margin + top_reserve,
+            grid_h_inches + bottom_reserve + top_reserve,
         )
+
+        # Translate the inch-domain top_reserve to the subplots_adjust top
+        # fraction so Figure.render uses the same reserve compose just baked
+        # into figsize (otherwise render falls back to 2*margin and undoes
+        # the override).
+        top_pad_resolved = 1.0 - top_reserve / figsize[1]
+        # Match: bottom reserve gets baked into figsize above; mirror it on
+        # the subplots_adjust bottom so the gridspec doesn't reclaim the
+        # space we reserved for the figure_number / figure_caption band.
+        bottom_pad_resolved = bottom_reserve / figsize[1]
+        # Center the suptitle text vertically in the full top-reserve band
+        # (figure top → first row spine). Otherwise the constructor V-centers
+        # in the legacy `margin`-tall band, which sits too high when callers
+        # pass a custom ``top_reserve_inches``.
+        suptitle_y_resolved = 1.0 - (top_reserve / 2.0) / figsize[1]
+        # Plot-area center x for figure_number alignment — chrome rows (e.g.
+        # TextPanel label columns) are excluded so the figure_number sits
+        # under the plot's x-axis label rather than the full figure midline.
+        # Falls back to figure center when no TextPanels are present.
+        plot_cols = []
+        for p_idx in range(len(rows[0])):
+            panel = rows[0][p_idx]
+            if getattr(panel, "is_text_only", False):
+                continue
+            col_start = sum(rows[0][i].units[0] for i in range(p_idx))
+            col_end = col_start + rows[0][p_idx].units[0]
+            plot_cols.append((col_start, col_end))
+        gutter_inches = wspace_resolved * unit_inches
+        if plot_cols:
+            c_lo = min(c for c, _ in plot_cols)
+            c_hi = max(c for _, c in plot_cols)
+            plot_x_start = margin + c_lo * (unit_inches + gutter_inches)
+            plot_x_end = (
+                margin + (c_hi - 1) * (unit_inches + gutter_inches) + unit_inches
+            )
+            figure_number_x_resolved = (
+                (plot_x_start + plot_x_end) / 2.0 / figsize[0]
+            )
+        else:
+            figure_number_x_resolved = 0.5
 
         fig = cls(
             n_rows=n_rows,
@@ -231,11 +345,17 @@ class Figure:
             figsize=figsize,
             suptitle=suptitle,
             suptitle_fontsize=suptitle_fontsize,
+            suptitle_y=suptitle_y_resolved,
             dpi=dpi,
             hspace=hspace_resolved,
             wspace=wspace_resolved,
             debug_guides=debug_guides,
             show_cell_borders=show_cell_borders,
+            top_pad=top_pad_resolved,
+            bottom_pad=bottom_pad_resolved,
+            figure_number=figure_number,
+            figure_caption=figure_caption,
+            figure_number_x=figure_number_x_resolved,
         )
 
         for r in range(n_rows):
@@ -283,13 +403,21 @@ class Figure:
             top_reserve = 2.0 * margin
         else:
             top_reserve = margin
+        # Bottom: use the compose-supplied bottom_pad when present (it already
+        # encodes the figure_number/caption reservation). Fall back to the
+        # panel-driven max_bottom_pad if compose didn't set anything, then to
+        # the standard margin.
+        if self._bottom_pad is not None:
+            bottom_resolved = self._bottom_pad
+        elif max_bottom_pad > 0.0:
+            bottom_resolved = max_bottom_pad + 0.05
+        else:
+            bottom_resolved = margin_v_frac
+
         adjust_kwargs: dict[str, float] = {
             "left":   margin_h_frac,
             "right":  1.0 - margin_h_frac,
-            "bottom": (
-                max_bottom_pad + 0.05 if max_bottom_pad > 0.0
-                else margin_v_frac
-            ),
+            "bottom": bottom_resolved,
             "top": (
                 self._top_pad if self._top_pad is not None
                 else 1.0 - top_reserve / fig_h
