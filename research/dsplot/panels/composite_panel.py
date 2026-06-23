@@ -101,12 +101,23 @@ class CompositePanel(Panel):
         # fractions for THIS composite's inner cells: gap = gutter_inches /
         # inner_cell_inches, so absolute gap matches the outer grid regardless
         # of how the composite was sized.
+        #
+        # share_x=True means the rows stack with a shared time axis (e.g. a
+        # stem quartet). Inner row gutter must be 0 so the rows touch — any
+        # gap reads as misalignment with the conceptual "one stacked view."
+        # Inner column gutter is unaffected.
         fig_w_in, fig_h_in = self.ax.figure.get_size_inches()
         bbox = self.ax.get_position()
         inner_cell_w = (bbox.width * fig_w_in) / n_cols
         inner_cell_h = (bbox.height * fig_h_in) / n_rows
         gutter_in = style.DEFAULT_INNER_GUTTER_INCHES
-        derived_hspace = gutter_in / inner_cell_h if inner_cell_h > 0 else style.DEFAULT_HSPACE
+        if self.share_x:
+            derived_hspace = 0.0
+        else:
+            derived_hspace = (
+                gutter_in / inner_cell_h if inner_cell_h > 0
+                else style.DEFAULT_HSPACE
+            )
         derived_wspace = gutter_in / inner_cell_w if inner_cell_w > 0 else style.DEFAULT_WSPACE
 
         subgs = self.ax.get_subplotspec().subgridspec(

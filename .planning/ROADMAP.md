@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Audio-Visual Sync** - Wire file-based audio playback to CWT rendering with sub-100ms perceived lag
 - [ ] **Phase 4: Install Experience** - Make clone-install-run work without manual configuration or surprises
 - [ ] **Phase 5: Documentation** - Four READMEs scaffolded by Claude, authored by user in their own voice
+- [ ] **Phase 9: dsplot Library Architecture** - Standalone, project-agnostic plotting library (Plottables + Static/Dynamic/InteractivePanels) to replace `research/dsp_figures.py` and serve docs, tests, and notebooks
 
 ## Phase Details
 
@@ -109,6 +110,7 @@ Phase 5 (Documentation) is the active phase. Phase 4 deferred to v2. All other p
 | 6. Finalize Audio & Figures | 3/3 | Complete | - |
 | 7. Visual Style & Config | 4/4 | Complete | - |
 | 8. Codebase Refactoring | 8/8 | Complete | 2026-04-10 |
+| 9. dsplot Library Architecture | 0/6 | **Planned** | - |
 
 ### Phase 05.2: Benchmark timing profiling and comparison grid polish (INSERTED)
 
@@ -156,6 +158,26 @@ Plans:
 - [x] 07-02-PLAN.md — @timed decorator in src/subshader/utils/ + wavelet.py refactor + timing.py update
 - [x] 07-03-PLAN.md — Research toolkit restructure: rename dispatcher, move files, migrate tests, archive dirs
 - [x] 07-04-PLAN.md — Style consumer migration + comparison.py extraction + grid header fix
+
+### Phase 9: dsplot Library Architecture
+**Goal:** Build `dsplot` — a standalone, project-agnostic Python plotting library with a Plottable/Panel two-layer architecture (Static/Dynamic/Interactive panels, overlayable on the same Figure). Library has zero subshader imports and is extractable to a standalone pip package. Replaces `research/dsp_figures.py` with the new module; serves notebooks, README figure generation, and test-result plotting.
+**Depends on:** Phase 8 (Codebase Refactoring) — needs the clean module structure established there
+**Requirements:** PLOT-01 through PLOT-29 (assigned during planning; each plan's requirements list pins its slice)
+**Success Criteria** (what must be TRUE):
+  1. `dsplot` lives at `research/dsplot/` with zero imports from `src/subshader/*` (grep verified; library/consumer boundary: figures/ subdir is consumer code allowed to bridge to research.utilities for CWT compute)
+  2. All figures currently in `research/dsp_figures.py` are reproducible from `dsplot` with identical or better visual fidelity
+  3. `src/subshader/dsp/dsp.ipynb` cell 01 renders figure 1 as a `DynamicPanel` (looping animation showing a vector morphing while preserving the orthogonality beat) with auto-reset
+  4. One example unit test imports `dsplot` and saves a result plot — demonstrates the testing-consumer pattern
+  5. Style override pattern works: a downstream consumer can reassign `dsplot.style.PRIMARY_COLOR` and every figure picks it up
+  6. Notebook-based dynamic and interactive panels work in Jupyter (matplotlib + ipywidgets); static export to PNG/GIF works for README inclusion
+**Plans:** 6 plans
+Plans:
+- [ ] 09-01-PLAN.md — dsplot package skeleton + style.py + Plottable base + Vector / VectorComponents / Annotation
+- [ ] 09-02-PLAN.md — Panel base + StaticPanel + Figure orchestrator + axes_setup helper
+- [ ] 09-03-PLAN.md — TimeSeries / Heatmap / Spotlight / Dropline / Vector3D Plottables + freq_axis helper
+- [ ] 09-04-PLAN.md — DynamicPanel (FuncAnimation) + InteractivePanel (ipywidgets) + mixed-Figure verification
+- [ ] 09-05-PLAN.md — Port all figures from research/dsp_figures.py (motivator 6 versions, alignment_diagnostic, foundation figures, 3D) + dispatcher
+- [ ] 09-06-PLAN.md — dsp.ipynb cell 01 animated figure 1 + example test + style-override demo + retire research/dsp_figures.py
 
 ### Phase 8: Codebase Refactoring and Module Cleanup
 

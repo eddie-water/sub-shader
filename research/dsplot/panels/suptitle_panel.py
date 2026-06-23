@@ -60,4 +60,10 @@ class SuptitlePanel(TextPanel):
             color=resolved_color,
             fontweight=resolved_fontweight,
             auto_shrink=auto_shrink,
+            # Optical V-centering: matplotlib's va="center" aligns on the
+            # bbox midline (includes descender slack even when the string
+            # has none) — a string like "Fourier vs Wavelet Decomposition"
+            # ends up visibly low. "center_baseline" pivots on the line
+            # baseline midline instead and reads as true V-center.
+            va="center_baseline",
         )

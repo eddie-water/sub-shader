@@ -30,6 +30,7 @@ def setup_vector_axes(
     show_border: bool = True,
     axis_style: str = "line",
     axis_labels: bool = False,
+    axis_label_size: Optional[float] = None,
     x_color: Optional[str] = None,
     y_color: Optional[str] = None,
     axis_alpha: Optional[float] = None,
@@ -90,14 +91,18 @@ def setup_vector_axes(
         # axis" instead of decorations sitting on the panel edge.
         offset = style.DEFAULT_AXIS_LABEL_OFFSET
         label_pos_along = lim * 0.92
+        label_size = (
+            axis_label_size if axis_label_size is not None
+            else style.DEFAULT_AXIS_LABEL_SIZE + 2
+        )
         ax.text(label_pos_along, -offset, "x",
                 color=style.TICK_LABEL_COLOR, alpha=0.95,
-                fontsize=style.DEFAULT_AXIS_LABEL_SIZE + 2,
+                fontsize=label_size,
                 fontweight="bold",
                 ha="center", va="top", style="italic")
         ax.text(offset, label_pos_along, "y",
                 color=style.TICK_LABEL_COLOR, alpha=0.95,
-                fontsize=style.DEFAULT_AXIS_LABEL_SIZE + 2,
+                fontsize=label_size,
                 fontweight="bold",
                 ha="left", va="center", style="italic")
 

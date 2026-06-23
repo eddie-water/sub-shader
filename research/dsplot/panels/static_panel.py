@@ -11,7 +11,7 @@ render observes the new value.
 """
 from __future__ import annotations
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Sequence, Tuple, Union
 
 from .. import style
 from ..axes_setup import setup_vector_axes
@@ -35,10 +35,14 @@ class StaticPanel(Panel):
         lim: Optional[Union[float, Tuple[float, float]]] = None,
         axis_style: str = "line",
         axis_labels: bool = False,
+        axis_label_size: Optional[float] = None,
         show_border: bool = True,
         show_ticks: bool = False,
         show_grid: bool = False,
         tick_positions: Optional[Tuple[float, ...]] = None,
+        x_label: Optional[str] = None,
+        y_label: Optional[str] = None,
+        show_tick_labels: bool = False,
     ) -> None:
         super().__init__(units=units)
         self.title = title
@@ -47,10 +51,19 @@ class StaticPanel(Panel):
         self.lim = lim
         self.axis_style = axis_style
         self.axis_labels = axis_labels
+        self.axis_label_size = axis_label_size
         self.show_border = show_border
         self.show_ticks = show_ticks
         self.show_grid = show_grid
         self.tick_positions = tick_positions
+        # x_label / y_label render EXTERNAL axis labels in the gutter via the
+        # same path used by HeatmapPanel / TimeSeriesPanel — distinct from
+        # axis_labels=True which puts italic "x"/"y" INSIDE the cell near the
+        # spine tips. show_tick_labels enables numerical tick labels (only
+        # meaningful when show_ticks=True).
+        self.x_label = x_label
+        self.y_label = y_label
+        self.show_tick_labels = show_tick_labels
 
     def render(self) -> None:
         if self.ax is None:
@@ -72,6 +85,7 @@ class StaticPanel(Panel):
             show_border=self.show_border,
             axis_style=self.axis_style,
             axis_labels=self.axis_labels,
+            axis_label_size=self.axis_label_size,
         )
 
         if self.show_ticks:
@@ -87,14 +101,25 @@ class StaticPanel(Panel):
                 ]
             self.ax.set_xticks(positions)
             self.ax.set_yticks(positions)
+            # Numerical tick labels (when show_tick_labels=True) use the same
+            # styled size/color as Heatmap/TimeSeries panels so tick chrome is
+            # consistent across all panel kinds.
+            label_kwargs = dict(
+                labelbottom=self.show_tick_labels,
+                labelleft=self.show_tick_labels,
+            )
+            if self.show_tick_labels:
+                label_kwargs.update(
+                    labelsize=style.DEFAULT_TICK_LABEL_SIZE,
+                    labelcolor=style.TICK_LABEL_COLOR,
+                )
             self.ax.tick_params(
                 axis="both",
                 colors=style.SPINE_COLOR,
                 length=style.DEFAULT_TICK_LENGTH * 0.6,
                 width=style.DEFAULT_TICK_WIDTH * 0.8,
-                labelbottom=False,
-                labelleft=False,
                 direction="inout",
+                **label_kwargs,
             )
 
         if self.show_grid:
@@ -105,6 +130,30 @@ class StaticPanel(Panel):
                 linewidth=style.DEFAULT_AXIS_GRID_LINEWIDTH,
                 zorder=0,
             )
+
+        # External x/y axis labels: route through the shared decoration helper
+        # so spacing/font/inset match Heatmap and TimeSeries panels. Passing
+        # xticks=None / yticks=None preserves whatever ticks the show_ticks
+        # branch above set up — _apply_axis_decoration only restyles ticks
+        # when an explicit positions list is passed. Local import to dodge the
+        # static_panel ↔ heatmap_panel module cycle.
+        if self.x_label is not None or self.y_label is not None:
+            from .heatmap_panel import _apply_axis_decoration
+            _apply_axis_decoration(
+                self.ax,
+                x_label=self.x_label,
+                y_label=self.y_label,
+                xticks=None,
+                yticks=None,
+                show_xticklabels=self.show_tick_labels,
+                show_yticklabels=self.show_tick_labels,
+            )
+        elif self.show_ticks and self.show_tick_labels:
+            # No x/y_label → _apply_axis_decoration is skipped. Pin tick
+            # labels directly so the extreme ones don't project past the
+            # spine into adjacent cells' chrome zones.
+            from .heatmap_panel import _pin_extreme_ticklabels
+            _pin_extreme_ticklabels(self.ax)
 
         self._render_chrome_titles()
 

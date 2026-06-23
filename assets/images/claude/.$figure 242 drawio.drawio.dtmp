@@ -1,0 +1,58 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.1.2 Chrome/138.0.7204.243 Electron/37.4.0 Safari/537.36" version="28.1.2">
+  <diagram name="Page-1" id="-pRdUL5L8lto2Yu8XzAG">
+    <mxGraphModel dx="815" dy="508" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-2" value="Projection onto Another Vector - 2D" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="360" width="640" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="440" width="160" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="320" y="440" width="160" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="480" y="440" width="160" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="640" y="440" width="160" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-12" value="Dot Product Cosine Form&amp;nbsp;&lt;div&gt;The Relative Angle Controls the Size of the Projection&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="400" width="320" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-13" value="Dot Product Component Form&lt;div&gt;The Angle is Baked into The Components Already&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="480" y="400" width="320" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-30" value="Figure 2.4.2" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="660" width="640" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-31" value="A" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="640" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-32" value="B" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="320" y="640" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-33" value="C" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="480" y="640" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-34" value="D" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="640" y="640" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-46" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="160" y="600" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-47" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="320" y="600" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-48" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="480" y="600" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="eVlYKm9Fu-aOZ3woOGLo-49" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="640" y="600" width="160" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

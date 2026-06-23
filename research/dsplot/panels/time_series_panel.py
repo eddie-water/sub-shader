@@ -33,6 +33,10 @@ class TimeSeriesPanel(StaticPanel):
         y_label_side: str = "left",
         xticks: Optional[Sequence[float]] = None,
         yticks: Optional[Sequence[float]] = None,
+        show_xticklabels: bool = True,
+        show_yticklabels: bool = True,
+        xlim: Optional[Tuple[float, float]] = None,
+        ylim: Optional[Tuple[float, float]] = None,
         twin_y: bool = False,
         twin_y_label: Optional[str] = None,
         twin_yticks: Optional[Sequence[float]] = None,
@@ -55,6 +59,15 @@ class TimeSeriesPanel(StaticPanel):
         self.y_label_side = y_label_side
         self.xticks = xticks
         self.yticks = yticks
+        self.show_xticklabels = show_xticklabels
+        self.show_yticklabels = show_yticklabels
+        # xlim/ylim kwargs let the caller PIN axis limits after plottables
+        # draw. Some plottables (Stem, Line) auto-fit limits to their data,
+        # which clobbers the StaticPanel default. Setting these explicitly
+        # gives the caller final say — useful for adding head/tail breathing
+        # room around a waveform that would otherwise fill the cell exactly.
+        self.xlim = xlim
+        self.ylim = ylim
         self.twin_y = twin_y
         self.twin_y_label = twin_y_label
         self.twin_yticks = twin_yticks
@@ -88,12 +101,27 @@ class TimeSeriesPanel(StaticPanel):
             y_label=self.y_label,
             xticks=self.xticks,
             yticks=self.yticks,
+            show_xticklabels=self.show_xticklabels,
+            show_yticklabels=self.show_yticklabels,
         )
+        # Pin xlim/ylim AFTER super().render() (which ran the plottables —
+        # some auto-fit to data, e.g. Stem) and AFTER axis decoration so a
+        # caller's explicit limits override any plottable auto-fit.
+        if self.xlim is not None:
+            self.ax.set_xlim(*self.xlim)
+        if self.ylim is not None:
+            self.ax.set_ylim(*self.ylim)
         if not self.twin_y:
             self._apply_y_label_side_switch()
             return
 
         self.ax_twin = self.ax.twinx()
+        # twinx() positions the twin at the host's ORIGINAL gridspec rect, not
+        # any inset the host already received (e.g. content_left_pad_inches).
+        # Match the host's current rect before decorating so the twin's y-axis
+        # label inset is computed against the inset spine — otherwise the
+        # figure-edge clamp collapses the label onto the spine.
+        self.ax_twin.set_position(self.ax.get_position())
 
         if self.twin_y_side == "left":
             self.ax_twin.yaxis.tick_left()
@@ -157,7 +185,12 @@ class TimeSeriesPanel(StaticPanel):
             fig_w_in = self.ax.figure.get_size_inches()[0]
             bbox = self.ax.get_position()
             axes_w_in = max(bbox.width * fig_w_in, 0.1)
-            half_pad_in = style.DEFAULT_AXIS_LABEL_INSET_INCHES
+            axes_x1_to_edge_in = (1.0 - bbox.x1) * fig_w_in
+            y_inset_in = min(
+                style.DEFAULT_Y_AXIS_LABEL_INSET_INCHES,
+                axes_w_in * 0.5,
+                max(axes_x1_to_edge_in - 0.15, 0.1),
+            )
             self.ax.yaxis.set_label_coords(
-                1.0 + half_pad_in / axes_w_in, 0.5,
+                1.0 + y_inset_in / axes_w_in, 0.5,
             )

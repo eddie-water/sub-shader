@@ -80,6 +80,52 @@ class Panel(ABC):
     def render(self) -> None:
         ...
 
+    def _content_border_rect_axes(self) -> "Tuple[float, float, float, float]":
+        """Content-border rect in axes-frac coords (left, bottom, right, top).
+
+        Shared "big box just inside the cell" used by text panels. The box
+        extends OUT past the axes to the cell border (by
+        ``style.DEFAULT_PAD_INCHES`` on each side) then insets by
+        ``style.DEFAULT_CONTENT_BORDER_INSET_FRAC`` of the cell width — so the
+        border reads as the cell's content frame, much larger than the tight
+        axes spine. Vertically it sits at the axes edge (the spine line of a
+        normal panel).
+        """
+        fig = self.ax.figure
+        fig_w_in, _ = fig.get_size_inches()
+        bbox = self.ax.get_position()
+        axes_w_in = max(bbox.width * fig_w_in, 0.1)
+        pad_x_frac = style.DEFAULT_PAD_INCHES / axes_w_in
+        cell_left = -pad_x_frac
+        cell_right = 1.0 + pad_x_frac
+        cell_w = cell_right - cell_left
+        h_inset = cell_w * style.DEFAULT_CONTENT_BORDER_INSET_FRAC
+        return (cell_left + h_inset, 0.0, cell_right - h_inset, 1.0)
+
+    def _draw_content_border(self):
+        """Draw the content-border rectangle (see ``_content_border_rect_axes``).
+
+        Color / linewidth inherit from the DEFAULT_SPINE_* constants every
+        panel spine uses, so the content frame matches the chrome of a real
+        plot's spine.
+        """
+        import matplotlib.patches as mpatches
+
+        left, bottom, right, top = self._content_border_rect_axes()
+        rect = mpatches.Rectangle(
+            (left, bottom),
+            right - left,
+            top - bottom,
+            transform=self.ax.transAxes,
+            fill=False,
+            edgecolor=style.SPINE_COLOR,
+            linewidth=style.DEFAULT_SPINE_LINEWIDTH,
+            clip_on=False,
+            zorder=1,
+        )
+        self.ax.add_patch(rect)
+        return rect
+
     def _render_chrome_titles(self) -> None:
         """Render this panel's title (above the plot) and subtitle (below).
 

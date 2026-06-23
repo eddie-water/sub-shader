@@ -36,6 +36,7 @@ class Annotation(Plottable):
                  color: str | None = None,
                  fontsize: float | None = None,
                  fontweight: str = "normal",
+                 fontfamily: str | None = None,
                  ha: str = "center",
                  va: str = "center",
                  transform: str = "data",
@@ -54,6 +55,7 @@ class Annotation(Plottable):
         self.arrow_to = tuple(arrow_to) if arrow_to is not None else None
         self.fontsize = fontsize
         self.fontweight = fontweight
+        self.fontfamily = fontfamily
         self.ha = ha
         self.va = va
         self.transform = transform
@@ -65,13 +67,19 @@ class Annotation(Plottable):
             else style.DEFAULT_LABEL_FONT_SIZE
         )
 
+        # Only forward fontfamily when set, so the default (None) leaves
+        # matplotlib's rcParams font selection untouched.
+        family_kw = (
+            {"fontfamily": self.fontfamily} if self.fontfamily else {}
+        )
+
         if self.arrow_to is not None:
             ax.annotate(
                 self.text,
                 xy=self.arrow_to, xytext=self.xy,
                 arrowprops=dict(arrowstyle="->", color=color, alpha=self.alpha),
                 color=color, fontsize=fontsize, fontweight=self.fontweight,
-                ha=self.ha, va=self.va, zorder=self.zorder,
+                ha=self.ha, va=self.va, zorder=self.zorder, **family_kw,
             )
             return
 
@@ -87,19 +95,19 @@ class Annotation(Plottable):
                     transform=ax.transAxes,
                     color=color, fontsize=fontsize, fontweight=self.fontweight,
                     ha=self.ha, va=self.va,
-                    alpha=self.alpha, zorder=self.zorder,
+                    alpha=self.alpha, zorder=self.zorder, **family_kw,
                 )
             else:
                 ax.text(
                     self.xy[0], self.xy[1], self.text,
                     color=color, fontsize=fontsize, fontweight=self.fontweight,
                     ha=self.ha, va=self.va, transform=ax.transAxes,
-                    alpha=self.alpha, zorder=self.zorder,
+                    alpha=self.alpha, zorder=self.zorder, **family_kw,
                 )
         else:
             ax.text(
                 self.xy[0], self.xy[1], self.text,
                 color=color, fontsize=fontsize, fontweight=self.fontweight,
                 ha=self.ha, va=self.va,
-                alpha=self.alpha, zorder=self.zorder,
+                alpha=self.alpha, zorder=self.zorder, **family_kw,
             )

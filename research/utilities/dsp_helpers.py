@@ -274,8 +274,9 @@ def build_bouncing_chirp(sr: int, duration_s: float,
 def build_waypoint_chirp(sr: int, duration_s: float,
                          waypoints: tuple[tuple[float, float], ...],
                          *, bc_type: str = "natural",
+                         interp: str = "cubic",
                          clip_to_waypoints: bool = True) -> tuple:
-    """Generate a chirp by cubic-splining log-frequency through user waypoints.
+    """Generate a chirp by splining log-frequency through user waypoints.
 
     Args:
         sr: Sample rate in Hz
@@ -283,9 +284,18 @@ def build_waypoint_chirp(sr: int, duration_s: float,
         waypoints: Sequence of (time_frac, freq_hz). Time fractions are in
                    [0, 1] of duration_s, must be strictly increasing, and must
                    include both endpoints (0 and 1).
-        bc_type: scipy.interpolate.CubicSpline boundary condition. "natural"
-                 (zero second derivative at endpoints) gives a soft start/end;
-                 "clamped" (zero first derivative) gives flat takeoff/landing.
+        bc_type: scipy.interpolate.CubicSpline boundary condition (only used when
+                 interp="cubic"). "natural" (zero second derivative at endpoints)
+                 gives a soft start/end; "clamped" (zero first derivative) gives
+                 flat takeoff/landing.
+        interp: interpolation kernel for the log-frequency curve.
+                "cubic"  — CubicSpline: C^2-smooth, cleanest for gentle shapes,
+                           but OVERSHOOTS badly on steep/aggressive walls.
+                "pchip"  — PchipInterpolator: shape-preserving (monotone between
+                           waypoints, NO overshoot) — use for aggressive dips/ramps
+                           and flat plateaus that must not sag.
+                "akima"  — Akima1DInterpolator: low-overshoot, slightly smoother
+                           than pchip but can still wiggle a little.
 
     Returns:
         (signal, inst_freq, t) — all 1-D arrays of length int(sr * duration_s)
@@ -314,14 +324,83 @@ def build_waypoint_chirp(sr: int, duration_s: float,
     # derivative) — fine for protecting against ringing on aggressive slope
     # flips, but visibly angular on smoother shapes. CubicSpline's only
     # weakness is overshoot when slopes flip sharply between waypoints; for
-    # moderate chirps that risk is low and the smoother visual wins.
-    from scipy.interpolate import CubicSpline
-    cs = CubicSpline(wp_times, wp_log_freqs, bc_type=bc_type)
-    log_inst_freq = cs(t)
+    # aggressive walls (steep dips/ramps) that overshoot explodes, so pick
+    # interp="pchip" (shape-preserving, no overshoot) there instead.
+    if interp == "pchip":
+        from scipy.interpolate import PchipInterpolator
+        spline = PchipInterpolator(wp_times, wp_log_freqs)
+    elif interp == "akima":
+        from scipy.interpolate import Akima1DInterpolator
+        spline = Akima1DInterpolator(wp_times, wp_log_freqs)
+    elif interp == "cubic":
+        from scipy.interpolate import CubicSpline
+        spline = CubicSpline(wp_times, wp_log_freqs, bc_type=bc_type)
+    else:
+        raise ValueError(f"interp must be 'cubic', 'pchip', or 'akima', got {interp!r}")
+    log_inst_freq = spline(t)
 
     if clip_to_waypoints:
         log_inst_freq = np.clip(log_inst_freq, wp_log_freqs.min(), wp_log_freqs.max())
     inst_freq = np.exp(log_inst_freq)
+
+    phase = 2 * np.pi * np.cumsum(inst_freq) / sr
+    signal = np.sin(phase)
+
+    return signal.astype(np.float64), inst_freq, t
+
+
+def build_log_sweep_oscillating(sr: int, duration_s: float,
+                                f_start: float, f_end: float, *,
+                                osc_octaves: float = 0.33,
+                                n_osc: float = 2.5,
+                                osc_phase: float = 0.0,
+                                osc_decay: float = 0.0,
+                                ramp_power: float = 1.0) -> tuple:
+    """Log-frequency sweep with a gentle sine wobble in log-freq.
+
+    The base contour rises in log-frequency from f_start to f_end, monotone
+    and therefore asymmetric (no dip-and-return arc to fan symmetrically).
+    With ramp_power=1 the rise is LINEAR in log-freq (a classic exponential
+    chirp, equal time per octave); ramp_power>1 warps the time curve so the
+    contour DWELLS near f_start for longer and then ramps up steeply toward
+    the end ("stay low for longer, rise late"). A slow sine ripples the
+    contour by +/- osc_octaves so the time-frequency ridge undulates instead
+    of tracing one clean line. The wobble breaks the low-frequency CWT smear
+    into a gently textured ribbon rather than a single obvious symmetric fan —
+    the smear reads as intentional motion, not as an artifact.
+
+    Args:
+        sr: Sample rate in Hz
+        duration_s: Signal duration in seconds
+        f_start: Frequency at t=0 (Hz) — set low for slow, readable cycles
+        f_end: Frequency at t=duration_s (Hz)
+        osc_octaves: Wobble amplitude in octaves (peak deviation each way).
+                     ~0.3 is a gentle undulation; >0.5 starts to look wavy.
+        n_osc: Number of full wobble cycles across the build duration.
+        osc_phase: Phase offset (radians) of the wobble — shifts where the
+                   undulations land relative to the trim window.
+        osc_decay: Exponential decay rate of the wobble amplitude over the
+                   sweep (0 = constant wobble; >0 fades the wobble as the
+                   sweep rises, so it textures the low end but not the high).
+        ramp_power: Time-curve exponent for the base rise. 1.0 = linear in
+                    log-freq (constant rate). >1 dwells low and rises late
+                    (e.g. 2.0-2.5 holds near f_start for the first ~half before
+                    climbing). <1 rises fast then flattens high.
+
+    Returns:
+        (signal, inst_freq, t) — all 1-D arrays of length int(sr * duration_s)
+    """
+    n = int(sr * duration_s)
+    t = np.arange(n, dtype=np.float64) / sr
+    frac = t / duration_s
+
+    ramp = frac ** ramp_power
+    base = np.log(f_start) + (np.log(f_end) - np.log(f_start)) * ramp
+    amp = osc_octaves * np.log(2.0)
+    if osc_decay:
+        amp = amp * np.exp(-osc_decay * frac)
+    wobble = amp * np.sin(2 * np.pi * n_osc * frac + osc_phase)
+    inst_freq = np.exp(base + wobble)
 
     phase = 2 * np.pi * np.cumsum(inst_freq) / sr
     signal = np.sin(phase)

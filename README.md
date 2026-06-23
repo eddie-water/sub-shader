@@ -1,4 +1,5 @@
-# Sub Shader
+# Sub Shader 
+There are symphonies everywhere for those with the eyes to see them
 
 Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline that analyzes audio using modern techniques in digital signal processing and parallel computing to render a low-latency frequency vs time plot. 
 

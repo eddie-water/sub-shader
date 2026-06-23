@@ -114,20 +114,27 @@ def test_vector_2d_label_renders_text():
         plt.close(fig)
 
 
-def test_vector_2d_dashed_uses_split_artists():
-    """Dashed shafts render via ax.plot + a SOLID FancyArrowPatch head stub —
-    sidesteps the dashed-arrowhead ghosting workaround."""
-    from dsplot import Vector
+def test_vector_2d_dashed_renders_dashed_shaft_and_solid_head():
+    """A dashed vector draws a dashed Line2D shaft PLUS a solid, full-size
+    `-|>` head patch — not a single dashed patch. A single dashed patch would
+    dash the head OUTLINE too, and the thick dashed edge chews visible chunks
+    out of the small head silhouette. The head keeps the same mutation_scale as
+    a solid vector's, so component heads still match their bold parents (the
+    reason the head must not be a shrunk stub)."""
+    from dsplot import Vector, style
+    from matplotlib.patches import FancyArrowPatch
     fig, ax = _fresh_2d()
     try:
         Vector((1.0, 0.0), linestyle="--").draw(ax)
-        dashed_lines = [l for l in ax.lines if l.get_linestyle() in ("--", "dashed")]
-        assert dashed_lines, "expected at least one dashed Line2D for the shaft"
-        solid_patches = [
-            p for p in ax.patches
-            if hasattr(p, "get_linestyle") and p.get_linestyle() in ("-", "solid")
-        ]
-        assert solid_patches, "expected at least one solid FancyArrowPatch head"
+        arrow_patches = [p for p in ax.patches if isinstance(p, FancyArrowPatch)]
+        assert len(arrow_patches) == 1, "expected a single head patch"
+        head = arrow_patches[0]
+        assert head.get_linestyle() in ("-", "solid"), \
+            "the head must be solid so the dash pattern can't break its outline"
+        assert head.get_mutation_scale() == style.DEFAULT_ARROW_MUTATION, \
+            "head must stay full-size (same mutation_scale as a solid vector)"
+        dashed = [l for l in ax.lines if l.get_linestyle() in ("--", "dashed")]
+        assert len(dashed) == 1, "expected one dashed Line2D shaft"
     finally:
         plt.close(fig)
 
@@ -205,12 +212,17 @@ def test_vector_origin_default_dimension_matches_input():
 
 def test_vector_components_x_first_renders_two_arrows_and_two_droplines():
     from dsplot import VectorComponents
+    from matplotlib.patches import FancyArrowPatch
     fig, ax = _fresh_2d()
     try:
         VectorComponents((2.0, 3.0), first_axis="x").draw(ax)
+        # Each component arrow is a solid head patch (one per axis).
+        arrow_patches = [p for p in ax.patches if isinstance(p, FancyArrowPatch)]
+        assert len(arrow_patches) == 2, f"expected 2 component arrows, got {len(arrow_patches)}"
+        # Dashed Line2Ds: 2 component shafts (head + dashed shaft per arrow) and
+        # 2 droplines, one per axis.
         dashed_lines = [l for l in ax.lines if l.get_linestyle() in ("--", "dashed")]
-        # 2 component-arrow shafts (dashed) + 2 droplines (dashed) = 4
-        assert len(dashed_lines) >= 4, f"expected >=4 dashed lines, got {len(dashed_lines)}"
+        assert len(dashed_lines) == 4, f"expected 2 shafts + 2 droplines, got {len(dashed_lines)}"
     finally:
         plt.close(fig)
 
@@ -218,27 +230,38 @@ def test_vector_components_x_first_renders_two_arrows_and_two_droplines():
 def test_vector_components_y_first_renders_y_then_x():
     """y-first ordering: y-arrow from origin, then x-arrow from y-arrow's tip."""
     from dsplot import VectorComponents
+    from matplotlib.patches import FancyArrowPatch
     fig, ax = _fresh_2d()
     try:
         VectorComponents((2.0, 3.0), first_axis="y", show_droplines=False).draw(ax)
-        dashed_lines = [l for l in ax.lines if l.get_linestyle() in ("--", "dashed")]
-        assert len(dashed_lines) >= 2
-        # First arrow shaft goes from origin to (0, 3.0) (y-first)
-        first = dashed_lines[0]
-        xs, ys = first.get_xdata(), first.get_ydata()
-        assert list(xs) == [0.0, 0.0]
-        assert list(ys) == [0.0, 3.0]
+        arrow_patches = [p for p in ax.patches if isinstance(p, FancyArrowPatch)]
+        assert len(arrow_patches) == 2
+        # First arrow is y-first: its head tip lands at (0, 3.0). The head patch
+        # is a stub at the tip (posA = stub tail, posB = tip), so check the tip
+        # plus the dashed shaft line that spans origin -> tip.
+        (_start, end) = arrow_patches[0]._posA_posB
+        assert tuple(end) == (0.0, 3.0)
+        shafts = [
+            l for l in ax.lines
+            if l.get_linestyle() in ("--", "dashed")
+            and list(l.get_xdata()) == [0.0, 0.0]
+            and list(l.get_ydata()) == [0.0, 3.0]
+        ]
+        assert shafts, "expected a dashed shaft from origin to (0, 3.0)"
     finally:
         plt.close(fig)
 
 
 def test_vector_components_no_droplines_when_disabled():
     from dsplot import VectorComponents
+    from matplotlib.patches import FancyArrowPatch
     fig, ax = _fresh_2d()
     try:
         VectorComponents((2.0, 3.0), show_droplines=False).draw(ax)
+        arrow_patches = [p for p in ax.patches if isinstance(p, FancyArrowPatch)]
+        assert len(arrow_patches) == 2, f"expected 2 component arrows, got {len(arrow_patches)}"
+        # No droplines, so the only dashed lines are the 2 component shafts.
         dashed_lines = [l for l in ax.lines if l.get_linestyle() in ("--", "dashed")]
-        # Only 2 dashed component-arrow shafts; no extra dropline pair
-        assert len(dashed_lines) == 2, f"expected exactly 2 dashed lines, got {len(dashed_lines)}"
+        assert len(dashed_lines) == 2, f"expected 2 component shafts, got {len(dashed_lines)}"
     finally:
         plt.close(fig)

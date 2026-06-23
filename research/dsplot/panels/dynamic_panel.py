@@ -59,10 +59,15 @@ class DynamicPanel(Panel):
         lim: Optional[Union[float, Tuple[float, float]]] = None,
         axis_style: str = "line",
         axis_labels: bool = False,
+        axis_label_size: Optional[float] = None,
         show_border: bool = True,
         show_ticks: bool = False,
         show_grid: bool = False,
         tick_positions: Optional[Tuple[float, ...]] = None,
+        x_label: Optional[str] = None,
+        y_label: Optional[str] = None,
+        show_tick_labels: bool = False,
+        fill_cell: bool = False,
     ) -> None:
         super().__init__(units=units)
         if frames is None and frame_fn is None:
@@ -87,10 +92,21 @@ class DynamicPanel(Panel):
         self.lim = lim
         self.axis_style = axis_style
         self.axis_labels = axis_labels
+        self.axis_label_size = axis_label_size
         self.show_border = show_border
         self.show_ticks = show_ticks
         self.show_grid = show_grid
         self.tick_positions = tick_positions
+        # External gutter labels — matches StaticPanel's x_label/y_label path.
+        # Routed through heatmap_panel._apply_axis_decoration in _render_background.
+        self.x_label = x_label
+        self.y_label = y_label
+        self.show_tick_labels = show_tick_labels
+        # When True, Figure.render expands this panel's axes to fill its whole
+        # gridspec cell (out to the surrounding half-gutter / figure edge),
+        # removing the chrome-zone padding. For title-less vector panels whose
+        # axis labels sit INSIDE the axes, that padding is dead space.
+        self.fill_cell = fill_cell
 
         self._anim = None
         self._frame_artists: List = []
@@ -143,6 +159,7 @@ class DynamicPanel(Panel):
             show_border=self.show_border,
             axis_style=self.axis_style,
             axis_labels=self.axis_labels,
+            axis_label_size=self.axis_label_size,
         )
 
         if self.show_ticks:
@@ -157,14 +174,22 @@ class DynamicPanel(Panel):
                 ]
             ax.set_xticks(positions)
             ax.set_yticks(positions)
+            label_kwargs = dict(
+                labelbottom=self.show_tick_labels,
+                labelleft=self.show_tick_labels,
+            )
+            if self.show_tick_labels:
+                label_kwargs.update(
+                    labelsize=style.DEFAULT_TICK_LABEL_SIZE,
+                    labelcolor=style.TICK_LABEL_COLOR,
+                )
             ax.tick_params(
                 axis="both",
                 colors=style.SPINE_COLOR,
                 length=style.DEFAULT_TICK_LENGTH * 0.6,
                 width=style.DEFAULT_TICK_WIDTH * 0.8,
-                labelbottom=False,
-                labelleft=False,
                 direction="inout",
+                **label_kwargs,
             )
 
         if self.show_grid:
@@ -174,6 +199,18 @@ class DynamicPanel(Panel):
                 alpha=style.DEFAULT_AXIS_GRID_ALPHA,
                 linewidth=style.DEFAULT_AXIS_GRID_LINEWIDTH,
                 zorder=0,
+            )
+
+        if self.x_label is not None or self.y_label is not None:
+            from .heatmap_panel import _apply_axis_decoration
+            _apply_axis_decoration(
+                ax,
+                x_label=self.x_label,
+                y_label=self.y_label,
+                xticks=None,
+                yticks=None,
+                show_xticklabels=self.show_tick_labels,
+                show_yticklabels=self.show_tick_labels,
             )
 
         self._render_chrome_titles()
@@ -204,6 +241,9 @@ class DynamicPanel(Panel):
         before_collections = set(id(p) for p in ax.collections)
         before_texts = set(id(p) for p in ax.texts)
         before_images = set(id(p) for p in ax.images)
+        # Generic artists (ax.add_artist) — e.g. offsetbox AnnotationBbox used
+        # by RichText for multi-color text. Tracked so they're cleared per frame.
+        before_artists = set(id(p) for p in ax.artists)
 
         # Draw frame plottables
         plottables = self._resolve_frame(frame_idx)
@@ -217,6 +257,7 @@ class DynamicPanel(Panel):
             ("collections", before_collections),
             ("texts", before_texts),
             ("images", before_images),
+            ("artists", before_artists),
         ):
             for artist in getattr(ax, collection_name):
                 if id(artist) not in before_ids:

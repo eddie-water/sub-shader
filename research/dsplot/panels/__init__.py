@@ -2,6 +2,9 @@
 from .base import Panel
 from .composite_panel import CompositePanel
 from .dynamic_panel import DynamicPanel
+from .dynamic_panel_3d import DynamicPanel3D
+from .dynamic_text_panel import DynamicTextPanel
+from .dynamic_time_series_panel import DynamicTimeSeriesPanel
 from .heatmap_panel import HeatmapPanel
 from .interactive_panel import InteractivePanel
 from .static_panel import StaticPanel
@@ -15,6 +18,9 @@ __all__ = [
     "StaticPanel",
     "StaticPanel3D",
     "DynamicPanel",
+    "DynamicPanel3D",
+    "DynamicTextPanel",
+    "DynamicTimeSeriesPanel",
     "InteractivePanel",
     "TimeSeriesPanel",
     "HeatmapPanel",

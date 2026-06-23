@@ -31,6 +31,7 @@ class VectorComponents(Plottable):
                  dropline_color: str | None = None,
                  label_x: str | None = None,
                  label_y: str | None = None,
+                 linewidth: float | None = None,
                  alpha: float = 0.95,
                  zorder: int = 2) -> None:
         vec_t = tuple(vec)
@@ -44,7 +45,7 @@ class VectorComponents(Plottable):
             )
         super().__init__(
             color=component_color,
-            linewidth=None,
+            linewidth=linewidth,
             alpha=alpha,
             linestyle="--",
             label=None,
@@ -88,6 +89,7 @@ class VectorComponents(Plottable):
             origin=first_origin,
             color=component_color,
             linestyle="--",
+            linewidth=self.linewidth,
             alpha=self.alpha,
             zorder=self.zorder,
         ).draw(ax)
@@ -96,6 +98,7 @@ class VectorComponents(Plottable):
             origin=second_origin,
             color=component_color,
             linestyle="--",
+            linewidth=self.linewidth,
             alpha=self.alpha,
             zorder=self.zorder,
         ).draw(ax)

@@ -58,7 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     # Defer imports until after sys.path is wired so ``import dsplot`` succeeds.
     from . import (
         alignment_diagnostic,
-        components_recombine,
+        gen_figure_241_xy_recombine_independent,
+        gen_figure_243_dot_product_3d,
         dot_product_geometry,
         motivator,
         projection_reconstruction,
@@ -78,11 +79,11 @@ def main(argv: list[str] | None = None) -> int:
     paths.append(dot_product_geometry.render(
         args.out, _with_suffix("dot_product/geometry.png", args.suffix)
     ))
-    paths.append(components_recombine.render(
+    paths.append(gen_figure_241_xy_recombine_independent.render(
         args.out,
-        _with_suffix("components_recombine/either_order_v19.png", args.suffix),
+        _with_suffix("gen_figure_241_xy_recombine_independent/either_order_v19.png", args.suffix),
     ))
-    paths.append(components_recombine.render_vector_xy_reconstruction(
+    paths.append(gen_figure_241_xy_recombine_independent.render_vector_xy_reconstruction(
         args.out,
         _with_suffix("vector_xy_reconstruction/baseline.png", args.suffix),
     ))
@@ -93,6 +94,10 @@ def main(argv: list[str] | None = None) -> int:
     paths.append(vector_projection_3d.render(
         args.out,
         _with_suffix("vector_projection_3d/v2_combo5_palette.png", args.suffix),
+    ))
+    paths.append(gen_figure_243_dot_product_3d.render(
+        args.out,
+        _with_suffix("dot_product_3d/baseline.png", args.suffix),
     ))
 
     # Motivator figures live under assets/images/dsp/figures/motivator/.

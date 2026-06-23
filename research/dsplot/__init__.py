@@ -29,11 +29,15 @@ _RESEARCH_DIR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 if _RESEARCH_DIR not in _sys.path:
     _sys.path.insert(0, _RESEARCH_DIR)
 
-from . import freq_axis, style
+from . import colormaps, freq_axis, style
+from .style import nb_compact_style
 from .figure import Figure, apply_jupyter_dark
 from .panels import (
     CompositePanel,
     DynamicPanel,
+    DynamicPanel3D,
+    DynamicTextPanel,
+    DynamicTimeSeriesPanel,
     HeatmapPanel,
     InteractivePanel,
     Panel,
@@ -48,8 +52,10 @@ from .plottables import (
     Dropline,
     Heatmap,
     Line,
+    RichText,
     Spotlight,
     Stem,
+    StemArrows,
     TimeSeries,
     Vector,
     VectorComponents,
@@ -58,19 +64,26 @@ from .plottables import (
 __all__ = [
     "style",
     "freq_axis",
+    "colormaps",
+    "nb_compact_style",
     "Vector",
     "VectorComponents",
     "Annotation",
     "TimeSeries",
     "Heatmap",
     "Line",
+    "RichText",
     "Spotlight",
     "Stem",
+    "StemArrows",
     "Dropline",
     "Panel",
     "StaticPanel",
     "StaticPanel3D",
     "DynamicPanel",
+    "DynamicPanel3D",
+    "DynamicTextPanel",
+    "DynamicTimeSeriesPanel",
     "InteractivePanel",
     "TimeSeriesPanel",
     "HeatmapPanel",
