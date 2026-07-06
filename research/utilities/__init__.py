@@ -40,6 +40,19 @@ from .constants import (
 # Export timing utilities
 from .timing import time_call, TimingAccumulator
 
+# Export timing result persistence + rendering
+from .timing_results import (
+    TimingRecorder,
+    render_markdown,
+    audio_frame_period_ms,
+    RESULTS_CSV,
+    RESULTS_MD,
+    METHODS_CSV,
+    append_method_rows,
+    latest_method_rows,
+    methods_table_md,
+)
+
 # Export printing utilities
 from .printing import (
     print_section_start,
@@ -134,6 +147,16 @@ __all__ = [
     # Timing
     "time_call",
     "TimingAccumulator",
+    # Timing results
+    "TimingRecorder",
+    "render_markdown",
+    "audio_frame_period_ms",
+    "RESULTS_CSV",
+    "RESULTS_MD",
+    "METHODS_CSV",
+    "append_method_rows",
+    "latest_method_rows",
+    "methods_table_md",
     # Printing
     "print_section_start",
     "print_section_end",
