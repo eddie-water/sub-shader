@@ -11,6 +11,7 @@ log = get_logger(__name__)
 
 PI: Final[np.float64] = np.pi
 
+
 class WaveletKernel():
     def __init__(self,
                  f: np.float64,

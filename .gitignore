@@ -22,6 +22,15 @@ logs/*.txt
 # FPS Record (track personal best)
 !fps_record.txt
 
+# draw.io autosave/backup cruft
+**/.$*
+*.drawio.bkp
+*.dtmp
+*:Zone.Identifier
+
+# Figure iteration renders — finals live in assets/, iterations stay local
+archive/figure-iterations/
+
 # Claude Code customizations — agent/command/skill markdown isn't worth tracking
 .claude/**/*.md
 # Per-agent worktree checkouts — transient, never source of truth

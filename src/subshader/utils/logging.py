@@ -98,8 +98,9 @@ def set_log_level(level: str) -> None:
     log = logging.getLogger(__name__)
     log.info(f"Log level changed to: {level}")
 
-
 # Convenience function for quick log access
+
+
 def get_module_logger() -> logging.Logger:
     """
     Get a log for the calling module.

@@ -34,6 +34,5 @@ def main():
     finally:
         pipeline.cleanup()
 
-
 if __name__ == "__main__":
     main()

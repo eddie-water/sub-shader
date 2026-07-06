@@ -7,27 +7,15 @@ audio file on construction and writes them back into the shared PipelineConfig
 so downstream stages (CWT, Renderer) see the correct runtime values.
 """
 
-# =============================================================================
-# IMPORTS
-# =============================================================================
-
 import time
 
 from subshader.utils.logging import get_logger
-from subshader.utils.timing import timed
+from subshader.utils.timing import timed, timed_block
 from subshader.config import PipelineConfig
 from .reader import AudioReader
 from .player import AudioPlayer
 
-# =============================================================================
-# LOGGING
-# =============================================================================
-
 log = get_logger(__name__)
-
-# =============================================================================
-# AUDIO STREAM CLASS
-# =============================================================================
 
 
 class AudioStream:
@@ -42,6 +30,7 @@ class AudioStream:
     the OutputStream).
     """
 
+    @timed
     def __init__(self, config: PipelineConfig) -> None:
         """Initialize the audio stream from pipeline config.
 
@@ -56,9 +45,11 @@ class AudioStream:
         """
         self._config = config
         # AudioReader opens the file and writes config.sample_rate + config.total_samples
-        self._reader = AudioReader(config)
+        with timed_block(self, "audio_reader"):
+            self._reader = AudioReader(config)
         # AudioPlayer reads the now-populated config.sample_rate
-        self._player = AudioPlayer(config)
+        with timed_block(self, "audio_player"):
+            self._player = AudioPlayer(config)
         log.info("AudioStream initialized")
 
     def start(self) -> None:

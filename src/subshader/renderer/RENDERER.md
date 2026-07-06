@@ -1,5 +1,7 @@
 # Renderer Module
 
+> 🚧 Under Construction 🚧
+
 ## Role in the Pipeline
 
 [WRITE: "Receives CWT frames from the DSP stage, stores recent history in a circular buffer, and renders the buffer as a GPU texture via fragment shader. The result is the scrolling spectrogram you see on screen."]

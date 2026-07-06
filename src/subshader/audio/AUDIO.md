@@ -1,5 +1,7 @@
 # Audio Module
 
+> 🚧 Under Construction 🚧
+
 ## Role in the Pipeline
 
 [WRITE: "AudioInput delivers overlapping chunks of audio samples to the DSP stage. AudioPlayer drives the render loop clock by providing real-time playback position."]

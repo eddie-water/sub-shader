@@ -1,15 +1,13 @@
 # Signal Decomposition
 
+> 🚧 Under Construction 🚧
+
 ## 1. Motivations
 
 - To visualize an audio signal effectively, we need an extremely precise method for representing it's behavior
 - Specifically, we want to know **what** frequencies are present and **when** they occur in the signal - this is the primary motivation for finding a highly accurate **time-frequency** analysis method 
   - The standard approach is to use the **Fourier Transform**, but in this context it has limitations
-<<<<<<< Updated upstream
   - The more recent **Wavelet Transform** was basically designed for this kind of task
-=======
-  - The more recently  **Wavelet Transform** was basically designed for this kind of task
->>>>>>> Stashed changes
 
   *[TODO Insert CWT vs STFT Figure]*
 - Both are built on the same foundation - **signal decomposition** 
@@ -23,11 +21,7 @@
 
 - The end goal is to **decompose** any given signal into its fundamental **components**
 - In simpler terms, we want to break it down into its **basic building blocks** and see how much of each exists in the signal originally 
-<<<<<<< Updated upstream
 - This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
-=======
-- This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall final color of the paint - where would you even begin?
->>>>>>> Stashed changes
 - This type of problem motivates us to do two things:
     1. **Define what a signal's fundamental components are** 
     2. **Measure the presence of each component in the signal** 
@@ -133,33 +127,19 @@ $$
 
 - The **length** of each "shadow" *is* its **component** for that dimension and reveals how much each dimension **contributes** to the original vector as a whole - we designate these "shadows" as the vector's **basic components** since they 
   - **Can be combined in any order** to reconstruct the original - when rebuilding them tip-to-tail, if you start with x first and then y, or y first then x, regardlessly, you still end up with the original  
-<<<<<<< Updated upstream
   - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component goes completely unnoticed by, and does not affect, the y component
 
-![Basic Vector Projection (3 panels, a = (3, 4)): Figure 2.4.1.a — projection of vector a onto x/y axes (left); Figure 2.4.1.b — tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); Figure 2.4.1.c — vectors a and a' = (-3, 4) sharing the same y-component but with opposite-sign x-components, with a and its x-component muted so a' reads as the spotlight — independence beat (right)](../../../assets/images/dsp/figures/components_recombine/either_order_v19.png)
+![Basic Vector Projection (3 panels, a = (3, 4)): Figure 2.4.1.a — projection of vector a onto x/y axes (left); Figure 2.4.1.b — tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); Figure 2.4.1.c — vectors a and a' = (-3, 4) sharing the same y-component but with opposite-sign x-components, with a and its x-component muted so a' reads as the spotlight — independence beat (right)](../../../assets/images/figures/components_recombine/either_order_v19.png)
 
 #### 2.4.2 Projection onto Another Vector
 - When projecting one vector onto another, like **a** onto **b**, we use **b** as the **reference direction**, revealing which components of **a** are **aligned** with **b** 
 - The more **parallel** the two vectors are, the larger **a**'s projection onto **b** is 
-=======
-  - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component does not affect, and goes completely unnoticed by the y component
-
-![Basic Vector Projection (3 panels): projection of vector a onto x/y axes (left); tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); two vectors a and a' (same orange family) sharing the same y-component but with opposite-sign x-components, demonstrating that measuring y is independent of x — the perpendicularity / orthogonality beat (right)](../../../assets/images/dsp/components_recombine_either_order_v18.png)
-
-#### 2.4.2 Reference Direction is another Vector
-- When projecting one vector onto another, like **a** onto **b**, we use **b** as the **reference direction** - this reveals which parts of **a** are **aligned** with, or point along the **same direction**, as **b** 
-
->>>>>>> Stashed changes
 - When performing the Dot Product on these vector components, using b as the direction
  TODO how does the dot product intuitively come into play here? sure we know how to decompose into dimensional components, but lets tie it back to the idea
 
 - Notice how when we project **a** onto **b** or **b** onto **a**, the resulting __ [the visual annotates each component of each projection - do the math for each exmaple - display how the dot product in either case produces the same result - this basically means we don't really care which one is the reference dimension - show math example in the with each - ]
 
-<<<<<<< Updated upstream
 ![Projection of a onto b (left) and b onto a (right), each shown with both reconstruction paths — parallel-then-perp and perp-then-parallel — demonstrating order independence for any reference direction](../../../assets/images/dsp/figures/projection_reconstruction/either_order_v9.png)
-=======
-![Projection of a onto b (left) and b onto a (right), each shown with both reconstruction paths — parallel-then-perp and perp-then-parallel — demonstrating order independence for any reference direction](../../../assets/images/dsp/projection_reconstruction_either_order_v9.png)
->>>>>>> Stashed changes
 
 <!-- WRITE 2.4.1 beat 4 — symmetry of the dot product (right panel).
      Even though "a onto b" and "b onto a" produce visibly different

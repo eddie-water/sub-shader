@@ -12,10 +12,6 @@ All config objects flow through the pipeline. AudioStream discovers runtime
 values (sample_rate, total_samples) and writes them back to the shared config.
 """
 
-# =============================================================================
-# IMPORTS
-# =============================================================================
-
 import os
 from dataclasses import dataclass, field
 from typing import Tuple, List
@@ -24,15 +20,8 @@ import tkinter as tk
 
 from .utils.logging import get_logger
 
-# =============================================================================
-# LOGGING
-# =============================================================================
-
 log = get_logger(__name__)
 
-# =============================================================================
-# UTILITIES
-# =============================================================================
 
 def _get_system_display_size() -> Tuple[int, int]:
     """
@@ -51,9 +40,6 @@ def _get_system_display_size() -> Tuple[int, int]:
         # Fallback to Full HD if system detection fails
         return 1920, 1080
 
-# =============================================================================
-# COLOR NORMALIZATION CONFIG
-# =============================================================================
 
 @dataclass
 class ColorNormalizationConfig:
@@ -77,9 +63,6 @@ class ColorNormalizationConfig:
 
         return errors
 
-# =============================================================================
-# BASE PIPELINE CONFIG
-# =============================================================================
 
 @dataclass
 class PipelineConfig:
@@ -148,9 +131,6 @@ class PipelineConfig:
 
         return errors
 
-# =============================================================================
-# CWT CONFIG
-# =============================================================================
 
 @dataclass
 class CWTConfig(PipelineConfig):
@@ -201,9 +181,6 @@ class CWTConfig(PipelineConfig):
 
         return errors
 
-# =============================================================================
-# RENDERER CONFIG
-# =============================================================================
 
 @dataclass
 class RendererConfig(PipelineConfig):
@@ -242,10 +219,6 @@ class RendererConfig(PipelineConfig):
 
         return errors
 
-# =============================================================================
-# DEPRECATED COMPATIBILITY SHIM
-# =============================================================================
-
 # DEPRECATED: Use CWTConfig or PipelineConfig directly.
 # Will be removed in next phase once all callers migrate to the new hierarchy.
 ProcessingConfig = CWTConfig
@@ -254,9 +227,6 @@ ProcessingConfig = CWTConfig
 # Preserved so wavelet.py can be imported without modification until Plan 08-05.
 WaveletConfig = CWTConfig
 
-# =============================================================================
-# DEFAULT CONFIG FACTORY
-# =============================================================================
 
 def get_default_config() -> CWTConfig:
     """

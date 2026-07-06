@@ -8,10 +8,6 @@ Accepts a PipelineConfig — reads file_path and sample_rate from config after
 AudioReader has written the discovered sample_rate back to config.
 """
 
-# =============================================================================
-# IMPORTS
-# =============================================================================
-
 import threading
 
 import numpy as np
@@ -22,15 +18,7 @@ from subshader.utils.logging import get_logger
 from subshader.exceptions import SubShaderException, AudioFileNotFoundError
 from subshader.config import PipelineConfig
 
-# =============================================================================
-# LOGGING
-# =============================================================================
-
 log = get_logger(__name__)
-
-# =============================================================================
-# AUDIO PLAYER CLASS
-# =============================================================================
 
 
 class AudioPlayer:

@@ -28,7 +28,7 @@ from subshader.config import CWTConfig
 from subshader.dsp.dsp import DSP
 from subshader.dsp.wavelet_kernel import WaveletKernel
 from subshader.utils.logging import get_logger
-from subshader.utils.timing import timed
+from subshader.utils.timing import timed, timed_block
 
 log = get_logger(__name__)
 
@@ -68,26 +68,28 @@ class CWT(DSP):
         self.output_shape: tuple = (self.num_freqs, self.output_n)
 
         # Build wavelet kernel bank
-        self.wavelets: list[WaveletKernel] = [
-            WaveletKernel(
-                f=f,
-                sample_rate=self.sample_rate,
-                num_cycles=config.num_cycles,
-                num_fwhm_cycles=config.num_fwhm_cycles,
-                input_n=self.input_n,
-            )
-            for f in self.freqs
-        ]
+        with timed_block(self, "dsp_kernels"):
+            self.wavelets: list[WaveletKernel] = [
+                WaveletKernel(
+                    f=f,
+                    sample_rate=self.sample_rate,
+                    num_cycles=config.num_cycles,
+                    num_fwhm_cycles=config.num_fwhm_cycles,
+                    input_n=self.input_n,
+                )
+                for f in self.freqs
+            ]
 
-        self.num_wavelets: int = len(self.wavelets)
-        self.max_conv_n: int = max(w.get_conv_n() for w in self.wavelets)
+            self.num_wavelets: int = len(self.wavelets)
+            self.max_conv_n: int = max(w.get_conv_n() for w in self.wavelets)
 
         # Pre-compute frequency-domain kernel bank (zero-padded to max_conv_n)
-        self.kernel_f_bank: np.ndarray = np.zeros(
-            (self.num_wavelets, self.max_conv_n), dtype=np.complex64
-        )
-        for i, w in enumerate(self.wavelets):
-            self.kernel_f_bank[i] = fft(w.kernel_t, self.max_conv_n)
+        with timed_block(self, "dsp_fft"):
+            self.kernel_f_bank: np.ndarray = np.zeros(
+                (self.num_wavelets, self.max_conv_n), dtype=np.complex64
+            )
+            for i, w in enumerate(self.wavelets):
+                self.kernel_f_bank[i] = fft(w.kernel_t, self.max_conv_n)
 
         # Reliable center slice (discards edge artifacts from widest wavelet)
         self.reliable_slice: slice = self._create_reliable_slice(self.wavelets)
@@ -300,6 +302,7 @@ class CpuCWT(CWT):
     transformed once, multiplied against all kernel rows, then iFFT'd.
     """
 
+    @timed
     def __init__(self, config: CWTConfig) -> None:
         super().__init__(config)
 
@@ -331,6 +334,7 @@ class GpuCWT(CWT):
     transfer of shape (num_freqs × max_conv_n).
     """
 
+    @timed
     def __init__(self, config: CWTConfig) -> None:
         if not _CUPY_AVAILABLE:
             raise RuntimeError(
@@ -340,9 +344,16 @@ class GpuCWT(CWT):
         super().__init__(config)
 
         log.info(f"CPU→GPU: Uploading {self.num_wavelets} wavelet kernels to GPU")
-        self.kernel_f_bank_gpu = cp.asarray(
-            self.kernel_f_bank, dtype=cp.complex64, order="C"
-        )
+        with timed_block(self, "dsp_upload"):
+            self.kernel_f_bank_gpu = cp.asarray(
+                self.kernel_f_bank, dtype=cp.complex64, order="C"
+            )
+
+        # TODO: free the CPU-side kernel bank once it's on the GPU. The base
+        # CWT builds self.kernel_f_bank for CpuCWT, but GpuCWT only reads it
+        # here to upload — after this it's dead weight in host RAM (the runtime
+        # multiply uses kernel_f_bank_gpu). Drop it with `del self.kernel_f_bank`
+        # (or skip building it for the GPU path) to reclaim the memory.
 
     @timed
     def transform(self, data: np.ndarray) -> np.ndarray:

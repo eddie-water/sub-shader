@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class SignalGenerator():
     def __init__(self, sample_rate: float) -> None:
         self.sample_rate = sample_rate

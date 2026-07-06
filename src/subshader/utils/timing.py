@@ -1,6 +1,31 @@
 """Lightweight method timing decorator for pipeline profiling."""
 import time
 import functools
+from contextlib import contextmanager
+
+
+@contextmanager
+def timed_block(obj, name):
+    """Record the elapsed milliseconds of a code block onto `obj`.
+
+    Accumulates into the dict ``obj._init_substages`` keyed by ``name`` (created
+    on first use). Lets a single constructor report a named breakdown of its
+    sub-steps — the init analogue of the per-method @timed attribute.
+
+    Usage:
+        with timed_block(self, "build_kernels"):
+            ...heavy work...
+        # self._init_substages["build_kernels"] == elapsed_ms
+    """
+    store = getattr(obj, "_init_substages", None)
+    if store is None:
+        store = {}
+        setattr(obj, "_init_substages", store)
+    t0 = time.perf_counter()
+    try:
+        yield
+    finally:
+        store[name] = store.get(name, 0.0) + (time.perf_counter() - t0) * 1000.0
 
 
 def timed(method):

@@ -15,17 +15,13 @@ import moderngl
 import numpy as np
 
 from subshader.utils.logging import get_logger
-from subshader.utils.timing import timed
+from subshader.utils.timing import timed, timed_block
 from subshader.config import RendererConfig
 from subshader.exceptions import WindowCloseException
 from .frame_buffer import CircularFrameBuffer
 
 log = get_logger(__name__)
 
-
-# =============================================================================
-# GL CONTEXT
-# =============================================================================
 
 class GLContext:
     def __init__(self, title="SubShader"):
@@ -43,10 +39,6 @@ class GLContext:
         # TODO-36 : self.ctx #3?
         self.ctx = self._init_opengl_context(width, height)
 
-    # =========================================================================
-    # PUBLIC METHODS - External interface
-    # =========================================================================
-
     def should_close(self) -> bool:
         """
         Checks if the window should close based on user input.
@@ -56,6 +48,7 @@ class GLContext:
         """
         return glfw.window_should_close(self.window)
 
+    @timed
     def display_graphic(self) -> None:
         """
         Display the rendered content (swap front/back buffers).
@@ -63,15 +56,12 @@ class GLContext:
         glfw.swap_buffers(self.window)
         glfw.poll_events()  # Process window events
 
+    @timed
     def clear_graphic(self, r: float = 0.0, g: float = 0.0, b: float = 0.0) -> None:
         """
         Clear the OpenGL context with a specified color.
         """
         self.ctx.clear(r, g, b)
-
-    # =========================================================================
-    # PRIVATE METHODS - Internal implementation
-    # =========================================================================
 
     def _init_window(self, title: str) -> tuple[object, int, int]:
         """
@@ -188,10 +178,6 @@ class GLContext:
         log.debug("GLFW error callback configured")
 
 
-# =============================================================================
-# GPU RENDERER (low-level)
-# =============================================================================
-
 class GPURenderer:
     """
     Low-level GPU rendering component.
@@ -216,10 +202,6 @@ class GPURenderer:
         self.shader = self._compile_shaders(gamma)
         self.vbo, self.vao = self._setup_rendering_geometry(self.shader)
         self.texture = self._setup_texture(self.shader, texture_shape)
-
-    # =========================================================================
-    # PRIVATE METHODS - Internal implementation
-    # =========================================================================
 
     def _compile_shaders(self, gamma: float) -> moderngl.Program:
         """
@@ -337,10 +319,7 @@ class GPURenderer:
             log.debug(f"GL OK: {operation}")
             return True
 
-    # =========================================================================
-    # PUBLIC METHODS - External interface
-    # =========================================================================
-
+    @timed
     def update_texture(self, texture_data: np.ndarray) -> None:
         """
         Upload new data to texture and activate it in the assigned slot
@@ -366,6 +345,7 @@ class GPURenderer:
 
         log.debug(f"Texture updated: {texture_data.shape}, range {texture_data.min():.3f}-{texture_data.max():.3f}")
 
+    @timed
     def render_graphic(self) -> None:
         """
         Render the quad - this one-shots the graphics pipeline from the source
@@ -400,11 +380,8 @@ class GPURenderer:
         self.shader['intensity_max'] = max(intensity_max, 1e-8)  # Avoid division by zero
 
 
-# =============================================================================
-# RENDERER (top-level orchestrator)
-# =============================================================================
-
 class Renderer:
+    @timed
     def __init__(self, frame_shape: tuple[int, int], config: RendererConfig):
         """
         Real-time GPU visualization orchestrator.
@@ -426,16 +403,19 @@ class Renderer:
         self._fixed_intensity_max = 1.0
 
         # Circular buffer to store data frames in chronological order
-        self.frame_buffer = CircularFrameBuffer(frame_shape=self.frame_shape,
-                                                num_frames=self.config.num_frames)
+        with timed_block(self, "render_buffer"):
+            self.frame_buffer = CircularFrameBuffer(frame_shape=self.frame_shape,
+                                                    num_frames=self.config.num_frames)
 
         # ModernGL Context - window creation and OpenGL context setup
-        self.gl_context = GLContext(title=f"SubShader - {os.path.basename(self.file_path)}")
+        with timed_block(self, "render_glcontext"):
+            self.gl_context = GLContext(title=f"SubShader - {os.path.basename(self.file_path)}")
 
         # GPU Renderer - shader compilation, texture management, and rendering
-        self.gpu_renderer = GPURenderer(ctx=self.gl_context.ctx,
-                                        texture_shape=self.frame_buffer.get_shape(),
-                                        gamma=self.config.color_norm.gamma)
+        with timed_block(self, "render_shader"):
+            self.gpu_renderer = GPURenderer(ctx=self.gl_context.ctx,
+                                            texture_shape=self.frame_buffer.get_shape(),
+                                            gamma=self.config.color_norm.gamma)
 
     @timed
     def update(self, coefs: np.ndarray) -> None:

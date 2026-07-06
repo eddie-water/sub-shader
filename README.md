@@ -1,4 +1,7 @@
 # Sub Shader 
+
+> 🚧 Under Construction 🚧
+
 There are symphonies everywhere for those with the eyes to see them
 
 Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline that analyzes audio using modern techniques in digital signal processing and parallel computing to render a low-latency frequency vs time plot. 
@@ -15,15 +18,15 @@ Audio → DSP → Renderer
 
 ## Audio 
 
-Loads audio from file and delivers overlapping window frames of audio samples to the DSP Stage. The overlap reduces edge artifacts at window boundaries. For more details → [Audio README](AUDIO.md)
+Loads audio from file and delivers overlapping window frames of audio samples to the DSP Stage. The overlap reduces edge artifacts at window boundaries. For more details → [Audio README](src/subshader/audio/AUDIO.md)
 
 ## DSP
 
-Performs the Continuous Wavelet Transform ([CWT](https://www.mathworks.com/help/wavelet/ug/continuous-wavelet-analysis-of-modulated-signals.html)) using [CuPy](https://cupy.dev/) on the raw audio samples across the chromatic scale. Post-processing includes scale normalization, discarding of edge-contaminated results, and downsampling. For design intuition and explanation → [DSP README](DSP.md)
+Performs the Continuous Wavelet Transform ([CWT](https://www.mathworks.com/help/wavelet/ug/continuous-wavelet-analysis-of-modulated-signals.html)) using [CuPy](https://cupy.dev/) on the raw audio samples across the chromatic scale. Post-processing includes scale normalization, discarding of edge-contaminated results, and downsampling. For design intuition and explanation → [DSP README](src/subshader/dsp/DSP.md)
 
 ## Renderer
 
-Chronologically stores the time-frequency results from the DSP module in a circular buffer, and uploads its entirety as a GPU texture. The renderer feeds the texture data to a fragment shader that colormaps the results to a 2D frequency vs time plot. For specifics → [Renderer README](RENDERER.md)
+Chronologically stores the time-frequency results from the DSP module in a circular buffer, and uploads its entirety as a GPU texture. The renderer feeds the texture data to a fragment shader that colormaps the results to a 2D frequency vs time plot. For specifics → [Renderer README](src/subshader/renderer/RENDERER.md)
 
 <!-- Placeholder: init flowchart -->
 
@@ -32,7 +35,7 @@ Chronologically stores the time-frequency results from the DSP module in a circu
 # Plot Comparison
 Below is a performance comparison plot of different audio signals and analysis methods, highlighting the accuracy and timing tradeoffs between each method.
 
-<p align="center"><img src="assets/images/generated/comparison_grid.png" width="100%"></p>
+<p align="center"><img src="assets/images/dsp/figures/comparison_grid/baseline.png" width="100%"></p>
 
 <!-- - STFT from [SciPy](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.stft.html)  -->
 <!-- - CWT from [PyWavelet](https://pywavelets.readthedocs.io/en/latest/ref/cwt.html) -->
@@ -115,7 +118,7 @@ Seems like SubShader is a happy medium between performance and accuracy
 
 [WRITE: "Brief summary of SubShader pipeline timing — link to DSP.md for detailed breakdown"]
 
-For detailed timing analysis, see [DSP: Computational Cost](DSP.md#6-implementation-deep-dive).
+For detailed timing analysis, see [DSP: Computational Cost](src/subshader/dsp/DSP.md#6-implementation-deep-dive).
 
 ---
 

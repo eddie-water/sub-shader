@@ -8,6 +8,7 @@ particularly for WSL graphics and OpenGL setup.
 import os
 import sys
 
+
 def env_init():
     """
     Configure environment for SubShader.

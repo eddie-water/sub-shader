@@ -8,6 +8,7 @@ AudioFrameBuffer   — stores audio chunks in a circular array for waveform disp
 import numpy as np
 
 from subshader.utils.logging import get_logger
+from subshader.utils.timing import timed
 
 log = get_logger(__name__)
 
@@ -33,10 +34,7 @@ class CircularFrameBuffer:
         # Pre-allocate flattened buffer
         self.flattened_buffer = np.zeros((self.height, self.width * num_frames), dtype=np.float32)
 
-    # =========================================================================
-    # PUBLIC METHODS - External interface
-    # =========================================================================
-
+    @timed
     def push_frame(self, frame_data) -> None:
         """
         Add new frame to circular buffer and update flattened buffer

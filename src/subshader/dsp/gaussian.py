@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Gaussian:
     def __init__(self, 
                  t: np.ndarray[np.float64],

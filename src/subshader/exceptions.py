@@ -29,7 +29,6 @@ class AudioFileNotFoundError(SubShaderException):
     """Raised when audio file cannot be found."""
     log_level = "error"
 
-
 # Exception tuple for catching
 GRACEFUL_EXCEPTIONS = (
     SubShaderException,
@@ -49,7 +48,6 @@ class ExceptionReporter:
             getattr(log, e.log_level)(e.message)
         else:
             log.error(f"Unexpected error: {type(e).__name__}: {e}")
-
 
 # Singleton instance
 reporter = ExceptionReporter()

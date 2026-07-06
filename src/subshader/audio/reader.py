@@ -6,10 +6,6 @@ Accepts a PipelineConfig and writes back discovered runtime values
 (sample_rate, total_samples) so downstream stages see the correct values.
 """
 
-# =============================================================================
-# IMPORTS
-# =============================================================================
-
 import os
 
 import numpy as np
@@ -19,15 +15,7 @@ from subshader.utils.logging import get_logger
 from subshader.exceptions import AudioFileNotFoundError
 from subshader.config import PipelineConfig
 
-# =============================================================================
-# LOGGING
-# =============================================================================
-
 log = get_logger(__name__)
-
-# =============================================================================
-# AUDIO READER CLASS
-# =============================================================================
 
 
 class AudioReader:

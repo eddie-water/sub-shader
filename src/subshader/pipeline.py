@@ -4,6 +4,7 @@ import numpy as np
 
 from subshader.utils.logging import get_logger
 from subshader.utils.gpu import gpu_available
+from subshader.utils.timing import timed
 from subshader.config import PipelineConfig, CWTConfig, RendererConfig
 from subshader.audio import AudioStream
 from subshader.dsp.cwt import GpuCWT, CpuCWT
@@ -42,13 +43,22 @@ class SubShader:
         self.audio = AudioStream(config)
 
         # Construct CWTConfig with all discovered runtime values.
-        # sample_rate is now populated by AudioStream.
+        # sample_rate is now populated by AudioStream. Wavelet-specific params are
+        # carried over from the incoming config when present (it may already be a
+        # CWTConfig), falling back to CWTConfig defaults for a base PipelineConfig —
+        # otherwise num_octaves/notes_per_octave/etc. would be silently dropped.
         cwt_config = CWTConfig(
             file_path=config.file_path,
             chunk_size=config.chunk_size,
             overlap_factor=config.overlap_factor,
             sample_rate=config.sample_rate,
             total_samples=config.total_samples,
+            notes_per_octave=getattr(config, "notes_per_octave", CWTConfig.notes_per_octave),
+            num_octaves=getattr(config, "num_octaves", CWTConfig.num_octaves),
+            root_note_hz=getattr(config, "root_note_hz", CWTConfig.root_note_hz),
+            target_width=getattr(config, "target_width", CWTConfig.target_width),
+            num_cycles=getattr(config, "num_cycles", CWTConfig.num_cycles),
+            num_fwhm_cycles=getattr(config, "num_fwhm_cycles", CWTConfig.num_fwhm_cycles),
         )
 
         # Select CWT backend based on GPU availability
@@ -79,6 +89,7 @@ class SubShader:
 
         log.info("SubShader pipeline initialized")
 
+    @timed
     def _prescan_intensity(self, renderer_config: RendererConfig) -> float:
         """Sample evenly-spaced CWT frames to compute a fixed intensity reference.
 
