@@ -33,8 +33,8 @@ class Stem(Plottable):
         linewidth: float | None = None,
         alpha: float = 1.0,
         baseline: float = 0.0,
-        marker: str = "o",
-        markersize: float = 6.0,
+        marker: str | None = None,
+        markersize: float | None = None,
         label: str | None = None,
         zorder: int = 3,
     ) -> None:
@@ -49,8 +49,9 @@ class Stem(Plottable):
         self.x = np.asarray(x)
         self.y = np.asarray(y)
         self.baseline = float(baseline)
+        # None resolves against style.DEFAULT_STEM_* at draw() time (lazy, D-05).
         self.marker = marker
-        self.markersize = float(markersize)
+        self.markersize = markersize
 
     def draw(self, ax: Axes) -> None:
         color = self.color if self.color is not None else style.PRIMARY_COLOR
@@ -58,6 +59,11 @@ class Stem(Plottable):
             self.linewidth
             if self.linewidth is not None
             else style.DEFAULT_VECTOR_LINEWIDTH
+        )
+        marker = self.marker if self.marker is not None else style.DEFAULT_STEM_MARKER
+        markersize = float(
+            self.markersize if self.markersize is not None
+            else style.DEFAULT_STEM_MARKERSIZE
         )
         markerline, stemlines, baseline_artist = ax.stem(
             self.x, self.y,
@@ -70,9 +76,9 @@ class Stem(Plottable):
         markerline.set_color(color)
         markerline.set_markerfacecolor(color)
         markerline.set_markeredgecolor(color)
-        markerline.set_markersize(self.markersize)
+        markerline.set_markersize(markersize)
         markerline.set_alpha(self.alpha)
-        markerline.set_marker(self.marker)
+        markerline.set_marker(marker)
         markerline.set_zorder(self.zorder + 1)
 
         stemlines.set_color(color)

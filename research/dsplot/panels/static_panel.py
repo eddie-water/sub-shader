@@ -33,6 +33,8 @@ class StaticPanel(Panel):
         subtitle: Optional[str] = None,
         caption: Optional[str] = None,
         lim: Optional[Union[float, Tuple[float, float]]] = None,
+        xlim: Optional[Tuple[float, float]] = None,
+        ylim: Optional[Tuple[float, float]] = None,
         axis_style: str = "line",
         axis_labels: bool = False,
         axis_label_size: Optional[float] = None,
@@ -49,6 +51,11 @@ class StaticPanel(Panel):
         self.subtitle = subtitle
         self.caption = caption
         self.lim = lim
+        # Explicit per-axis limits override the shared `lim`. An asymmetric pair
+        # shifts the origin so a single-quadrant vector fills the cell; keep the
+        # two ranges equal to preserve the honest equal-aspect geometry.
+        self.xlim = xlim
+        self.ylim = ylim
         self.axis_style = axis_style
         self.axis_labels = axis_labels
         self.axis_label_size = axis_label_size
@@ -80,7 +87,9 @@ class StaticPanel(Panel):
 
         setup_vector_axes(
             self.ax,
-            lim=self._scalar_lim(),
+            lim=self.lim,
+            xlim=self.xlim,
+            ylim=self.ylim,
             panel_title=None,
             show_border=self.show_border,
             axis_style=self.axis_style,
@@ -116,13 +125,29 @@ class StaticPanel(Panel):
             self.ax.tick_params(
                 axis="both",
                 colors=style.SPINE_COLOR,
-                length=style.DEFAULT_TICK_LENGTH * 0.6,
-                width=style.DEFAULT_TICK_WIDTH * 0.8,
-                direction="inout",
+                length=style.DEFAULT_TICK_LENGTH * style.DEFAULT_INSET_TICK_LENGTH_SCALE,
+                width=style.DEFAULT_TICK_WIDTH * style.DEFAULT_INSET_TICK_WIDTH_SCALE,
+                direction=style.DEFAULT_TICK_DIRECTION,
                 **label_kwargs,
             )
 
         if self.show_grid:
+            # ax.grid() draws lines at TICK positions — but setup_vector_axes
+            # cleared ticks to [] (and show_ticks=False panels never set any), so
+            # without locators the grid renders nothing. Establish an integer grid
+            # of locators (skipping 0 — the axis crosshair owns that line) with the
+            # tick MARKS/labels kept invisible, so the light grid shows even on a
+            # tickless panel.
+            if not self.show_ticks:
+                import math
+                x_lo, x_hi = self.ax.get_xlim()
+                y_lo, y_hi = self.ax.get_ylim()
+                xpos = [float(i) for i in range(math.ceil(x_lo), math.floor(x_hi) + 1) if i != 0]
+                ypos = [float(i) for i in range(math.ceil(y_lo), math.floor(y_hi) + 1) if i != 0]
+                self.ax.set_xticks(xpos)
+                self.ax.set_yticks(ypos)
+                self.ax.tick_params(axis="both", length=0,
+                                    labelbottom=False, labelleft=False)
             self.ax.grid(
                 True,
                 color=style.DEFAULT_AXIS_GRID_COLOR,

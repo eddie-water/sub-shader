@@ -286,6 +286,12 @@ CONTENDER_CAPTION_FONT_SIZE = 44
 # during build + render (same mechanism as nb_compact_style), then restored.
 CONTENDER_TIGHT_STYLE = {
     "DEFAULT_PAD_INCHES": 0.4,
+    # Cell-border weight scaled to THIS figure's width so it reads at 2.4.1's
+    # border thickness when each figure is viewed at a common display width
+    # (the cross-figure border rule — wider canvas needs a heavier pt line to
+    # look equally thick). Fig 1 is ~46.8" wide vs 241's 31.1" reference, so
+    # 3.0 × 46.8/31.1 ≈ 4.5pt. (Base 3.0 lives in style.DEFAULT_FRAME_LINEWIDTH.)
+    "DEFAULT_FRAME_LINEWIDTH": 4.5,
     # Perimeter margin (panel-border → figure edge) cut hard: at 1.05" it left
     # ~1.3" of dead space between the page edge and the y-axis labels. The
     # labels render INTO this margin, so shrinking it pulls "Hz"/numbers close
@@ -1185,8 +1191,10 @@ STACK_BAND_HEIGHT = 0.4       # header / footer bands — short relative to a sq
 # labels live inside the panel box instead of a separate column.
 STACK_LABEL_PAD_INCHES = 2.6
 # A little air between panels (inches) — uniform gutter between stacked plots
-# (rows) and between each plot and its caption square.
-STACK_GUTTER_INCHES = 0.9
+# (rows) and between each plot and its caption square. Matched to 2.4.1's
+# column gutter (0.30) so Figure 1's cells are the SAME size as the other
+# figures' tiles (the shared-square model) instead of ~12% larger.
+STACK_GUTTER_INCHES = 0.3
 # Vertical breathing room INSIDE each plot cell: the filled data axes is inset
 # from the cell top + bottom by this much so the extreme y-tick labels (1k at
 # top, 10 at bottom) lift off the cell-border line instead of sitting on it.

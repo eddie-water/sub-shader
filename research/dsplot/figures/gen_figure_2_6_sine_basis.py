@@ -113,7 +113,7 @@ KIND = {f: np.sign(SIGNAL * _sine(f)).astype(int) for f in SWEEP_HZ}
 
 
 # --- layout / scale ---------------------------------------------------------
-WIDTH_UNITS = 4
+WIDTH_UNITS = 3   # plot is 3 tiles long (shared-tile model); text box is 1 tile
 
 X_LIM = (-0.9, N - 0.1)
 X_TICKS = [0, 6, 12, 18]
@@ -131,6 +131,11 @@ SPEC_YTICKS = [-1.0, 0.0, 1.0]
 TITLE = "Figure 2.6 - Measuring Frequencies"
 TOP_SUBTITLE = "The signal, compared against a sweeping pure-sine reference"
 SPEC_SUBTITLE = "Dot product at each reference frequency  →  spectrum"
+# SCAFFOLD header labels for the text-panel header bands — these captions have no
+# title line to promote, so the headers are explicit. Rename to taste (the prose
+# is the user's). Mirrors §2.4.2/§2.5's promoted titles.
+TOP_HEADER = "Signal vs Reference"
+SPEC_HEADER = "Spectrum"
 
 # Right-hand caption column width (units). Plot stays WIDTH_UNITS wide; the
 # descriptive text box sits beside it instead of stacked in a band above.
@@ -146,8 +151,9 @@ SPEC_SUBTITLE_LINES = "Dot product at each\nreference frequency\n→  spectrum"
 
 # One text colour for everything (chrome + in-plot), matching §2.5.
 TEXT_COLOR = "#EEEEEE"
-IN_PLOT_FONTSIZE = 22
-FREQ_LABEL_FONTSIZE = 20
+# 28"-canvas scale (were 22 / 20 at ~13").
+IN_PLOT_FONTSIZE = 34
+FREQ_LABEL_FONTSIZE = 30
 ROW_TITLE_COLOR = TEXT_COLOR
 
 # --- weights / palette ------------------------------------------------------
@@ -157,13 +163,14 @@ ROW_TITLE_COLOR = TEXT_COLOR
 GHOST_ALPHA = 0.34
 BRIGHT_ALPHA = 1.0
 SINE_GHOST_ALPHA = 0.62
-SINE_GHOST_LINEWIDTH = 3.2
-SAMPLE_STEM_LINEWIDTH = 5.0
-SAMPLE_MARKERSIZE = 9.0     # dome the 5pt stem at the same ~1.8 marker:stem ratio as the spectrum
-ZERO_LINE_WIDTH = 1.8
+# 28"-canvas weights (were 3.2 / 5.0 / 1.8 / 6.0 at ~13").
+SINE_GHOST_LINEWIDTH = 6.5  # the continuous sine/signal curves, one notch bolder
+SAMPLE_STEM_LINEWIDTH = style.DEFAULT_VECTOR_LINEWIDTH   # shared hero weight, common across figures
+SAMPLE_MARKERSIZE = style.DEFAULT_HERO_STEM_MARKERSIZE   # ONE circle size across every stem plot
+ZERO_LINE_WIDTH = 3.0
 SPINE_LINEWIDTH = 2.6
-SPEC_STEM_LW = 6.0
-SPEC_MARKERSIZE = 11.0     # clearly domes the 6pt stem (matches the signal panel's ~1.6 marker:stem ratio); a near-equal marker reads as off-centre under anti-aliasing
+SPEC_STEM_LW = style.DEFAULT_VECTOR_LINEWIDTH        # match the signal stems / shared hero weight
+SPEC_MARKERSIZE = style.DEFAULT_HERO_STEM_MARKERSIZE   # ONE circle size across every stem plot
 SPEC_ALPHA = 0.95          # every coefficient stem at one weight — uniform, keep adding
 SPEC_LABEL_GAP = 0.12      # running-sum number sits this far across the zero line
 COL_WSPACE = 0.18
@@ -176,7 +183,7 @@ ROW_HSPACE = 0.34
 # half-gutter above the mid-gutter cell border (otherwise the border line draws
 # straight through "sample n"). Scoped to render() only — the animated
 # notebook/GIF path keeps nb_compact_style's smaller-cell sizing untouched.
-STATIC_ROW_HEIGHTS = [0.26, 0.78, 0.78]
+STATIC_ROW_HEIGHTS = [0.26, 1.0, 1.0]
 STATIC_ROW_HSPACE = 0.5
 # One font size for every chrome element in the static figure — title, axis
 # labels, tick labels, and the right-hand captions all render at STATIC_FONT_SIZE.
@@ -184,22 +191,46 @@ STATIC_ROW_HSPACE = 0.5
 # compact GIF/notebook path keeps nb_compact_style's own smaller sizes.
 STATIC_FONT_SIZE = 24
 STATIC_LAYOUT_STYLE = {
-    "DEFAULT_TICK_LABEL_SIZE": STATIC_FONT_SIZE,
-    "DEFAULT_AXIS_LABEL_SIZE": STATIC_FONT_SIZE,
-    "SUPTITLE_FONT_SIZE": STATIC_FONT_SIZE,
-    "DEFAULT_SUBTITLE_FONT_SIZE": STATIC_FONT_SIZE,
-    "DEFAULT_X_AXIS_LABEL_INSET_INCHES": 0.58,
-    # This is a single full-width column, so each cell's left/right borders ARE
-    # the figure perimeter. Pull that perimeter in close to the y-axis chrome so
-    # the y-label + tick numbers sit just inside the left border (template look)
-    # instead of stranded in a wide margin. Sized to clear the rotated y-label
-    # ("signal , sine") + tick numbers without clipping at the edge.
-    "DEFAULT_MARGIN_INCHES": 1.25,
+    # Chrome fonts use the SHARED defaults (header 40 / tick 30 / axis 36 /
+    # subtitle 26) so the 28"-canvas figure matches fig 1 / 241 / 242 / 2.5.
+    # (Previously all forced to 24, which is why the title read tiny.)
+    # x-label must clear the (now larger, 40pt) tick numbers below the spine, so
+    # the inset drops it well past them; the row gutter + bottom margin below
+    # give it the vertical room (see GUTTER / MARGIN below).
+    "DEFAULT_X_AXIS_LABEL_INSET_INCHES": 1.15,
+    # y-label sits in the in-plot label strip (content_left_pad), left of the
+    # tick numbers — so the inset is larger (within the strip), figure-1 style.
+    "DEFAULT_Y_AXIS_LABEL_INSET_INCHES": 1.30,
+    # Cell border inherits the ONE common style.DEFAULT_FRAME_LINEWIDTH (4.5,
+    # figure 1's weight) — no per-figure width scaling anymore.
+    # COLUMN gutter sets the plot↔caption width split: the 3-unit plot + 2 inner
+    # gutters vs the 1-unit caption ≈ a clean 3:1 (three tiles) — small like
+    # 241/242/243 (with tile_gutters=True the gutters derive from these inches,
+    # not the bespoke gridspec wspace that skewed the ratio before).
+    "DEFAULT_COLUMN_GUTTER_INCHES": 0.30,
+    # ROW gutter must clear the SIGNAL plot's bottom x-label ("sample n" + the
+    # 40pt tick numbers), which sits between the two plot rows — so it can't be
+    # tiny like the column gutter. Widened from 0.70 to seat the larger ticks +
+    # the dropped x-label without the two colliding.
+    "DEFAULT_GUTTER_INCHES": 1.25,
+    # PAD = spine inset within each cell (keeps plots filling their tiles).
+    "DEFAULT_PAD_INCHES": 0.40,
+    # MARGIN: the BOTTOM x-label ("reference frequency (Hz)") renders into the
+    # bottom margin below the last row, so the margin must hold the dropped
+    # label + tick numbers (PAD + MARGIN must exceed the x-inset + label height).
+    # The y-label needs no wide left margin (it lives in the in-plot label strip
+    # via content_left_pad), but the shared 4-side margin is sized for the x-label.
+    "DEFAULT_MARGIN_INCHES": 1.10,
 }
+
+# Width (inches) of the in-plot strip reserved on each plot's LEFT for the
+# y-axis label + tick numbers (figure-1's STACK_LABEL_PAD_INCHES idea). The data
+# axes is inset rightward by this much so the labels sit inside the panel box.
+STATIC_LABEL_PAD_INCHES = 1.6
 
 CURSOR_COLOR = style.NEUTRAL_COLOR
 CURSOR_ALPHA = 0.24
-SIGN_FONTSIZE = 18
+SIGN_FONTSIZE = 28   # 28"-canvas scale (was 18 at ~13")
 
 # Nested clock: each reference frequency gets its own per-sample accumulation,
 # then a pause on the finished coefficient, then the next frequency begins.
@@ -221,9 +252,11 @@ def _decode(k: int) -> tuple[int, int]:
     return fi, count
 
 _UNIFIED_TEXT_STYLE = {
-    "TICK_LABEL_COLOR": TEXT_COLOR,
-    "SUPTITLE_COLOR": TEXT_COLOR,
+    # Tick numbers / axis chrome stay gray; the header reads bone-white (#EEEEEE)
+    # so every figure's title matches the same bright weight across the montage.
+    # In-plot stems, readouts and captions keep TEXT_COLOR (white) directly.
     "SPINE_COLOR": TEXT_COLOR,
+    "SUPTITLE_COLOR": "#EEEEEE",
 }
 
 
@@ -533,6 +566,10 @@ def _static_signal_panel(highlight_hz: float) -> TimeSeriesPanel:
         show_xticklabels=True,
         show_yticklabels=True,
     )
+    # y-label + tick numbers live in an IN-PLOT strip (figure-1's approach) so the
+    # figure margin can stay tight and this cell is the same size as the other
+    # figures' tiles, instead of inflated by a wide left margin for the labels.
+    panel.content_left_pad_inches = STATIC_LABEL_PAD_INCHES
     for p in _signal_base():
         panel.add(p)
     panel.add(_SineGhost(highlight_hz, color=style.SECONDARY_COLOR))
@@ -554,6 +591,7 @@ def _static_spectrum_panel(highlight_hz: float) -> TimeSeriesPanel:
         show_xticklabels=True,
         show_yticklabels=True,
     )
+    panel.content_left_pad_inches = STATIC_LABEL_PAD_INCHES
     panel.add(_ZeroLine(color=style.DROPLINE_COLOR))
     freqs = np.array(SWEEP_HZ, dtype=float)
     coeffs = np.array([COEFFS[f] for f in SWEEP_HZ], dtype=float)
@@ -568,28 +606,30 @@ def _static_spectrum_panel(highlight_hz: float) -> TimeSeriesPanel:
 # ---------------------------------------------------------------------------
 # Composition + three-mode contract
 # ---------------------------------------------------------------------------
-def _side_text_panel(text: str) -> TextPanel:
-    """Right-hand caption beside a plot (STATIC PNG). A short descriptive
-    sentence, pre-broken into balanced lines and centred (horizontally +
-    vertically) in its square cell so it reads as a label paired with the plot
-    to its left. The cell is already framed by ``show_cell_borders``, so no
-    border is drawn here."""
+def _side_text_panel(text: str, header: str | None = None) -> TextPanel:
+    """Right-hand caption beside a plot (STATIC PNG) — Figure 1's _side_text_panel
+    treatment, shared across every figure: one 1-unit square tile, top-left
+    anchored, ragged-right, at the shared caption font size (no auto-shrink), in
+    the bone-white tick colour. The cell border (show_cell_borders) is the only
+    frame. Text passed UNBROKEN so the wrap pipeline fits it to the cell width.
+
+    ``header`` adds a title band (figure-header height) above the caption — these
+    captions are single-line subtitles with no title to promote, so the header is
+    passed explicitly (matches §2.4.2/§2.5's header bands)."""
     return TextPanel(
         text,
         units=TEXT_UNITS,
-        font_size=style.DEFAULT_SUBTITLE_FONT_SIZE,
-        min_font_size=12,
+        font_size=style.DEFAULT_CAPTION_FONT_SIZE,
+        min_font_size=24.0,
         color=TEXT_COLOR,
         fontweight="bold",
-        # Simple centered ax.text path: ha/va default to "center", text is
-        # pre-broken with \n, auto_shrink scales the whole block to fit. justify
-        # / top_anchor are left off on purpose — they route to the wrap pipeline
-        # which only left-aligns or block-justifies, never true-centres.
-        ha="center",
-        va="center",
-        auto_shrink=True,
+        auto_shrink=False,
+        justify=False,
+        top_anchor=True,
+        content_margin_frac=0.05,
         show_ghost_border=False,
         facecolor="none",
+        header=header,
     )
 
 
@@ -625,7 +665,8 @@ def _gif_text_panel(text: str) -> TextPanel:
 def _compose(signal_panel, spectrum_panel, *, unit_inches=None, dpi=None,
              unit_height_inches=None, hold_ticks=None,
              row_heights=None, hspace=None, show_cell_borders=False,
-             gif_caption=False) -> Figure:
+             gif_caption=False, total_width_inches=None,
+             total_height_inches=None, tile_gutters=False) -> Figure:
     # Both paths frame every cell with the gray library cell border
     # (show_cell_borders=True). Only the caption text style differs:
     #   Static PNG  — small CENTRED captions, pre-broken into balanced lines.
@@ -635,8 +676,8 @@ def _compose(signal_panel, spectrum_panel, *, unit_inches=None, dpi=None,
         top_text = _gif_text_panel(TOP_SUBTITLE)
         spec_text = _gif_text_panel(SPEC_SUBTITLE)
     else:
-        top_text = _side_text_panel(TOP_SUBTITLE_LINES)
-        spec_text = _side_text_panel(SPEC_SUBTITLE_LINES)
+        top_text = _side_text_panel(TOP_SUBTITLE, header=TOP_HEADER)
+        spec_text = _side_text_panel(SPEC_SUBTITLE, header=SPEC_HEADER)
     rows = [
         [SuptitlePanel(TITLE, units=(TOTAL_WIDTH_UNITS, 1))],
         [signal_panel, top_text],
@@ -644,12 +685,20 @@ def _compose(signal_panel, spectrum_panel, *, unit_inches=None, dpi=None,
     ]
     if row_heights is None:
         row_heights = [0.3, 1.5, 1.5]
+    # tile_gutters=True (the static PNG): pass wspace/hspace=None so compose
+    # derives the gridspec gutters from the PHYSICAL-INCH tile constants
+    # (DEFAULT_COLUMN_GUTTER_INCHES / DEFAULT_GUTTER_INCHES) exactly like
+    # 241/242/243 — so the 3-unit plot renders a clean 3:1 (three tiles) next to
+    # the 1-unit square caption. The GIF path keeps its bespoke gridspec spacing.
     kwargs = dict(
         rows=rows,
         row_heights=row_heights,
-        wspace=COL_WSPACE,
-        hspace=ROW_HSPACE if hspace is None else hspace,
+        wspace=None if tile_gutters else COL_WSPACE,
+        hspace=None if tile_gutters else (ROW_HSPACE if hspace is None else hspace),
         unit_inches=unit_inches,
+        total_width_inches=total_width_inches,
+        total_height_inches=total_height_inches,
+        header_band_inches=style.HEADER_BAND_INCHES,
         dpi=dpi,
         # Figure-1 treatment (static PNG only): every cell framed so the plots
         # and their right-hand caption boxes read as a bordered grid.
@@ -674,12 +723,18 @@ def _build_dynamic_figure(unit_inches=None, dpi=None,
 
 
 def _build_static_figure(unit_inches=None, dpi=None,
-                         highlight_hz=STATIC_HIGHLIGHT_HZ) -> Figure:
+                         highlight_hz=STATIC_HIGHLIGHT_HZ,
+                         total_width_inches=None,
+                         total_height_inches=None,
+                         unit_height_inches=None) -> Figure:
     return _compose(_static_signal_panel(highlight_hz),
                     _static_spectrum_panel(highlight_hz),
                     unit_inches=unit_inches, dpi=dpi,
-                    row_heights=STATIC_ROW_HEIGHTS, hspace=STATIC_ROW_HSPACE,
-                    show_cell_borders=True)
+                    total_width_inches=total_width_inches,
+                    total_height_inches=total_height_inches,
+                    unit_height_inches=unit_height_inches,
+                    row_heights=STATIC_ROW_HEIGHTS,
+                    show_cell_borders=True, tile_gutters=True)
 
 
 def _bolden_spines(fig: Figure) -> None:
@@ -716,7 +771,13 @@ def render(
     if output_dir is None:
         output_dir = _default_output_dir()
     with _unified_style(), _static_layout_style():
-        fig = _build_static_figure()
+        # 2.5 / 2.6 render as a matched PAIR: shared WIDTH (total_width_inches)
+        # and shared per-row cell HEIGHT (unit_height_inches=SHARED_UNIT_INCHES),
+        # so a single row of 2.6 has the same vertical proportions as a single
+        # row of 2.5. 2.6 is naturally shorter (2 rows vs 2.5's 3 case rows).
+        fig = _build_static_figure(
+            total_width_inches=style.PAIR_25_26_WIDTH_INCHES,
+            unit_height_inches=style.SHARED_UNIT_INCHES)
         fig.render()
         # NB: spines left at their default (thin) weight here — the bolded
         # cell border is the visible frame (figure-1 / template look), so a

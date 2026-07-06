@@ -186,9 +186,9 @@ class DynamicPanel(Panel):
             ax.tick_params(
                 axis="both",
                 colors=style.SPINE_COLOR,
-                length=style.DEFAULT_TICK_LENGTH * 0.6,
-                width=style.DEFAULT_TICK_WIDTH * 0.8,
-                direction="inout",
+                length=style.DEFAULT_TICK_LENGTH * style.DEFAULT_INSET_TICK_LENGTH_SCALE,
+                width=style.DEFAULT_TICK_WIDTH * style.DEFAULT_INSET_TICK_WIDTH_SCALE,
+                direction=style.DEFAULT_TICK_DIRECTION,
                 **label_kwargs,
             )
 

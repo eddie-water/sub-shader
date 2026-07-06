@@ -1,6 +1,8 @@
 """Plottable units — concrete subclasses re-exported here as they land."""
 
+from .accumulator_strip import AccumulatorStrip
 from .annotation import Annotation
+from .barh import Barh
 from .dropline import Dropline
 from .heatmap import Heatmap
 from .line import Line
@@ -13,7 +15,9 @@ from .vector import Vector
 from .vector_components import VectorComponents
 
 __all__ = [
+    "AccumulatorStrip",
     "Annotation",
+    "Barh",
     "Dropline",
     "Heatmap",
     "Line",

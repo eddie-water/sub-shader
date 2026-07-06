@@ -28,6 +28,11 @@ from .. import style
 from .base import Panel
 
 
+# Breathing gap (axes-fraction) between the header-band divider and the top of
+# the body text, so the prose doesn't kiss the divider line.
+_HEADER_BODY_GAP_FRAC = 0.035
+
+
 class TextPanel(Panel):
     """Panel that renders a single centered text string with no axes chrome."""
 
@@ -40,33 +45,51 @@ class TextPanel(Panel):
         units: Optional[Tuple[int, int]] = None,
         font_size: Optional[float] = None,
         color: Optional[str] = None,
-        fontweight: str = "bold",
+        fontweight: Optional[str] = None,
         rotation: float = 0.0,
         ha: str = "center",
         va: str = "center",
         auto_shrink: bool = True,
-        min_font_size: float = 14.0,
-        cell_padding_frac: float = 0.08,
+        min_font_size: Optional[float] = None,
+        cell_padding_frac: Optional[float] = None,
         justify: bool = False,
-        line_spacing: float = 1.35,
+        line_spacing: Optional[float] = None,
         show_ghost_border: bool = False,
         top_anchor: bool = False,
         facecolor: Optional[str] = None,
         content_margin_frac: Optional[float] = None,
+        header: Optional[str] = None,
+        header_band: bool = False,
+        header_band_inches: Optional[float] = None,
+        header_font_size: Optional[float] = None,
+        header_color: Optional[str] = None,
+        header_weight: Optional[str] = None,
     ) -> None:
         super().__init__(units=units)
         self.text = text
         self.font_size = font_size
         self.color = color
-        self.fontweight = fontweight
+        # None resolves against style.DEFAULT_TEXT_* defaults (themeable).
+        self.fontweight = (
+            fontweight if fontweight is not None else style.DEFAULT_TEXT_FONT_WEIGHT
+        )
         self.rotation = rotation
         self.ha = ha
         self.va = va
         self.auto_shrink = auto_shrink
-        self.min_font_size = min_font_size
-        self.cell_padding_frac = cell_padding_frac
+        self.min_font_size = (
+            min_font_size if min_font_size is not None
+            else style.DEFAULT_TEXT_MIN_FONT_SIZE
+        )
+        self.cell_padding_frac = (
+            cell_padding_frac if cell_padding_frac is not None
+            else style.DEFAULT_TEXT_CELL_PADDING_FRAC
+        )
         self.justify = justify
-        self.line_spacing = line_spacing
+        self.line_spacing = (
+            line_spacing if line_spacing is not None
+            else style.DEFAULT_TEXT_LINE_SPACING
+        )
         self.show_ghost_border = show_ghost_border
         self.top_anchor = top_anchor
         # Cell background fill. Defaults to style.BG_COLOR (opaque). Pass "none"
@@ -80,6 +103,20 @@ class TextPanel(Panel):
         # every side — i.e. text starts hard in the top-left with a tiny uniform
         # margin. None keeps the legacy content-border behaviour.
         self.content_margin_frac = content_margin_frac
+        # Header band: a titled strip at the TOP of the cell, the same physical
+        # height as the figure's header band (header_band_inches, default
+        # style.HEADER_BAND_INCHES), separated from the body by a cell-border-weight
+        # divider. `header` sets the title explicitly; `header_band=True` instead
+        # promotes the first \n\n-delimited paragraph of `text` into the title and
+        # uses the remainder as the body. Title styling defaults to the figure
+        # header's SuptitlePanel treatment (SUPTITLE_* constants).
+        self.header = header
+        self.header_band = header_band
+        self.header_band_inches = header_band_inches
+        self.header_font_size = header_font_size
+        self.header_color = header_color
+        self.header_weight = header_weight
+        self._body_top_cap: Optional[float] = None
 
     def render(self) -> None:
         if self.ax is None:
@@ -106,15 +143,22 @@ class TextPanel(Panel):
         if self.show_ghost_border:
             self._draw_ghost_border()
 
-        # Use the wrap pipeline whenever justify OR top_anchor is set —
-        # both require per-line layout (justify spreads words; top_anchor
-        # needs to know the wrapped line count to start at the top edge).
-        if self.justify or self.top_anchor:
-            self._render_justified(resolved_size, resolved_color)
+        # Resolve the optional header band + the body text it leaves behind. A
+        # header caps the body region to below the divider (self._body_top_cap).
+        header_title, body_text = self._resolve_header()
+        self._body_top_cap = None
+        if header_title is not None:
+            self._draw_header_band(header_title)
+
+        # Use the wrap pipeline whenever justify OR top_anchor OR a header is set
+        # — all require per-line layout (justify spreads words; top_anchor/header
+        # need to know the wrapped line count to start at a specific top edge).
+        if self.justify or self.top_anchor or header_title is not None:
+            self._render_justified(resolved_size, resolved_color, text=body_text)
             return
 
         text_artist = ax.text(
-            0.5, 0.5, self.text,
+            0.5, 0.5, body_text,
             transform=ax.transAxes,
             ha=self.ha, va=self.va,
             fontsize=resolved_size,
@@ -125,6 +169,89 @@ class TextPanel(Panel):
 
         if self.auto_shrink:
             self._shrink_to_fit(text_artist, resolved_size)
+
+    def _resolve_header(self) -> Tuple[Optional[str], str]:
+        """Return (header_title, body_text).
+
+        Explicit ``header=`` wins and leaves ``text`` whole as the body.
+        ``header_band=True`` promotes the first ``\\n\\n``-delimited paragraph of
+        ``text`` into the title and keeps the rest as the body. Otherwise no
+        header (None, full text).
+        """
+        if self.header is not None:
+            return self.header, self.text
+        if self.header_band and "\n\n" in self.text:
+            title, body = self.text.split("\n\n", 1)
+            return title.strip(), body.strip()
+        return None, self.text
+
+    def _draw_header_band(self, title: str) -> None:
+        """Draw the title strip + divider at the top of the cell and set
+        ``self._body_top_cap`` so the body lays out below it.
+
+        Band height is ``header_band_inches`` (default style.HEADER_BAND_INCHES)
+        measured against the cell's rendered height, so it matches the figure's
+        own header band. The divider spans to the cell borders at the cell-border
+        weight; the title is centered and shrunk to fit the cell width, styled
+        like the figure header (SUPTITLE_* defaults).
+        """
+        ax = self.ax
+        fig = ax.figure
+        ax_h_in = ax.get_position().height * fig.get_figheight()
+        band_in = (
+            self.header_band_inches if self.header_band_inches is not None
+            else style.HEADER_BAND_INCHES
+        )
+        frac = min(0.5, band_in / max(ax_h_in, 1e-6))
+        # Body starts a small gap below the divider (not flush against it) so the
+        # prose has room to breathe under the title band.
+        self._body_top_cap = 1.0 - frac - _HEADER_BODY_GAP_FRAC
+
+        half_col, half_row = self._half_gutter_axes_fracs()
+        left, right = self._horizontal_cell_borders_axes_frac(half_col)
+        cell_top = 1.0 + half_row
+        divider_y = 1.0 - frac
+        # Divider is part of the CELL FRAME system (it already uses the frame
+        # linewidth), so it takes the frame COLOR too — not SPINE_COLOR. This
+        # keeps it visible in figures that turn spines off (SPINE_COLOR="none")
+        # to let the cell border be the single frame (e.g. fig 2.5); figures that
+        # keep light spines are unaffected (frame color == spine color there).
+        ax.plot(
+            [left, right], [divider_y, divider_y],
+            transform=ax.transAxes,
+            color=style.DEFAULT_FRAME_COLOR, linewidth=style.DEFAULT_FRAME_LINEWIDTH,
+            solid_capstyle="butt", clip_on=False, zorder=3,
+        )
+
+        h_size = self.header_font_size or style.SUPTITLE_FONT_SIZE
+        h_color = self.header_color or style.SUPTITLE_COLOR
+        h_weight = self.header_weight or style.SUPTITLE_WEIGHT
+        title_artist = ax.text(
+            0.5, (divider_y + cell_top) / 2.0, title,
+            transform=ax.transAxes,
+            ha="center", va="center",
+            fontsize=h_size, color=h_color, fontweight=h_weight,
+        )
+        self._shrink_header_to_width(title_artist, h_size, left, right)
+
+    def _shrink_header_to_width(self, text_artist, size: float,
+                                left_frac: float, right_frac: float) -> None:
+        """Shrink the header title so its width fits the cell (never grows)."""
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+        ax = self.ax
+        renderer = FigureCanvasAgg(ax.figure).get_renderer()
+        try:
+            tb = text_artist.get_window_extent(renderer)
+            ab = ax.get_window_extent(renderer)
+        except Exception:
+            return
+        avail_w = ab.width * (right_frac - left_frac) * 0.90  # 10% side padding
+        if tb.width <= 0 or avail_w <= 0:
+            return
+        scale = min(1.0, avail_w / tb.width)
+        if scale < 1.0:
+            text_artist.set_fontsize(max(self.min_font_size, size * scale))
 
     def _shrink_to_fit(self, text_artist, initial_font_size: float) -> None:
         """Reduce ``text_artist`` font size until its bbox fits the cell.
@@ -162,7 +289,8 @@ class TextPanel(Panel):
         new_size = max(self.min_font_size, initial_font_size * scale)
         text_artist.set_fontsize(new_size)
 
-    def _render_justified(self, font_size: float, color: str) -> None:
+    def _render_justified(self, font_size: float, color: str,
+                          text: Optional[str] = None) -> None:
         """Render text wrapped + justified across the axes width.
 
         Each ``\\n``-separated paragraph is word-wrapped to fit the content
@@ -193,6 +321,10 @@ class TextPanel(Panel):
         else:
             gb_left, gb_bottom, gb_right, gb_top = self._ghost_border_rect_axes()
             pad_frac = self.cell_padding_frac
+        # A header band caps the body to below its divider so the prose never
+        # rides up into the title strip.
+        if self._body_top_cap is not None:
+            gb_top = min(gb_top, self._body_top_cap)
         gb_w_frac = gb_right - gb_left
         gb_h_frac = gb_top - gb_bottom
         pad_w_px = axes_w_px * gb_w_frac * pad_frac
@@ -204,7 +336,7 @@ class TextPanel(Panel):
         gb_bottom_px = axes_bbox.y0 + axes_h_px * gb_bottom
         gb_h_px = axes_h_px * gb_h_frac
 
-        paragraphs = self.text.split("\n")
+        paragraphs = (text if text is not None else self.text).split("\n")
         size, paragraph_lines = self._fit_and_wrap(
             paragraphs, font_size, content_w_px, content_h_px, renderer
         )

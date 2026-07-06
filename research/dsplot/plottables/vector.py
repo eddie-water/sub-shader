@@ -199,8 +199,13 @@ class Vector(Plottable):
             ux, uy = vx / norm, vy / norm
             stub = head_len * 1.25
             stub_tail = (tip[0] - ux * stub, tip[1] - uy * stub)
+            # Dashed shaft terminates at the BACK of the head (stub_tail), NOT at
+            # the tip — otherwise the last dash overruns the head and a flat dash
+            # bar pokes past the arrow point. The solid head patch then draws a
+            # short solid neck (stub_tail → head base) plus the filled `-|>`, so
+            # the handoff reads continuous and the point stays clean.
             ax.plot(
-                [ox, tip[0]], [oy, tip[1]],
+                [ox, stub_tail[0]], [oy, stub_tail[1]],
                 color=color,
                 linewidth=linewidth,
                 linestyle=self.linestyle,
@@ -235,7 +240,8 @@ class Vector(Plottable):
         color = self.color if self.color is not None else style.NEUTRAL_COLOR
         linewidth = (
             self.linewidth if self.linewidth is not None
-            else style.DEFAULT_VECTOR_BOLD_LINEWIDTH + 0.6
+            else style.DEFAULT_VECTOR_BOLD_LINEWIDTH
+                 + style.DEFAULT_VECTOR_3D_BOLD_LINEWIDTH_BUMP
         )
 
         ox, oy, oz = origin
@@ -300,7 +306,7 @@ class Vector(Plottable):
             if self.show_tip:
                 ax.scatter(
                     [tip[0]], [tip[1]], [tip[2]],
-                    color=color, s=80,
+                    color=color, s=style.DEFAULT_VECTOR_3D_TIP_SIZE,
                     zorder=self.zorder + 1,
                     depthshade=False,
                 )

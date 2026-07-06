@@ -156,6 +156,17 @@ CASE_ROW_HEIGHT = 2.0      # two stacked plots → each ≈ one unit tall
 TEXT_UNITS = 2
 WIDTH_UNITS = LEFT_UNITS + SUM_UNITS + TEXT_UNITS   # = 7
 
+# Static (composite PNG) layout — the shared-tile model: each case flattens to
+# ONE 1-tall row [ stems (2 units) | Sum strip (1) | text (1) ], every cell the
+# size of fig-1's text box. Only the single input-stem plot is kept (the separate
+# product-stem plot is dropped — the Sum strip carries the result, the text the
+# reasoning). The ANIMATED path keeps the taller stacked LEFT_UNITS layout above,
+# so these are separate constants used only by _ab_panel / _case_row / _compose.
+STATIC_STEM_UNITS = 2
+STATIC_TEXT_UNITS = 1
+STATIC_WIDTH_UNITS = STATIC_STEM_UNITS + SUM_UNITS + STATIC_TEXT_UNITS  # = 4
+STATIC_CASE_ROW_HEIGHT = 1.0
+
 X_LIM = (-0.9, N - 0.1)
 X_TICKS = [0, 5, 10, 15]     # evenly spaced, ending on the final sample (n=15)
 
@@ -177,11 +188,13 @@ ACCUM_X_CENTER = 0.5
 
 TITLE = "Figure 2.5 - Sign Agreement"
 
-# Short case names for the text box heading (case name + correlation outcome).
+# Short case names for the text box header band — one line each (the correlation
+# outcome lives in the blurb below). Promoted into a header band with a divider
+# rule by _text_panel (header_band=True), matching §2.6's header-line treatment.
 CASE_TITLES = [
-    "Strong Agreement\nPositive Correlation",
-    "Strong Disagreement\nNegative Correlation",
-    "Weak Agreement\nNo Correlation",
+    "Strong Agreement",
+    "Strong Disagreement",
+    "Weak Agreement",
 ]
 
 # Quick blurb beneath each heading — a plain-language read of what the plot is
@@ -204,8 +217,10 @@ ROW_Y_LABELS = ("a , b", "a · b", "running Σ")
 # approach. The chrome side is driven through _unified_style() (a temporary
 # style override, restored after build); in-plot text references TEXT_COLOR.
 TEXT_COLOR = "#EEEEEE"
-IN_PLOT_FONTSIZE = 22        # sign glyphs AND the running-sum readout — one size
-TEXT_FONTSIZE = 16           # cycling text box (DynamicTextPanel _CaseText)
+# 28"-canvas scale (were 22 / 16 at ~13"): the in-plot glyphs/readout and the
+# text-box body scale up so they read at the same visual weight as fig 1 / 241.
+IN_PLOT_FONTSIZE = 34        # sign glyphs AND the running-sum readout — one size
+TEXT_FONTSIZE = 26           # cycling text box (DynamicTextPanel _CaseText)
 TEXT_MARGIN_FRAC = 0.06      # text inset from its cell border (breathing room
                              # matching the plots) — shared by the static
                              # TextPanel and the animated _CaseText
@@ -214,12 +229,17 @@ CASE_TITLE_COLOR = TEXT_COLOR
 # --- weights / palette ------------------------------------------------------
 GHOST_ALPHA = 0.16           # un-processed samples sit faint behind the action
 BRIGHT_ALPHA = 0.9           # a / b once their pair has been processed
-SAMPLE_STEM_LINEWIDTH = 5.0
-SAMPLE_MARKERSIZE = 8.0
-ACCUM_STEM_LINEWIDTH = SAMPLE_STEM_LINEWIDTH   # Sum strip stem matches the others
-ACCUM_MARKERSIZE = SAMPLE_MARKERSIZE
+# 28"-canvas weights (were 5.0 / 8.0 / 1.8 at ~13") — the stems are this
+# figure's hero, so they scale up to stay bold on the wide canvas.
+SAMPLE_STEM_LINEWIDTH = style.DEFAULT_VECTOR_LINEWIDTH   # shared hero weight, common across figures
+SAMPLE_MARKERSIZE = style.DEFAULT_HERO_STEM_MARKERSIZE   # ONE circle size across every stem plot
+# Sum strip = the SAME accumulator vocabulary as figures 2.4.2 / 2.4.3: a thick
+# stem capped with a big tip circle comparable to the arrowheads. Tied to the
+# shared DEFAULT_ACCUM_* constants so every figure's accumulator stays common.
+ACCUM_STEM_LINEWIDTH = style.DEFAULT_ACCUM_STEM_LINEWIDTH
+ACCUM_MARKERSIZE = style.DEFAULT_ACCUM_MARKERSIZE
 PRODUCT_COLOR = style.NEUTRAL_COLOR   # products / running sum: sign by direction
-ZERO_LINE_WIDTH = 1.8
+ZERO_LINE_WIDTH = 3.0
 SPINE_LINEWIDTH = 2.6
 
 # Spacing follows figure 1's philosophy: gutters/margins are PHYSICAL INCHES set
@@ -232,13 +252,22 @@ SPINE_LINEWIDTH = 2.6
 # gutters (between cases) use the SAME physical inch value so every gap reads
 # identically. compose derives the per-axis gridspec fractions from this.
 GUTTER_INCHES = 0.60
-COL_GUTTER_INCHES = GUTTER_INCHES   # between stem stack, Sum strip, and text box
+# COLUMN gutter matched to 2.4.1 (0.30) so the accumulator / text cells are the
+# SAME WIDTH as the other figures' tiles (the shared-square model). The ROW
+# gutter stays wider — it seats each case row's bottom x-tick labels (0..15)
+# between rows, which the column gutter doesn't carry.
+COL_GUTTER_INCHES = 0.30            # between stem stack, Sum strip, and text box
 ROW_GUTTER_INCHES = GUTTER_INCHES   # between the three case rows
-MARGIN_INCHES = 0.55       # panel-border → figure edge; wider than figure 1's
-                           # 0.25 because our y-tick labels (−1 / −10) render
-                           # OUTSIDE the plot into this margin (figure 1 put its
-                           # labels in an in-plot strip, so it could go tighter)
+MARGIN_INCHES = 0.40       # panel-border → figure edge; a touch wider than
+                           # figure 1's 0.25 because our y-tick labels (−1 / −10)
+                           # render OUTSIDE the plot into this margin (figure 1
+                           # put its labels in an in-plot strip, so it went tighter)
 PAD_INCHES = 0.40          # cell-fill inset (axis labels sit close to the border)
+# Width (inches) of the in-plot strip reserved on the stem plot's LEFT for the
+# y-tick numbers (−1/0/1), so they sit INSIDE the cell frame instead of kissing
+# the left cell border — figure 2.6's content_left_pad treatment, shared here so
+# the two figures handle edge y-labels the same way.
+STATIC_LABEL_PAD_INCHES = 1.2
 
 CURSOR_COLOR = style.NEUTRAL_COLOR
 CURSOR_ALPHA = 0.16
@@ -264,8 +293,10 @@ TOTAL_CYCLE_FRAMES = 3 * SEGMENT_FRAMES              # case 1 → 2 → 3
 # animated paths bold them via _bolden_spines). The STATIC PNG's panel frame is
 # the figure-1 cell border, not the spine — see render().
 _UNIFIED_TEXT_STYLE = {
-    "TICK_LABEL_COLOR": TEXT_COLOR,
-    "SUPTITLE_COLOR": TEXT_COLOR,
+    # Tick numbers / axis-chrome AND the header use the SHARED gray (#888) so
+    # they match fig 1 / 241 / 242; in-plot glyphs, readouts and the text boxes
+    # keep TEXT_COLOR (white) via direct references. (No SUPTITLE_COLOR override
+    # → header defaults to the shared gray, matching every other figure.)
     "SPINE_COLOR": TEXT_COLOR,
     "DEFAULT_MARGIN_INCHES": MARGIN_INCHES,
     "DEFAULT_PAD_INCHES": PAD_INCHES,
@@ -301,8 +332,20 @@ def _unified_style():
 #      nb_compact_style, so this override is static-only by design.
 _STATIC_CHROME_STYLE = {
     "SPINE_COLOR": "none",
-    "DEFAULT_TICK_LABEL_SIZE": TEXT_FONTSIZE,       # tick numbers == text-box body (16)
-    "DEFAULT_LABEL_FONT_SIZE": IN_PLOT_FONTSIZE,    # "n" axis label == in-plot glyphs (22)
+    # Tick numbers AND the right-column captions read bone-white (#EEEEEE) like
+    # every other figure — the caption pulls style.TICK_LABEL_COLOR, which
+    # otherwise stays the #888888 gray default and made 2.5's text look dim.
+    "TICK_LABEL_COLOR": "#EEEEEE",
+    # Cell border inherits the ONE common style.DEFAULT_FRAME_LINEWIDTH (4.5,
+    # figure 1's weight) — no per-figure width scaling anymore (the montage tiles
+    # at a common px/inch, so equal points already read as equal pixels).
+    # Header bone-white (#EEEEEE) so every figure's title reads at the same bright
+    # weight across the montage.
+    "SUPTITLE_COLOR": "#EEEEEE",
+    # Tick numbers use the SHARED default (style.DEFAULT_TICK_LABEL_SIZE = 30) so
+    # axis chrome matches every other figure; the "n" axis label tracks the
+    # in-plot glyph size.
+    "DEFAULT_LABEL_FONT_SIZE": IN_PLOT_FONTSIZE,
 }
 
 
@@ -464,14 +507,25 @@ class _AccumStem(Plottable):
 
     def __init__(self, value, *, x=ACCUM_X_CENTER, color=PRODUCT_COLOR,
                  alpha=BRIGHT_ALPHA, linewidth=ACCUM_STEM_LINEWIDTH,
-                 markersize=ACCUM_MARKERSIZE, zorder=3):
+                 markersize=ACCUM_MARKERSIZE, zorder=3, vertical_spine=True):
         super().__init__(color=color, alpha=alpha, zorder=zorder)
         self.value = float(value)
         self.x = float(x)
         self.linewidth = linewidth
         self.markersize = markersize
+        self.vertical_spine = vertical_spine
 
     def draw(self, ax):
+        # Origin crosshair: a bone-white vertical axis down the strip center that
+        # the bar rides, plus a horizontal axis through y=0 (matches §2.4.2 /
+        # §2.4.3's accumulator). Drawn first so the heavy bar sits on top.
+        if self.vertical_spine:
+            ax.axvline(self.x, color=TEXT_COLOR,
+                       alpha=style.DEFAULT_AXIS_DECORATION_ALPHA,
+                       linewidth=style.DEFAULT_AXIS_DECORATION_LINEWIDTH, zorder=1)
+            ax.axhline(0.0, color=TEXT_COLOR,
+                       alpha=style.DEFAULT_AXIS_DECORATION_ALPHA,
+                       linewidth=style.DEFAULT_AXIS_DECORATION_LINEWIDTH, zorder=1)
         # ONE artist (line + tip marker via markevery=[1]) so the circle shares
         # the stem's exact coordinate and can't round off-centre; snap=False stops
         # the stroke pixel-snapping away from it. See _Stems.draw.
@@ -494,14 +548,19 @@ class _SumReadout(Plottable):
         self.x = float(x)
 
     def draw(self, ax):
+        # Readout parked a FIXED 1 unit from the origin in the empty well
+        # opposite the bar (below an upward/zero stem, above a downward one),
+        # matching §2.4.2 / §2.4.3's accumulator readout.
         positive = self.value >= 0
+        readout_y = -1.0 if positive else 1.0
         ax.annotate(
             f"{round(self.value):+d}",
-            xy=(self.x, 0.0),
-            xytext=(0, -10 if positive else 10), textcoords="offset points",
-            ha="center", va="top" if positive else "bottom",
+            xy=(self.x, readout_y),
+            ha="center", va="center",
             color=self.color, fontsize=IN_PLOT_FONTSIZE, fontweight="bold",
             zorder=self.zorder,
+            bbox=dict(facecolor="black", edgecolor="none",
+                      boxstyle="square,pad=0.45"),
         )
 
 
@@ -625,16 +684,21 @@ def _ghost_products(scn: dict) -> list:
 # Sum strip is a narrow companion on its own one-bar axis.
 # ---------------------------------------------------------------------------
 def _ab_panel(scn: dict, *, dynamic: bool):
-    """Stack row 1 — input sequences a, b (no signs)."""
-    axis = dict(units=(LEFT_UNITS, 1), xticks=X_TICKS, yticks=SIGNAL_YTICKS,
+    """The single input-stem plot (static path) — sequences a, b. As the only
+    left-hand plot it now carries the shared x-axis chrome (n label + ticks)."""
+    axis = dict(units=(STATIC_STEM_UNITS, 1), x_label="n",
+                xticks=X_TICKS, yticks=SIGNAL_YTICKS,
                 xlim=X_LIM, ylim=SIGNAL_YLIM,
-                show_xticklabels=False, show_yticklabels=True)
+                show_xticklabels=True, show_yticklabels=True)
     if dynamic:
         return DynamicTimeSeriesPanel(
             frame_fn=lambda k, s=scn: _ab_frame(s, k),
             num_frames=N + 1, interval_ms=INTERVAL_MS,
             base_plottables=_ghost_ab(scn), **axis)
     panel = TimeSeriesPanel(**axis)
+    # y-tick numbers (−1/0/1) live in an in-plot strip so they sit inside the
+    # cell frame, not on the left cell border (figure 2.6's treatment).
+    panel.content_left_pad_inches = STATIC_LABEL_PAD_INCHES
     panel.add(_ZeroLine(color=style.DROPLINE_COLOR))
     coincide = _coincide_mask(scn)
     panel.add(_Stems(N_IDX, scn["a_vals"], color=style.PRIMARY_COLOR,
@@ -680,9 +744,9 @@ def _sum_panel(scn: dict, *, dynamic: bool):
         return DynamicTimeSeriesPanel(
             frame_fn=lambda k, s=scn: _sum_frame(s, k),
             num_frames=N + 1, interval_ms=INTERVAL_MS,
-            base_plottables=[_ZeroLine(color=style.DROPLINE_COLOR)], **axis)
+            base_plottables=[], **axis)
     panel = TimeSeriesPanel(**axis)
-    panel.add(_ZeroLine(color=style.DROPLINE_COLOR))
+    # No horizontal zero line — _AccumStem draws a vertical spine instead.
     panel.add(_AccumStem(scn["dot"]))
     panel.add(_SumReadout(scn["dot"]))
     return panel
@@ -692,9 +756,8 @@ def _case_body(title: str) -> str:
     """The text-box copy for one case: the heading + a quick what's-happening
     blurb. (Tally/Σ are dropped — the plots already show them.)"""
     i = CASE_TITLES.index(title)
-    # Uppercase header + blank line + body, matching figure 1's caption layout
-    # (`_side_text_panel`: f"{title.upper()}\n\n{caption}").
-    return f"{title.upper()}\n\n{CASE_BLURBS[i]}"
+    # Regular-case header (CASE_TITLES are already Title Case) + blank line + body.
+    return f"{title}\n\n{CASE_BLURBS[i]}"
 
 
 def _text_panel(scn: dict, title: str) -> TextPanel:
@@ -706,37 +769,35 @@ def _text_panel(scn: dict, title: str) -> TextPanel:
     the dark bg without a competing fill. Scaffold; final prose is the user's."""
     return TextPanel(
         _case_body(title),
-        units=(TEXT_UNITS, 1),
+        units=(STATIC_TEXT_UNITS, 1),
+        font_size=style.DEFAULT_CAPTION_FONT_SIZE,
+        min_font_size=24.0,
         color=style.TICK_LABEL_COLOR,
-        fontweight="normal",
-        auto_shrink=True,
-        min_font_size=12.0,
-        cell_padding_frac=0.0,
-        # Uniform inset from the cell border so the text doesn't hug it — gives
-        # the same internal breathing room the plots have inside their borders
-        # (top_anchor starts the first line at this inset, so it sets the top gap).
-        content_margin_frac=TEXT_MARGIN_FRAC,
-        justify=True,   # flush both margins (figure 1's body treatment)
-        # No inner box — the gray cell border (show_cell_borders) is the ONE and
-        # only frame, identical for every panel (figure 1's model: SPINE_COLOR is
-        # "none" in the static path, so plots have no inner spine box either).
+        fontweight="bold",
+        # Figure 1's _side_text_panel treatment exactly (shared across figures):
+        # fixed shared caption size (no auto-shrink), ragged-right (justify=False),
+        # top-left anchored, no inner box — the cell border is the only frame.
+        auto_shrink=False,
+        justify=False,
+        content_margin_frac=0.05,
         show_ghost_border=False,
         top_anchor=True,
         facecolor="none",
+        # Promote the UPPERCASE case label into a header band the height of the
+        # figure header band, with the blurb below the divider (matches §2.4.2).
+        header_band=True,
     )
 
 
 def _case_row(scn: dict, title: str, *, dynamic: bool) -> list:
-    """One composite row: the two-plot stem stack, the Sum strip, the text box."""
-    stack = CompositePanel(
-        units=(LEFT_UNITS, 1),
-        rows=[[_ab_panel(scn, dynamic=dynamic)],
-              [_product_panel(scn, dynamic=dynamic)]],
-        share_x=False,          # gap between the two plots…
-        hspace=None,            # …derived from DEFAULT_INNER_GUTTER_INCHES so it
-                                #   matches every other gutter in the figure
-    )
-    return [stack, _sum_panel(scn, dynamic=dynamic), _text_panel(scn, title)]
+    """One flat case row (static): [ stems (2 units) | Sum strip (1) | text (1) ],
+    all on the shared tile. The two-plot stack collapses to the single input-stem
+    plot; the Sum strip carries the running total, the text the reasoning."""
+    return [
+        _ab_panel(scn, dynamic=dynamic),
+        _sum_panel(scn, dynamic=dynamic),
+        _text_panel(scn, title),
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -799,7 +860,7 @@ def _cycle_row(*, text_border: bool = True) -> list:
     )
     sum_strip = DynamicTimeSeriesPanel(
         frame_fn=_sum_cycle,
-        base_plottables=[_ZeroLine(color=style.DROPLINE_COLOR)],
+        base_plottables=[],
         units=(SUM_UNITS, 1), xticks=[], yticks=[],
         xlim=ACCUM_XLIM, ylim=RUNNING_YLIM,
         show_xticklabels=False, show_yticklabels=False, **common)
@@ -821,6 +882,7 @@ def _compose_cycle(*, unit_inches=None, dpi=None, unit_height_inches=None,
     kwargs = dict(
         rows=rows, row_heights=row_heights,
         unit_inches=unit_inches, dpi=dpi,
+        header_band_inches=style.HEADER_BAND_INCHES,
         show_cell_borders=show_cell_borders,
     )
     if unit_height_inches is not None:
@@ -845,13 +907,14 @@ def _square_unit_height(unit_w: float) -> float:
 
 def _compose(*, dynamic, unit_inches=None, dpi=None,
              unit_height_inches=None, hold_ticks=None,
-             show_cell_borders=False) -> Figure:
+             show_cell_borders=False, total_width_inches=None,
+             total_height_inches=None) -> Figure:
     """Three composite case rows under a full-width suptitle (no footer)."""
-    rows = [[SuptitlePanel(TITLE, units=(WIDTH_UNITS, 1))]]
+    rows = [[SuptitlePanel(TITLE, units=(STATIC_WIDTH_UNITS, 1))]]
     row_heights = [0.50]
     for scn, title in zip(SCENARIOS, CASE_TITLES):
         rows.append(_case_row(scn, title, dynamic=dynamic))
-        row_heights.append(CASE_ROW_HEIGHT)
+        row_heights.append(STATIC_CASE_ROW_HEIGHT)
 
     # No wspace/hspace: let compose derive the gridspec gutters from the
     # physical-inch values in _UNIFIED_TEXT_STYLE (the figure-1 approach), so
@@ -862,10 +925,15 @@ def _compose(*, dynamic, unit_inches=None, dpi=None,
         row_heights=row_heights,
         unit_inches=unit_inches,
         dpi=dpi,
+        header_band_inches=style.HEADER_BAND_INCHES,
         show_cell_borders=show_cell_borders,
     )
     if unit_height_inches is not None:
         kwargs["unit_height_inches"] = unit_height_inches
+    if total_width_inches is not None:
+        kwargs["total_width_inches"] = total_width_inches
+    if total_height_inches is not None:
+        kwargs["total_height_inches"] = total_height_inches
     if hold_ticks is not None:
         kwargs["hold_ticks"] = hold_ticks
     return Figure.compose(**kwargs)
@@ -888,10 +956,14 @@ def _build_dynamic_figure(unit_inches=None, dpi=None,
 
 def _build_static_figure(unit_inches=None, dpi=None,
                          unit_height_inches=None,
-                         show_cell_borders=False) -> Figure:
+                         show_cell_borders=False,
+                         total_width_inches=None,
+                         total_height_inches=None) -> Figure:
     return _compose(dynamic=False, unit_inches=unit_inches, dpi=dpi,
                     unit_height_inches=unit_height_inches,
-                    show_cell_borders=show_cell_borders)
+                    show_cell_borders=show_cell_borders,
+                    total_width_inches=total_width_inches,
+                    total_height_inches=total_height_inches)
 
 
 def _bolden_spines(fig: Figure) -> None:
@@ -1084,10 +1156,18 @@ def render(
         # unit_height derived so the (gutter-absorbing) 2-column text cell is a
         # true square. Stem stack ≈ 8.2" wide; Sum strip ≈ 1.6" wide; text box
         # square. (4 : 1 : 2 — the square text cell supersedes the earlier 4:1:3.)
-        uw = 1.6
-        fig = _build_static_figure(unit_inches=uw,
-                                   unit_height_inches=_square_unit_height(uw),
-                                   show_cell_borders=show_cell_borders)
+        # Shared graph-paper square: same 5" cell (width == height) as every
+        # other figure, replacing the back-solved width-locked unit. _square_
+        # unit_height is no longer needed — at a true square cell the 2-wide
+        # text column in a 2-tall row is already ~square.
+        # 2.5 / 2.6 render as a matched PAIR: shared WIDTH (total_width_inches)
+        # and shared per-row cell HEIGHT (unit_height_inches=SHARED_UNIT_INCHES),
+        # so a single row of 2.6 has the same vertical proportions as a single
+        # row of 2.5. Total heights differ (2.5 has 3 case rows, 2.6 has 2).
+        fig = _build_static_figure(
+            total_width_inches=style.PAIR_25_26_WIDTH_INCHES,
+            unit_height_inches=style.SHARED_UNIT_INCHES,
+            show_cell_borders=show_cell_borders)
         fig.render()
         _inset_ticks(fig)
         _uniform_borders(fig)

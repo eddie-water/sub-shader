@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import math
 import os
+from contextlib import contextmanager
 
 from .. import (
     Annotation,
@@ -40,7 +41,7 @@ from .foundation_constants import A, A_PRIME, FOUND_LIM
 
 # Vector ``a`` label sits this far past the tip (axes units). Bumped above
 # the library default of 0.30 so "a" doesn't crowd the arrowhead.
-_LABEL_OFFSET = 0.55
+_LABEL_OFFSET = 0.40
 
 # Panel-3 spotlight: vector ``a`` and its x-component fade to this alpha so
 # ``a'`` reads as the new subject.
@@ -50,6 +51,11 @@ _MUTED_ALPHA = 0.35
 # than the legacy v18 layout but big enough that the new long titles and
 # explanatory captions fit without overflowing panel cells.
 _UNIT_INCHES = 4.2
+
+# Header band font: the figure NUMBER + NAME on one line (the 2.5 / 2.6
+# convention). Sized to sit in the top band without dominating like the prior
+# 40pt suptitle did.
+_HEADER_FONT_SIZE = 28
 
 # Panel b — cumulative 5-beat reconstruction at four fixed angles. Fixed
 # magnitude (3.0) — only the angle varies between reconstructions, and the
@@ -83,6 +89,13 @@ def _vector_at_angle(theta: float) -> tuple[float, float]:
     return (_RECON_MAG * math.cos(theta), _RECON_MAG * math.sin(theta))
 
 
+# Fill limits — asymmetric so the origin sits low-left and vector ``a`` (and
+# ``a'``) fills the cell instead of stranding the lower / opposite quadrants as
+# dead space. Equal RANGE on both axes (7.5) keeps equal-aspect geometry honest
+# AND keeps ``a`` the same on-screen size across all three panels.
+#   Panels 1 & 2 (Q1 content): origin low-left.
+#   Panel 3 (a + mirrored a'): x symmetric (both signs present), y shares the
+#   low-origin range.
 def _common_panel_kwargs() -> dict:
     """Chrome shared by all three static panels — v52 kitchen-sink look."""
     return dict(
@@ -93,27 +106,94 @@ def _common_panel_kwargs() -> dict:
         # smaller than the library default so they read as quiet annotations.
         axis_labels=True,
         axis_label_size=style.DEFAULT_AXIS_LABEL_SIZE - 2,
-        show_border=True,
-        show_ticks=True,
+        # Spines OFF — the library CELL BORDER is the single frame for every
+        # cell (data panels AND the header/footer bands), the unified 2.5 / 2.6
+        # model. show_cell_borders=True in render() draws those boxes.
+        show_border=False,
+        # No inset tick marks — they read as faint dark-gray nubs on the cell
+        # border and add nothing; the grid carries the scale.
+        show_ticks=False,
         show_grid=True,
     )
 
 
+# Bone-white unified chrome for the static PNG — matches gen_figure_2_5 / 2_6 so
+# §2.4.1 shares their look. One colour (#EEEEEE) for every chrome text element
+# (tick numbers, the in-plot x/y labels, the suptitle/footer bands); SPINE off so
+# the gray library CELL BORDER (NEUTRAL_COLOR, also #EEEEEE) is the single panel
+# frame instead of a competing inner spine box. In-plot vector/component labels
+# keep their semantic colours (orange a, etc.) — those reference style.PRIMARY_*
+# directly, not the chrome constants.
+_STATIC_CHROME = {
+    "TICK_LABEL_COLOR": "#EEEEEE",
+    # Header/footer band text bone-white (#EEEEEE) so every figure's title reads
+    # at the same bright weight across the montage.
+    "SUPTITLE_COLOR": "#EEEEEE",
+    # Origin crosshair ("spine") bone-white so §2.4.1's axis lines read at the
+    # same bright weight as §2.4.2 — the axhline/axvline in setup_vector_axes
+    # take their color from SPINE_COLOR. Mirrors gen_figure_242's _STATIC_CHROME
+    # so the two figures' spines are common/identical.
+    "SPINE_COLOR": "#EEEEEE",
+    "DEFAULT_SPINE_LINEWIDTH": 2.0,
+    # FRAME MODEL: the library cell border (#EEEEEE, DEFAULT_FRAME_LINEWIDTH=2.0)
+    # is the single frame around EVERY cell — data panels AND the header/footer
+    # bands — matching gen_figure_2_5 / 2_6. Per-axes spines are OFF
+    # (show_border=False in _common_panel_kwargs); show_cell_borders=True in
+    # render() draws the boxes.
+    # Tight PHYSICAL-INCH spacing so the plots fill their cells; the cell border
+    # then sits close to the data. Mirrors gen_figure_242. ROW gutter is
+    # near-zero so the header/footer bands hug the panel grid (no floating gap
+    # — the "undo the gutters" pass); COLUMN gutter keeps a little air between
+    # the three side-by-side panels so their tick labels don't crowd.
+    "DEFAULT_PAD_INCHES": 0.15,
+    "DEFAULT_MARGIN_INCHES": 0.25,
+    "DEFAULT_GUTTER_INCHES": 0.10,
+    # Zero column gutter so adjacent body panels SHARE one border line instead of
+    # each drawing its own a half-gutter apart (which read as a doubled border
+    # between cells). Internal PAD keeps the plot content off the shared border.
+    "DEFAULT_COLUMN_GUTTER_INCHES": 0.0,
+    # x/y axis glyphs and in-plot math labels at the shared 28"-canvas scale
+    # (matches §2.4.2). Vectors use the shared bold weight (7.5) — no local
+    # override — so 241 and 242 vectors read identically (the prior 4.6 read thin).
+    "DEFAULT_AXIS_LABEL_SIZE": 42,
+    # In-plot vector / component labels (a, aₓ, aᵧ) match the x/y axis glyphs
+    # (axis_label_size = AXIS_LABEL_SIZE − 2 = 40) — they were reading too small.
+    "DEFAULT_LABEL_FONT_SIZE": 40,
+}
+
+
+@contextmanager
+def _static_chrome():
+    orig = {k: getattr(style, k) for k in _STATIC_CHROME}
+    try:
+        for k, v in _STATIC_CHROME.items():
+            setattr(style, k, v)
+        yield
+    finally:
+        for k, v in orig.items():
+            setattr(style, k, v)
+
+
 def _panel_projection_onto_axes() -> StaticPanel:
-    """Panel 1: solid white component arrows + droplines."""
+    """Panel 1: dashed white component arrows + droplines."""
     panel = StaticPanel(
-        title="Projection Along Each Axis",
-        **_common_panel_kwargs(),
+        **_common_panel_kwargs(),  # symmetric lim=FOUND_LIM, origin centered
     )
 
     ax_val, ay_val = A
     component_color = style.NEUTRAL_COLOR
 
-    panel.add(Dropline(start=(ax_val, ay_val), end=(ax_val, 0.0)))
-    panel.add(Dropline(start=(ax_val, ay_val), end=(0.0, ay_val)))
+    # Projection "shadow" droplines — same weight as vector a so they read as
+    # the cast shadow of the vector onto each axis, not a faint guide.
+    panel.add(Dropline(start=(ax_val, ay_val), end=(ax_val, 0.0),
+                        linewidth=style.DEFAULT_VECTOR_BOLD_LINEWIDTH))
+    panel.add(Dropline(start=(ax_val, ay_val), end=(0.0, ay_val),
+                        linewidth=style.DEFAULT_VECTOR_BOLD_LINEWIDTH))
 
-    panel.add(Vector((ax_val, 0.0), color=component_color, alpha=0.95, zorder=2))
-    panel.add(Vector((0.0, ay_val), color=component_color, alpha=0.95, zorder=2))
+    panel.add(Vector((ax_val, 0.0), color=component_color, alpha=0.95, zorder=2,
+                     linestyle="--"))
+    panel.add(Vector((0.0, ay_val), color=component_color, alpha=0.95, zorder=2,
+                     linestyle="--"))
 
     panel.add(
         Annotation(
@@ -153,8 +233,7 @@ def _panel_projection_onto_axes() -> StaticPanel:
 def _panel_tip_to_tail() -> StaticPanel:
     """Panel 2: parallelogram with dashed component arrows in both orders."""
     panel = StaticPanel(
-        title="Reconstruction in Any Order",
-        **_common_panel_kwargs(),
+        **_common_panel_kwargs(),  # symmetric lim=FOUND_LIM, origin centered
     )
 
     ax_val, ay_val = A
@@ -186,8 +265,8 @@ def _panel_tip_to_tail() -> StaticPanel:
                           ha="center", va="top", **label_kwargs))
     panel.add(Annotation("aᵧ", xy=(ax_val + 0.35, ay_val / 2.0),
                           ha="left", va="center", **label_kwargs))
-    panel.add(Annotation("aₓ", xy=(ax_val / 2.0, ay_val + 0.45),
-                          ha="center", va="bottom", **label_kwargs))
+    panel.add(Annotation("aₓ", xy=(ax_val / 2.0, ay_val + 0.50),
+                          ha="center", va="center", **label_kwargs))
     panel.add(Annotation("aᵧ", xy=(-0.35, ay_val / 2.0),
                           ha="right", va="center", **label_kwargs))
 
@@ -208,8 +287,7 @@ def _panel_tip_to_tail() -> StaticPanel:
 def _panel_perpendicular() -> StaticPanel:
     """Panel 3: a' is the spotlight; a + its x-component fade to _MUTED_ALPHA."""
     panel = StaticPanel(
-        title="Independent Components",
-        **_common_panel_kwargs(),
+        **_common_panel_kwargs(),  # symmetric lim=FOUND_LIM, origin centered
     )
 
     ax_val, ay_val = A
@@ -304,39 +382,55 @@ def render(
     output_dir: str,
     output_filename: str = "either_order_v19.png",
 ) -> str:
-    """Render the 3-panel §2.4.1 figure with v52 kitchen-sink chrome.
+    """Render the 3-panel §2.4.1 figure with the bone-white unified chrome.
 
-    Layout mirrors gen_figure_1_stft_vs_cwt: SuptitlePanel header row + panel row + SuptitlePanel
-    footer row. Suptitle is the figure name ("Basic Vector Projection"); footer
-    is the figure number ("Figure 2.4.1") — per-panel subtitles carry the .a/.b/.c
-    sub-figure labels.
+    Header convention matches gen_figure_2_5 / 2_6: the figure NUMBER + NAME sit
+    on ONE line in a single top band ("Figure 2.4.1 - Basic Vector Projection"),
+    folding in what used to be a separate giant bottom "Figure 2.4.1" footer band
+    and freeing that vertical space for the plots. The per-panel descriptive names
+    ("Projection Along Each Axis", …) stay as FOOTERS beneath each plot. The whole
+    figure renders under _static_chrome so the chrome text is one bone-white tone
+    and the gray cell border is each panel's single (now visible) frame.
     """
-    suptitle_row = [SuptitlePanel("Basic Vector Projection", units=(3, 1))]
-    subtitle_row = [
-        SuptitlePanel("Figure 2.4.1.a", units=(1, 1),
-                       font_size=style.DEFAULT_SUBTITLE_FONT_SIZE),
-        SuptitlePanel("Figure 2.4.1.b", units=(1, 1),
-                       font_size=style.DEFAULT_SUBTITLE_FONT_SIZE),
-        SuptitlePanel("Figure 2.4.1.c", units=(1, 1),
-                       font_size=style.DEFAULT_SUBTITLE_FONT_SIZE),
+    panel_footers = [
+        "Projection Along Each Axis",
+        "Reconstruction in Any Order",
+        "Independent Components",
     ]
-    footer_row = [SuptitlePanel("Figure 2.4.1", units=(3, 1))]
-    fig = Figure.compose(
-        rows=[
-            suptitle_row,
-            [
-                _panel_projection_onto_axes(),
-                _panel_tip_to_tail(),
-                _panel_perpendicular(),
+    # Single header band: figure NUMBER + NAME on one line (the 2.5 / 2.6
+    # convention). The old standalone bottom footer band is folded in here.
+    header_row = [
+        SuptitlePanel("Figure 2.4.1 - Basic Vector Projection",
+                       units=(3, 1))
+    ]
+    # Per-panel descriptive footers — same font as the header band (SuptitlePanel
+    # default = SUPTITLE_FONT_SIZE) so the bottom labels read at the same weight
+    # and size as the title. auto_shrink (width + height) keeps the longest name
+    # ("Reconstruction in Any Order") inside its 1-unit cell.
+    footer_names_row = [
+        SuptitlePanel(name, units=(1, 1))
+        for name in panel_footers
+    ]
+    with _static_chrome():
+        fig = Figure.compose(
+            rows=[
+                header_row,
+                [
+                    _panel_projection_onto_axes(),
+                    _panel_tip_to_tail(),
+                    _panel_perpendicular(),
+                ],
+                footer_names_row,
             ],
-            subtitle_row,
-            footer_row,
-        ],
-        row_heights=[0.25, 1.0, 0.12, 0.25],
-        unit_inches=_UNIT_INCHES,
-        show_cell_borders=True,
-    )
-    fig.render()
+            # Footer band height == header band (HEADER_BAND_INCHES = 2.0" with
+            # unit_height 10" → 0.20 row units) so top and bottom bands match.
+            row_heights=[0.28, 1.0, 0.20],
+            unit_inches=style.SHARED_UNIT_INCHES,
+            header_band_inches=style.HEADER_BAND_INCHES,
+            show_cell_borders=True,
+            frame_inset=True,
+        )
+        fig.render()
     output_path = os.path.join(output_dir, output_filename)
     fig.savefig(output_path)
     fig.close()

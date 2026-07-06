@@ -87,10 +87,10 @@ def _apply_axis_decoration(
         labelsize=style.DEFAULT_TICK_LABEL_SIZE,
         length=style.DEFAULT_TICK_LENGTH,
         width=style.DEFAULT_TICK_WIDTH,
-        # direction="out" → tick marks point AWAY from the data (left for
-        # left-side y, right for right-side y, down for bottom x). Keeps the
-        # plot area clean and makes the marks read as chrome.
-        direction="out",
+        # DEFAULT_HEATMAP_TICK_DIRECTION ("out") → tick marks point AWAY from
+        # the data (left for left-side y, right for right-side y, down for
+        # bottom x). Keeps the plot area clean and makes the marks read as chrome.
+        direction=style.DEFAULT_HEATMAP_TICK_DIRECTION,
     )
     if xticks is not None:
         ax.set_xticks(list(xticks))
@@ -132,7 +132,7 @@ def _apply_axis_decoration(
     axes_x1_to_edge_in = (1.0 - bbox.x1) * fig_w_in
     axes_y0_in = bbox.y0 * fig_h_in
     axes_y1_to_edge_in = (1.0 - bbox.y1) * fig_h_in
-    edge_clearance = 0.15
+    edge_clearance = style.DEFAULT_HEATMAP_AXIS_EDGE_CLEARANCE_INCHES
     x_inset_in = min(
         style.DEFAULT_X_AXIS_LABEL_INSET_INCHES,
         max(axes_y0_in - edge_clearance, 0.1)

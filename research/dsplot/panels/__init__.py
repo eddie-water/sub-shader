@@ -1,5 +1,6 @@
 """Panel containers — own one mpl Axes and a list of Plottables."""
 from .base import Panel
+from .bar_panel import BarPanel
 from .composite_panel import CompositePanel
 from .dynamic_panel import DynamicPanel
 from .dynamic_panel_3d import DynamicPanel3D
@@ -24,6 +25,7 @@ __all__ = [
     "InteractivePanel",
     "TimeSeriesPanel",
     "HeatmapPanel",
+    "BarPanel",
     "CompositePanel",
     "TextPanel",
     "SuptitlePanel",

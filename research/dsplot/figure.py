@@ -169,6 +169,11 @@ class Figure:
         self._debug_guides = debug_guides
         self._show_cell_borders = show_cell_borders
         self._hold_ticks = hold_ticks
+        # One sans family for all non-numeric text across every figure (the
+        # single type-system knob). Set on rcParams so every text artist
+        # inherits it; numeric readouts pass family= explicitly and override.
+        plt.rcParams["font.family"] = "sans-serif"
+        plt.rcParams["font.sans-serif"] = [style.DEFAULT_FONT_FAMILY, "DejaVu Sans"]
         self._mpl_fig = plt.figure(figsize=figsize, dpi=dpi)
         self._mpl_fig.patch.set_facecolor(style.BG_COLOR)
         self._gs = self._mpl_fig.add_gridspec(
@@ -192,7 +197,12 @@ class Figure:
             sup_band_center_in = style.DEFAULT_MARGIN_INCHES / 2.0
             self._mpl_fig.suptitle(
                 suptitle,
-                color=style.TICK_LABEL_COLOR,
+                # Header color is its OWN knob (SUPTITLE_COLOR), independent of
+                # tick/body color, so a figure can keep white body text while its
+                # header matches the shared gray header tone. Default
+                # SUPTITLE_COLOR == TICK_LABEL_COLOR (#888), so unchanged figures
+                # are unaffected.
+                color=style.SUPTITLE_COLOR,
                 fontsize=sup_fontsize_resolved,
                 fontweight="bold",
                 y=(
@@ -242,12 +252,12 @@ class Figure:
             if figure_number is not None:
                 self._mpl_fig.text(
                     figure_number_x if figure_number_x is not None else 0.5,
-                    1.05 / fig_h,
+                    style.DEFAULT_FIGURE_NUMBER_Y_INCHES / fig_h,
                     figure_number,
                     color=style.TICK_LABEL_COLOR,
                     fontsize=style.DEFAULT_FIGURE_NUMBER_FONT_SIZE,
-                    fontweight="bold",
-                    style="italic",
+                    fontweight=style.DEFAULT_FIGURE_NUMBER_FONT_WEIGHT,
+                    style=style.DEFAULT_FIGURE_NUMBER_FONT_STYLE,
                     ha="center", va="center",
                 )
             # Caption: left edge anchors to the leftmost panel cell's left
@@ -257,12 +267,12 @@ class Figure:
             # the caption is multi-line.
             if figure_caption is not None:
                 self._mpl_fig.text(
-                    margin / fig_w, 0.75 / fig_h,
+                    margin / fig_w, style.DEFAULT_FIGURE_CAPTION_Y_INCHES / fig_h,
                     figure_caption,
                     color=style.TICK_LABEL_COLOR,
                     fontsize=style.DEFAULT_FIGURE_CAPTION_FONT_SIZE,
-                    fontweight="bold",
-                    style="italic",
+                    fontweight=style.DEFAULT_FIGURE_CAPTION_FONT_WEIGHT,
+                    style=style.DEFAULT_FIGURE_CAPTION_FONT_STYLE,
                     ha="left", va="top",
                 )
 
@@ -281,12 +291,16 @@ class Figure:
         suptitle_fontsize: Optional[float] = None,
         unit_inches: Optional[float] = None,
         unit_height_inches: Optional[float] = None,
+        total_width_inches: Optional[float] = None,
+        total_height_inches: Optional[float] = None,
+        header_band_inches: Optional[float] = None,
         row_heights: Optional[List[float]] = None,
         dpi: Optional[int] = None,
         hspace: Optional[float] = None,
         wspace: Optional[float] = None,
         debug_guides: bool = False,
         show_cell_borders: bool = False,
+        frame_inset: bool = False,
         top_reserve_inches: Optional[float] = None,
         bottom_reserve_inches: Optional[float] = None,
         figure_number: Optional[str] = None,
@@ -320,6 +334,26 @@ class Figure:
                 f"Figure.compose row widths mismatch: {width_units_per_row}"
             )
 
+        # Common-canvas normalization: back-solve unit_inches so the finished
+        # figure is exactly `total_width_inches` wide. Width is
+        #   n_cols·unit_inches + (n_cols-1)·col_gutter + 2·margin
+        # so unit_inches = (W - 2·margin - (n_cols-1)·col_gutter) / n_cols.
+        # unit_height defaults to unit_inches downstream, so the whole figure
+        # scales uniformly to the target width — same proportions, one canvas
+        # size shared across every figure (→ a shared pt type scale is visually
+        # consistent everywhere). Overrides any explicit unit_inches.
+        if total_width_inches is not None:
+            _ncols_w = width_units_per_row[0]
+            if wspace is not None:
+                # Explicit wspace: width = unit·(n + (n-1)·wspace) + 2·margin.
+                unit_inches = (
+                    total_width_inches - 2.0 * style.DEFAULT_MARGIN_INCHES
+                ) / (_ncols_w + (_ncols_w - 1) * wspace)
+            else:
+                unit_inches = style.unit_inches_for_width(
+                    _ncols_w, total_width_inches
+                )
+
         # If row 0 is a single SuptitlePanel spanning all cols, lift it out of
         # the gridspec and render it as figure-level chrome in the top_reserve
         # band. Otherwise an explicit row-0 suptitle picks up the full row
@@ -351,7 +385,17 @@ class Figure:
                 suptitle = sup_panel.text
             if suptitle_fontsize is None:
                 suptitle_fontsize = sup_panel.font_size
-            _suptitle_band_inches = row_heights[0] * _resolved_unit_height()
+            # Fixed physical band when the caller pins it (header_band_inches),
+            # else the legacy relative `row_heights[0] × unit_height`. The fixed
+            # path makes every figure's header band identical in inches on the
+            # shared canvas regardless of column count (unit_height varies ~3×
+            # between a 3-col and 9-col figure, so the relative path renders very
+            # different bands). row_heights[0] is sliced off below and unused
+            # once the band height is set, so pinning it is complete here.
+            _suptitle_band_inches = (
+                header_band_inches if header_band_inches is not None
+                else row_heights[0] * _resolved_unit_height()
+            )
             rows = rows[1:]
             row_heights = row_heights[1:]
             n_rows = len(rows)
@@ -525,7 +569,12 @@ class Figure:
         elif _subtitle_band_inches is not None:
             gap = row_gutter_in / 2.0
             foot = _footer_band_inches if _footer_band_inches is not None else 0.0
-            _subtitle_band_bottom_in = foot if foot > 0.0 else margin
+            # With a footer band below, the subtitle band tiles on top of it.
+            # With nothing below, the subtitle band IS the bottom of the figure,
+            # so it sits flush on the perimeter (0.0) instead of floating a
+            # margin above it — that float renders as dead space under the
+            # footer text.
+            _subtitle_band_bottom_in = foot if foot > 0.0 else 0.0
             _subtitle_band_top_in = _subtitle_band_bottom_in + _subtitle_band_inches
             _subtitle_band_center_in = (
                 _subtitle_band_bottom_in + _subtitle_band_top_in
@@ -537,6 +586,38 @@ class Figure:
             bottom_reserve = 1.5
         else:
             bottom_reserve = margin
+        # Common-canvas normalization (height): back-solve unit_height so the
+        # finished figure is exactly `total_height_inches` tall — the vertical
+        # mirror of total_width_inches. figsize[1] = grid_h + bottom_reserve +
+        # top_reserve, and the reserves + row gutters are FIXED physical inches
+        # (independent of unit_height), so the only height-scaled term is
+        # grid_h's row contribution. Solve that for unit_height, then recompute
+        # the height-dependent quantities (row heights, hspace gutter fraction,
+        # grid_h) before figsize is sized. Lets two structurally-different figures
+        # (different row counts) land on ONE shared canvas; trades the square
+        # shared-tile invariant for an exact W×H match (opt-in only).
+        if total_height_inches is not None:
+            avail_h = total_height_inches - top_reserve - bottom_reserve
+            if hspace is None:
+                avail_h -= (n_rows - 1) * row_gutter_in
+                unit_height_inches_resolved = avail_h / sum(row_heights)
+                row_heights_inches = [
+                    r * unit_height_inches_resolved for r in row_heights
+                ]
+                if n_rows > 1:
+                    hspace_resolved = (
+                        row_gutter_in * n_rows / sum(row_heights_inches)
+                    )
+                grid_h_inches = (
+                    sum(row_heights_inches) + (n_rows - 1) * row_gutter_in
+                )
+            else:
+                denom_h = sum(row_heights) + (n_rows - 1) * hspace_resolved
+                unit_height_inches_resolved = avail_h / denom_h
+                row_heights_inches = [
+                    r * unit_height_inches_resolved for r in row_heights
+                ]
+                grid_h_inches = unit_height_inches_resolved * denom_h
         figsize = (
             grid_w_inches + 2 * margin,
             grid_h_inches + bottom_reserve + top_reserve,
@@ -619,6 +700,7 @@ class Figure:
             subtitle_band_bottom_inches=_subtitle_band_bottom_in,
             hold_ticks=hold_ticks,
         )
+        fig._frame_inset = frame_inset
 
         for r in range(n_rows):
             for p in range(len(rows[r])):
@@ -675,7 +757,7 @@ class Figure:
         if self._bottom_pad is not None:
             bottom_resolved = self._bottom_pad
         elif max_bottom_pad > 0.0:
-            bottom_resolved = max_bottom_pad + 0.05
+            bottom_resolved = max_bottom_pad + style.DEFAULT_BOTTOM_PAD_BUFFER_INCHES
         else:
             bottom_resolved = margin_v_frac
 
@@ -852,23 +934,34 @@ class Figure:
     def _cell_rect_fracs(
         self, panel, row, col, rowspan, colspan,
         half_row_g_frac, half_col_g_frac, sup_band_bot_frac, fig_h,
+        perim_x_frac=0.0, perim_y_frac=0.0,
     ) -> tuple[float, float, float, float]:
         """Figure-fraction (left, bottom, right, top) of the gridspec CELL that
         encloses one panel — the cell border bounds. Perimeter sides snap to
         the figure edge (or suptitle / footer / subtitle band edge); interior
         sides sit at the half-gutter midline. Shared by the cell-border tiler
         and the fill_cell axes expansion so both agree on cell bounds.
+
+        ``perim_x_frac`` / ``perim_y_frac`` inset the OUTER perimeter sides off
+        the figure edge by that fraction (the opt-in ``frame_inset`` path). At
+        the default 0.0 perimeter sides snap to the canvas edge as before —
+        which renders the line right at the edge where it is effectively clipped
+        to invisibility. A non-zero inset (the figure margin) pulls those lines
+        inboard so the outer frame and header/footer bands read as full boxes.
         """
         bbox = panel.ax.get_position()
-        cell_left = 0.0 if col == 0 else bbox.x0 - half_col_g_frac
+        cell_left = perim_x_frac if col == 0 else bbox.x0 - half_col_g_frac
         cell_right = (
-            1.0 if col + colspan == self.n_cols
+            1.0 - perim_x_frac if col + colspan == self.n_cols
             else bbox.x1 + half_col_g_frac
         )
-        cell_top = (
-            sup_band_bot_frac if row == 0
-            else bbox.y1 + half_row_g_frac
-        )
+        if row == 0:
+            # With a lifted suptitle band the body's top row touches the band
+            # bottom (an interior, already-visible line); otherwise the top row
+            # is itself the perimeter and insets by perim_y_frac.
+            cell_top = sup_band_bot_frac if self._has_suptitle else 1.0 - perim_y_frac
+        else:
+            cell_top = bbox.y1 + half_row_g_frac
         # Bottom-most row stops at the footer/subtitle band top when one was
         # lifted into a bottom_reserve band (cell border touches the band edge
         # with no gap); otherwise it stops at the half-gutter midline.
@@ -881,7 +974,7 @@ class Figure:
             elif self._footer_band_inches is not None:
                 cell_bot = self._footer_band_inches / fig_h
             else:
-                cell_bot = 0.0
+                cell_bot = perim_y_frac
         else:
             cell_bot = bbox.y0 - half_row_g_frac
         return cell_left, cell_bot, cell_right, cell_top
@@ -981,6 +1074,16 @@ class Figure:
         fig_w, fig_h = fig.get_size_inches()
         margin = style.DEFAULT_MARGIN_INCHES
 
+        # Outer-perimeter edge gap: every figure's outer frame is inset from the
+        # canvas edge by style.DEFAULT_FRAME_EDGE_GAP_INCHES so it reads as a
+        # framed figure on a page (and the full stroke renders instead of being
+        # half-clipped at fraction 0.0/1.0). A fixed INCH value gives every
+        # figure the same visible gap regardless of dpi. One shared default —
+        # change the style knob, every figure's edge gap moves together.
+        inset_in = style.DEFAULT_FRAME_EDGE_GAP_INCHES
+        perim_x_frac = inset_in / fig_w
+        perim_y_frac = inset_in / fig_h
+
         # Use ACTUAL gutter measured from adjacent-panel spine positions so
         # cell borders honor compose(hspace=...) / compose(wspace=...)
         # overrides. Fall back to style constants if no adjacent panel exists
@@ -1008,17 +1111,15 @@ class Figure:
         else:
             sup_band_bot_frac = 1.0
 
-        # show_cell_borders is a DEBUG/inspection mode — the borders are meant
-        # to be visible against the dark bg so the user can verify that titles,
-        # axis labels, and other chrome land inside their owning cell. Use the
-        # NEUTRAL_COLOR palette slot (light gray) and a wider stroke so the
-        # outlines actually read, rather than the near-invisible SPINE_COLOR
-        # used for the per-axes spine.
+        # The cell border IS each panel's single frame (the figure-1 / 2.5
+        # border model — spines off, this box is the one visible frame). Styled
+        # from the shared DEFAULT_FRAME_* knobs so every figure's frame is one
+        # clean visible thin line, tuned in one place (style.py).
         border_kwargs = dict(
             fill=False,
-            edgecolor=style.NEUTRAL_COLOR,
-            linewidth=style.DEFAULT_SPINE_LINEWIDTH * 2.0,
-            alpha=0.6,
+            edgecolor=style.DEFAULT_FRAME_COLOR,
+            linewidth=style.DEFAULT_FRAME_LINEWIDTH,
+            alpha=style.DEFAULT_FRAME_ALPHA,
             transform=fig.transFigure,
             zorder=50,
             clip_on=False,
@@ -1030,6 +1131,7 @@ class Figure:
             cell_left, cell_bot, cell_right, cell_top = self._cell_rect_fracs(
                 panel, row, col, rowspan, colspan,
                 half_row_g_frac, half_col_g_frac, sup_band_bot_frac, fig_h,
+                perim_x_frac, perim_y_frac,
             )
 
             rect = Rectangle(
@@ -1042,9 +1144,9 @@ class Figure:
 
         if self._has_suptitle:
             rect = Rectangle(
-                (0.0, sup_band_bot_frac),
-                1.0,
-                1.0 - sup_band_bot_frac,
+                (perim_x_frac, sup_band_bot_frac),
+                1.0 - 2.0 * perim_x_frac,
+                (1.0 - perim_y_frac) - sup_band_bot_frac,
                 **border_kwargs,
             )
             fig.add_artist(rect)
@@ -1054,9 +1156,9 @@ class Figure:
         if self._footer_band_inches is not None:
             footer_band_top_frac = self._footer_band_inches / fig_h
             rect = Rectangle(
-                (0.0, 0.0),
-                1.0,
-                footer_band_top_frac,
+                (perim_x_frac, perim_y_frac),
+                1.0 - 2.0 * perim_x_frac,
+                footer_band_top_frac - perim_y_frac,
                 **border_kwargs,
             )
             fig.add_artist(rect)
@@ -1066,19 +1168,32 @@ class Figure:
         if self._subtitle_band_inches is not None and self._subtitle_specs:
             sub_top = self._subtitle_band_top_inches / fig_h
             sub_bot = self._subtitle_band_bottom_inches / fig_h
+            # When the subtitle band is the bottom-most element (no footer band
+            # beneath it) its bottom edge IS the figure perimeter, so it honors
+            # perim_y_frac exactly like the body cells / header band — otherwise
+            # the band floats a margin above the canvas and reads as dead space
+            # under the footer text.
+            sub_bot_draw = max(sub_bot, perim_y_frac)
             for spec in self._subtitle_specs:
                 x0, x1 = self._column_x_extent(spec["col_start"], spec["colspan"])
                 if x0 is None:
                     continue
-                cell_left = 0.0 if spec["col_start"] == 0 else x0 - half_col_g_frac
+                # Outer columns snap to perim_x_frac (NOT the raw canvas edge) so
+                # the band's left/right frame lines up vertically with the header
+                # band and the body cells above it.
+                cell_left = (
+                    perim_x_frac if spec["col_start"] == 0
+                    else x0 - half_col_g_frac
+                )
                 cell_right = (
-                    1.0 if spec["col_start"] + spec["colspan"] == self.n_cols
+                    1.0 - perim_x_frac
+                    if spec["col_start"] + spec["colspan"] == self.n_cols
                     else x1 + half_col_g_frac
                 )
                 rect = Rectangle(
-                    (cell_left, sub_bot),
+                    (cell_left, sub_bot_draw),
                     cell_right - cell_left,
-                    sub_top - sub_bot,
+                    sub_top - sub_bot_draw,
                     **border_kwargs,
                 )
                 fig.add_artist(rect)

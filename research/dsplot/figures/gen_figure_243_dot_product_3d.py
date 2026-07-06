@@ -36,9 +36,12 @@ from __future__ import annotations
 import math
 import os
 
+from contextlib import contextmanager
+
 import numpy as np
 
 from .. import (
+    AccumulatorStrip,
     Annotation,
     DynamicPanel,
     DynamicPanel3D,
@@ -48,6 +51,8 @@ from .. import (
     RichText,
     StemArrows,
     SuptitlePanel,
+    TextPanel,
+    TimeSeriesPanel,
     Vector,
     nb_compact_style,
     style,
@@ -58,6 +63,10 @@ _LABEL_OFFSET = 0.55
 _UNIT_INCHES = 4.2
 _LIM_3D = 4.0
 _LIM_2D = (-4.0, 4.0)
+# Static a·b gauge y-scale: SYMMETRIC about zero (figure 2.5's accumulator) so
+# the baseline sits centered in the square cell and the bar grows up from the
+# middle. ±1.4×value (matches 2.5 / §2.4.2): the 3D dot (~6.1) → ±8.54.
+_ACCUM_GAUGE_YLIM = (-8.54, 8.54)
 _VIEW_INIT = (24.0, -58.0)
 
 
@@ -99,7 +108,7 @@ _SHADOW_MIN_LEN = 0.2
 # arithmetic is the longest line, so this is sized for it.
 _FOOTER_FONT_SCALE = 0.36
 
-_NUMBER_FONT: str | None = "Ubuntu"
+_NUMBER_FONT: str | None = style.DEFAULT_MONO_FONT_FAMILY
 _NUMBER_FONT_WEIGHT = "normal"
 
 _MUTED_ALPHA = style.DEFAULT_MUTED_ALPHA
@@ -108,8 +117,11 @@ _MUTED_ALPHA = style.DEFAULT_MUTED_ALPHA
 # standard muted alpha so the components are unambiguously the hero.
 _GHOST_ALPHA = 0.16
 
-# Dash pattern for every projection / component element (tighter than "--").
-_PROJ_DASH = (0, (1.5, 1.5))
+# Dash pattern for every projection / component element. Plain "--" so the
+# dashes-per-unit cadence matches the 2D figures' dashed components (§2.4.1 /
+# §2.4.2 use "--"); matplotlib scales the dash unit with linewidth, so equal
+# linestyle reads as the same dash rhythm across the 2D and 3D figures.
+_PROJ_DASH = "--"
 
 # Stem panel D: THREE slots — an "x", "y" and "z" slot, one per product term.
 # At each slot the two multiplicands of that term sit side by side (aₓ next to
@@ -253,10 +265,11 @@ def _shadow_vec(a, *, alpha: float, zorder: int = 2, dashed: bool = True) -> Vec
     )
 
 
-# Axis-label anchor radii (data coords along each spine). The z anchor is pulled
-# well in (3.8 -> 2.9) so the vertical z-axis label sits inside the cube instead
-# of poking up through the inline panel title at the top of the cell.
-_LABEL_ANCHORS = (3.8, 3.4, 2.9)  # (x, y, z)
+# Axis-label anchor radii (data coords along each spine, _LIM_3D = 4.0). x and y
+# are pushed OUT near their spine tips (spines run to lim·spine_extension = 5.4,
+# clipped at the cell border) so "x"/"y" sit right next to the cell border where
+# each axis meets it. z stays pulled IN so it clears the panel title at the top.
+_LABEL_ANCHORS = (5.0, 5.0, 2.5)  # (x, y, z)
 
 
 def _common_3d_kwargs() -> dict:
@@ -268,16 +281,17 @@ def _common_3d_kwargs() -> dict:
         show_spine_tick_labels=False,
         label_anchors=_LABEL_ANCHORS,
         spine_alpha=0.9,
-        spine_extension=1.0,  # spines reach the cube edge — which, with fill_cell
-                              # + box_zoom below, is the cell edge. Longer spines
-                              # would just bleed into the neighbor panel.
+        spine_extension=1.35,  # spines run PAST the cube edge so the x/y/z axes
+                               # reach out to the cell border (clipped at the axes
+                               # bbox = the cell edge with fill_cell on) instead of
+                               # stopping short inside the cube.
         # fill_cell expands the Axes3D to the whole gridspec cell (matching the 2D
         # sibling §2.4.2). WITHOUT it the axes is inset and mpl's box_zoom barely
         # grows the cube; WITH it box_zoom actually fills. This is the real fill
         # lever — box_zoom/lim/elevation only matter once fill_cell is on.
         fill_cell=True,
-        box_zoom=2.40,   # fills the (now cell-sized) axes. Higher overflows the
-                         # cell; lower leaves the legacy centered-cube margin.
+        box_zoom=2.80,   # fills the (now SQUARE cell-sized) axes. Higher overflows
+                         # the cell; lower leaves the legacy centered-cube margin.
         # No per-panel inner border: the figure's bright cell-grid border frames
         # each 3D panel; a second inner border just reads as clutter.
         show_border=False,
@@ -429,7 +443,7 @@ def _slot_chrome() -> list:
         chrome.append(Annotation(
             txt, xy=(slot, _SLOT_LABEL_Y), color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE - 2, fontweight="bold",
-            fontfamily="Ubuntu", zorder=5))
+            fontfamily=style.DEFAULT_FONT_FAMILY, zorder=5))
     return chrome
 
 
@@ -577,6 +591,150 @@ def _rows() -> list:
 _ROW_HEIGHTS = [0.22, 0.30, 1.0, 0.22, 0.18, 0.20]
 
 
+# ---------------------------------------------------------------------------
+# Static PNG — the §2.4.2 [ 3D visual | a·b strip | text ] template.
+# Two rows (cosine form, component form), each a big 3D scene beside the same
+# dot-product strip and an explanation. Mirrors gen_figure_242_a_onto_b so the
+# pair reads as one system. The notebook/GIF path keeps the 4-panel _rows().
+# ---------------------------------------------------------------------------
+_STATIC_FRAME = 18   # a lifted-A, off-axis frame so the height + angle both read
+
+
+# Static-PNG chrome — mirrors gen_figure_242_a_onto_b's _STATIC_CHROME so the
+# two figures share one look: tight margins/gutters (otherwise the global 3.0"
+# column gutter starves a 9-unit row down to ~0.1"/unit) and the cell-border
+# frame model (spines off; show_cell_borders draws every box).
+_STATIC_CHROME = {
+    "TICK_LABEL_COLOR": "#EEEEEE",
+    # Header text bone-white (#EEEEEE) so every figure's title reads at the same
+    # bright weight across the montage.
+    "SUPTITLE_COLOR": "#EEEEEE",
+    "SPINE_COLOR": "#EEEEEE",
+    "DEFAULT_SPINE_LINEWIDTH": 1.0,
+    "DEFAULT_PAD_INCHES": 0.15,
+    "DEFAULT_MARGIN_INCHES": 0.25,
+    "DEFAULT_GUTTER_INCHES": 0.10,
+    "DEFAULT_COLUMN_GUTTER_INCHES": 0.30,
+    # Match §2.4.1 / §2.4.2's in-plot label scale so the three vector figures
+    # share one type system (slot labels, 3D glyphs, footer math).
+    "DEFAULT_AXIS_LABEL_SIZE": 42,
+    # In-plot 3D vector labels (a, b) match the x/y/z axis glyphs (3D axis labels
+    # render at AXIS_LABEL_SIZE + 2 = 44) — they were reading too small.
+    "DEFAULT_LABEL_FONT_SIZE": 44,
+}
+
+
+@contextmanager
+def _static_chrome():
+    orig = {k: getattr(style, k) for k in _STATIC_CHROME}
+    try:
+        for k, v in _STATIC_CHROME.items():
+            setattr(style, k, v)
+        yield
+    finally:
+        for k, v in orig.items():
+            setattr(style, k, v)
+
+_COSINE_TEXT = (
+    "Dot Product - Cosine Form\n\n"
+    "a · b = |a| |b| cos θ. In 3D the dot product still tracks only the shared "
+    "direction. a's height adds nothing because b lies flat on the floor — the "
+    "shadow of a on b's line is the score."
+)
+_COMPONENT_TEXT = (
+    "Dot Product - Component Form\n\n"
+    "a · b = aₓbₓ + aᵧbᵧ + a_zb_z. Multiply matching axes and add. b has no z, "
+    "so a_zb_z = 0 — the height drops out and the answer matches the cosine form."
+)
+
+
+def _static_panel_cosine() -> DynamicPanel3D:
+    return DynamicPanel3D(
+        frame_fn=_panel_b_frame,
+        num_frames=_SWEEP_REAL_NUM_FRAMES,
+        interval_ms=_SWEEP_INTERVAL_MS,
+        repeat=True,
+        units=(1, 1),
+        **_common_3d_kwargs(),
+    )
+
+
+def _static_panel_component() -> DynamicPanel3D:
+    return DynamicPanel3D(
+        frame_fn=_panel_c_frame,
+        num_frames=_SWEEP_REAL_NUM_FRAMES,
+        interval_ms=_SWEEP_INTERVAL_MS,
+        repeat=True,
+        units=(1, 1),
+        **_common_3d_kwargs(),
+    )
+
+
+def _static_accum(dot: float) -> TimeSeriesPanel:
+    """The a·b strip — same value in both rows (same answer, two ways).
+
+    Figure 2.5's accumulator look (matches §2.4.2): SYMMETRIC y-range so the
+    baseline sits centered in the square cell and the bar grows up from the
+    middle; the stem matches the shared hero linework weight so it reads at the
+    same thickness as the data stems / vectors elsewhere."""
+    panel = TimeSeriesPanel(
+        units=(1, 1), xticks=[], yticks=[],
+        xlim=(-1.0, 1.0), ylim=_ACCUM_GAUGE_YLIM,
+        show_xticklabels=False, show_yticklabels=False,
+        show_border=False,
+        # No x/y crosshair — AccumulatorStrip draws its own zero baseline; the
+        # default "line" axis would add a stray vertical at x=0 (matches §2.4.2).
+        axis_style="none",
+    )
+    panel.add(AccumulatorStrip(
+        dot, decimals=1,
+        # Bar centered in the strip cell; readout drops into the empty well
+        # (matches §2.4.2).
+        x=0.0,
+        # Crisp bone-white bar at full opacity (matches §2.4.2) — the a·b RESULT
+        # reads as a neutral gauge, distinct from the orange vectors it scores.
+        color="#EEEEEE", alpha=1.0,
+        linewidth=style.DEFAULT_ACCUM_STEM_LINEWIDTH,
+        markersize=style.DEFAULT_ACCUM_MARKERSIZE,
+        readout_color="#EEEEEE", readout_font_size=34,
+        # VERTICAL spine (no grid), matching §2.4.2: a bone-white axis line down
+        # the strip center that the bar rides; the readout sits a fixed 1 unit
+        # from the origin in the empty well below the bar.
+        vertical_spine=True,
+        readout_origin_offset=1.0,
+        zero_line_color="#EEEEEE",
+        zero_line_alpha=style.DEFAULT_AXIS_DECORATION_ALPHA,
+        zero_line_width=style.DEFAULT_AXIS_DECORATION_LINEWIDTH,
+    ))
+    return panel
+
+
+def _static_text(text: str) -> TextPanel:
+    """Figure 1's _side_text_panel treatment (matches §2.4.2): one 1-unit square
+    tile, uppercase head + ragged-right body, top-left anchored at the shared
+    caption font size, no inner box (the cell border is the frame)."""
+    return TextPanel(
+        text, units=(1, 1),
+        font_size=style.DEFAULT_CAPTION_FONT_SIZE,
+        min_font_size=24.0,
+        color=style.TICK_LABEL_COLOR, fontweight="bold",
+        auto_shrink=False, justify=False, top_anchor=True,
+        content_margin_frac=0.05,
+        show_ghost_border=False, facecolor="none",
+        # Leading "DOT PRODUCT - …" line becomes a header band (matches §2.4.2).
+        header_band=True,
+    )
+
+
+def _static_rows(dot: float) -> list:
+    header_row = [
+        SuptitlePanel("Figure 2.4.3 - The Dot Product in 3D", units=(3, 1))
+    ]
+    cosine_row = [_static_panel_cosine(), _static_accum(dot), _static_text(_COSINE_TEXT)]
+    component_row = [_static_panel_component(), _static_accum(dot), _static_text(_COMPONENT_TEXT)]
+    return [header_row, cosine_row, component_row]
+
+
 def build_notebook_figure(debug: bool = False) -> Figure:
     """Build §2.4.3 as a 4-column mixed Figure (three 3D panels + a stem panel)."""
     return Figure.compose(
@@ -614,16 +772,24 @@ def show(debug: bool = False) -> Figure:
 
 def render(output_dir: str,
            output_filename: str = "dot_product_3d/baseline.png") -> str:
-    """Render a static PNG snapshot (a mid-rev frame: A lifted off the floor)."""
-    fig = Figure.compose(
-        rows=_rows(),
-        row_heights=_ROW_HEIGHTS,
-        unit_inches=_UNIT_INCHES,
-        show_cell_borders=True,
-    )
-    fig.render()
-    for panel in (p for p, *_ in fig.panels if isinstance(p, DynamicPanel)):
-        panel.tick(12)
+    """Render the static §2.4.3 on the §2.4.2 template — two [3D | a·b | text]
+    rows on the shared 28" canvas, A lifted off the floor at _STATIC_FRAME."""
+    a, b, _ = _ab_for_frame(_STATIC_FRAME)
+    dot = _dot3(a, b)
+    if abs(dot) < 0.05:
+        dot = 0.0
+    with _static_chrome():
+        fig = Figure.compose(
+            rows=_static_rows(dot),
+            row_heights=[0.32, 1.0, 1.0],
+            unit_inches=style.SHARED_UNIT_INCHES,
+            header_band_inches=style.HEADER_BAND_INCHES,
+            show_cell_borders=True,
+            frame_inset=True,
+        )
+        fig.render()
+        for panel in (p for p, *_ in fig.panels if isinstance(p, DynamicPanel)):
+            panel.tick(_STATIC_FRAME)
     output_path = os.path.join(output_dir, output_filename)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     fig.savefig(output_path)

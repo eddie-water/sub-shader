@@ -52,6 +52,30 @@ def apply_3d_scene(ax, *, lim_3d: float, view_init: Tuple[float, float],
     ax.set_box_aspect((1, 1, 1), zoom=box_zoom)
 
 
+def draw_3d_floor_grid(ax, *, lim_3d: float) -> None:
+    """A light grid on the z=0 (xy) plane only — the scene 'floor'.
+
+    set_axis_off() kills mpl's native 3D grid/panes, so the floor reference is
+    drawn manually: integer lines parallel to x and y, at z=0, spanning the cube.
+    Only the floor (not the back/side panes) so the grid grounds the vectors
+    without boxing the scene in three planes. Faint (DEFAULT_AXIS_GRID_ALPHA_3D)
+    and zorder 0 so it sits under everything.
+    """
+    import math
+    lo, hi = -lim_3d, lim_3d
+    ticks = [float(i) for i in range(math.ceil(lo), math.floor(hi) + 1)]
+    grid_kwargs = dict(
+        color=style.DEFAULT_AXIS_GRID_COLOR,
+        alpha=style.DEFAULT_AXIS_GRID_ALPHA_3D,
+        linewidth=style.DEFAULT_AXIS_GRID_LINEWIDTH,
+        zorder=0,
+    )
+    for x in ticks:
+        ax.plot([x, x], [lo, hi], [0.0, 0.0], **grid_kwargs)
+    for y in ticks:
+        ax.plot([lo, hi], [y, y], [0.0, 0.0], **grid_kwargs)
+
+
 def draw_3d_spines(ax, *, lim_3d: float, spine_extension: float,
                    alpha: float = 0.55) -> None:
     """Three neutral axis spines through the origin, both directions.
@@ -66,7 +90,7 @@ def draw_3d_spines(ax, *, lim_3d: float, spine_extension: float,
     lim = lim_3d * spine_extension
     spine_kwargs = dict(
         color=style.SPINE_COLOR,
-        linewidth=style.DEFAULT_VECTOR_LINEWIDTH,
+        linewidth=style.DEFAULT_SPINE_3D_LINEWIDTH,
         alpha=alpha,
         show_tip=False,
     )
@@ -93,7 +117,7 @@ def draw_3d_spine_ticks(ax, *, lim_3d: float, show_labels: bool = True) -> None:
     tick_len = lim_3d * 0.05
     tick_kwargs = dict(
         color=style.SPINE_COLOR,
-        linewidth=style.DEFAULT_VECTOR_LINEWIDTH * 0.6,
+        linewidth=style.DEFAULT_SPINE_3D_LINEWIDTH * 0.6,
         alpha=0.85,
         show_tip=False,
     )
@@ -170,6 +194,7 @@ def render_3d_chrome(
     label_anchors: Optional[Tuple[float, float, float]] = None,
     spine_alpha: float = 0.55,
     box_zoom: float = 1.55,
+    show_floor_grid: bool = True,
 ) -> None:
     """Apply the full Axes3D chrome: scene config, then spines/ticks/labels.
 
@@ -177,9 +202,12 @@ def render_3d_chrome(
     numeric labels. ``label_anchors`` (x, y, z) overrides the per-axis label
     radii along each spine. ``spine_alpha`` sets the spine opacity. ``box_zoom``
     magnifies the cube (lower it if edge-pointing vectors get arrowhead-clipped).
+    ``show_floor_grid`` lays a light grid on the z=0 plane for ground reference.
     Does NOT draw the figure-coord border or chrome titles — callers handle those.
     """
     apply_3d_scene(ax, lim_3d=lim_3d, view_init=view_init, box_zoom=box_zoom)
+    if show_floor_grid:
+        draw_3d_floor_grid(ax, lim_3d=lim_3d)
     if show_spines:
         draw_3d_spines(ax, lim_3d=lim_3d, spine_extension=spine_extension,
                        alpha=spine_alpha)

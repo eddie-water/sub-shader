@@ -120,10 +120,10 @@ class Spotlight(Plottable):
             raise ValueError("Spotlight(mode='scatter') requires xy")
         ax.scatter(
             [self.xy[0]], [self.xy[1]],
-            s=100,
+            s=style.DEFAULT_SPOTLIGHT_SIZE,
             color=color,
             alpha=self.alpha,
-            edgecolors="white",
+            edgecolors=style.DEFAULT_SPOTLIGHT_EDGE_COLOR,
             linewidths=self.linewidth,
             zorder=self.zorder,
         )

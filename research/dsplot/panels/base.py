@@ -160,7 +160,7 @@ class Panel(ABC):
                 transform=ax.transAxes,
                 ha="center", va="center",
                 fontsize=style.DEFAULT_TITLE_FONT_SIZE,
-                fontweight="bold",
+                fontweight=style.DEFAULT_TITLE_FONT_WEIGHT,
                 color=style.TICK_LABEL_COLOR,
             )
 
@@ -172,8 +172,8 @@ class Panel(ABC):
                 ha="center", va="top",
                 fontsize=style.DEFAULT_SUBTITLE_FONT_SIZE,
                 color=style.TICK_LABEL_COLOR,
-                style="italic",
-                fontweight="bold",
+                style=style.DEFAULT_SUBTITLE_FONT_STYLE,
+                fontweight=style.DEFAULT_SUBTITLE_FONT_WEIGHT,
             )
 
         caption = getattr(self, "caption", None)
@@ -185,6 +185,6 @@ class Panel(ABC):
                 ha="center", va="top",
                 fontsize=style.DEFAULT_CAPTION_FONT_SIZE,
                 color=style.TICK_LABEL_COLOR,
-                style="italic",
-                fontweight="bold",
+                style=style.DEFAULT_CAPTION_FONT_STYLE,
+                fontweight=style.DEFAULT_CAPTION_FONT_WEIGHT,
             )
