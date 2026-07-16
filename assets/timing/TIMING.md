@@ -18,9 +18,9 @@
 
 ### Pipeline Structure
 
-![Start up — one-time construction, CPU and GPU lanes](pipeline%20start%20up%20init.drawio.png)
+![Start up — one-time construction, CPU and GPU lanes](pipeline_init.drawio.png)
 
-![Runtime loop — the per-frame pipeline, CPU and GPU lanes](pipeline%20runtime%20loop%20process.drawio.png)
+![Runtime loop — the per-frame pipeline, CPU and GPU lanes](pipeline_runtime.drawio.png)
 
 ### Start Up vs Runtime — Measured Per-Stage Timing
 

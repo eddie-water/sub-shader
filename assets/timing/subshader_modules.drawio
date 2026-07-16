@@ -1,0 +1,55 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.1.2 Chrome/138.0.7204.243 Electron/37.4.0 Safari/537.36" version="28.1.2">
+  <diagram name="Page-1" id="QCZ3n3qp3TAFaX97XNlw">
+    <mxGraphModel dx="783" dy="440" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" background="light-dark(#000000,#000000)" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="LI05zg6XyyKic5iJjcqK-1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#FFFFFF;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;arcSize=16;strokeWidth=3;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="160" width="720" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-7" value="SubShader" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontStyle=1;fontSize=24;strokeWidth=3;arcSize=28;labelBackgroundColor=none;strokeColor=none;verticalAlign=top;align=left;labelBorderColor=none;convertToSvg=1;spacingLeft=10;spacing=0;spacingTop=1;fontColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="40" y="160" width="720" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-2" value="&lt;font&gt;Audio Manager&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#FFD27D,#FFD27D);fontColor=#FFFFFF;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;arcSize=16;strokeWidth=3;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="240" y="239.89999999999998" width="80" height="79.8" as="geometry" />
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-3" value="DSP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#7B6FE1,#7B6FE1);fontColor=#FFFFFF;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;arcSize=16;strokeWidth=3;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="360" y="240.00000000000003" width="80" height="79.9" as="geometry" />
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-4" value="Renderer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#FF5A1F,#FF5A1F);fontColor=#FFFFFF;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;arcSize=16;strokeWidth=3;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="480" y="240.00000000000003" width="80" height="79.9" as="geometry" />
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-5" value="Display" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#FFFFFF,#FFFFFF);fontColor=#FFFFFF;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;arcSize=16;strokeWidth=3;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="600" y="239.9" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-6" value="Audio&amp;nbsp;&lt;div&gt;File&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=light-dark(#FFFFFF,#FFFFFF);fontColor=#FFFFFF;fontSize=16;fontStyle=1;align=center;verticalAlign=middle;arcSize=16;strokeWidth=3;labelBackgroundColor=none;" vertex="1" parent="1">
+          <mxGeometry x="120" y="240" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FFFFFF;strokeWidth=3;endArrow=block;endFill=1;fontColor=#8c8c8c;fontSize=16;dashed=0;labelBackgroundColor=none;curved=0;endSize=6;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="LI05zg6XyyKic5iJjcqK-6" target="LI05zg6XyyKic5iJjcqK-2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="120" y="270" as="sourcePoint" />
+            <mxPoint x="160" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FFFFFF;strokeWidth=3;endArrow=block;endFill=1;fontColor=#8c8c8c;fontSize=16;dashed=0;labelBackgroundColor=none;curved=0;endSize=6;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="LI05zg6XyyKic5iJjcqK-2" target="LI05zg6XyyKic5iJjcqK-3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="340" as="sourcePoint" />
+            <mxPoint x="320" y="340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FFFFFF;strokeWidth=3;endArrow=block;endFill=1;fontColor=#8c8c8c;fontSize=16;dashed=0;labelBackgroundColor=none;curved=0;endSize=6;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="LI05zg6XyyKic5iJjcqK-3" target="LI05zg6XyyKic5iJjcqK-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="350" y="330" as="sourcePoint" />
+            <mxPoint x="390" y="330" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="LI05zg6XyyKic5iJjcqK-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;strokeColor=#FFFFFF;strokeWidth=3;endArrow=block;endFill=1;fontColor=#8c8c8c;fontSize=16;dashed=0;labelBackgroundColor=none;curved=0;endSize=6;fontStyle=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="LI05zg6XyyKic5iJjcqK-4" target="LI05zg6XyyKic5iJjcqK-5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="560" y="280" as="sourcePoint" />
+            <mxPoint x="510" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
