@@ -29,6 +29,12 @@ class AudioFileNotFoundError(SubShaderException):
     """Raised when audio file cannot be found."""
     log_level = "error"
 
+
+# Covered by GRACEFUL_EXCEPTIONS via SubShaderException inheritance
+class AudioStreamStalledError(SubShaderException):
+    """Raised when the audio stream stalls (e.g. after an ALSA underrun)."""
+    log_level = "error"
+
 # Exception tuple for catching
 GRACEFUL_EXCEPTIONS = (
     SubShaderException,

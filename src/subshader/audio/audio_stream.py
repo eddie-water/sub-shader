@@ -12,10 +12,15 @@ import time
 from subshader.utils.logging import get_logger
 from subshader.utils.timing import timed, timed_block
 from subshader.config import PipelineConfig
+from subshader.exceptions import AudioStreamStalledError
 from .reader import AudioReader
 from .player import AudioPlayer
 
 log = get_logger(__name__)
+
+# Seconds the playback clock may stay frozen on a chunk boundary before the
+# stream is treated as stalled (e.g. ALSA underrun on the WSL2 audio bridge)
+STREAM_STALL_TIMEOUT_S = 2.0
 
 
 class AudioStream:
@@ -44,6 +49,7 @@ class AudioStream:
                     are written back by AudioReader during construction.
         """
         self._config = config
+        self._stall_timeout_s = STREAM_STALL_TIMEOUT_S
         # AudioReader opens the file and writes config.sample_rate + config.total_samples
         with timed_block(self, "audio_reader"):
             self._reader = AudioReader(config)
@@ -82,12 +88,21 @@ class AudioStream:
           most recent chunk position (D-09, frame-skip).
         - If a loop wrap is detected: reset reader.file_pos to 0 and continue.
         - If no more audio data: return None (caller handles end-of-file).
+        - If the audio clock stays frozen below the boundary for longer than
+          self._stall_timeout_s: raise AudioStreamStalledError (stall watchdog).
 
         Returns:
             np.ndarray[np.float64] or None: Mono audio chunk aligned to the
                 current audio clock position, or None at EOF.
+
+        Raises:
+            AudioStreamStalledError: If the playback clock has not advanced
+                for self._stall_timeout_s seconds while waiting on a chunk
+                boundary — typically an ALSA underrun on the WSL2 audio bridge.
         """
         hop_size = self._config.hop_size
+        last_pos = self._player.get_playback_sample()
+        stall_deadline = time.monotonic() + self._stall_timeout_s
 
         while True:
             # Handle loop wrap before any other checks (Pitfall 4)
@@ -100,6 +115,18 @@ class AudioStream:
             next_boundary = self._reader.file_pos
 
             if playback_pos < next_boundary:
+                if playback_pos != last_pos:
+                    # Clock is alive — reset the stall watchdog
+                    last_pos = playback_pos
+                    stall_deadline = time.monotonic() + self._stall_timeout_s
+                elif time.monotonic() >= stall_deadline:
+                    raise AudioStreamStalledError(
+                        f"Audio stream stalled: audio clock frozen at sample "
+                        f"{playback_pos} for {self._stall_timeout_s}s "
+                        f"(stream active={self._player.is_active()}); likely an "
+                        f"ALSA underrun on the WSL2 audio bridge — restart the "
+                        f"app / audio device to recover"
+                    )
                 # Audio clock has not yet reached next chunk — yield briefly (D-08)
                 time.sleep(0.001)
                 continue

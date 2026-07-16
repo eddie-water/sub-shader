@@ -114,6 +114,14 @@ class AudioPlayer:
         with self._lock:
             return self._current_frame
 
+    def is_active(self) -> bool:
+        """Report whether the OutputStream is currently running.
+
+        Returns False if the stream never started or aborted (e.g. after an
+        ALSA underrun). Cheap corroborating signal for the stall watchdog.
+        """
+        return self._stream is not None and self._stream.active
+
     def has_looped(self) -> bool:
         """Check whether the playback has crossed a loop boundary.
 
