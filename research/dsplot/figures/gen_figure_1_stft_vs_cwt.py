@@ -334,6 +334,9 @@ CONTENDER_TIGHT_STYLE = {
     "DEFAULT_X_AXIS_LABEL_INSET_INCHES": 1.2,
     "DEFAULT_Y_AXIS_LABEL_INSET_INCHES": 2.1,
     "DEFAULT_AXIS_LABEL_INSET_INCHES": 0.5,
+    # Range-bar end labels (20k top / 20 bottom, 1/-1 on the amp axis) tuck a
+    # touch further in from the range ends than the lib default (0.25).
+    "RANGE_BAR_LABEL_END_PAD_INCHES": 0.4,
 }
 
 
@@ -1195,6 +1198,11 @@ STACK_LABEL_PAD_INCHES = 2.6
 # column gutter (0.30) so Figure 1's cells are the SAME size as the other
 # figures' tiles (the shared-square model) instead of ~12% larger.
 STACK_GUTTER_INCHES = 0.3
+# Row-header bands between two plots pick up a half-gutter on BOTH sides when
+# the cell borders tile (the top band and footer face the figure margin on one
+# side, so they don't), rendering visibly taller. Trim the middle bands'
+# gridspec rows by this much so all bands read as one border-to-border height.
+STACK_MID_BAND_TRIM_INCHES = 0.24
 # Vertical breathing room INSIDE each plot cell: the filled data axes is inset
 # from the cell top + bottom by this much so the extreme y-tick labels (1k at
 # top, 10 at bottom) lift off the cell-border line instead of sitting on it.
@@ -1209,6 +1217,7 @@ def _side_text_panel(
     *,
     font_size: float | None = None,
     min_font_size: float = 24,
+    uppercase: bool = True,
 ) -> TextPanel:
     """Right-hand row label: title lead-in + justified caption, rendered
     ENTIRELY inside the cell (no chrome-zone title) so it survives hspace=0
@@ -1225,14 +1234,14 @@ def _side_text_panel(
     # caption text stay one type system across figures (style.py is the source).
     if font_size is None:
         font_size = style.DEFAULT_CAPTION_FONT_SIZE
-    text = f"{title.upper()}\n\n{caption}"
+    text = f"{title.upper() if uppercase else title}\n\n{caption}"
     return TextPanel(
         text,
         units=STACK_TEXT_UNITS,
         font_size=font_size,
         min_font_size=min_font_size,
         color=style.TICK_LABEL_COLOR,
-        fontweight="normal",
+        fontweight="bold",
         auto_shrink=False,
         # Left-justified (ragged right) — top_anchor still drives the wrap
         # pipeline so the block starts at the cell's top-left; justify=False
@@ -1242,13 +1251,13 @@ def _side_text_panel(
         # the three blocks share a common top-left origin (uniform size pins the
         # rest). Shorter captions leave a void below rather than floating centred.
         top_anchor=True,
-        # Text starts in the cell's top-left corner with a small uniform margin
-        # in from the cell border (content_margin_frac is measured from the cell
-        # border, not the inset axes box). The margin is sized to clear row 1's
-        # right-side amplitude tick labels (-1/0/1), which render across the
-        # gutter to the cell border — a tighter inset would let "0" touch the
-        # AUDIO body text. Uniform across all three captions for alignment.
-        content_margin_frac=0.018,
+        # Text starts in the cell's top-left corner with a uniform margin in
+        # from the cell border (content_margin_frac is measured from the cell
+        # border, not the inset axes box). 0.055 of the ~10" cell ≈ 0.55" of
+        # air on every side — picked from the 4-variation padding mock (the
+        # earlier 0.018 read tight against the borders). Uniform across all
+        # three captions for alignment.
+        content_margin_frac=0.055,
         # No inner ghost outline — the cell border (show_cell_borders) frames
         # each caption as a single clean box matching the plot cells. The
         # inner content-margin rect drew a redundant second line (double border).
@@ -1263,19 +1272,44 @@ def _side_text_panel(
 
 def _build_contender_stacked_figure(
     *,
+    data: dict | None = None,
+    display_freq_lim_hz: tuple[float, float] | None = None,
+    display_freq_ticks: tuple[int, ...] | None = None,
+    row_captions: tuple[str, str, str] | None = None,
+    row_titles: tuple[str, str, str] | None = None,
+    row_header_titles: tuple[str, str, str] | None = None,
+    show_xaxis: bool = True,
+    y_unit: str | None = "Hz",
+    uppercase_titles: bool = True,
+    title_band: bool = True,
+    footer_band: bool = True,
+    show_inst_freq: bool = True,
+    label_strip_inches: float | None = None,
+    cell_vpad_inches: float | None = None,
+    range_bar_yaxis: bool = False,
+    show_captions: bool = True,
     dpi: int = 150,
     unit_inches: float | None = None,
     unit_height_inches: float | None = None,
     debug: bool = False,
 ) -> Figure:
-    data = _prepare_contender()
+    if data is None:
+        data = _prepare_contender()
+    # No-caption mode: the text column is dropped and each plot absorbs its
+    # squares, spanning the full row width — the canvas stays the same size,
+    # the plots just run wider.
+    plot_units = (STACK_PLOT_UNITS if show_captions
+                  else (STACK_PLOT_COLS + STACK_TEXT_COLS, 1))
     duration_s = data["duration_s"]
     cwt_freqs = data["cwt_freqs"]
     cwt_data = data["cwt_data"]
     stft_mag_log = data["stft_mag_log"]
 
-    display_freq_ticks = CONTENDER_DISPLAY_FREQ_TICKS
-    disp_lo, disp_hi = CONTENDER_DISPLAY_FREQ_LIM_HZ
+    if display_freq_ticks is None:
+        display_freq_ticks = CONTENDER_DISPLAY_FREQ_TICKS
+    disp_lo, disp_hi = (display_freq_lim_hz
+                        if display_freq_lim_hz is not None
+                        else CONTENDER_DISPLAY_FREQ_LIM_HZ)
     bin_lo = int(np.searchsorted(cwt_freqs, disp_lo, side="left"))
     bin_hi = int(np.searchsorted(cwt_freqs, disp_hi, side="right"))
     bin_lo = max(0, min(bin_lo, len(cwt_freqs) - 1))
@@ -1307,29 +1341,25 @@ def _build_contender_stacked_figure(
     spec_extent = (0.0, disp_dur, 0.0, float(len(cwt_freqs)))
     xticks = _auto_xticks(disp_dur)
 
-    # Row 1 — chirp waveform. Its OWN amplitude scale (-1..1) labels the LEFT
-    # side, dropping into the same y-tick column rows 2/3 use for Hz (so the
-    # numbers column-align down the figure) and keeping the right gutter clear
-    # for the caption panel. A hidden twin axis (twin_ylim maps Hz→bin) only
-    # positions the orange inst-freq overlay so it tracks the spectrogram bins
-    # below; it carries no ticks/label.
+    # Row 1 — chirp waveform. Two axis treatments, chosen by the data bundle:
+    #   default (ts_yticks absent) — the contender look: the host amplitude
+    #   scale is hidden and a LEFT twin carries the Hz/bin ticks so row 1's
+    #   frequency axis column-aligns with rows 2/3 (the twin also positions
+    #   the orange inst-freq overlay in bin space).
+    #   amp mode (ts_yticks present) — the host axis shows the time-series'
+    #   own amplitude ticks on the left and no frequency twin is created.
+    ts_yticks = data.get("ts_yticks")
+    amp_axis = ts_yticks is not None
     row1 = TimeSeriesPanel(
-        units=STACK_PLOT_UNITS,
+        units=plot_units,
         xticks=xticks,
         xlim=(0.0, disp_dur),
         show_xticklabels=False,
-        # Host axis carries the waveform on a HIDDEN amplitude scale (ts_ylim);
-        # no ticks/label so the left side reads as a frequency axis. The ylim is
-        # still pinned so the waveform's vertical extent (top aligned to the
-        # caption text) is preserved.
         ylim=data.get("ts_ylim"),
-        yticks=[],
-        show_yticklabels=False,
+        yticks=list(ts_yticks) if amp_axis else [],
+        show_yticklabels=amp_axis,
         y_label_side="left",
-        # Twin carries the Hz/bin scale on the LEFT — same ticks/label as the
-        # spectrograms below, so the top plot's frequency axis column-aligns with
-        # rows 2/3. The inst-freq overlay (bin space) draws onto this twin.
-        twin_y=True,
+        twin_y=not amp_axis,
         twin_y_label="Hz",
         twin_y_side="left",
         twin_yticks=twin_ytick_positions,
@@ -1337,18 +1367,19 @@ def _build_contender_stacked_figure(
         twin_ylim=twin_ylim,
     )
     row1.add(TimeSeries(data["signal"], disp_sr, color=style.TICK_LABEL_COLOR))
-    row1.add_twin(Line(
-        t_axis, inst_freq_bins, color=style.BG_COLOR,
-        linewidth=style.INST_FREQ_LINEWIDTH + 9.5, alpha=1.0,
-    ))
-    row1.add_twin(Line(
-        t_axis, inst_freq_bins, color=style.PRIMARY_COLOR,
-        linewidth=style.INST_FREQ_LINEWIDTH + 7.0, alpha=1.0,
-    ))
+    if show_inst_freq and not amp_axis:
+        row1.add_twin(Line(
+            t_axis, inst_freq_bins, color=style.BG_COLOR,
+            linewidth=style.INST_FREQ_LINEWIDTH + 9.5, alpha=1.0,
+        ))
+        row1.add_twin(Line(
+            t_axis, inst_freq_bins, color=style.PRIMARY_COLOR,
+            linewidth=style.INST_FREQ_LINEWIDTH + 7.0, alpha=1.0,
+        ))
 
     # Rows 2/3 — STFT then CWT. Only row 3 owns the shared x axis.
     row2 = HeatmapPanel(
-        units=STACK_PLOT_UNITS, y_label="Hz", xticks=xticks,
+        units=plot_units, y_label=y_unit, xticks=xticks,
         show_xticklabels=False,
     )
     row2.add(Heatmap(
@@ -1357,8 +1388,8 @@ def _build_contender_stacked_figure(
         vmin=data.get("stft_vmin", 0.0), vmax=data.get("stft_vmax"),
     ))
     row3 = HeatmapPanel(
-        units=STACK_PLOT_UNITS, x_label="s", y_label="Hz", xticks=xticks,
-        show_xticklabels=True,
+        units=plot_units, x_label="s" if show_xaxis else None, y_label=y_unit,
+        xticks=xticks, show_xticklabels=show_xaxis,
     )
     row3.add(Heatmap(
         cwt_data, duration_s=duration_s, freqs=cwt_freqs, log_freq=True,
@@ -1369,9 +1400,11 @@ def _build_contender_stacked_figure(
     # Reserve the in-panel label strip on every plot — the y-axis label + tick
     # numbers render inside this strip, inside each plot's own cell box, so no
     # separate y-tick column is needed.
-    row1.content_left_pad_inches = STACK_LABEL_PAD_INCHES
-    row2.content_left_pad_inches = STACK_LABEL_PAD_INCHES
-    row3.content_left_pad_inches = STACK_LABEL_PAD_INCHES
+    strip_in = (label_strip_inches if label_strip_inches is not None
+                else STACK_LABEL_PAD_INCHES)
+    row1.content_left_pad_inches = strip_in
+    row2.content_left_pad_inches = strip_in
+    row3.content_left_pad_inches = strip_in
     # Maximize each plot vertically — expand the data axes to fill its panel cell
     # height (the left label strip is preserved by fill_cell_vertical), but inset
     # top + bottom by STACK_CELL_VPAD_INCHES so the extreme y-ticks (1k/10) don't
@@ -1379,19 +1412,41 @@ def _build_contender_stacked_figure(
     row1.fill_cell_vertical = True
     row2.fill_cell_vertical = True
     row3.fill_cell_vertical = True
-    row1.fill_cell_pad_inches = STACK_CELL_VPAD_INCHES
-    row2.fill_cell_pad_inches = STACK_CELL_VPAD_INCHES
-    row3.fill_cell_pad_inches = STACK_CELL_VPAD_INCHES
+    vpad_in = (cell_vpad_inches if cell_vpad_inches is not None
+               else STACK_CELL_VPAD_INCHES)
+    row1.fill_cell_pad_inches = vpad_in
+    row2.fill_cell_pad_inches = vpad_in
+    row3.fill_cell_pad_inches = vpad_in
+    # Range-bar y-axis (dsplot lib feature, see Figure._apply_range_bar_yaxes):
+    # replaces each plot's stock y-axis with a thin bar flush with the plot's
+    # left edge + labels centered in the label strip.
+    row1.range_bar_yaxis = range_bar_yaxis
+    row2.range_bar_yaxis = range_bar_yaxis
+    row3.range_bar_yaxis = range_bar_yaxis
 
     # Caption font bumped above the shared default: the caption square grew from
     # 5"→10" per side (taller plots → bigger square), so the body text scales up
     # with it to stay proportionate (passed locally so other figures keep the
     # shared style.DEFAULT_CAPTION_FONT_SIZE).
-    text1 = _side_text_panel(ROW1_TITLE, CONTENDER_ROW1_CAPTION, font_size=CONTENDER_CAPTION_FONT_SIZE)
-    text2 = _side_text_panel(ROW2_TITLE, CONTENDER_ROW2_CAPTION, font_size=CONTENDER_CAPTION_FONT_SIZE)
-    text3 = _side_text_panel(ROW3_TITLE, CONTENDER_ROW3_CAPTION, font_size=CONTENDER_CAPTION_FONT_SIZE)
+    if show_captions:
+        cap1, cap2, cap3 = (row_captions
+                            if row_captions is not None
+                            else (CONTENDER_ROW1_CAPTION, CONTENDER_ROW2_CAPTION,
+                                  CONTENDER_ROW3_CAPTION))
+        title1, title2, title3 = (row_titles
+                                  if row_titles is not None
+                                  else (ROW1_TITLE, ROW2_TITLE, ROW3_TITLE))
+        text1 = _side_text_panel(title1, cap1,
+                                 font_size=CONTENDER_CAPTION_FONT_SIZE,
+                                 uppercase=uppercase_titles)
+        text2 = _side_text_panel(title2, cap2,
+                                 font_size=CONTENDER_CAPTION_FONT_SIZE,
+                                 uppercase=uppercase_titles)
+        text3 = _side_text_panel(title3, cap3,
+                                 font_size=CONTENDER_CAPTION_FONT_SIZE,
+                                 uppercase=uppercase_titles)
 
-    total_w = STACK_PLOT_UNITS[0] + STACK_TEXT_UNITS[0]
+    total_w = plot_units[0] + (STACK_TEXT_UNITS[0] if show_captions else 0)
     suptitle_row = [SuptitlePanel(
         "Figure 1 - Fourier vs Wavelet Analysis", units=(total_w, 1), font_size=44
     )]
@@ -1409,20 +1464,48 @@ def _build_contender_stacked_figure(
     # an exact STACK_GUTTER_INCHES gap in both directions.
     hspace = STACK_GUTTER_INCHES / (u_h * STACK_PLOT_ROW_HEIGHT)
     wspace = STACK_GUTTER_INCHES / u_w
+    rows = ([
+        [row1, text1],
+        [row2, text2],
+        [row3, text3],
+    ] if show_captions else [
+        [row1],
+        [row2],
+        [row3],
+    ])
+    row_heights = [
+        STACK_PLOT_ROW_HEIGHT, STACK_PLOT_ROW_HEIGHT, STACK_PLOT_ROW_HEIGHT,
+    ]
+    # Row headers: a SuptitlePanel band above each plot row names the row
+    # ("Audio Signal" / "Fourier Analysis" / "Wavelet Analysis") — the in-figure
+    # replacement for the caption column's row titles when show_captions=False.
+    # Same STACK_BAND_HEIGHT as the suptitle/footer bands so every non-plot
+    # row in the grid shares one height.
+    if row_header_titles is not None:
+        header_rows = [
+            [SuptitlePanel(t, units=(total_w, 1), font_size=44)]
+            for t in row_header_titles
+        ]
+        rows = [r for pair in zip(header_rows, rows) for r in pair]
+        mid_band = STACK_BAND_HEIGHT - STACK_MID_BAND_TRIM_INCHES / u_h
+        row_heights = [STACK_BAND_HEIGHT, STACK_PLOT_ROW_HEIGHT,
+                       mid_band, STACK_PLOT_ROW_HEIGHT,
+                       mid_band, STACK_PLOT_ROW_HEIGHT]
+    if title_band:
+        rows.insert(0, suptitle_row)
+        row_heights.insert(0, STACK_BAND_HEIGHT)
+    if footer_band:
+        rows.append(footer_row)
+        row_heights.append(STACK_BAND_HEIGHT)
     with _contender_tight_style():
         return Figure.compose(
-            rows=[
-                suptitle_row,
-                [row1, text1],
-                [row2, text2],
-                [row3, text3],
-                footer_row,
-            ],
-            row_heights=[
-                STACK_BAND_HEIGHT,
-                STACK_PLOT_ROW_HEIGHT, STACK_PLOT_ROW_HEIGHT, STACK_PLOT_ROW_HEIGHT,
-                STACK_BAND_HEIGHT,
-            ],
+            rows=rows,
+            row_heights=row_heights,
+            # With the footer band dropped there is no gridspec row left to
+            # seat row 3's x-tick numbers + "s" label, so reserve unbordered
+            # figure space for them instead of an empty outlined band. With
+            # the x axis suppressed entirely there is nothing to seat.
+            bottom_reserve_inches=None if (footer_band or not show_xaxis) else 1.9,
             # A small uniform gutter between plots (rows) and between the
             # y-tick / plot / caption columns — breathing room, not flush.
             hspace=hspace,
@@ -1444,6 +1527,359 @@ def render_contender(
     with _contender_tight_style():
         fig = _build_contender_stacked_figure()
         fig.render()
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, output_filename)
+    fig.savefig(output_path)
+    return os.path.abspath(output_path)
+
+
+# ~23 ms window — the "slug" shape: on the log-frequency axis the short window
+# bloats the ridge at the low end (poor frequency resolution) and thins it at
+# the top, showing the fixed-resolution tradeoff in one stroke. The 20 ms-spaced
+# clicks render as separate faint columns rather than one fused blob.
+HERO_STACKED_STFT_NPERSEG = 1024
+# Hero-only dB floor. The broadband clicks spread their energy across the whole
+# band, so per-bin they sit far below the chirp-referenced 0 dB ridge — at the
+# contender's -18 dB they clip to black. -30 dB leaves the ridge contrast alone
+# but lets the click columns lift faintly off the floor.
+HERO_STACKED_DB_FLOOR = -30.0
+
+# Hero row labels — sentence-case titles (the contender keeps its uppercase
+# AUDIO/FOURIER/WAVELET lead-ins) and captions tightened for the README hero.
+HERO_STACKED_ROW_TITLES = ("Audio Signal", "Fourier Analysis", "Wavelet Analysis")
+HERO_STACKED_ROW1_CAPTION = (
+    "A chirp whose frequency sweeps continuously from mid to low to high. "
+    "A series of abrupt broad-band transients or 'clicks' are mixed into the "
+    "audio at the halfway point."
+)
+HERO_STACKED_ROW2_CAPTION = (
+    "Resolves the signal with a smeared and jagged representation. Notice how "
+    "low frequency measurements bleed into neighboring rows, while high "
+    "frequencies appear weak and formless."
+)
+HERO_STACKED_ROW3_CAPTION = (
+    "Follows the contour of the frequency sweep, tracing it with smooth, clean "
+    "definition, and resolves the onset of each click as distinct events in time."
+)
+
+
+def _prepare_hero_stacked() -> dict:
+    """Hero signal (bouncy full-range chirp + broadband click cluster) with the
+    contender-style post-processing — chirp-referenced dB magnitudes and the
+    hop-rate-correct zero-crossing slice — so it can feed the stacked (v47)
+    layout. The signal construction itself is the locked hero design from
+    `_prepare_hero`; only the downstream conditioning differs.
+    """
+    chirp_signal, inst_freq, t = build_waypoint_chirp(
+        SR, HERO_DURATION_S, HERO_WAYPOINTS, clip_to_waypoints=False
+    )
+    n_build = len(chirp_signal)
+    chirp_peak = float(np.max(np.abs(chirp_signal))) or 1.0
+
+    disp_lo, disp_hi = HERO_DISPLAY_FREQ_LIM_HZ
+    f_lo = min(f for _, f in HERO_WAYPOINTS)
+    cwt_root_hz = min(f_lo, disp_lo)
+    num_octaves = max(1, math.ceil(math.log2(disp_hi / cwt_root_hz)) + 1)
+
+    # Chirp-referenced 0 dB level (contender pattern): the amplified chirp's
+    # ridge sets the bright end of both colormaps so the clicks lift off the
+    # floor instead of resetting the scale.
+    chirp_amp = chirp_signal * HERO_CHIRP_AMP
+    chirp_cwt, chirp_freqs, _cs, _ce = compute_full_cwt(
+        chirp_amp, SR, root_note_hz=cwt_root_hz, num_octaves=num_octaves
+    )
+    cwt_ref = float(np.percentile(np.abs(chirp_cwt), 99.5)) or 1.0
+    chirp_stft = _stft_on_log_bins(
+        chirp_amp, SR, chirp_freqs, nperseg=HERO_STACKED_STFT_NPERSEG
+    )
+    stft_ref = float(np.percentile(chirp_stft, 99.5)) or 1.0
+
+    # Broadband click cluster — verbatim hero design (`_prepare_hero`).
+    sigma = HERO_CLICK_DURATION_S / 2.3548200450309493  # FWHM → sigma
+    cluster_center_t = HERO_CLICK_T_FRAC * HERO_DURATION_S
+    cluster_half_span = (HERO_CLICK_COUNT - 1) * HERO_CLICK_SPACING_S / 2.0
+    click_burst = np.zeros(n_build, dtype=np.float64)
+    for i in range(HERO_CLICK_COUNT):
+        click_t = cluster_center_t - cluster_half_span + i * HERO_CLICK_SPACING_S
+        rng = np.random.default_rng(seed=i)
+        noise = rng.standard_normal(n_build).astype(np.float64)
+        envelope = np.exp(-((t - click_t) ** 2) / (2.0 * sigma ** 2))
+        single = noise * envelope
+        peak = float(np.max(np.abs(single)))
+        if peak > 0.0:
+            single = single * (HERO_CLICK_AMP * chirp_peak / peak)
+        click_burst = click_burst + single
+    signal = chirp_amp + click_burst
+
+    cwt_data, cwt_freqs, start_sample, end_sample = compute_full_cwt(
+        signal, SR, root_note_hz=cwt_root_hz, num_octaves=num_octaves
+    )
+
+    signal = signal[start_sample:end_sample]
+    inst_freq = inst_freq[start_sample:end_sample]
+    if len(t) > start_sample:
+        t = t[start_sample:end_sample] - t[start_sample]
+    else:
+        t = t[:0]
+
+    if len(signal) > 1:
+        sign_changes = np.where(np.diff(np.sign(signal)) != 0)[0]
+        if len(sign_changes) >= 2:
+            first_zc = int(sign_changes[0]) + 1
+            last_zc = int(sign_changes[-1]) + 1
+            # Map sample-index ZC bounds to hop-rate COLUMN indices before
+            # slicing cwt_data (see the contender pipeline for why raw sample
+            # indices de-sync the scalogram).
+            n_samples = len(signal)
+            n_cols = cwt_data.shape[1]
+            col_lo = int(round(first_zc / n_samples * n_cols))
+            col_hi = int(round((last_zc + 1) / n_samples * n_cols))
+            signal = signal[first_zc:last_zc + 1]
+            inst_freq = inst_freq[first_zc:last_zc + 1]
+            t = t[first_zc:last_zc + 1] - t[first_zc] if len(t) > first_zc else t[:0]
+            cwt_data = cwt_data[:, col_lo:col_hi]
+
+    duration_s = len(signal) / SR
+
+    stft_mag = _stft_on_log_bins(signal, SR, cwt_freqs,
+                                 nperseg=HERO_STACKED_STFT_NPERSEG)
+    cwt_db = _to_db(cwt_data, cwt_ref, HERO_STACKED_DB_FLOOR)
+    stft_db = _to_db(stft_mag, stft_ref, HERO_STACKED_DB_FLOOR)
+
+    # Row 1 shows the waveform on its own ±1 amplitude axis (ts_yticks →
+    # amp mode in the stacked builder; no Hz twin). Normalize to unit peak —
+    # FULL signal peak, clicks included (~7× the chirp) — so the dense chirp
+    # band compresses into the middle of the panel with the clicks spiking
+    # out of it, and the -1/0/1 ticks are honest.
+    sig_peak = float(np.max(np.abs(signal))) or 1.0
+    signal = signal / sig_peak
+    return {
+        "signal": signal,
+        "inst_freq": inst_freq,
+        "t": t,
+        "duration_s": duration_s,
+        "cwt_data": cwt_db,
+        "cwt_freqs": cwt_freqs,
+        "stft_mag_log": stft_db,
+        "cwt_vmin": HERO_STACKED_DB_FLOOR,
+        "cwt_vmax": 0.0,
+        "stft_vmin": HERO_STACKED_DB_FLOOR,
+        "stft_vmax": 0.0,
+        # Exactly ±1 (no pad): the -1/1 ticks sit AT the panel corners so the
+        # y-axis extremes coincide with the x-axis line — the unit-peak clicks
+        # touch the frame edges by design.
+        "ts_ylim": (-1.0, 1.0),
+        "ts_yticks": (-1.0, 0.0, 1.0),
+    }
+
+
+# Range-bar y-axis: promoted into the dsplot library — the treatment itself
+# (bar linewidth, end-label pad, strip-centered labels) lives in
+# Figure._apply_range_bar_yaxes with its knobs in style.RANGE_BAR_LINEWIDTH /
+# style.RANGE_BAR_LABEL_END_PAD_INCHES. The hero opts in per-panel via
+# _build_contender_stacked_figure(range_bar_yaxis=True); only the layout
+# choices below remain hero-local.
+# Sized so the visible left strip (figure border to range bar) comes out
+# 1.95" — the same as the header/footer band heights, squaring the frame.
+HERO_LABEL_STRIP_IN = 1.75
+# End tick labels no longer straddle the border, so the plots fill their cells
+# completely: zero pad puts the plot's top/bottom edges (= the y-lims) exactly
+# on the cell border lines.
+HERO_CELL_VPAD_IN = 0.0
+# "f vs t" corner label may span at most this fraction of the corner cell's
+# width; the remainder splits into equal side margins.
+HERO_CORNER_LABEL_MAX_FRAC = 0.7
+
+
+def _clamp_top_row_to_border(fig: Figure) -> None:
+    """Pull the FIRST plot row's top edge down onto the perimeter border (hero-only).
+
+    With the title band removed, the gridspec's first row tops out at the
+    figure edge (y=1.0) while the perimeter cell border draws inset by
+    ``style.DEFAULT_FRAME_EDGE_GAP_INCHES`` — so the row-1 axes (and the range
+    bar drawn to its top) poke past the border line at the top-left. Clamp the
+    axes top to the border path and shorten the already-drawn range-bar
+    Line2D to match, so the bar tucks under the border like it does at the
+    shared inter-row borders.
+    """
+    import matplotlib.lines as mlines
+
+    mpl_fig = fig._mpl_fig
+    _fig_w, fig_h = mpl_fig.get_size_inches()
+    border_y = 1.0 - style.DEFAULT_FRAME_EDGE_GAP_INCHES / fig_h
+    for panel, *_rest in fig.panels:
+        ax = getattr(panel, "ax", None)
+        if ax is None:
+            continue
+        pos = ax.get_position()
+        if pos.y1 <= border_y:
+            continue
+        old_y1 = pos.y1
+        ax.set_position([pos.x0, pos.y0, pos.width, border_y - pos.y0])
+        for art in mpl_fig.artists:
+            if not isinstance(art, mlines.Line2D):
+                continue
+            xd, yd = art.get_xdata(), art.get_ydata()
+            if (len(xd) == 2 and xd[0] == xd[1]
+                    and max(yd) >= old_y1 - 1e-6):
+                art.set_ydata([min(yd), border_y])
+
+
+def _apply_hero_band_xaxis(fig: Figure, *, flush_right_to_border: bool = False) -> None:
+    """Rebuild row 3's x-axis as footer-band furniture (hero-only).
+
+    Every plot row is widened by half the column gutter so its right spine
+    lands ON the plot/caption divider line — the horizontal match to the
+    vpad-0 "plot edges on the border lines" treatment, and what makes the
+    2.0 s mark coincide with the divider. With ``flush_right_to_border``
+    (the no-caption layout, where no divider exists) each row is instead
+    widened until its right spine lands on the figure's perimeter border
+    line. The stock x-axis is then hidden and redrawn inside the bordered
+    footer band: numbers sit centered on their tick positions (no physical
+    tick marks — labels only), with the first/last numbers tucked inside the
+    cell by matching edge pads so nothing straddles a border. The band is
+    split by a divider continuing the plot's left edge: the corner cell under
+    the y-label strip carries "f vs t", naming both axes in place of the
+    per-axis "Hz" / "s" units.
+    """
+    import matplotlib.lines as mlines
+
+    mpl_fig = fig._mpl_fig
+    mpl_fig.canvas.draw()
+    fig_w, fig_h = mpl_fig.get_size_inches()
+
+    half_gutter = (STACK_GUTTER_INCHES / 2.0) / fig_w
+    border_x1 = 1.0 - style.DEFAULT_FRAME_EDGE_GAP_INCHES / fig_w
+    row3_ax = None
+    for panel, *_rest in fig.panels:
+        ax = getattr(panel, "ax", None)
+        if ax is None or not getattr(panel, "range_bar_yaxis", False):
+            continue
+        pos = ax.get_position()
+        new_width = (border_x1 - pos.x0 if flush_right_to_border
+                     else pos.width + half_gutter)
+        ax.set_position([pos.x0, pos.y0, new_width, pos.height])
+        if ax.get_xlabel() == "s":
+            row3_ax = ax
+    if row3_ax is None:
+        raise RuntimeError("hero band x-axis: row 3 (xlabel 's') not found")
+    mpl_fig.canvas.draw()
+
+    ax = row3_ax
+    ticks_and_labels = [
+        (tick, lab.get_text())
+        for tick, lab in zip(ax.get_xticks(), ax.get_xticklabels())
+    ]
+    xlim = ax.get_xlim()
+    span = xlim[1] - xlim[0]
+    ax.tick_params(axis="x", labelbottom=False, length=0)
+    ax.set_xlabel("")
+    pos = ax.get_position()
+    # The footer SuptitlePanel isn't in fig.panels; the band cell is bounded
+    # by the figure's bottom perimeter border and row 3's plot bottom (vpad 0
+    # puts the spine ON the shared border).
+    band_y0 = style.DEFAULT_FRAME_EDGE_GAP_INCHES / fig_h
+    y_label = (band_y0 + pos.y0) / 2.0
+    visible = [(tick, lab) for tick, lab in ticks_and_labels
+               if -0.001 <= (tick - xlim[0]) / span <= 1.001 and lab]
+    last_tick = visible[-1][0]
+    text_kwargs = dict(
+        color=style.TICK_LABEL_COLOR,
+        fontsize=style.DEFAULT_TICK_LABEL_SIZE,
+        fontweight=style.DEFAULT_TICK_LABEL_FONT_WEIGHT,
+        va="center",
+    )
+    # Corner cell: the plot's left edge continues down through the band, and
+    # "f vs t" centers in the strip under the y labels (same centerline the
+    # range-bar tick numbers use). The label shrinks to leave a proportional
+    # margin on both sides — at full tick-label size it spans the whole strip
+    # and crowds the divider.
+    perim_x = style.DEFAULT_FRAME_EDGE_GAP_INCHES / fig_w
+    mpl_fig.add_artist(mlines.Line2D(
+        [pos.x0, pos.x0], [band_y0, pos.y0],
+        color=style.DEFAULT_FRAME_COLOR,
+        linewidth=style.DEFAULT_FRAME_LINEWIDTH,
+    ))
+    corner_text = mpl_fig.text((perim_x + pos.x0) / 2.0, y_label, "f vs t",
+                               ha="center", **text_kwargs)
+    mpl_fig.canvas.draw()
+    corner_w_px = corner_text.get_window_extent().width
+    strip_w_px = (pos.x0 - perim_x) * mpl_fig.bbox.width
+    max_w_px = HERO_CORNER_LABEL_MAX_FRAC * strip_w_px
+    if corner_w_px > max_w_px:
+        corner_text.set_fontsize(
+            text_kwargs["fontsize"] * max_w_px / corner_w_px
+        )
+    # First/last numbers tuck inside their cell by the SAME inset the range
+    # bars give their end tick labels, so the x and y axes read as one system.
+    edge_pad = style.RANGE_BAR_LABEL_END_PAD_INCHES / fig_w
+    for tick, lab in visible:
+        frac = (tick - xlim[0]) / span
+        x = pos.x0 + frac * pos.width
+        if frac <= 0.001:
+            # First tick sits ON the corner-cell divider — tuck the number
+            # inside the cell instead of straddling the line.
+            mpl_fig.text(pos.x0 + edge_pad, y_label, lab,
+                         ha="left", **text_kwargs)
+        elif tick == last_tick and flush_right_to_border:
+            # Last tick sits ON the perimeter border — mirror the first
+            # tick's inset so the two ends read symmetrically.
+            mpl_fig.text(x - edge_pad, y_label, lab,
+                         ha="right", **text_kwargs)
+        else:
+            mpl_fig.text(x, y_label, lab, ha="center", **text_kwargs)
+
+
+def render_hero_stacked(
+    output_dir: str = "assets/images/dsp/figures/figure_1",
+    output_filename: str = "hero_stacked_v1.png",
+    show_captions: bool = True,
+    row_headers: bool = False,
+    show_xaxis: bool = True,
+) -> str:
+    """Hero signal through the stacked (v47/montage-style) layout.
+
+    ``show_captions=False`` drops the right-hand caption column entirely —
+    the plots absorb its squares and span the full row width (the caption
+    prose moves into the document that embeds the figure).
+
+    ``row_headers=True`` puts a thin header band above each plot row carrying
+    its ``HERO_STACKED_ROW_TITLES`` name — row identification for the
+    no-captions layout, where the caption column's titles are gone.
+
+    ``show_xaxis=False`` drops row 3's x-tick numbers + "s" label AND the
+    footer band that exists only to seat them.
+    """
+    with _contender_tight_style():
+        fig = _build_contender_stacked_figure(
+            data=_prepare_hero_stacked(),
+            display_freq_lim_hz=HERO_DISPLAY_FREQ_LIM_HZ,
+            display_freq_ticks=HERO_DISPLAY_FREQ_TICKS,
+            row_captions=(HERO_STACKED_ROW1_CAPTION, HERO_STACKED_ROW2_CAPTION,
+                          HERO_STACKED_ROW3_CAPTION),
+            row_titles=HERO_STACKED_ROW_TITLES,
+            row_header_titles=HERO_STACKED_ROW_TITLES if row_headers else None,
+            show_xaxis=show_xaxis,
+            # "f vs t" in the footer corner names both axes; no per-axis units.
+            y_unit=None,
+            uppercase_titles=False,
+            title_band=False,
+            footer_band=show_xaxis,
+            show_inst_freq=False,
+            label_strip_inches=HERO_LABEL_STRIP_IN,
+            cell_vpad_inches=HERO_CELL_VPAD_IN,
+            range_bar_yaxis=True,
+            show_captions=show_captions,
+        )
+        fig.render()
+        # No physical tick marks anywhere — the faint stubs poke through the
+        # shared border lines as edge discontinuities. Labels are separate
+        # artists and survive; length=0 covers host and twin axes alike.
+        for mpl_ax in fig._mpl_fig.axes:
+            mpl_ax.tick_params(axis="both", which="both", length=0)
+        _clamp_top_row_to_border(fig)
+        if show_xaxis:
+            _apply_hero_band_xaxis(fig, flush_right_to_border=not show_captions)
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, output_filename)
     fig.savefig(output_path)

@@ -151,6 +151,7 @@ def _apply_axis_decoration(
             x_label,
             color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
+            fontweight=style.DEFAULT_TICK_LABEL_FONT_WEIGHT,
             labelpad=0,
         )
         # va='center' so the label CENTER aligns with set_label_coords. Default
@@ -168,6 +169,7 @@ def _apply_axis_decoration(
             y_label,
             color=style.TICK_LABEL_COLOR,
             fontsize=style.DEFAULT_AXIS_LABEL_SIZE,
+            fontweight=style.DEFAULT_TICK_LABEL_FONT_WEIGHT,
             labelpad=0,
         )
         # Same fix as x-label: default va='bottom' (which becomes the right
@@ -218,6 +220,11 @@ def _pin_extreme_ticklabels(ax) -> None:
             x_labels[-1].set_ha("right")
         elif len(x_labels) == 1:
             x_labels[0].set_ha("center")
+        # Tick-number weight rides the same callback: tick_params has no
+        # weight knob and a one-shot set_fontweight is clobbered by the same
+        # regenerate-on-draw behavior this pinner exists to survive.
+        for lab in y_labels + x_labels:
+            lab.set_fontweight(style.DEFAULT_TICK_LABEL_FONT_WEIGHT)
 
     ax.figure.canvas.mpl_connect("draw_event", _on_draw)
     ax._dsplot_tick_pinner_attached = True

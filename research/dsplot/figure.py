@@ -111,6 +111,7 @@ class Figure:
         footer_text: Optional[str] = None,
         footer_fontsize: Optional[float] = None,
         footer_band_inches: Optional[float] = None,
+        bottom_reserve_is_explicit: bool = False,
         subtitle_band_inches: Optional[float] = None,
         subtitle_specs: Optional[List[dict]] = None,
         subtitle_band_center_inches: Optional[float] = None,
@@ -161,6 +162,7 @@ class Figure:
         self._footer_text = footer_text
         self._footer_fontsize = footer_fontsize
         self._footer_band_inches = footer_band_inches
+        self._bottom_reserve_is_explicit = bottom_reserve_is_explicit
         self._subtitle_band_inches = subtitle_band_inches
         self._subtitle_specs = subtitle_specs or []
         self._subtitle_band_center_inches = subtitle_band_center_inches
@@ -693,6 +695,7 @@ class Figure:
             footer_text=_footer_text,
             footer_fontsize=_footer_fontsize,
             footer_band_inches=_footer_band_inches,
+            bottom_reserve_is_explicit=bottom_reserve_inches is not None,
             subtitle_band_inches=_subtitle_band_inches,
             subtitle_specs=_subtitle_specs,
             subtitle_band_center_inches=_subtitle_band_center_in,
@@ -833,6 +836,9 @@ class Figure:
         # Expand fill_cell panels last — after borders/guides read the original
         # gridspec positions — so the expansion doesn't perturb those reads.
         self._apply_fill_cell()
+        # Range-bar y-axes read the FINAL axes positions, so they run after
+        # the fill_cell expansion.
+        self._apply_range_bar_yaxes()
         self._apply_jupyter_display_styling()
 
     def _force_all_tick_labels(self) -> None:
@@ -973,6 +979,12 @@ class Figure:
                 cell_bot = self._subtitle_band_top_inches / fig_h
             elif self._footer_band_inches is not None:
                 cell_bot = self._footer_band_inches / fig_h
+            elif self._bottom_reserve_is_explicit and self._bottom_pad is not None:
+                # Caller reserved unbordered bottom space via
+                # bottom_reserve_inches (already baked into _bottom_pad as a
+                # figure fraction) — the bottom row's cell stops at the reserve
+                # top so borders and fill_cell don't spill into it.
+                cell_bot = self._bottom_pad
             else:
                 cell_bot = perim_y_frac
         else:
@@ -1055,6 +1067,103 @@ class Figure:
             twin = getattr(panel, "ax_twin", None)
             if twin is not None:
                 twin.set_position(panel.ax.get_position())
+
+    def _apply_range_bar_yaxes(self) -> None:
+        """Swap opted-in panels' stock y-axes for the range-bar treatment.
+
+        Opt-in via ``panel.range_bar_yaxis = True`` on a panel that reserves an
+        in-cell label strip (``content_left_pad_inches``). Post-layout pass —
+        runs after ``_apply_fill_cell`` so it reads FINAL axes positions:
+
+          - snaps the y-view to the outermost ticks so the range ENDS at the
+            end labels (a heatmap's bin-space view may otherwise run slightly
+            past its extreme tick values),
+          - hides the stock y-axis (ticks, labels, ylabel),
+          - draws a thin vertical bar (``style.RANGE_BAR_LINEWIDTH``) flush
+            with the plot's left edge, spanning exactly the plot height,
+          - re-draws the tick labels as figure-level text, each label's text
+            midpoint horizontally centered in the visible strip between the
+            cell border and the bar,
+          - tucks the end labels INSIDE the range (top label top-aligned,
+            bottom label bottom-aligned, inset by
+            ``style.RANGE_BAR_LABEL_END_PAD_INCHES``) so nothing straddles a
+            shared cell border or collides with a neighboring row's labels,
+          - renders the y unit (the panel's ylabel, e.g. "Hz") horizontal at
+            mid-height in the same face as the tick numbers.
+        """
+        targets = [
+            (p, c) for p, _r, c, _rs, _cs, _ in self.panels
+            if getattr(p, "range_bar_yaxis", False) and p.ax is not None
+        ]
+        if not targets:
+            return
+        import matplotlib.lines as mlines
+        fig = self._mpl_fig
+        fig.canvas.draw()  # populate tick label text
+        fig_w, fig_h = fig.get_size_inches()
+        end_pad_v = style.RANGE_BAR_LABEL_END_PAD_INCHES / fig_h
+        for panel, col in targets:
+            ax = panel.ax
+            ticks_and_labels = [
+                (t, lab.get_text())
+                for t, lab in zip(ax.get_yticks(), ax.get_yticklabels())
+            ]
+            tick_vals = [t for t, _lab in ticks_and_labels]
+            if tick_vals:
+                ax.set_ylim(min(tick_vals), max(tick_vals))
+            ylim = ax.get_ylim()
+            span = ylim[1] - ylim[0]
+            if not span:
+                continue
+            unit = ax.get_ylabel()
+            ax.tick_params(axis="y", left=False, labelleft=False)
+            ax.set_ylabel("")
+            pos = ax.get_position()
+            bar_x = pos.x0
+            fig.add_artist(mlines.Line2D(
+                [bar_x, bar_x], [pos.y0, pos.y1],
+                color=style.TICK_LABEL_COLOR,
+                linewidth=style.RANGE_BAR_LINEWIDTH,
+            ))
+            # Labels center between the VISIBLE cell border and the bar. A
+            # col-0 panel's border left side is hardwired to the figure edge
+            # (see _draw_cell_borders), so its strip starts at the frame edge
+            # gap; otherwise the strip starts where the label-strip inset
+            # pushed the axes from.
+            if col == 0:
+                strip_left = style.DEFAULT_FRAME_EDGE_GAP_INCHES / fig_w
+            else:
+                strip_left = pos.x0 - (
+                    getattr(panel, "content_left_pad_inches", 0.0) / fig_w
+                )
+            label_x = (strip_left + bar_x) / 2.0
+            for tick, lab in ticks_and_labels:
+                frac = (tick - ylim[0]) / span
+                if frac < -0.001 or frac > 1.001:
+                    continue
+                y = pos.y0 + frac * pos.height
+                # End labels tuck INSIDE the range so they don't straddle the
+                # cell border or collide with the neighboring row's labels.
+                if frac > 0.93:
+                    va, y = "top", y - end_pad_v
+                elif frac < 0.07:
+                    va, y = "bottom", y + end_pad_v
+                else:
+                    va = "center"
+                fig.text(
+                    label_x, y, lab, color=style.TICK_LABEL_COLOR,
+                    fontsize=style.DEFAULT_TICK_LABEL_SIZE,
+                    fontweight=style.DEFAULT_TICK_LABEL_FONT_WEIGHT,
+                    ha="center", va=va,
+                )
+            if unit:
+                fig.text(
+                    label_x, (pos.y0 + pos.y1) / 2.0, unit,
+                    color=style.TICK_LABEL_COLOR,
+                    fontsize=style.DEFAULT_TICK_LABEL_SIZE,
+                    fontweight=style.DEFAULT_TICK_LABEL_FONT_WEIGHT,
+                    ha="center", va="center",
+                )
 
     def _draw_cell_borders(self) -> None:
         """Tile the figure with one bordered Rectangle per gridspec cell.

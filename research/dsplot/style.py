@@ -147,6 +147,21 @@ def unit_inches_for_width(n_cols, total_width_inches=None):
 DEFAULT_FRAME_EDGE_GAP_INCHES = 0.05
 
 # ============================================================
+# RANGE-BAR Y-AXIS
+# ============================================================
+# Opt-in y-axis treatment (``panel.range_bar_yaxis = True`` on a panel that
+# reserves an in-cell label strip via ``content_left_pad_inches``): the stock
+# y-axis is replaced by a thin vertical bar flush with the plot's left edge,
+# tick labels horizontally centered in the strip between the cell border and
+# the bar, end labels tucked INSIDE the range so nothing crosses the cell
+# border, and the y unit ("Hz") horizontal at mid-height in the tick face.
+RANGE_BAR_LINEWIDTH = 4.5                 # matches the cell-border weight
+# Breathing room between the flush end labels and the range ends: the top
+# label hangs this far below the top lim, the bottom label floats this far
+# above the bottom lim.
+RANGE_BAR_LABEL_END_PAD_INCHES = 0.25
+
+# ============================================================
 # ARROWHEADS
 # ============================================================
 # Arrowhead geometry (multiplied by DEFAULT_ARROW_MUTATION → points). A long,
@@ -197,6 +212,9 @@ DEFAULT_CAPTION_BOTTOM_PAD = 0.14
 # and body text read as one type system.
 DEFAULT_TICK_LABEL_SIZE    = 40
 DEFAULT_AXIS_LABEL_SIZE    = 46
+# Tick numbers and axis-unit labels ("Hz", "s") render bold so the axis chrome
+# carries the same voice as the bold caption/title text.
+DEFAULT_TICK_LABEL_FONT_WEIGHT = "bold"
 # Tick mark dimensions (matplotlib defaults are ~3.5pt length, ~0.8pt width)
 DEFAULT_TICK_LENGTH        = 8.0
 DEFAULT_TICK_WIDTH         = 1.5
