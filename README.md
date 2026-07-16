@@ -1,143 +1,108 @@
-# Sub Shader 
+# SubShader
 
-> 🚧 Under Construction 🚧
+SubShader is a **real-time audio visualizer** written in Python - it is a low-latency, feature-extraction pipeline accelerated with parallel computing. It uses modern techniques in digital signal processsing (DSP) and parallel programming (GPU) to accurately  **visualize what an audio signal sounds like**.
 
-There are symphonies everywhere for those with the eyes to see them
+Demonstrating my foundations in real-time DSP and hardware acceleration, I'm using this project to branch into DSP and ML-adjacent fields in computer engineering and data science. It took a lot of effort and care to make this, so thank you for taking the time to read! 
 
-Sub Shader is a real-time audio visualizer written in Python. It's an audio-graphics pipeline that analyzes audio using modern techniques in digital signal processing and parallel computing to render a low-latency frequency vs time plot. 
+## Overview
 
-This project has given me a deeper understanding of the foundations of DSP and how they generalize to contexts beyond audio. It has also been an opportunity to learn how to use CUDA to minimize pipeline bottlenecks by off-loading parallel operations to a GPU.
+This implementation monitors the time-frequency information present in audio signals using **Wavelet**-based analysis methods, as opposed to typical **Fourier**-based ones.
 
-Details of the top-level design and its performance are outlined in this document.
+>ℹ️ For a comprehensive explanation of the design decisions and intuitions made in this project, especially in the DSP implementation, see → **[DSP.MD](src/subshader/dsp/DSP.md)** 
 
-# Design
 
-```
-Audio → DSP → Renderer
-```
+Fourier methods are not well-suited for signals whose **frequency content changes** over time. These signals are considered **non-stationary**, and almost all real-world signals behave this way - audio, images, sensor data, weather models, financial time-series, modern physics, etc. They are difficult to capture because their frequency content can change gradually, suddenly, or both at once. Fourier methods carry an inherent **time-frequency resolution tradeoff** when analyzing signals - sharpening the precision of its time resolution blurs its frequency resolution and vice-versa. The real problem for the Fourier method is that this tradeoff is **fixed**, while each end of the spectrum needs a different kind of precision. 
 
-## Audio 
+Low frequencies take a long time to complete cycles, so **when** they happen doesn't need fine precision in time - but a small change in frequency down there produces a proportionally big, a (relatively) wildly different pitch, so knowing **which** particular frequency matters a lot. High frequencies are the opposite - cycles complete almost instantly, so **when** they happen is everything, but that same small change in frequency is proportionally negligible and audibly unnoticeable. The Wavelet Transform trades this resolution *proportionally* across frequency, giving each end exactly the kind of precision it needs - capturing both slow drifts and sharp transients.
 
-Loads audio from file and delivers overlapping window frames of audio samples to the DSP Stage. The overlap reduces edge artifacts at window boundaries. For more details → [Audio README](src/subshader/audio/AUDIO.md)
+### Audio Signal Analysis - Fourier vs Wavelet 
 
-## DSP
+<p align="left"><img src="assets/images/dsp/figures/by_figure/fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_hero_v43_equal_bands.png" width="800"></p>
 
-Performs the Continuous Wavelet Transform ([CWT](https://www.mathworks.com/help/wavelet/ug/continuous-wavelet-analysis-of-modulated-signals.html)) using [CuPy](https://cupy.dev/) on the raw audio samples across the chromatic scale. Post-processing includes scale normalization, discarding of edge-contaminated results, and downsampling. For design intuition and explanation → [DSP README](src/subshader/dsp/DSP.md)
+**Audio Signal** 
+- The non-stationary audio shown here is a chirp signal whose frequency sweeps continuously from mid to low to high
+- At its halfway point, the signal is punctuated by a series of clicks (abrupt broad-band transients)
 
-## Renderer
+**Fourier Analysis** 
+- The **STFT** (Short-Time Fourier Transform) resolves the audio signal with a somewhat smeared and jagged representation
+- Notice how low frequency measurements bleed into neighboring rows, while high frequencies appear weak and formless
+- In some cases, this is a more-than-adequate textbook approach for re-representing signals into a more visual format
 
-Chronologically stores the time-frequency results from the DSP module in a circular buffer, and uploads its entirety as a GPU texture. The renderer feeds the texture data to a fragment shader that colormaps the results to a 2D frequency vs time plot. For specifics → [Renderer README](src/subshader/renderer/RENDERER.md)
+**Wavelet Analysis** 
+- The **CWT** (Continuous Wavelet Transform) follows the contour of the chirp's frequency sweep, tracing it with smooth, clean definition
+- Resolves the onset of each "click" as distinct events in time
+- The advantage is clear when analyzing signals non-stationary signals
 
-<!-- Placeholder: init flowchart -->
+## Design
+<p align="left"><img src="assets/timing/subshader_modules.drawio.png" width="40%"></p>
 
-<!-- Placeholder: runtime flowchart -->
+- [AUDIO.MD](src/subshader/audio/AUDIO.md) - delivers audio samples to pipeline
+- [DSP.MD](src/subshader/dsp/DSP.md) - parallelizes heavy DSP computations on a GPU using CUDA
+- [RENDERER.MD](src/subshader/renderer/RENDERER.md) - plots the time-frequency results as a colormapped energy spectrum
 
-# Plot Comparison
-Below is a performance comparison plot of different audio signals and analysis methods, highlighting the accuracy and timing tradeoffs between each method.
+
+### Init
+To achieve real-time performance, the pipeline parallelizes all the heavy DSP computations and visual rendering to a dedicated GPU. While initially constructing the pipeline, all large and persistent memory blocks are allocated and instantiated up front to minimize unnecessary memory transfers during runtime.
+<p align="left"><img src="assets/timing/pipeline_init.drawio.png" width="60%"></p>
+
+### Runtime
+During the runtime loop, the pipeline fetches audio samples, processes them, and renders the result as an energy spectrum colormap plot. The whole process is synchronized in real-time to the audio's playback and continuously plots until the end of the audio.
+<p align="left"><img src="assets/timing/pipeline_runtime.drawio.png" width="100%"></p>
+
+<!-- 
+> **Audio** - Delivers overlapping windows of audio samples \
+> **DSP** - Performs the Continuous Wavelet Transform ([CWT]()) using [CuPy](https://cupy.dev/) on the raw audio samples against the musical scale. Post-processing includes scale normalization, discarding of edge-contaminated results, and downsampling \
+> **Renderer** - Stores the time-frequency results in a circular buffer and uploads it as a GPU texture. A fragment shader colormaps the results into a 2D frequency vs time plot -->
+
+# Timing
+
+✅ **Real-time** - the pipeline runs at ~75 FPS, 14× under its real-time deadline. Full report → [TIMING.md](assets/timing/TIMING.md)
+
+
+### Measured Per-Stage Timing
+
+<p align="center"><img src="assets/timing/timing_pipeline.png" width="100%"></p>
+
+# Why Wavelets
+
+A comparison of the same signals analyzed three ways - the textbook Fourier approach (STFT), a popular wavelet library (PyWavelets), and Sub Shader's GPU CWT:
 
 <p align="center"><img src="assets/images/dsp/figures/comparison_grid/baseline.png" width="100%"></p>
 
-<!-- - STFT from [SciPy](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.stft.html)  -->
-<!-- - CWT from [PyWavelet](https://pywavelets.readthedocs.io/en/latest/ref/cwt.html) -->
-<!-- - SubShader CWT from [ANTS](https://www.youtube.com/playlist?list=PLn0OLiymPak2BYu--bR0ADNBJsC4kuRWs).  -->
+<p align="center"><img src="assets/timing/timing_methods.png" width="100%"></p>
 
-Bouncing Chirp 
-- A signal whose frequency sweeps upward with periodic variation
-- This stress-tests each method's time-frequency resolution
-    - Methods like the STFT with fixed resolution smear signal measurements of rapid frequency transitions
-    - Methods like the PyWavelet and Sub Shader CWT that adapt their resolution proportionally to the scaled frequency being measured track the signal contour more precisely
+**STFT** - The [Short Time Fourier Transform](https://www.youtube.com/watch?v=T9x2rvdhaIE) is the textbook approach for this kind of task. It's very fast at under 1 ms per call, but its fixed time-frequency resolution struggles to capture low end frequencies, bleeding the signal's energy into neighboring frequency bands.
 
-MIDI Sine Waves 
-- A signal composed of multiple, overlapping sine waves played at different frequencies and varying durations
-- Tests each method's ability to resolve multiple frequencies simultaneously and distinguish between long sustained tones and quick transient ones
+**PyWavelets CWT** - [PyWavelets](https://pywavelets.readthedocs.io/en/latest/ref/cwt.html) scales its time-frequency resolution proportionally to the frequency being measured, tracking the signal contour precisely - but at over 1 second per call it's unsuitable for real-time use.
 
-Beltran Audio
-- This audio is 4 bar measures ripped from [Beltran's SoundCloud](https://soundcloud.com/listenbeltran/beltran-coachella-yuma-weekend-1-2025) at about 8:00 minutes in the beat drops, the bass cuts out, then cuts back in.
-- Tests the ability to measure more realistically recorded audio containing apparent and non-apparent audio patterns via vocal tones, sustained bass activity, and repetitive broadband transients like kicks, snares, and percussions
+**Sub Shader CWT** - Based on an implementation from [Analyzing Neural Time Series](https://www.youtube.com/playlist?list=PLn0OLiymPak2BYu--bR0ADNBJsC4kuRWs) (ANTS), parallelized on the GPU with CuPy. It keeps the CWT's tightly measured resolution while running fast enough for real-time performance.
 
+[EDIT: closing line - sentiment: better feature extraction while still maintaining real-time performance; "a happy medium between performance and accuracy"]
 
-# Timing Comparison
+# How to Install
 
-```
-Bouncing Chirp:
---------------------------------------------------------------------------------
-Function                            Avg (ms)        Max (ms)        Min (ms)
---------------------------------------------------------------------------------
-STFT                                 0.73 ms         1.13 ms         0.65 ms
-PyWavelet                         1111.52 ms      2124.07 ms       991.35 ms
-SubShader (CPU)                     75.20 ms        95.66 ms        62.12 ms
-SubShader (GPU)                     78.94 ms        84.58 ms         6.22 ms
-
-================================================================================
-
-MIDI Sine Waves:
---------------------------------------------------------------------------------
-Function                            Avg (ms)        Max (ms)        Min (ms)
---------------------------------------------------------------------------------
-STFT                                 0.70 ms         0.89 ms         0.65 ms
-PyWavelet                         1109.93 ms      1440.09 ms      1009.23 ms
-SubShader (CPU)                     69.83 ms        83.48 ms        60.62 ms
-SubShader (GPU)                     82.46 ms        88.53 ms        38.34 ms
-
-================================================================================
-
-Beltran SoundCloud Rip (4 Bars):
---------------------------------------------------------------------------------
-Function                            Avg (ms)        Max (ms)        Min (ms)
---------------------------------------------------------------------------------
-STFT                                 0.72 ms         1.02 ms         0.66 ms
-PyWavelet                         1119.50 ms      1429.56 ms      1010.55 ms
-SubShader (CPU)                     70.78 ms        80.53 ms        60.38 ms
-SubShader (GPU)                     84.40 ms        88.11 ms        83.87 ms
-
-================================================================================
-```
-
-STFT
-- The [Short Time Fourier Transform](https://www.youtube.com/watch?v=T9x2rvdhaIE) we'll consider as the text-book approach for this kind of task
-- It's very fast at < 1 ms per call, great for real-time applications
-- Here we see the limitations of the STFT in the Plot Comparison - the fixed time-frequency resolution of the STFT struggles to capture low end frequencies, bleeding the signal's energy into neighboring frequency bands
-
-PyWavelet CWT
-- [PyWavelet](https://pywavelets.readthedocs.io/en/latest/ref/cwt.html) CWT is a popular python library module for wavelet-based analysis
-- Unfortunately is very slow at almost 300 ms per call, unsuitable for real-time performance
-- The CWT uses a time-frequency resolution that scales proportionally to the frequency being measured, producing an overcomplete representation of the input signal 
-
-SubShader CWT
-- The CWT is based off an implementation from this course: [Analyzing Neural Times Series](https://www.youtube.com/watch?v=7ahrcB5HL0k&list=PLn0OLiymPak2BYu--bR0ADNBJsC4kuRWs&index=1) (ANTS)
-- Two implementations
-    - Uses NumPy for running on CPU at about 20 ms per call
-    - Uses CuPy for parallelizing on GPU at about 10 ms per call
-- Near identical computation results, the time-frequency resolution in the ANTS CWT produces a tightly measured result
-
-Seems like SubShader is a happy medium between performance and accuracy
-
----
-
-## Benchmark
-
-[WRITE: "Brief summary of SubShader pipeline timing — link to DSP.md for detailed breakdown"]
-
-For detailed timing analysis, see [DSP: Computational Cost](src/subshader/dsp/DSP.md#6-implementation-deep-dive).
-
----
-
-## Installation
-
-[WRITE: "Installation instructions — fill from Phase 4 output (INST-01/INST-02)"]
-
-```
-
-### Requirements
+Requirements:
 
 - Python 3.9+
-- CUDA-capable GPU
+- NVIDIA CUDA-capable GPU
 - OpenGL 3.3+
 
-## Future Improvements
+```bash
+git clone https://github.com/eddie-water/sub-shader.git
+cd sub-shader
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+```
 
-[REWRITE: intent="list of concrete future improvements — hosted demo, live audio capture, GPU benchmark panel, color controls" placement="final section"]
+Run it:
 
-This project has given me a deeper understanding of the foundational concepts in real-time signal processing. There are DSP fundamentals that can be generalized, allowing for higher level pattern detection and feature extraction beyond audio contexts. Higher precision results require higher compute, so we explore why off-loading some of the work  This project goes into the details of the why I made these design decisions
+```bash
+python -m subshader
+```
 
-*[List future improvements]*
+[VERIFY: repo URL, and whether cupy needs a CUDA-versioned wheel (e.g. pip install cupy-cuda12x) called out separately]
+
+---
+
+This project has given me a deeper understanding of the foundations of DSP and how they generalize to contexts beyond audio. It has also been an opportunity to learn how to use CUDA to minimize pipeline bottlenecks by off-loading parallel operations to a GPU.

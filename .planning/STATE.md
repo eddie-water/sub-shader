@@ -189,3 +189,4 @@ None yet.
 Last activity: 2026-05-19 - Completed quick task 260519-a1p: dsplot twin-axis support + figure_1 inst-freq overlay across all 3 rows
 Stopped at: figure_1 v8 locked; deferred items (CWT low-f delay, COI pre-padding, possible Figure 2 click+drone demo) tracked in [[project-figure-1]] memory
 Resume file: None
+| 2026-07-12 | fast | README pivot-sentence variations (pick one) | ✅ |
