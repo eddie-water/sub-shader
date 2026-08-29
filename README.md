@@ -1,135 +1,141 @@
 # SubShader
 
-SubShader is a **real-time audio visualizer** written in Python. It uses modern techniques in digital signal processing and GPU programming to accurately **visualize what an audio signal sounds like**. But to call it just a visualizer is a massive understatement - it implements the foundation of a GPU-accelerated pipeline customly built for real-time signal processing and feature extraction.
+SubShader is a **real-time audio visualizer** written in Python. It uses modern techniques in digital signal processing and GPU programming to accurately **visualize what an audio signal sounds like**. But to describe it as just a visualizer would be a massive understatement - it implements the foundation of a GPU-accelerated pipeline custom-built for real-time signal processing and feature extraction.
 
-This project uses **[Wavelet](https://youtu.be/jnxqHcObNK4?si=x98elLTbz6QLe03g&t=1996)**-based analysis to convert audio signals into a **time-frequency** representation for visualization. Wavelet analysis is a modern adaptation of the traditional **[Fourier](https://youtu.be/spUNpyF58BY?si=jXTsOaIHUwB8meoc)**-based methods used for typical signal analysis. The advantages and justification of using it for real-world signal processing are discussed in this project.
+The signal processing is **[Wavelet](https://youtu.be/jnxqHcObNK4?si=x98elLTbz6QLe03g&t=1996)**-based - a modern adaptation of the traditional **[Fourier](https://youtu.be/spUNpyF58BY?si=jXTsOaIHUwB8meoc)**-based methods - converting audio into a **time-frequency** representation in real time. The advantages and justification of using it for real-world signal processing are discussed in this project.
 
-> ℹ️ For in-depth implementation decisions and design intuitions → **[DSP.MD](src/subshader/dsp/DSP.md)** 
+> ℹ️ For in-depth implementation decisions and design intuitions → **[DSP README](src/subshader/dsp/DSP.md)**
 
-Demonstrating my technical skills in real-time signal analysis and GPU acceleration, I'm using this project to branch into areas more adjacent to digital signal processing (DSP), machine learning (ML), data science, and computer engineering. The high-level design, performance, real-world applications, and future aspirations of this project are detailed below. **It took a lot of effort and care to make this, so thank you for taking the time to read!**
+<!-- HERO DEMO CLIP — experiment: committed-file embed. GitHub is expected to strip the
+     <video> tag (it only plays videos uploaded as attachments / user-attachments URLs);
+     the linked thumbnail below is the working fallback: click-through plays the mp4 in
+     GitHub's file viewer. For a true inline player: edit this file on github.com, drag
+     assets/video/subshader_demo.mp4 into the editor, and replace this block with the
+     generated URL on its own line. -->
+<video src="https://github.com/eddie-water/sub-shader/raw/gsd/phase-08-codebase-refactoring-and-module-cleanup/assets/video/subshader_demo.mp4" controls width="100%"></video>
 
-<p align="left"><img src="assets/images/readme/beltran_scalogram_placeholder_v1.png" width="100%"></p>
-🚧 TODO - Replace with live audio clip 🚧
+[![SubShader demo video](assets/images/readme/beltran_scalogram_placeholder_v1.png)](assets/video/subshader_demo.mp4)
+
+> 🚧⚙️🏗️ Replace with live audio clip 🛠️⚠️📐
+
+Demonstrating my technical skills in real-time signal analysis and GPU acceleration, I'm using this project to branch into digital signal processing (DSP), machine learning (ML), data science, and computer engineering. **It took a lot of effort and care to make this, so thank you for taking the time to read!**
 
 ## Problem Statement
 
-When we perceive sound, our ears can easily distinguish all the different kinds of noises we hear - the loud vs the quiet, the high vs the low, the sudden vs the gradual. However, designing something that can analyze audio to this level of detail is not as trivial as it may seem. To properly visualize an audio signal, we need to be able to detect more than just **what frequencies** are present. We also need to know **when in time** they start, how long they last, and when they stop. All relative to how loud these frequencies actually are to each other. The main difficulty of this stems from trying to analyze sound structures and **details that coexist at vastly different scales**. 
+Our ears can easily distinguish all the different kinds of noise we hear - the loud vs the quiet, the high vs the low, the sudden vs the gradual - but designing something that can analyze audio to this level of detail is not as trivial as it may seem. We need to know more than just **what frequencies** are present. We need to know **when in time** they start, how long they last, and when they stop, all relative to how loud they actually are. 
 
-Typical audio like music or speech is frequency-rich, containing both low and high-end frequencies that contribute to the long-term trends and short-term details of a signal's structure. High-frequency activities can be brief and abrupt, demanding **fine resolution in time** to pin down exactly when they happen. Low-frequency contributions take long stretches of time to develop, shaping the grand scheme of the signal slowly and gradually - demanding **fine resolution in frequency** instead to detect slight variations in tone. Simultaneously capturing both ends of a signal's frequency spectrum in a fully-detailed representation is the core problem this project confronts.
+The difficulty of this stems from signal details that **coexist at vastly different scales** - high-frequency activity can be extremely brief and abrupt, demanding **fine resolution in time**, while low-frequency content develops slowly and gradually, demanding **fine resolution in frequency** instead. Simultaneously capturing both ends of the spectrum in a fully-detailed representation is the core problem this project confronts.
 
 ### Audio Example
 
-The audio displayed here is a "non-stationary" signal containing both regular and irregular frequency content, and is an exaggeration of this resolution problem specifically. The signal **gently** sweeps a single frequency across a range of 20-20k Hz - from the middle, down to the low-end, and back up to the high-end. At its halfway point, the sweep is **abruptly** punctuated by a series of "clicks" or "short-term broad-band transients". 
+The audio here is a "non-stationary" signal - an exaggeration of this resolution problem specifically. It **gently** sweeps a single frequency across 20-20k Hz, and at the halfway point the sweep is **abruptly** punctuated by a series of "clicks" - short-term broad-band transients.
 
 <p align="left"><img src="assets/images/dsp/figures/by_figure/fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_hero_v44_split_audio.png" width="100%"></p>
 
 ### Fourier Analysis
 
-The **Short-Time Fourier Transform** (STFT) is the typical, textbook-approach for basic DSP. It does a decent job of representing the *general* idea of what is happening in the signal. But for "non-stationary" frequency content, notice how the signal's energy is resolved into a somewhat **smeared and jagged representation**. Notice how low-end frequency measurements of the sweep bleed and blob into neighboring frequency bands, while high-frequency impulses like the clicks appear as weakly represented fragments.
+The **Short-Time Fourier Transform** (STFT), the typical textbook approach for basic DSP, captures the *general* idea of the signal - but resolves its energy into a somewhat **smeared and jagged representation**. Low-end measurements of the sweep bleed and spread vertically into neighboring frequency bands, while the high-end appear as weak and chunky fragments in time.
 
 <p align="left"><img src="assets/images/dsp/figures/by_figure/fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_hero_v44_split_fourier.png" width="100%"></p>
 
 ### Wavelet Analysis
 
-The **Continuous Wavelet Transform** (CWT) is the more-recently popularized method for advanced signal analysis. It tracks the frequency sweep much more closely, tracing it with clean definition and without much smudging. It clearly resolves the onset of each "click" as a distinct event in time. Overall, the implementation produces an arguably **more representative result** by capturing signal energy into the frequency bands and moments in time they actually belong to.
+The **Continuous Wavelet Transform** (CWT) traces the sweep with a narrower spread and cleaner definition, resolving the burst of "clicks" as distinct events in time - arguably a more **representative** result, by capturing signal energy at the moments in time and frequency bands they actually belong to.
 
 <p align="left"><img src="assets/images/dsp/figures/by_figure/fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_hero_v44_split_wavelet.png" width="100%"></p>
 
-### Discussion and Intuition
+### Discussion
 
-These methods produce two technically valid, but slightly different representations of the same audio. We can clearly see the CWT excels at perceiving signal energy in the bands and moments they actually occur. The STFT's slightly skewed perception at each end of the spectrum is its main limitation for analyzing audio - signals that commonly exhibit this kind of frequency content. But what is the specific issue faced by the STFT? Like previously mentioned, it stems from trying to **analyze signal properties that simultaneously exist at drastically different scales of magnitude.**
+Both are technically valid representations of the same audio, but the difference in resolution quality comes from trying to **analyze signal properties that simultaneously exist at drastically different scales of magnitude**. This idea can be a little too abstract to immediately understand.
 
-But this idea can be a little too abstract to immediately understand - what counts as a detail, and the resolution it needs, depends entirely on the thing being observed. Think of it like trying to observe a group of trees. If you were trying to map out the entirety of the forest, you wouldn't stand up close with a microscope. If you were trying to observe its plant cells, you wouldn't watch from a space-grade telescope in orbit. For every scale of the detail measured at each of these extremes, there is an appropriate level of resolution needed to represent it meaningfully. What about the scales of detail in between each of these extremes? What kind of resolution would they need? You would probably use binoculars if you were trying to record the individual leaf shapes on a specific kind of tree. If you were trying to analyze the texture of a particular kind of bark, you might use a magnifying glass.
+Think of it like trying to observe a group of trees. How exactly would you situate yourself to do this? It depends on what exactly you're obseriving and the range of detail you want to each achieve. To map out the entirety of the forest, you wouldn't stand up close with a microscope. To observe its plant cells, you wouldn't watch from a space-grade telescope in orbit. For every scale of detail in between these two extremes, there is a level of resolution appropriate for the detail you are observing. You would use binoculars to record individual leaf shapes, or a magnifying glass to analyze the texture of a particular kind of bark.
 
-In any of these cases, the observer is faced with the same tradeoff - **being able to observe fine details clearly comes at the cost of knowing exactly where these details exist in the grand scheme**. Zoomed in, you could easily figure out what kind of tree you are looking at, but you would have no idea **where** in the forest you were. Zoomed out, you could easily map the acreage of the forest, but would struggle to determine **which** specific types of trees make it up.
+In any case, the observer always faces the same tradeoff - **clearly observing fine details comes at the cost of knowing exactly where these details exist in the grand scheme of themselves**. Zoomed in, you could easily figure out the kind of tree you were looking at, but would have no idea **where** in the forest you were. Zoomed out, you could easily map the acreage of the forest, but would struggle to determine **which** kind of trees make it up. 
 
-### Method Comparison
+### Comparison
 
-The audio example shown above exhibits this resolution tradeoff analogy directly. The STFT tries to monitor the entirety of the audio using **a single lens** of resolution - meaning one scale of frequency may come out looking fine, but all other scales come out skewed. The CWT is like an array of lenses spanning from microscopic to macroscopic resolution - except here we are not mapping the acreage of a forest, or recording leaf shapes, we are observing detail-rich sound structures. We are resolving the signal at a level of detail that allows us to distinguish its long-lasting, low-end frequencies from its short-lived, high-end ones, and everything in between.
+The audio example and analogy above exhibit this resolution tradeoff directly. The STFT monitors the entirety of the audio using **a single lens** of resolution, so while one scale of frequency may come out looking fine, other scales skew their perception - as seen in the STFT's distortions at each end of the spectrum. The CWT is like an array of lenses spanning from microscopic to macroscopic resolution, using the appropriate lenses depending on the scale of the frequencies being measured. This achieves **multiscale resolution** for observing non-stationary, frequency-rich sound structures - simultaneously capturing the long-lasting low-ends, the short-lived high-ends, and everything in between.
 
-> ℹ️ All design decisions related to this concept are explored in depth in **[DSP.md](src/subshader/dsp/DSP.md)**
+todo under constuction - possibly put a another non stationary even moreso - single tone at low frequeny long time support - another one with an equal magnitude high end transient short time support - up to the nanoscale - chiller frequency range - 1:10 range - can still - want to see one cycle of each - how the fft creates a ativation in the low f and a weak activation in the high f - then show another signal - different - the same low f contribution  and the high f but at 1/10 the magnitude - show how that produces a single result - show how buoth signlas produce idnetical stfs  but different cwts
+
+
+> ℹ️ For intuition and details of the CWT design and implementation → **[DSP README](src/subshader/dsp/DSP.md)**
 
 ## Design
 
-Better resolution comes at the cost of more compute. Libraries to implement the STFT like [NumPy](https://numpy.org/doc/stable/reference/routines.fft.html) run exceptionally fast, but produce the smeared resolution issue shown above. [PyWavelets](https://pywavelets.readthedocs.io/en/latest/), a popular wavelet library, produces clean results but is too slow for real-time visualization. This project uses a custom CWT adapted from [ANTS](https://www.youtube.com/playlist?list=PLn0OLiymPak2BYu--bR0ADNBJsC4kuRWs), rewritten in Python and parallelized on a GPU with [CuPy](https://cupy.dev/). The renderer is a graphics shader for the same reason - [matplotlib](https://matplotlib.org/) cannot draw frames this detailed at this rate, and downsampling them would throw away detail the CWT strives to capture.
-
-### Pipeline
-[AUDIO.MD](src/subshader/audio/AUDIO.md) | [DSP.MD](src/subshader/dsp/DSP.md) | [RENDERER.MD](src/subshader/renderer/RENDERER.md)
-
-The pipeline processes and visualizes audio signals in sync with audio playback. It fetches audio samples from a file (live audio coming soon), processes them, and renders the results as an energy spectrum plot. The pipeline is composed of the following stages:
+The audio processing and visual rendering are synchronized to audio playback in a multi-stage pipeline. From a file (live audio coming soon), audio samples are fetched, processed, and rendered as a time-frequency energy spectrum plot - **all within real-time performance deadlines**.
 
 <p align="left"><img src="assets/timing/subshader_modules.drawio.png" width="380"></p>
 
-During runtime, overlapping frames of audio samples are delivered to the DSP stages for parallel processing. The CWT is performed on the audio frame and the results are post-processed. After storing the most recent frame into a circular buffer, the renderer uses a shader to color-map the results as a rolling energy spectrum plot. All of this is synced to the audio's playback device.
+**Multiscale resolution comes at the cost of more compute.** [NumPy](https://numpy.org/doc/stable/reference/routines.fft.html)'s STFT runs exceptionally fast, but as it was just stated, its perception can look skewed. [PyWavelets](https://pywavelets.readthedocs.io/en/latest/), a popular CWT library, produces a clean result but is too slow for real-time visualization. This project uses a custom CWT adapted from [ANTS](https://www.youtube.com/playlist?list=PLn0OLiymPak2BYu--bR0ADNBJsC4kuRWs), rewritten in Python and parallelized on a GPU with [CuPy](https://cupy.dev/). The live visualization is rendered with a graphics shader for the sake of drawing megapixels worth of signal data and [matplotlib](https://matplotlib.org/) cannot handle this much detail for real-time performance.
 
-<p align="left"><img src="assets/timing/subshader_runtime.drawio.png" width="1000"></p>
+### Documentation
+[AUDIO README](src/subshader/audio/AUDIO.md) → [DSP README](src/subshader/dsp/DSP.md) → [RENDERER README](src/subshader/renderer/RENDERER.md)
+
+<!-- ### Documentation
+- [AUDIO README](src/subshader/audio/AUDIO.md) 
+- [DSP README](src/subshader/dsp/DSP.md)
+- [RENDERER README](src/subshader/renderer/RENDERER.md) -->
+
+
+### Pipeline
+
+During runtime, overlapping frames of audio samples are delivered to the DSP stages for parallel processing, results are stored in a circular buffer, and the renderer color-maps them as a rolling energy spectrum plot - all synced to the audio's playback device.
 
 ## Performance
 
-✅ **Real-time** - each frame finishes in ~80 ms, well inside the 185 ms deadline. The slowest frame recorded was ~130 ms - still inside. Full timing report → [TIMING.md](assets/timing/TIMING.md)
+The deadline is set by the audio playback itself - sampled at 44.1 kHz and taken in overlapping window frames, audio gets processed 8K samples at a time - 8,192 ÷ 44,100 ≈ **185 ms** to fetch, process, and render each frame.
 
-<p align="center"><img src="assets/timing/timing_runtime_gantt_black_bg_v1.png" width="100%"></p>
+✅ **Real-time** - each frame finishes in ~8 ms, well inside the 185 ms deadline. The slowest frame recorded was ~14 ms - still inside. Full timing report → [TIMING.md](assets/timing/TIMING.md)
+
+<p align="center"><img src="assets/timing/timing_runtime_deadline_v5.png" width="100%"></p>
 
 - **Deadline** - ~185 ms per chunk of audio
-- **Work per frame** - ~80 ms on average - 2.3× room to spare
+- **Work per frame** - ~8 ms on average - 23× room to spare
 - **Resolution** - semitone bins - energy resolved at ±3% of every center frequency (116 chromatic tones · 27.5 Hz → 21.1 kHz)
 
+Here's where those 8 ms go - one frame of work, stage by stage, on its own scale:
+
+<p align="center"><img src="assets/timing/timing_runtime_workscale_v1.png" width="100%"></p>
+
 ### Startup
-To achieve real-time performance, all the heavy DSP computation and rendering are off-loaded to a dedicated GPU, and all of the expensive setup is paid once up front. Constructing the pipeline takes about 1.3 s, of which roughly 80% is GPU bring-up - creating the CUDA and OpenGL contexts, compiling kernels and FFT plans, and uploading the wavelet bank. This minimizes large memory allocations and transfers during runtime.
+
+All the heavy computation has been off-loaded to a dedicated GPU, so all the expensive setup is paid once up front - constructing the pipeline takes about 740 ms, of which roughly 80% is GPU bring-up: CUDA and OpenGL contexts, kernel and FFT-plan compilation, uploading the wavelet bank. This keeps runtime free of large allocations and transfers.
 
 <p align="left"><img src="assets/timing/subshader_startup.drawio.png" width="650"></p>
-<p align="center"><img src="assets/timing/timing_startup_gantt_black_bg_v1.png" width="100%"></p>
+<p align="center"><img src="assets/timing/timing_startup_gantt_black_bg_v2.png" width="100%"></p>
 
-This project is a proof of concept written in Python, running on WSL2. Most of the overhead is from my environment, not math. When the core stages were benchmarked in isolation, the same process was about 8× faster - for a potential 18× margin. Plenty of room for higher resolutions or stricter deadlines.
-<!-- SKELETON R3: environment-vs-isolation is its own beat - WSL2 proof-of-concept
-numbers vs isolated core-stage benchmark, framed as a deliberate contrast / headroom,
-two numbers side by side, no hedging, not an apology. -->
+This project is a proof of concept written in Python, running on WSL2 - and it still clears its deadline with 23× room to spare. Plenty of room for higher resolutions or stricter deadlines.
 
 ## Real-World Implications
 
-> ### 🚧⚙️🏗️ Section Under Construction 🛠️⚠️📐
->
-> **Goal for this section:** Close the loop - this is everywhere in the natural world: the signals around us, and the ones in our ears and eyes. Better mathematical representation doesn't just make for prettier pictures - it gives us a more representative observation. We are tuning our measurement design to adhere to the same natural law the signal we are measuring abides by - the same we can't know both where an electron is and how fast it's moving - is the same as the tree analogy sort of - here we are controlling this that observational tradeoff to our advantage. Better representation has massive benefits downstream: real-time data analysis and machine learning - classification, mood detection, embedding selection, model fine-tuning - and triggering real-time visuals more accurately. Beyond audio too - graphics, small sample machine learning, financial time series
+> 🚧⚙️🏗️ Section Under Construction 🛠️⚠️📐
 
-<details>
-<summary>📝 Consolidate the following ideas into something conclusive </summary>
+Better mathematical representation doesn't just make for prettier pictures - it gives us a more representative observation and a more trustworthy measurment. When a signal's energy is captured where it actually belongs, instead of bleeding into places it doesn't, it yields features that describe what the signal is actually doing. Pattern detection and feature extraction can only ever be as good as the representation underneath them - basically the whole point of this project.
 
-- Better mathematical representation doesn't just make for prettier pictures
-- A signal's energy captured where it actually belongs, instead of bleeding into places it doesn't → more reliable features that are actually representative of the signal's properties
-- Pattern detection and feature extraction can only ever be as good as the representation underneath them - the fundamentals of DSP explored here extend naturally into machine learning
-- "...delivered to a machine learning model as higher quality inputs for it to learn and derive patterns from" (the payoff line - weave into final prose)
-- None of this is exclusive to audio - almost every signal in the natural world is composed of both gradual trends and fine details
-- Multiresolution analysis applies to any domain where details live at more than one size
-- Wavelets follow the same natural laws as the signals they are measuring
-- Typically this is left to the models to figure out - how the quickly-changing parts of a signal exist in the same context as the slow-moving ones
-- The first layers of convolutional neural networks tend to converge towards wavelet-like filters ([AlexNet, 2012](https://proceedings.neurips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)) - even self-optimizing systems gravitate toward this innate time-frequency compromise
-- Even our own eyes and ears run a multiscale decomposition of the world
-- The cochlea resolves low tones with narrow biological filters and high ones with wide ones - the same proportional trade the wavelet makes
-- Our eyes can take in the landscape trends of our view while simultaneously focusing on the finer details of an object in sight; our ears can distinguish the texture of a sound as its frequency content changes with time
-- It is valuable to accurately capture the short term details in the context in which they exist - it is happening around us constantly
-- ear -> graphics card -> eye 
-- there are symphonies everywhere, for those with the eyes to see them
+This is where the fundamentals of DSP extend naturally into areas like machine learning. Higher-quality representations serve as higher-quality inputs for ML models to learn and derive patterns from. Typically the models are left to figure this out for themselves - how the fine, short-term details of a dataset relate to the long-term trends they live in. 1)
 
-</details>
+It has even been observed that the first few layers of convolutional neural networks learn to recognize the very energy-resolution tradeoff the CWT is built around - naturally learning basic wavelet-like filters at prmitive layers of the CNN ([AlexNet, 2012](https://proceedings.neurips.cc/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf)).
+
+2)
+
+There are symphonies everywhere, for those with the eyes to see them. 
+
+3)
 
 ## Future Aspirations
-<details>
-<summary>📝 Speak on the future direction of the project </summary>
 
-- **Synchrosqueezing** - sharpening the CWT's energy localization even further 
-   - What about beats? 
-   - Consider two signals at +/- X Hz at Y Hz - this creates a X Hz beating artifact
-   - What contexts is this desired? Simple monotonic analysis or rich, complex, irregular polyphonics? 
-- **Wavelet scattering** - capturing modulation envelopes
-   - Differentiating tremolo vs vibrato vs beats
-- **Tempo/BPM detection** - tempo tracking that holds up even with soft onsets, driven by energy detection 🚧 TODO link tempo algorithm video 🚧
-- **Real-time classification + tempo tracking** - triggering visual stimulus based on actual signal events, more accurately
-- **Genre detection** - mapping audio along axes like [everynoise.com](https://everynoise.com/) - atmospheric to dense, bouncy to smooth
-- **Color mapping to mood** - happy chords vs sad chords, chords that stress each other or relieve each other
-- **Stem separation** - differentiating the parts in the audio to stem things out
-</details>
+- [Synchrosqueezing](https://dsp.stackexchange.com/questions/71398/synchrosqueezing-wavelet-transform-explanation) - sharpening energy spectrum, tighter energy localization, distinguish beating artifacts
+- [Wavelet Scattering](https://www.youtube.com/watch?v=S6LcP7txu9E) - capture modulation envelopes (tremolo vs vibrato vs beats) 
+- High-level feature extraction - tempo, mood, vibe
+- [BPM Detection](https://www.youtube.com/watch?v=FmwpkdcAXl0&t=1264s) - soft and hard onsets
+- Real-Time Classification
+    - Genre mapping like [everynoise.com](https://everynoise.com/) - atmospheric to dense, bouncy to smooth 
+    - Color mapping to mood (happy vs sad, stress vs relief)
+- Stem Separation - differentiate the symphonic components 
 
 ## How to Install
+
 Requirements:
 - Python 3.9+
 - NVIDIA CUDA-capable GPU
