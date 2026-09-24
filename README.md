@@ -107,11 +107,15 @@ The plot is rendered with a GPU shader for similar reasoning - [matplotlib](http
 
 To keep the runtime loop free of large allocations and memory transfers, every expensive setup cost is paid once up front - the CUDA context, kernel and FFT-plan compilation, generating and uploading the wavelet bank, and the OpenGL context. Constructing the pipeline takes about **800 ms**. Roughly 80% of this is GPU bring-up which makes sense since this was all developed in Python and WSL.
 
+<p align="center"><img src="assets/images/drawio/startup_lanes_v25_black.png" width="100%"></p>
+
 <p align="center"><img src="assets/timing/timing_startup_hybrid_v4.png" width="100%"></p>
 
 ### Runtime Loop
 
 During runtime, overlapping frames of audio samples are delivered to the DSP stages for parallel processing, and results are stored in a circular buffer for the renderer to color-map in chronological order.
+
+<p align="center"><img src="assets/images/drawio/runtime_lanes_v27_black.png" width="100%"></p>
 
 In a single shot of the pipeline, one frame of **8K audio samples** is fetched, processed, and rendered in about **6 ms**. With a sampling rate of **44.1K s/s**, each frame of 8K samples are worth about **186 ms** of time which is our figurative deadline for this much audio. Meaning the pipeline completed its work **31×** times faster than it took to actually play out this much audio.
 
