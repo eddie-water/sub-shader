@@ -9,6 +9,8 @@ This project uses **[wavelet](https://youtu.be/jnxqHcObNK4?si=x98elLTbz6QLe03g&t
 <!-- HERO DEMO CLIP — GitHub attachment upload of assets/video/avril_14th.mp4.
      Re-rendering the clip means re-uploading (drag into the github.com editor) and
      swapping this URL. -->
+▶️ **Demo Clip**
+
 https://github.com/user-attachments/assets/01707520-7ac6-4e85-bd37-6630733e54f7
 
 Demonstrating my technical skills in real-time signal analysis and GPU acceleration, I'm using this project to branch into DSP, Machine Learning, Data Science, and Computer Engineering. **It took a lot of effort and care to make this, so thank you for taking the time to read!**
