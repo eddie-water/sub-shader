@@ -4,16 +4,16 @@ SubShader is a **real-time audio visualizer** written in Python. It uses modern 
 
 This project uses **[wavelet](https://youtu.be/jnxqHcObNK4?si=x98elLTbz6QLe03g&t=1996)**-based signal processing methods - a modern adaptation of traditional **[Fourier](https://youtu.be/spUNpyF58BY?si=jXTsOaIHUwB8meoc)**-based DSP. It converts audio information into a **time-frequency** representation while adhering to real-time performance deadlines. The advantages and justification of using wavelets for real-world signal processing are discussed in this project.
 
-> ℹ️ For design details and explanations → [DSP README](src/subshader/dsp/DSP.md)
-
 <!-- HERO DEMO CLIP — GitHub attachment upload of assets/video/avril_14th.mp4.
      Re-rendering the clip means re-uploading (drag into the github.com editor) and
      swapping this URL. -->
-▶️ **Demo Clip**
+> ▶️ Demo Clip
 
 https://github.com/user-attachments/assets/01707520-7ac6-4e85-bd37-6630733e54f7
 
 Demonstrating my technical skills in real-time signal analysis and GPU acceleration, I'm using this project to branch into DSP, Machine Learning, Data Science, and Computer Engineering. **It took a lot of effort and care to make this, so thank you for taking the time to read!**
+
+> ℹ️ For design details and explanations → [DSP README](src/subshader/dsp/DSP.md)
 
 ## Problem Overview
 
