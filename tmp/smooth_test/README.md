@@ -20,7 +20,10 @@ Same moment in all three — left: current, middle: 30 fps, right: 60 fps (same 
 
 ## More 60 fps renders
 
-Upload these from Downloads to get players here — until then the files are in this folder:
+### Beltran, 16 bars
 
-- Beltran, 16 bars (29 s): `beltran_16bar_60fps.mp4`
-- Baby, 1:00–1:30: `baby_60s-90s_60fps.mp4`
+https://github.com/user-attachments/assets/52368d94-c9ae-4bfd-8c71-30c580964456
+
+### Baby, 1:00–1:30
+
+https://github.com/user-attachments/assets/24b526a9-6686-4a6e-a513-09488b50e379
