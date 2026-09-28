@@ -46,9 +46,10 @@ LANE_H = PAD + CAP_H + UNIT + TILE_GAP + UNIT + RAIL_GAP     # 330: caption | ti
 LETTER_W, LETTER_H = U, U       # letter box on the rail, one per column (stages and transfers alike)
 FRAME_PAD = 10                  # inset of the content inside its UNIT cell (decks and rasters fill the cell)
 STRIP = (20, 80)                # the colour map: a half-unit strip, one UNIT tall, centred in its cell
-FONT = 17                       # stage labels, captions, HW labels
-LETTER_FONT = 22                # rail letters, timing labels, tick labels
-W_LINE, W_HEAVY = 3, 6          # every drawn line (boxes, tiles, rail, flow, pulses, axis) | frames, rules, bold transfers
+FONT = 20                       # stage labels, captions, HW labels (style.README_LABEL_EM_FRACTION, low end)
+LETTER_FONT = 24                # rail letters, timing labels, tick labels
+W_LINE, W_HEAVY = style.README_STROKE_DRAWIO, 2 * style.README_STROKE_DRAWIO   # every drawn line | frames, rules, bold transfers
+ARC = round(100 * style.README_BOX_RADIUS)   # draw.io arcSize, % of the short side
 PAYLOAD_ROW = "stage"           # "stage": a transfer's payload rides the flow line | "tile": it sits in the outer row, dashed into the drop
 GPU_LANE_H = None               # None: mirror the CPU lane | a height, when the GPU outer row is unused (all tiles inline)
 LOOP_ROW = "tile"               # "tile": the runtime loop rail runs through the CPU tile row | "top": along the top of the CPU lane
@@ -110,7 +111,7 @@ class Page:
 
     def box(self, label, x, y, color, rounded=True, w=UNIT, h=UNIT, size=FONT, late=False, stroke=W_LINE, font=INK, valign="middle"):
         style = (f"rounded={1 if rounded else 0};whiteSpace=wrap;html=1;fillColor=default;strokeColor={color};fontColor={font};"
-                 f"fontFamily={FONT_FAMILY};fontSize={size};fontStyle=1;align=center;verticalAlign={valign};arcSize=16;strokeWidth={stroke};labelBackgroundColor=none;")
+                 f"fontFamily={FONT_FAMILY};fontSize={size};fontStyle=1;align=center;verticalAlign={valign};arcSize={ARC};strokeWidth={stroke};labelBackgroundColor=none;")
         return self.vertex(style, x, y, w, h, label, late=late)
 
     def tile(self, key, x, y, color, caption, caption_side, size=None, width=W_LINE, backing=None):
@@ -459,10 +460,10 @@ SPAN = 960                               # analyzer span (0 to axis_max)
 PANEL_PAD = GUT                          # padding either side of the span inside the frame, room for the end tick labels
 GAP_PANEL = PANEL_PAD                    # the analyzer shares the lanes' frame: its span starts one pad past the GPU lane
 H_GRID = "all"                         # ghost lines on the row boundaries: None | "panel" | "all" (across the lanes too)
-RAIL_INK, FLOW_W = INK, 3
+RAIL_INK, FLOW_W = INK, W_LINE
 BORDER_INK, BORDER_W = INK, W_HEAVY                                   # lane / panel frames and the section divider
 T_FONT = LETTER_FONT                                            # timing labels, same size as the rail letters
-LOOP_INK, LOOP_W = INK, 3                # the loop's return when it runs outside the lane
+LOOP_INK, LOOP_W = INK, W_LINE                # the loop's return when it runs outside the lane
 
 
 def load_timings():

@@ -29,6 +29,7 @@ from ..export import crop_to_content
 AUDIO, DSP, REND = style.AUDIO_COLOR, style.DSP_COLOR, style.RENDER_COLOR
 WHITE, BG = style.NEUTRAL_COLOR, style.BG_COLOR
 CHUNK_SAMPLES, SAMPLE_RATE_K = 8192, 44.1
+LW, RADIUS = style.README_STROKE_PT, style.README_BOX_RADIUS
 
 REPO = Path(__file__).resolve().parents[3]
 RESULTS_CSV = REPO / "assets/timing/timing_results.csv"
@@ -107,10 +108,10 @@ class _HybridGrid:
     def col(self, lane):
         return self.CPU_X if lane == "CPU" else self.GPU_X
 
-    def rbox(self, cx, cy, w, h, edge, lw=3.2):
+    def rbox(self, cx, cy, w, h, edge, lw=LW):
         self.ax.add_patch(FancyBboxPatch(
             (cx - w / 2, cy - h / 2), w, h,
-            boxstyle="round,pad=0,rounding_size=2.2",
+            boxstyle=f"round,pad=0,rounding_size={RADIUS * _HybridGrid.BH}",
             facecolor=BG, edgecolor=edge, linewidth=lw, zorder=3))
 
     def label(self, cx, cy, text, size=13):
@@ -145,16 +146,16 @@ class _HybridGrid:
             x0 = self.CHART_X0 + start * scale
             self.ax.add_patch(FancyBboxPatch(
                 (x0, self.ROW_Y[k] - self.BH / 2), dur * scale, self.BH,
-                boxstyle="round,pad=0,rounding_size=2.2",
-                facecolor=BG, edgecolor=color, linewidth=3.2, zorder=3))
+                boxstyle=f"round,pad=0,rounding_size={RADIUS * _HybridGrid.BH}",
+                facecolor=BG, edgecolor=color, linewidth=LW, zorder=3))
             self.ax.text(x0 + dur * scale + self.GAP / 2, self.ROW_Y[k],
                          fmt(dur), color=WHITE, fontsize=16,
                          fontweight="bold", ha="left", va="center")
             start += dur
         self.ax.add_patch(FancyBboxPatch(
             (self.CHART_X0, self.LANE_Y - self.BH / 2), total_ms * scale,
-            self.BH, boxstyle="round,pad=0,rounding_size=2.2",
-            facecolor=BG, edgecolor=WHITE, linewidth=3.2, zorder=3))
+            self.BH, boxstyle=f"round,pad=0,rounding_size={RADIUS * _HybridGrid.BH}",
+            facecolor=BG, edgecolor=WHITE, linewidth=LW, zorder=3))
         self.ax.text(self.CHART_X1 + self.GAP / 2, self.LANE_Y, total_label,
                      color=WHITE, fontsize=16, fontweight="bold",
                      ha="left", va="center")
@@ -232,9 +233,9 @@ def build_startup_hybrid(stages, total_ms, out_path):
 
 def build_deadline_strip(work_ms, out_path, dead_ms=186.0):
     """One solid frame of work + a continuous dashed lane to the deadline."""
-    MS, BH, LW = 0.5, None, 3.2
+    MS = 0.5
     BH = work_ms * MS                            # square work box
-    RS = 0.14 * BH
+    RS = RADIUS * BH
     fig, ax = _new_axes((27.0, 2.4))
 
     def rbox(x, w, ls="solid", lw=LW):
@@ -270,7 +271,7 @@ def build_rate_check(work_ms, out_path, play_k=SAMPLE_RATE_K):
     factor = int(pipe_k / play_k)
     MS = 0.1
     BH = play_k * MS                             # square playback box
-    RS, LW, GAP = 0.14 * BH, 3.2, 0.7 * BH
+    RS, GAP = RADIUS * BH, 0.7 * BH
     fig, ax = _new_axes((27.0, 3.4))
 
     def rbox(x, y, w, lw=LW):

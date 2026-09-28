@@ -73,7 +73,7 @@ The CWT is like an **array of lenses** spanning from microscopic to macroscopic 
 
 Composed of individual stages, the pipeline **fetches** audio samples from a file, **processes** the audio, and **renders** the visual as a rolling frequency-vs-time **energy spectrum plot** - all in sync with the system's audio playback device.
 
-<p align="left"><img src="assets/timing/subshader_modules_v2.png" width="500"></p>
+<p align="left"><img src="assets/timing/subshader_modules_v7.png" width="500"></p>
 
 ### Documentation  
 
@@ -100,7 +100,7 @@ To get better resolution and performance, the DSP module uses a custom CWT adapt
 
 The plot is rendered with a GPU shader for similar reasoning - [matplotlib](https://matplotlib.org/) cannot handle drawing this much signal information at these real-time rates.
 
-<p align="center"><img src="assets/timing/timing_rate_check_v4.png" width="100%"></p>
+<p align="center"><img src="assets/timing/timing_rate_check_v7.png" width="100%"></p>
 
 ✅ **Real-Time Performance** - aiming for **44.1K s/s** at a minimum, the pipeline achieves about **1.4M s/s** - **31× faster** than our audio playback deadline, measured per frame below.
 
@@ -110,21 +110,18 @@ The plot is rendered with a GPU shader for similar reasoning - [matplotlib](http
 
 To keep the runtime loop free of large allocations and memory transfers, every expensive setup cost is paid once up front - the CUDA context, kernel and FFT-plan compilation, generating and uploading the wavelet bank, and the OpenGL context. Constructing the pipeline takes about **800 ms**. Roughly 80% of this is GPU bring-up which makes sense since this was all developed in Python and WSL.
 
-<p align="center"><img src="assets/images/drawio/vertical_startup_v6_black.png" width="100%"></p>
-
-<p align="center"><img src="assets/timing/timing_startup_hybrid_v5.png" width="100%"></p>
+<p align="center"><img src="assets/images/drawio/vertical_startup_v7_black.png" width="100%"></p>
 
 ### Runtime Loop
 
 During runtime, overlapping frames of audio samples are delivered to the DSP stages for parallel processing, and results are stored in a circular buffer for the renderer to color-map in chronological order.
 
-<p align="center"><img src="assets/images/drawio/vertical_runtime_v6_black.png" width="100%"></p>
+<p align="center"><img src="assets/images/drawio/vertical_runtime_v7_black.png" width="100%"></p>
 
 In a single shot of the pipeline, one frame of **8K audio samples** is fetched, processed, and rendered in about **6 ms**. With a sampling rate of **44.1K s/s**, each frame of 8K samples are worth about **186 ms** of time which is our figurative deadline for this much audio. Meaning the pipeline completed its work **31×** times faster than it took to actually play out this much audio.
 
 > ℹ️ For the full timing report → [TIMING.md](assets/timing/TIMING.md)
 
-<p align="center"><img src="assets/timing/timing_runtime_hybrid_v12.png" width="100%"></p>
 
 With **31× headroom** to spare, there is plenty of room for heavier processing and stricter deadlines. Since this is a proof of concept written in Python and developed in WSL, a robust C++ implementation could conservatively run another **2-3× faster**.
 

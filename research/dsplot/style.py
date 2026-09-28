@@ -367,6 +367,16 @@ FONT_STACK = (DEFAULT_FONT_FAMILY, DRAWIO_FONT_FAMILY, "DejaVu Sans")
 # Outer margin of every README figure: content bbox + this many pixels, applied
 # by dsplot.export.crop_to_content and tools/drawio_export.py alike.
 README_EDGE_PAD_PX = 30
+# Box grammar shared by every README figure that draws stage boxes (draw.io
+# swimlanes, timing hybrids, rate check): stroke and corner radius. Both are
+# expressed so the on-screen result matches at README width (~1600 px):
+# stroke ~0.2 % of exported width, radius 15 % of the box's short side.
+README_STROKE_PT = 2.8            # matplotlib, 150 dpi, ~26" canvases
+README_STROKE_DRAWIO = 4          # draw.io px at 1.5x export, 2950 px canvases
+README_BOX_RADIUS = 0.15
+# Label em target: 1.0-1.4 % of exported width. draw.io stage labels sit at the
+# low end (20 px @ 2950), matplotlib labels at the high end (16 pt @ ~2450 px).
+README_LABEL_EM_FRACTION = (0.010, 0.014)
 
 # ============================================================
 # TICK DECORATION (direction + inset scaling)
