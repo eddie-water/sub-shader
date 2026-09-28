@@ -47,3 +47,4 @@ assets/video/
 # Claude Code and GSD planning stay local for now (may return as a submodule)
 .claude/
 .planning/
+CLAUDE.md
