@@ -110,14 +110,14 @@ from .dsp_helpers import (
 from .wav_export import export_signal_to_wav
 
 __all__ = [
-    # Constants — directories
+    # Constants - directories
     "AUDIO_REFERENCE_DIR",
     "AUDIO_GENERATED_DIR",
     "IMAGES_REFERENCE_DIR",
     "IMAGES_GENERATED_DIR",
     "IMAGES_DSP_DIR",
     "TIMING_DIR",
-    # Constants — audio files
+    # Constants - audio files
     "AUDIO_BOUNCING_CHIRP",
     "AUDIO_MIDI_SINE_WAVES",
     "AUDIO_BELTRAN",
@@ -127,7 +127,7 @@ __all__ = [
     "AUDIO_COMPARISON_1",
     "AUDIO_COMPARISON_2",
     "AUDIO_COMPARISON_3",
-    # Constants — DAW reference images
+    # Constants - DAW reference images
     "DAW_IMAGE_BOUNCING_CHIRP_EDISON",
     "DAW_IMAGE_MIDI_SINE_WAVES_EDISON",
     "DAW_IMAGE_BELTRAN_16BAR_EDISON",
@@ -136,7 +136,7 @@ __all__ = [
     "DAW_IMAGE_COMPARISON_1",
     "DAW_IMAGE_COMPARISON_2",
     "DAW_IMAGE_COMPARISON_3",
-    # Constants — DSP parameters
+    # Constants - DSP parameters
     "STFT_NPERSEG",
     "NUM_FRAMES",
     "CHIRP_F0",

@@ -10,7 +10,7 @@ def timed_block(obj, name):
 
     Accumulates into the dict ``obj._init_substages`` keyed by ``name`` (created
     on first use). Lets a single constructor report a named breakdown of its
-    sub-steps — the init analogue of the per-method @timed attribute.
+    sub-steps - the init analogue of the per-method @timed attribute.
 
     Usage:
         with timed_block(self, "build_kernels"):
@@ -32,7 +32,7 @@ def timed(method):
     """Decorator that stores elapsed milliseconds as an instance attribute.
 
     After each call, sets self._timing_{method_name}_ms to the elapsed time.
-    Overhead is ~1 microsecond per call — negligible for SubShader's 10-30 fps pipeline.
+    Overhead is ~1 microsecond per call - negligible for SubShader's 10-30 fps pipeline.
 
     Usage:
         @timed

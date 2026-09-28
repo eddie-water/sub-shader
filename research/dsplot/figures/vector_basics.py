@@ -1,10 +1,10 @@
-"""vector_basics.png renderer — 5 arrows radiating from origin.
+"""vector_basics.png renderer - 5 arrows radiating from origin.
 
 Single-panel figure for §2.4.1 beat 1 ("a vector is an arrow with magnitude
-and direction"). No math, no labels — just visual proof.
+and direction"). No math, no labels - just visual proof.
 
 Per D-01 the figures subdir IS allowed to import non-library helpers, but
-this module needs none — the figure is pure dsplot.
+this module needs none - the figure is pure dsplot.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import os
 from .. import Figure, StaticPanel, Vector, style
 
 
-# Hand-picked radiating hues for visual variety — not part of the canonical
+# Hand-picked radiating hues for visual variety - not part of the canonical
 # 3-role palette. dsplot.style intentionally does not carry these (the legacy
 # names were ``VECTOR_PROJ_COLOR`` / ``GRID_WAVEFORM_COLOR`` in
 # ``research/utilities/style.py``; figure-local here keeps subshader-specific

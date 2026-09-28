@@ -1,4 +1,4 @@
-"""Example unit test — teaching artifact for downstream dsplot consumers.
+"""Example unit test - teaching artifact for downstream dsplot consumers.
 
 This file is intentionally minimal. It demonstrates the shape a downstream
 test suite (subshader's own tests, an external project's tests, etc.) should
@@ -10,7 +10,7 @@ follow when verifying a figure renders correctly:
      automatically between runs.
   4. Assert the PNG exists and is non-empty.
 
-There is no fixture, no parametrization, no full coverage — that is by design.
+There is no fixture, no parametrization, no full coverage - that is by design.
 This is a SHAPE TEMPLATE, not a coverage suite. The full dsplot coverage lives
 in the sibling test files (`test_plottable_construction.py`,
 `test_panel_composition.py`, `test_figure_orchestrator.py`, etc.).
@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import matplotlib
 
-matplotlib.use("Agg")  # headless — required before any pyplot import in tests
+matplotlib.use("Agg")  # headless - required before any pyplot import in tests
 
 
 def test_dsplot_example_composition(tmp_path):

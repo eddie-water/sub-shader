@@ -1,17 +1,17 @@
-"""DynamicPanel3D — animated Panel for an Axes3D cell.
+"""DynamicPanel3D - animated Panel for an Axes3D cell.
 
 DynamicPanel is 2D-only: its ``_render_background`` calls ``setup_vector_axes``
 and 2D spine/tick logic that breaks on an Axes3D. StaticPanel3D has the 3D
 chrome but no animation. DynamicPanel3D bridges them: it subclasses
-DynamicPanel — inheriting the frame model, the master-clock ``tick()`` hook,
-``_managed_externally``, and the tracked-artist per-frame removal — and
+DynamicPanel - inheriting the frame model, the master-clock ``tick()`` hook,
+``_managed_externally``, and the tracked-artist per-frame removal - and
 overrides ONLY ``_render_background`` to install the shared 3D chrome
 (``render_3d_chrome`` + ``draw_3d_border`` from static_panel_3d) instead of the
 2D axis setup.
 
 The per-frame artist removal in the inherited ``_animate`` works on Axes3D
 because 3D Vector draws via ``ax.quiver``/``ax.plot`` + scatter tip + 3D text,
-which land in ``ax.collections`` / ``ax.lines`` / ``ax.texts`` — the same
+which land in ``ax.collections`` / ``ax.lines`` / ``ax.texts`` - the same
 artist collections the id-diff snapshot tracks for 2D.
 
 Because compose()'s master clock ticks every ``isinstance(p, DynamicPanel)``

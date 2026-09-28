@@ -1,4 +1,4 @@
-"""Annotation Plottable — 2D text with optional arrow callout.
+"""Annotation Plottable - 2D text with optional arrow callout.
 
 Supports data-coord placement (default) and axes-relative placement
 (transform="axes") via matplotlib's transAxes. The axes-relative path
@@ -25,7 +25,7 @@ class Annotation(Plottable):
     transform="data" (default) places text at xy in data coords;
     transform="axes" places text at xy in axes-relative coords (0,0 = lower
     left of axes, 1,1 = upper right). The arrow callout (if any) uses data
-    coords regardless of transform — arrows always point to a data location.
+    coords regardless of transform - arrows always point to a data location.
     """
 
     def __init__(self,
@@ -84,7 +84,7 @@ class Annotation(Plottable):
             return
 
         # Axes3D requires text2D (or text with 3 coords). Detect via the
-        # presence of get_zlim — Annotation is 2D semantically but the
+        # presence of get_zlim - Annotation is 2D semantically but the
         # axes-relative form is still useful for 3D legends.
         is_3d = hasattr(ax, "get_zlim")
 

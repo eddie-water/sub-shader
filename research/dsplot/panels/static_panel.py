@@ -1,4 +1,4 @@
-"""StaticPanel — single-state Panel that renders all Plottables once.
+"""StaticPanel - single-state Panel that renders all Plottables once.
 
 Renders in insertion order; z-ordering between plottables is resolved by each
 Plottable's own zorder kwarg. Title/subtitle/lim/axis-style/axis-labels all
@@ -6,7 +6,7 @@ flow through `dsplot.axes_setup.setup_vector_axes` so the panel's chrome is
 consistent with any other 2D vector panel rendered by the library.
 
 Layout defaults resolve LAZILY against `dsplot.style.DEFAULT_*` at render()
-time (per D-05) — reassigning a style constant between construction and
+time (per D-05) - reassigning a style constant between construction and
 render observes the new value.
 """
 from __future__ import annotations
@@ -21,7 +21,7 @@ from .base import Panel
 class StaticPanel(Panel):
     """Single-state panel. `render()` iterates the plottables in insertion order.
 
-    `render()` raises RuntimeError if called before `attach()` — the owning
+    `render()` raises RuntimeError if called before `attach()` - the owning
     Figure handles attach + render in its own render loop.
     """
 
@@ -64,7 +64,7 @@ class StaticPanel(Panel):
         self.show_grid = show_grid
         self.tick_positions = tick_positions
         # x_label / y_label render EXTERNAL axis labels in the gutter via the
-        # same path used by HeatmapPanel / TimeSeriesPanel — distinct from
+        # same path used by HeatmapPanel / TimeSeriesPanel - distinct from
         # axis_labels=True which puts italic "x"/"y" INSIDE the cell near the
         # spine tips. show_tick_labels enables numerical tick labels (only
         # meaningful when show_ticks=True).
@@ -132,10 +132,10 @@ class StaticPanel(Panel):
             )
 
         if self.show_grid:
-            # ax.grid() draws lines at TICK positions — but setup_vector_axes
+            # ax.grid() draws lines at TICK positions - but setup_vector_axes
             # cleared ticks to [] (and show_ticks=False panels never set any), so
             # without locators the grid renders nothing. Establish an integer grid
-            # of locators (skipping 0 — the axis crosshair owns that line) with the
+            # of locators (skipping 0 - the axis crosshair owns that line) with the
             # tick MARKS/labels kept invisible, so the light grid shows even on a
             # tickless panel.
             if not self.show_ticks:
@@ -159,7 +159,7 @@ class StaticPanel(Panel):
         # External x/y axis labels: route through the shared decoration helper
         # so spacing/font/inset match Heatmap and TimeSeries panels. Passing
         # xticks=None / yticks=None preserves whatever ticks the show_ticks
-        # branch above set up — _apply_axis_decoration only restyles ticks
+        # branch above set up - _apply_axis_decoration only restyles ticks
         # when an explicit positions list is passed. Local import to dodge the
         # static_panel ↔ heatmap_panel module cycle.
         if self.x_label is not None or self.y_label is not None:

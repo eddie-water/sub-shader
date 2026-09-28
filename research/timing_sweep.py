@@ -1,8 +1,8 @@
-"""Config sweep — compare live timing across backend / chunk_size / overlap.
+"""Config sweep - compare live timing across backend / chunk_size / overlap.
 
 One-factor-at-a-time (OFAT) around a baseline: each config is a *real* live run
 (same pipeline as ``timing_live``) recorded to the shared CSV, then rendered as a
-stacked-bar comparison PNG. Runs are **un-paced** — we want raw compute-per-frame
+stacked-bar comparison PNG. Runs are **un-paced** - we want raw compute-per-frame
 to answer "which setup is cheapest?", not real-time slack.
 
 Axes covered here (all propagate through ``SubShader`` with no src changes):
@@ -71,7 +71,7 @@ def _run_one(overrides, seconds):
 
     Each config gets its own `python test_suite.py --live-timing ...` process so
     no warm GPU state (CuPy pool, cuFFT plan cache, CUDA context) carries between
-    configs — the comparison is fair. The child prints `RUN_ID=<id>`; we parse it.
+    configs - the comparison is fair. The child prints `RUN_ID=<id>`; we parse it.
     """
     argv = [
         sys.executable, _TEST_SUITE, "--live-timing", "--quiet", "--no-pace",
@@ -100,7 +100,7 @@ def _run_one(overrides, seconds):
 def run_sweep(audio_path=AUDIO_BELTRAN, seconds=SWEEP_SECONDS):
     """Run the OFAT sweep, append to the CSV, and render the comparison PNG."""
     configs = _sweep_configs()
-    print(f"\nSubShader Config Sweep — {len(configs)} runs, "
+    print(f"\nSubShader Config Sweep - {len(configs)} runs, "
           f"{seconds:.0f}s each, un-paced, fresh process per config\n")
 
     results = []  # (run_id, group, label)
@@ -118,7 +118,7 @@ def run_sweep(audio_path=AUDIO_BELTRAN, seconds=SWEEP_SECONDS):
         print(f"  numbers     →  {RESULTS_CSV}")
         print(f"  table       →  {os.path.join(TIMING_DIR, 'TIMING.md')}\n")
     else:
-        print("\n  No runs recorded — nothing to plot.\n")
+        print("\n  No runs recorded - nothing to plot.\n")
 
 
 def _run_lookup(rows):
@@ -148,7 +148,7 @@ def _plot(results):
         len(groups), 1, figsize=(9, 2.4 * len(groups) + 0.6), squeeze=False,
     )
     axes = axes[:, 0]
-    fig.suptitle("SubShader config sweep — per-frame compute (ms)",
+    fig.suptitle("SubShader config sweep - per-frame compute (ms)",
                  fontsize=13, fontweight="bold")
 
     seen_stages = []

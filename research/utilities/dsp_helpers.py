@@ -29,7 +29,7 @@ class WaypointChirpConfig:
 
     `clip_to_waypoints` clamps the resulting curve to [min_wp_freq,
     max_wp_freq]. Set False when an endpoint waypoint sits AT the desired
-    extreme (e.g. ending at 20 kHz) — the cubic spline will tend to overshoot
+    extreme (e.g. ending at 20 kHz) - the cubic spline will tend to overshoot
     that extreme inside the last segment, and the clamp pins the curve into
     a visible plateau. With clip off, brief spline overshoot just clips
     against the panel edge in the plot.
@@ -58,7 +58,7 @@ def build_fm_chirp(sr: int, duration_s: float, fc: float, delta_f: float,
         f_floor: Minimum allowed frequency in Hz
 
     Returns:
-        (signal, inst_freq, t) — all 1-D arrays of length int(sr * duration_s)
+        (signal, inst_freq, t) - all 1-D arrays of length int(sr * duration_s)
     """
     n = int(sr * duration_s)
     t = np.linspace(0, duration_s, n, dtype=np.float64)
@@ -83,7 +83,7 @@ def build_fm_chirp_chunks(fc, delta_f, f_mod_start, f_mod_end, sr, chunk_size,
     """Generate a chirped-modulation FM signal pre-sliced into overlapping chunks.
 
     Returns:
-        (chunks, signal, inst_freq, t) — chunks is a list of arrays,
+        (chunks, signal, inst_freq, t) - chunks is a list of arrays,
         the rest are the full signal/freq/time for reference plotting.
     """
     hop_size = int(chunk_size * (1 - overlap_factor))
@@ -112,7 +112,7 @@ def build_wandering_chirp(sr: int, duration_s: float, f_lo: float, f_hi: float,
                 0.15 means waypoints stay in the inner 70% of the log-freq range.
 
     Returns:
-        (signal, inst_freq, t)  — all 1-D arrays of length int(sr * duration_s)
+        (signal, inst_freq, t)  - all 1-D arrays of length int(sr * duration_s)
     """
     rng = np.random.default_rng(seed)
     n = int(sr * duration_s)
@@ -152,7 +152,7 @@ def build_wandering_chirp_chunks(f_lo, f_hi, sr, chunk_size, overlap_factor,
     """Generate a frequency-wandering chirp pre-sliced into overlapping chunks.
 
     Returns:
-        (chunks, signal, inst_freq, t) — chunks is a list of arrays,
+        (chunks, signal, inst_freq, t) - chunks is a list of arrays,
         the rest are the full signal/freq/time for reference plotting.
     """
     hop_size = int(chunk_size * (1 - overlap_factor))
@@ -174,7 +174,7 @@ def build_bouncing_chirp(sr: int, duration_s: float,
     """Generate a chirp whose frequency ascends across decades with parabolic dips.
 
     The frequency contour rises overall from ~20 Hz to ~20 kHz across 3 frequency
-    decades, with periodic parabolic dips — like a ball bouncing upward. Each bounce
+    decades, with periodic parabolic dips - like a ball bouncing upward. Each bounce
     starts near the previous decade floor, rises toward the next decade ceiling, then
     dips partway back before rising higher.
 
@@ -190,7 +190,7 @@ def build_bouncing_chirp(sr: int, duration_s: float,
         seed: Random seed for optional jitter (None = deterministic)
 
     Returns:
-        (signal, inst_freq, t) — all 1-D arrays of length int(sr * duration_s)
+        (signal, inst_freq, t) - all 1-D arrays of length int(sr * duration_s)
     """
     if f_decades is None:
         f_decades = [20, 200, 2000, 20000]
@@ -289,16 +289,16 @@ def build_waypoint_chirp(sr: int, duration_s: float,
                  gives a soft start/end; "clamped" (zero first derivative) gives
                  flat takeoff/landing.
         interp: interpolation kernel for the log-frequency curve.
-                "cubic"  — CubicSpline: C^2-smooth, cleanest for gentle shapes,
+                "cubic"  - CubicSpline: C^2-smooth, cleanest for gentle shapes,
                            but OVERSHOOTS badly on steep/aggressive walls.
-                "pchip"  — PchipInterpolator: shape-preserving (monotone between
-                           waypoints, NO overshoot) — use for aggressive dips/ramps
+                "pchip"  - PchipInterpolator: shape-preserving (monotone between
+                           waypoints, NO overshoot) - use for aggressive dips/ramps
                            and flat plateaus that must not sag.
-                "akima"  — Akima1DInterpolator: low-overshoot, slightly smoother
+                "akima"  - Akima1DInterpolator: low-overshoot, slightly smoother
                            than pchip but can still wiggle a little.
 
     Returns:
-        (signal, inst_freq, t) — all 1-D arrays of length int(sr * duration_s)
+        (signal, inst_freq, t) - all 1-D arrays of length int(sr * duration_s)
     """
     if len(waypoints) < 2:
         raise ValueError(f"Need at least 2 waypoints, got {len(waypoints)}")
@@ -321,7 +321,7 @@ def build_waypoint_chirp(sr: int, duration_s: float,
     # CubicSpline (C^2 continuous, smooth second derivative across waypoints)
     # gives the cleanest bounded humps for gently-paced chirps. Akima and
     # Pchip both produce visible "kinks" at waypoints (discontinuous second
-    # derivative) — fine for protecting against ringing on aggressive slope
+    # derivative) - fine for protecting against ringing on aggressive slope
     # flips, but visibly angular on smoother shapes. CubicSpline's only
     # weakness is overshoot when slopes flip sharply between waypoints; for
     # aggressive walls (steep dips/ramps) that overshoot explodes, so pick
@@ -366,18 +366,18 @@ def build_log_sweep_oscillating(sr: int, duration_s: float,
     the end ("stay low for longer, rise late"). A slow sine ripples the
     contour by +/- osc_octaves so the time-frequency ridge undulates instead
     of tracing one clean line. The wobble breaks the low-frequency CWT smear
-    into a gently textured ribbon rather than a single obvious symmetric fan —
+    into a gently textured ribbon rather than a single obvious symmetric fan -
     the smear reads as intentional motion, not as an artifact.
 
     Args:
         sr: Sample rate in Hz
         duration_s: Signal duration in seconds
-        f_start: Frequency at t=0 (Hz) — set low for slow, readable cycles
+        f_start: Frequency at t=0 (Hz) - set low for slow, readable cycles
         f_end: Frequency at t=duration_s (Hz)
         osc_octaves: Wobble amplitude in octaves (peak deviation each way).
                      ~0.3 is a gentle undulation; >0.5 starts to look wavy.
         n_osc: Number of full wobble cycles across the build duration.
-        osc_phase: Phase offset (radians) of the wobble — shifts where the
+        osc_phase: Phase offset (radians) of the wobble - shifts where the
                    undulations land relative to the trim window.
         osc_decay: Exponential decay rate of the wobble amplitude over the
                    sweep (0 = constant wobble; >0 fades the wobble as the
@@ -388,7 +388,7 @@ def build_log_sweep_oscillating(sr: int, duration_s: float,
                     climbing). <1 rises fast then flattens high.
 
     Returns:
-        (signal, inst_freq, t) — all 1-D arrays of length int(sr * duration_s)
+        (signal, inst_freq, t) - all 1-D arrays of length int(sr * duration_s)
     """
     n = int(sr * duration_s)
     t = np.arange(n, dtype=np.float64) / sr
@@ -422,11 +422,11 @@ def build_click_plus_tone(
     """Sustained sine tone with a single Gaussian-windowed noise click.
 
     When ``click_center_hz`` is None (default), the click is a true broadband
-    Gaussian-windowed white-noise impulse — energy at every frequency
+    Gaussian-windowed white-noise impulse - energy at every frequency
     simultaneously, producing a vertical streak across the full spectrogram.
     When ``click_center_hz`` is a number, the noise is rectangular-bandpassed
     to a 2 kHz-wide band around that centre (the "spectrally-centred burst"
-    variant — more like a tone burst than a click).
+    variant - more like a tone burst than a click).
 
     The instantaneous frequency curve is constant at ``tone_hz`` (the click is
     broadband and has no single inst-freq). Render-time callers decide whether
@@ -437,7 +437,7 @@ def build_click_plus_tone(
         duration_s: Total signal duration in seconds.
         tone_hz: Sustained tone frequency in Hz.
         click_t: Time of click centre in seconds.
-        click_center_hz: When None, no bandpass — true broadband click. When
+        click_center_hz: When None, no bandpass - true broadband click. When
             numeric, centre frequency of a 2 kHz-wide rectangular bandpass.
         click_duration_s: Gaussian FWHM of the click envelope in seconds.
         click_amp: Peak absolute amplitude of the click burst.
@@ -445,7 +445,7 @@ def build_click_plus_tone(
         click_seed: RNG seed for reproducibility.
 
     Returns:
-        (signal, inst_freq, t) — all 1-D float64 arrays of length
+        (signal, inst_freq, t) - all 1-D float64 arrays of length
         ``int(sr * duration_s)``.
     """
     n = int(sr * duration_s)
@@ -506,7 +506,7 @@ def build_low_vibrato(
         amp: Signal amplitude.
 
     Returns:
-        (signal, inst_freq, t) — all 1-D float64 arrays of length
+        (signal, inst_freq, t) - all 1-D float64 arrays of length
         ``int(sr * duration_s)``.
     """
     n = int(sr * duration_s)
@@ -524,7 +524,7 @@ def build_bouncing_chirp_chunks(sr, chunk_size, overlap_factor, n_frames,
     """Generate a bouncing chirp pre-sliced into overlapping chunks.
 
     Returns:
-        (chunks, signal, inst_freq, t) — chunks is a list of arrays,
+        (chunks, signal, inst_freq, t) - chunks is a list of arrays,
         the rest are the full signal/freq/time for reference plotting.
     """
     hop_size = int(chunk_size * (1 - overlap_factor))

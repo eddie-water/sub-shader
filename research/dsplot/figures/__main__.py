@@ -1,4 +1,4 @@
-"""``python -m research.dsplot.figures`` — regenerate all DSP.md figures.
+"""``python -m research.dsplot.figures`` - regenerate all DSP.md figures.
 
 Output convention:
   - Default mode (no ``--suffix``): writes the canonical filenames into
@@ -17,7 +17,7 @@ import sys
 
 import matplotlib
 
-# Headless rendering — no GUI window pops up on dispatcher invocation.
+# Headless rendering - no GUI window pops up on dispatcher invocation.
 matplotlib.use("Agg")
 
 # Ensure ``import dsplot`` works regardless of cwd: insert research/ on path.

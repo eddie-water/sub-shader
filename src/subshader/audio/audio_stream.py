@@ -66,7 +66,7 @@ class AudioStream:
     def get_chunk(self) -> object:
         """Return the next audio chunk at the current reader position.
 
-        Non-blocking — returns None if there is no more audio data. The
+        Non-blocking - returns None if there is no more audio data. The
         caller is responsible for checking None and handling end-of-file.
 
         Returns:
@@ -87,18 +87,22 @@ class AudioStream:
         - If the render loop has fallen behind the audio clock: skip to the
           most recent chunk position (D-09, frame-skip).
         - If a loop wrap is detected: reset reader.file_pos to 0 and continue.
-        - If no more audio data: return None (caller handles end-of-file).
-        - If the audio clock stays frozen below the boundary for longer than
-          self._stall_timeout_s: raise AudioStreamStalledError (stall watchdog).
+        - If fewer than chunk_size samples remain (EOF tail): yield 1ms and
+          wait for the player's loop wrap instead of returning immediately -
+          the wrap handler resets the reader and the loop continues.
+        - If the audio clock stays frozen for longer than
+          self._stall_timeout_s on ANY wait path (pre-boundary or EOF tail):
+          raise AudioStreamStalledError (stall watchdog).
 
         Returns:
-            np.ndarray[np.float64] or None: Mono audio chunk aligned to the
-                current audio clock position, or None at EOF.
+            np.ndarray[np.float64]: Mono audio chunk aligned to the current
+                audio clock position. (None is retained in the signature for
+                callers, but looping playback waits through EOF internally.)
 
         Raises:
             AudioStreamStalledError: If the playback clock has not advanced
-                for self._stall_timeout_s seconds while waiting on a chunk
-                boundary — typically an ALSA underrun on the WSL2 audio bridge.
+                for self._stall_timeout_s seconds while waiting - typically
+                an ALSA underrun on the WSL2 audio bridge.
         """
         hop_size = self._config.hop_size
         last_pos = self._player.get_playback_sample()
@@ -109,25 +113,28 @@ class AudioStream:
             if self._player.has_looped():
                 self._player.clear_loop_event()
                 self._reader.file_pos = 0
-                log.info("AudioStream: audio looped — reader reset to start")
+                log.info("AudioStream: audio looped - reader reset to start")
 
             playback_pos = self._player.get_playback_sample()
-            next_boundary = self._reader.file_pos
 
+            # Stall watchdog guards every wait path - a frozen clock must
+            # raise whether we are waiting below a boundary or in the EOF tail
+            if playback_pos != last_pos:
+                # Clock is alive - reset the stall watchdog
+                last_pos = playback_pos
+                stall_deadline = time.monotonic() + self._stall_timeout_s
+            elif time.monotonic() >= stall_deadline:
+                raise AudioStreamStalledError(
+                    f"Audio stream stalled: audio clock frozen at sample "
+                    f"{playback_pos} for {self._stall_timeout_s}s "
+                    f"(stream active={self._player.is_active()}); likely an "
+                    f"ALSA underrun on the WSL2 audio bridge - restart the "
+                    f"app / audio device to recover"
+                )
+
+            next_boundary = self._reader.file_pos
             if playback_pos < next_boundary:
-                if playback_pos != last_pos:
-                    # Clock is alive — reset the stall watchdog
-                    last_pos = playback_pos
-                    stall_deadline = time.monotonic() + self._stall_timeout_s
-                elif time.monotonic() >= stall_deadline:
-                    raise AudioStreamStalledError(
-                        f"Audio stream stalled: audio clock frozen at sample "
-                        f"{playback_pos} for {self._stall_timeout_s}s "
-                        f"(stream active={self._player.is_active()}); likely an "
-                        f"ALSA underrun on the WSL2 audio bridge — restart the "
-                        f"app / audio device to recover"
-                    )
-                # Audio clock has not yet reached next chunk — yield briefly (D-08)
+                # Audio clock has not yet reached next chunk - yield briefly (D-08)
                 time.sleep(0.001)
                 continue
 
@@ -137,7 +144,15 @@ class AudioStream:
             self._reader.file_pos = target_sample
 
             chunk = self._reader.get_chunk()
-            return chunk  # None signals EOF to caller
+            if chunk is None:
+                # EOF tail: fewer than chunk_size samples remain. Wait for the
+                # player's loop wrap (handled at top of loop) instead of
+                # returning - a bare return here made run() busy-spin with no
+                # sleep, no event pumping, and no watchdog coverage.
+                time.sleep(0.001)
+                continue
+
+            return chunk
 
     def get_playback_sample(self) -> int:
         """Return the current playback position in samples."""

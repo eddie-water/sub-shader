@@ -8,7 +8,7 @@ Layering contract
 -----------------
 The in-``src`` timing primitive is the ``@timed`` decorator
 (``subshader.utils.timing``), which writes ``self._timing_{method}_ms`` and nothing
-else. This module never imports from ``src`` and never measures — it only records
+else. This module never imports from ``src`` and never measures - it only records
 the timing arrays the drivers collect, and renders them. ``research/`` may read
 ``src``; ``src`` never reads ``research/``.
 
@@ -35,8 +35,13 @@ from .constants import TIMING_DIR
 RESULTS_CSV = os.path.join(TIMING_DIR, "timing_results.csv")
 RESULTS_MD = os.path.join(TIMING_DIR, "TIMING.md")
 
+# Per-iteration sidecar: one row per (run, frame, stage) so spikes can be traced
+# to the exact frame they happened in. The main CSV stays aggregate-only.
+ITERATIONS_CSV = os.path.join(TIMING_DIR, "timing_iterations.csv")
+ITER_COLUMNS = ["run_id", "frame_idx", "stage", "ms"]
+
 # Method-comparison results (STFT / PyWavelet / CWT-CPU / CWT-GPU) live in their
-# own small CSV — different shape from the per-stage table. The measurement lives
+# own small CSV - different shape from the per-stage table. The measurement lives
 # in research/timing_methods.py; storage + rendering stay here (no src imports) so
 # render_markdown can fold the table in.
 METHODS_CSV = os.path.join(TIMING_DIR, "timing_methods.csv")
@@ -65,7 +70,7 @@ TOTAL_STAGE = "TOTAL"
 
 # Stage-name prefixes excluded from the per-frame compute total and % breakdown:
 #   init:*  one-time setup costs
-#   wait:*  real-time-paced slack (e.g. blocking on the audio clock) — not work
+#   wait:*  real-time-paced slack (e.g. blocking on the audio clock) - not work
 _EXCLUDED_PREFIXES = ("init:", "wait:")
 
 
@@ -218,6 +223,7 @@ class TimingRecorder:
         })
 
         self._append(rows)
+        self._append_iterations(run_id, stage_arrays, total_arr)
         return run_id
 
     def _append(self, rows):
@@ -226,6 +232,30 @@ class TimingRecorder:
         new_file = not os.path.exists(self.csv_path) or os.path.getsize(self.csv_path) == 0
         with open(self.csv_path, "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=COLUMNS)
+            if new_file:
+                writer.writeheader()
+            writer.writerows(rows)
+
+    def _append_iterations(self, run_id, stage_arrays, total_arr,
+                           iter_csv=ITERATIONS_CSV):
+        """Persist raw per-frame timings (multi-sample stages + TOTAL) to the
+        sidecar CSV. init:* one-shots are skipped; wait:* is kept - its
+        per-frame trace shows the loop's real pacing behaviour."""
+        rows = []
+        for stage, arr in stage_arrays.items():
+            arr = np.asarray(arr, dtype=float)
+            if stage.startswith("init:") or arr.size <= 1:
+                continue
+            rows.extend({"run_id": run_id, "frame_idx": i, "stage": stage,
+                         "ms": round(float(v), 4)} for i, v in enumerate(arr))
+        rows.extend({"run_id": run_id, "frame_idx": i, "stage": TOTAL_STAGE,
+                     "ms": round(float(v), 4)} for i, v in enumerate(total_arr))
+        if not rows:
+            return
+        os.makedirs(os.path.dirname(iter_csv), exist_ok=True)
+        new_file = not os.path.exists(iter_csv) or os.path.getsize(iter_csv) == 0
+        with open(iter_csv, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=ITER_COLUMNS)
             if new_file:
                 writer.writeheader()
             writer.writerows(rows)
@@ -293,7 +323,7 @@ _PIPE_LABEL = {
     "edge_trim": "Discard Edges",
     "hop_center": "Extract New Hop",
     "downsample": "Down-sample",
-    "buf_push": "Store Onto Frame Buffer",
+    "buf_push": "Store Into Frame Buffer",
     "tex_upload": "Upload To Texture",
     "gl_clear": "Clear Previous Display Buffer",
     "gl_draw": "Shader Draw",
@@ -351,7 +381,7 @@ def methods_table_md(csv_path=METHODS_CSV):
 
 
 def _fmt_hz(hz):
-    """Hz below 1000, kHz above — one decimal."""
+    """Hz below 1000, kHz above - one decimal."""
     hz = float(hz)
     return f"{hz / 1000:.1f} kHz" if hz >= 1000 else f"{hz:g} Hz"
 
@@ -386,7 +416,7 @@ def methods_params(csv_path=METHODS_CSV):
 def config_summary_rows(csv_path=RESULTS_CSV):
     """One summary row per unique (backend, chunk, freqs), newest value wins.
 
-    Returns dicts with backend / chunk / freqs / mean_ms / fps / rt — the data
+    Returns dicts with backend / chunk / freqs / mean_ms / fps / rt - the data
     behind the config chart and (historically) the config table.
     """
     rows = _read_rows(csv_path)
@@ -421,12 +451,22 @@ def _fmt_dur(ms):
     return f"{ms / 1000:.1f} s" if ms >= 1000 else f"{ms:.0f} ms"
 
 
-def render_markdown(csv_path=RESULTS_CSV, md_path=RESULTS_MD):
-    """Render the timing report.
+# Coarse init module rows - the authoritative one-time total. Fine init:*
+# sub-stage rows break these down and must NOT be summed alongside them.
+_INIT_COARSE = ("init:audio", "init:cuda", "init:dsp", "init:renderer",
+                "init:prescan", "init:prime", "init:other", "init:build")
 
-    Overview (headline numbers) → Pipeline Profiling (test params, then startup
-    and runtime each as high-level + breakdown) → method comparison → settings
-    sweep. Returns the path written, or ``None`` if there are no results yet.
+
+def render_markdown(csv_path=RESULTS_CSV, md_path=RESULTS_MD):
+    """Render the timing report - verdict, then a takeaway-led section per phase.
+
+    Start Up and Process Loop each pair their pipeline flowchart with the
+    per-stage gantt - one continuous lowercase greek sequence (Start Up α–κ,
+    Process Loop λ–ω, 24/24 letters) prefixes the gantt rows AND sits under
+    the flowchart blocks, so the two figures in each pair cross-reference
+    letter-for-letter. Why This Method closes with the comparisons, sweep,
+    and test parameters. Returns the path written, or ``None`` if there are
+    no results yet.
     """
     rows = _read_rows(csv_path)
     if not rows:
@@ -435,31 +475,73 @@ def render_markdown(csv_path=RESULTS_CSV, md_path=RESULTS_MD):
     latest = [r for r in rows if r["run_id"] == latest_id]
     total_row = next((r for r in latest if r["stage"] == TOTAL_STAGE), None)
     total = float(total_row["mean_ms"]) if total_row else 0.0
+    worst = float(total_row["max_ms"]) if total_row else 0.0
     rt = total_row["rt_margin"] if total_row else ""
     rt_val = float(rt) if rt not in ("", None) else 0.0
     deadline_ms = rt_val * total if rt_val else total
-    fps = 1000.0 / total if total else 0.0
-    init_total = sum(float(r["mean_ms"]) for r in latest if r["stage"].startswith("init:"))
+    init_total = sum(float(r["mean_ms"]) for r in latest
+                     if r["stage"] in _INIT_COARSE)
     ok = rt_val >= 1
     params = methods_params(csv_path=METHODS_CSV)
 
     p = ["# SubShader Timing", ""]
 
-    # --- Overview ------------------------------------------------------------
-    p.append("## Overview")
-    p.append("")
-    p.append(f"{'✅' if ok else '⚠️'} **Real-Time Performance**")
-    p.append("")
-    if params and params["sample_rate"] and rt_val:
-        speed = params["sample_rate"] * rt_val
-        p.append(f"- **Processing Speed** — ~{speed:,.0f} samples per second")
-    p.append(f"- **FPS** — ~{fps:.0f} frames per second")
-    p.append(f"- **Deadline** — {rt_val:.0f}× under the {deadline_ms:.0f} ms deadline")
+    # --- Verdict + hero --------------------------------------------------------
+    verdict = (f"{'✅' if ok else '⚠️'} **Real-time** - {total:.1f} ms of work "
+               f"per {deadline_ms:.0f} ms frame budget, a {rt_val:.0f}× margin")
+    if worst > 0 and deadline_ms > 0:
+        verdict += (f". The worst frame observed took {worst:.0f} ms - "
+                    f"still {deadline_ms / worst:.1f}× under the deadline.")
+    else:
+        verdict += "."
+    p.append(verdict)
     p.append("")
 
-    # --- Pipeline Profiling --------------------------------------------------
-    p.append("## Pipeline Profiling")
+    # --- Start Up --------------------------------------------------------------
+    p.append("## Start Up")
     p.append("")
+    p.append(f"**Start up pays {_fmt_dur(init_total)} once - allocations, kernel "
+             "builds, GPU warmup - so every frame of the Process Loop stays "
+             "lean.**")
+    p.append("")
+    p.append("![Start up - one-time construction, CPU and GPU lanes]"
+             "(subshader_startup.drawio.png)")
+    p.append("")
+    p.append("![Start up per-stage cascade, ending at the first Process Loop "
+             "deadline window - rows α–κ match the flowchart blocks]"
+             "(timing_startup_gantt.png)")
+    p.append("")
+
+    # --- Process Loop ----------------------------------------------------------
+    p.append("## Process Loop")
+    p.append("")
+    p.append(f"**One frame of audio propagates end to end in {total:.1f} ms, "
+             f"against a {deadline_ms:.0f} ms deadline.**")
+    p.append("")
+    p.append("![Process Loop - the per-frame pipeline, CPU and GPU lanes]"
+             "(subshader_runtime.drawio.png)")
+    p.append("")
+    p.append("![Process Loop per-stage cascade - rows λ–ω match the flowchart "
+             "blocks](timing_runtime_gantt.png)")
+    p.append("")
+
+    # --- Why this method ---------------------------------------------------------
+    has_methods = bool(latest_method_rows())
+    has_config = bool(config_summary_rows(csv_path))
+    if has_methods or has_config or params:
+        p.append("## Why This Method")
+        p.append("")
+    if has_methods:
+        p.append("**The GPU CWT keeps wavelet accuracy at real-time speed - the "
+                 "textbook options give up one or the other.**")
+        p.append("")
+        p.append("![Fourier vs Wavelet - time per frame (log scale) and frequency "
+                 "resolution](timing_methods.png)")
+        p.append("")
+    if has_config:
+        p.append("![Compute per frame for each backend, chunk size, and resolution]"
+                 "(timing_config.png)")
+        p.append("")
     if params:
         p.append("**Test parameters**")
         p.append("")
@@ -478,36 +560,6 @@ def render_markdown(csv_path=RESULTS_CSV, md_path=RESULTS_MD):
         p.append("| " + " | ".join(name for name, _ in param_rows) + " |")
         p.append("| " + " | ".join("---" for _ in param_rows) + " |")
         p.append("| " + " | ".join(value for _, value in param_rows) + " |")
-        p.append("")
-
-    p.append("### Pipeline Structure")
-    p.append("")
-    p.append("![Start up — one-time construction, CPU and GPU lanes]"
-             "(pipeline%20start%20up%20init.drawio.png)")
-    p.append("")
-    p.append("![Runtime loop — the per-frame pipeline, CPU and GPU lanes]"
-             "(pipeline%20runtime%20loop%20process.drawio.png)")
-    p.append("")
-    p.append("### Start Up vs Runtime — Measured Per-Stage Timing")
-    p.append("")
-    p.append("![Pipeline timing — startup construction and runtime loop, each to "
-             "scale](timing_pipeline.png)")
-    p.append("")
-
-    # --- Method comparison ---------------------------------------------------
-    if latest_method_rows():
-        p.append("## Fourier vs Wavelet Implementations")
-        p.append("")
-        p.append("![Fourier vs Wavelet — time per frame (log scale) and frequency "
-                 "resolution](timing_methods.png)")
-        p.append("")
-
-    # --- Settings sweep ------------------------------------------------------
-    if config_summary_rows(csv_path):
-        p.append("## Performance Across Settings")
-        p.append("")
-        p.append("![Compute per frame for each backend, chunk size, and resolution]"
-                 "(timing_config.png)")
         p.append("")
 
     os.makedirs(os.path.dirname(md_path), exist_ok=True)

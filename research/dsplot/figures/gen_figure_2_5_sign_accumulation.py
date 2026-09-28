@@ -1,14 +1,14 @@
-"""gen_figure_2_5_sign_accumulation — §2.5 of DSP.md.
+"""gen_figure_2_5_sign_accumulation - §2.5 of DSP.md.
 
 The dot product as a *pattern detector*, watched one pair at a time. This
 section comes BEFORE sine waves enter the story (§2.6), so the figure works on
-plain sets of values — the "independent values" framing §2.4 left off on. Two
+plain sets of values - the "independent values" framing §2.4 left off on. Two
 sequences are compared sample by sample: each pair is multiplied, the SIGN of
 that product says whether the pair agrees (+), opposes (−), or abstains (0,
 when one value is zero), and the products accumulate into a single running sum.
-That running sum *is* the correlation — evidence of a shared pattern.
+That running sum *is* the correlation - evidence of a shared pattern.
 
-Layout — three COMPOSITE ROWS, one per relationship. None is a pure case —
+Layout - three COMPOSITE ROWS, one per relationship. None is a pure case -
 correlation is a NET tendency, not an all-or-nothing rule:
 
     row 1  similar     mostly agrees    → sum climbs  (positive correlation)
@@ -18,27 +18,27 @@ correlation is a NET tendency, not an all-or-nothing rule:
 Each composite row reads left → right:
 
     LEFT    a CompositePanel stacking TWO same-size plots on the shared sample
-            axis —
+            axis -
               1. the two input sequences a, b (overlaid stems, no signs)
-              2. their per-sample products a·b (stems, with the +/−/0 verdict —
-                 agree / oppose / abstain — on the zero line)
-    MIDDLE  a tall narrow "Sum" strip — the products collapsed into a single
+              2. their per-sample products a·b (stems, with the +/−/0 verdict -
+                 agree / oppose / abstain - on the zero line)
+    MIDDLE  a tall narrow "Sum" strip - the products collapsed into a single
             heavy stem rising (or falling) from zero to the running total, with
             the numeric dot product parked at its tip
-    RIGHT   a "Text box" — the case name and the factual outcome
+    RIGHT   a "Text box" - the case name and the factual outcome
 
-Dynamic (notebook) form — `show()`:
+Dynamic (notebook) form - `show()`:
     Each frame *processes the next pair*. Every plot's full sequence is laid out
     up front as faint ghosts; as the master clock advances, each pair lights up
-    in turn — the a/b stems brighten, their product stem and its +/−/0 verdict
+    in turn - the a/b stems brighten, their product stem and its +/−/0 verdict
     appear, and the Sum strip's single stem extends toward the running total.
-    The strip's final height is the dot product — large +, large −, or ≈ 0. The
+    The strip's final height is the dot product - large +, large −, or ≈ 0. The
     stacked left plots live inside a CompositePanel, but the figure master clock
     reaches them so every panel ticks in lockstep. No slider: the same
     FuncAnimation master clock the other notebook figures use, on time-series
     axes via DynamicTimeSeriesPanel.
 
-Static (doc) form — `render()`:
+Static (doc) form - `render()`:
     The fully processed final frame as a PNG, for inline embedding where the
     animation can't run.
 
@@ -83,7 +83,7 @@ from ..plottables.base import Plottable
 
 
 # ---------------------------------------------------------------------------
-# Data — three independent (a, b) pairs (N=16). Values are now UNIT magnitude
+# Data - three independent (a, b) pairs (N=16). Values are now UNIT magnitude
 # only (−1, 0, +1): it is the *agreement of signs*, not their strength, that
 # drives the correlation. Each pair is one of three kinds:
 #     agree    sign(a) == sign(b)   → product = +1   (+)
@@ -92,7 +92,7 @@ from ..plottables.base import Plottable
 #
 # Each row's layout follows the same story: a run of positive- and negative-
 # side agreements, two abstentions (one a=0, one b=0), two disagreements, then
-# more agreements — with the agree/disagree balance set per scenario:
+# more agreements - with the agree/disagree balance set per scenario:
 #     P1 Strong Agreement     12 agree,  2 disagree, 2 abstain → Σ = +10
 #     P2 Strong Disagreement   2 agree, 12 disagree, 2 abstain → Σ = −10
 #     P3 Weak Agreement        7 agree,  7 disagree, 2 abstain → Σ =   0
@@ -100,13 +100,13 @@ from ..plottables.base import Plottable
 N = 16
 N_IDX = np.arange(N, dtype=float)
 
-# P1 — Strong Agreement → Strong Positive Correlation
+# P1 - Strong Agreement → Strong Positive Correlation
 A1 = [1, 1, 1, -1, -1, -1,  0, 1,  1, -1,  1, 1, -1, -1, 1, -1]
 B1 = [1, 1, 1, -1, -1, -1,  1, 0, -1,  1,  1, 1, -1, -1, 1, -1]
-# P2 — Strong Disagreement → Strong Negative Correlation
+# P2 - Strong Disagreement → Strong Negative Correlation
 A2 = [1, 1, 1, -1, -1, -1,  0, -1,  1, -1,  1, 1, -1, -1, 1, -1]
 B2 = [-1, -1, -1, 1, 1, 1, -1,  0,  1, -1, -1, -1, 1, 1, -1, 1]
-# P3 — Weak Agreement → No Correlation (balanced mix, cancels to 0)
+# P3 - Weak Agreement → No Correlation (balanced mix, cancels to 0)
 A3 = [1, -1, 1, -1, 1, -1,  0, 1, -1,  1, -1, 1, -1, 1, -1, 1]
 B3 = [1, -1, -1, 1, 1, 1,  1, 0, -1, -1,  1, 1, -1, -1, 1, 1]
 
@@ -141,25 +141,25 @@ SCENARIOS = [
 #             sample axis (so they read top-to-bottom as one computation):
 #               1. the two input sequences a, b (overlaid stems, no signs)
 #               2. their per-sample products a·b (stems + the +/−/0 verdict)
-#     MIDDLE  a tall narrow "Sum" strip — one heavy stem collapsing the products
+#     MIDDLE  a tall narrow "Sum" strip - one heavy stem collapsing the products
 #             into the running total, with the numeric result at its tip
 #     RIGHT   a "Text box" carrying the case name + the outcome
 # Proportions are 4 : 1 : 3 (stem stack : Sum strip : text box).
-LEFT_UNITS = 4             # stem stack — wide, landscape (two stacked plots)
-SUM_UNITS = 1             # Sum strip — tall and narrow
+LEFT_UNITS = 4             # stem stack - wide, landscape (two stacked plots)
+SUM_UNITS = 1             # Sum strip - tall and narrow
 CASE_ROW_HEIGHT = 2.0      # two stacked plots → each ≈ one unit tall
 # Text box is a SQUARE cell. It spans TEXT_UNITS columns, so its rendered width
 # is TEXT_UNITS·unit_w PLUS the (TEXT_UNITS−1) inter-column gutters it absorbs;
 # its height is CASE_ROW_HEIGHT·unit_h. Square base units alone do NOT make it
-# square (the absorbed gutter widens it) — instead `_square_unit_height()`
+# square (the absorbed gutter widens it) - instead `_square_unit_height()`
 # derives the unit_h that makes width == height. See render()/save_gif()/show().
 TEXT_UNITS = 2
 WIDTH_UNITS = LEFT_UNITS + SUM_UNITS + TEXT_UNITS   # = 7
 
-# Static (composite PNG) layout — the shared-tile model: each case flattens to
+# Static (composite PNG) layout - the shared-tile model: each case flattens to
 # ONE 1-tall row [ stems (2 units) | Sum strip (1) | text (1) ], every cell the
 # size of fig-1's text box. Only the single input-stem plot is kept (the separate
-# product-stem plot is dropped — the Sum strip carries the result, the text the
+# product-stem plot is dropped - the Sum strip carries the result, the text the
 # reasoning). The ANIMATED path keeps the taller stacked LEFT_UNITS layout above,
 # so these are separate constants used only by _ab_panel / _case_row / _compose.
 STATIC_STEM_UNITS = 2
@@ -181,14 +181,14 @@ _run_peak = max(float(np.abs(s["running"]).max()) for s in SCENARIOS)
 RUNNING_YLIM = (-1.4 * _run_peak, 1.4 * _run_peak)
 RUNNING_YTICKS = [-round(_run_peak), 0, round(_run_peak)]
 
-# The Sum strip's own x-axis is meaningless (one bar) — a unit-wide span with the
+# The Sum strip's own x-axis is meaningless (one bar) - a unit-wide span with the
 # single stem parked at its centre.
 ACCUM_XLIM = (0.0, 1.0)
 ACCUM_X_CENTER = 0.5
 
 TITLE = "Figure 2.5 - Sign Agreement"
 
-# Short case names for the text box header band — one line each (the correlation
+# Short case names for the text box header band - one line each (the correlation
 # outcome lives in the blurb below). Promoted into a header band with a divider
 # rule by _text_panel (header_band=True), matching §2.6's header-line treatment.
 CASE_TITLES = [
@@ -197,39 +197,39 @@ CASE_TITLES = [
     "Weak Agreement",
 ]
 
-# Quick blurb beneath each heading — a plain-language read of what the plot is
+# Quick blurb beneath each heading - a plain-language read of what the plot is
 # doing this cycle. SCAFFOLD copy; the user authors the final prose.
 CASE_BLURBS = [
     "Most pairs share a sign, so their products are positive. "
-    "The running sum climbs steadily to +10 — strong positive correlation.",
+    "The running sum climbs steadily to +10 - strong positive correlation.",
     "Most pairs have opposite signs, so their products are negative. "
-    "The running sum falls steadily to −10 — strong negative correlation.",
+    "The running sum falls steadily to −10 - strong negative correlation.",
     "Agreements and disagreements roughly cancel, so the products offset. "
-    "The running sum drifts and ends near 0 — no real correlation.",
+    "The running sum drifts and ends near 0 - no real correlation.",
 ]
 
-# Row y-axis captions — currently disabled (no y-labels for now); kept here so
+# Row y-axis captions - currently disabled (no y-labels for now); kept here so
 # they can be wired back onto the leftmost column when wanted.
 ROW_Y_LABELS = ("a , b", "a · b", "running Σ")
 
-# One text colour for everything — chrome (titles, ticks, axis labels) AND the
-# in-plot glyphs/readout — matching figure 1's "single consistent value"
+# One text colour for everything - chrome (titles, ticks, axis labels) AND the
+# in-plot glyphs/readout - matching figure 1's "single consistent value"
 # approach. The chrome side is driven through _unified_style() (a temporary
 # style override, restored after build); in-plot text references TEXT_COLOR.
 TEXT_COLOR = "#EEEEEE"
 # 28"-canvas scale (were 22 / 16 at ~13"): the in-plot glyphs/readout and the
 # text-box body scale up so they read at the same visual weight as fig 1 / 241.
-IN_PLOT_FONTSIZE = 34        # sign glyphs AND the running-sum readout — one size
+IN_PLOT_FONTSIZE = 34        # sign glyphs AND the running-sum readout - one size
 TEXT_FONTSIZE = 26           # cycling text box (DynamicTextPanel _CaseText)
 TEXT_MARGIN_FRAC = 0.06      # text inset from its cell border (breathing room
-                             # matching the plots) — shared by the static
+                             # matching the plots) - shared by the static
                              # TextPanel and the animated _CaseText
 CASE_TITLE_COLOR = TEXT_COLOR
 
 # --- weights / palette ------------------------------------------------------
 GHOST_ALPHA = 0.16           # un-processed samples sit faint behind the action
 BRIGHT_ALPHA = 0.9           # a / b once their pair has been processed
-# 28"-canvas weights (were 5.0 / 8.0 / 1.8 at ~13") — the stems are this
+# 28"-canvas weights (were 5.0 / 8.0 / 1.8 at ~13") - the stems are this
 # figure's hero, so they scale up to stay bold on the wide canvas.
 SAMPLE_STEM_LINEWIDTH = style.DEFAULT_VECTOR_LINEWIDTH   # shared hero weight, common across figures
 SAMPLE_MARKERSIZE = style.DEFAULT_HERO_STEM_MARKERSIZE   # ONE circle size across every stem plot
@@ -245,16 +245,16 @@ SPINE_LINEWIDTH = 2.6
 # Spacing follows figure 1's philosophy: gutters/margins are PHYSICAL INCHES set
 # through a temporary style override (below), and `Figure.compose` derives the
 # gridspec fractions from them proportionally (= inch_gutter × n / Σ cell_sizes).
-# We do NOT pass raw wspace/hspace — that bypasses the derivation and makes the
+# We do NOT pass raw wspace/hspace - that bypasses the derivation and makes the
 # gutter diverge from the value chrome-title placement reads (titles overflow).
 # Values match figure 1's CONTENDER_TIGHT_STYLE so the two figures rhyme.
-# One gutter size everywhere — column gutters (stack ↔ strip ↔ text) and row
+# One gutter size everywhere - column gutters (stack ↔ strip ↔ text) and row
 # gutters (between cases) use the SAME physical inch value so every gap reads
 # identically. compose derives the per-axis gridspec fractions from this.
 GUTTER_INCHES = 0.60
 # COLUMN gutter matched to 2.4.1 (0.30) so the accumulator / text cells are the
 # SAME WIDTH as the other figures' tiles (the shared-square model). The ROW
-# gutter stays wider — it seats each case row's bottom x-tick labels (0..15)
+# gutter stays wider - it seats each case row's bottom x-tick labels (0..15)
 # between rows, which the column gutter doesn't carry.
 COL_GUTTER_INCHES = 0.30            # between stem stack, Sum strip, and text box
 ROW_GUTTER_INCHES = GUTTER_INCHES   # between the three case rows
@@ -265,7 +265,7 @@ MARGIN_INCHES = 0.40       # panel-border → figure edge; a touch wider than
 PAD_INCHES = 0.40          # cell-fill inset (axis labels sit close to the border)
 # Width (inches) of the in-plot strip reserved on the stem plot's LEFT for the
 # y-tick numbers (−1/0/1), so they sit INSIDE the cell frame instead of kissing
-# the left cell border — figure 2.6's content_left_pad treatment, shared here so
+# the left cell border - figure 2.6's content_left_pad treatment, shared here so
 # the two figures handle edge y-labels the same way.
 STATIC_LABEL_PAD_INCHES = 1.2
 
@@ -291,7 +291,7 @@ TOTAL_CYCLE_FRAMES = 3 * SEGMENT_FRAMES              # case 1 → 2 → 3
 #      `Figure.compose` derives proportional gridspec gutters the figure-1 way.
 # SPINE_COLOR = TEXT_COLOR keeps the plot spines white where they're drawn (the
 # animated paths bold them via _bolden_spines). The STATIC PNG's panel frame is
-# the figure-1 cell border, not the spine — see render().
+# the figure-1 cell border, not the spine - see render().
 _UNIFIED_TEXT_STYLE = {
     # Tick numbers / axis-chrome AND the header use the SHARED gray (#888) so
     # they match fig 1 / 241 / 242; in-plot glyphs, readouts and the text boxes
@@ -321,23 +321,23 @@ def _unified_style():
 # Static-PNG chrome overrides (figure 1 / 2.6). Two jobs:
 #   1. Border model: the gray cell border (NEUTRAL_COLOR, drawn by
 #      show_cell_borders) is the SINGLE frame for every panel. Spines off so no
-#      white inner box competes — every panel reads with one identical border.
+#      white inner box competes - every panel reads with one identical border.
 #      The animated paths keep SPINE_COLOR white (no cell borders in a single
 #      row, so the spine IS their frame), so this stays scoped to the static PNG.
 #   2. Chrome font scale: the global defaults (tick numbers 30, axis label 26)
 #      dwarf this figure's content (text box 16, in-plot glyphs/readout 22), so
 #      the axis chrome looks oversized. Pull tick numbers down to the body scale
-#      and the axis label to the in-plot scale — a clean tier (in-plot 22 ≥ axis
+#      and the axis label to the in-plot scale - a clean tier (in-plot 22 ≥ axis
 #      label 22 > tick numbers / body 16). The GIF gets its own compact scale via
 #      nb_compact_style, so this override is static-only by design.
 _STATIC_CHROME_STYLE = {
     "SPINE_COLOR": "none",
     # Tick numbers AND the right-column captions read bone-white (#EEEEEE) like
-    # every other figure — the caption pulls style.TICK_LABEL_COLOR, which
+    # every other figure - the caption pulls style.TICK_LABEL_COLOR, which
     # otherwise stays the #888888 gray default and made 2.5's text look dim.
     "TICK_LABEL_COLOR": "#EEEEEE",
     # Cell border inherits the ONE common style.DEFAULT_FRAME_LINEWIDTH (4.5,
-    # figure 1's weight) — no per-figure width scaling anymore (the montage tiles
+    # figure 1's weight) - no per-figure width scaling anymore (the montage tiles
     # at a common px/inch, so equal points already read as equal pixels).
     # Header bone-white (#EEEEEE) so every figure's title reads at the same bright
     # weight across the montage.
@@ -363,7 +363,7 @@ def _static_chrome_style():
 
 @contextmanager
 def _cell_border_chrome():
-    """Spines off so the gray cell border is the SINGLE panel frame — the static
+    """Spines off so the gray cell border is the SINGLE panel frame - the static
     PNG's border model, applied to the GIF too so the two share one look. Unlike
     _static_chrome_style this touches ONLY the spine colour, leaving the font
     scale to the caller (the GIF keeps nb_compact_style's compact sizes)."""
@@ -376,7 +376,7 @@ def _cell_border_chrome():
 
 
 # ---------------------------------------------------------------------------
-# Plottables — small enough to compose into both the static panels and the
+# Plottables - small enough to compose into both the static panels and the
 # per-frame lists the DynamicTimeSeriesPanel draws.
 # ---------------------------------------------------------------------------
 class _ZeroLine(Plottable):
@@ -398,7 +398,7 @@ class _ZeroLine(Plottable):
 # Stems that do NOT coincide are drawn whole, untouched (they're already both
 # visible). `split_mask` is the per-point boolean of where a == b; only masked
 # points are sliced. The cut is a per-stem TransformedBbox(data half-plane,
-# transData) — it tracks the transform, so it stays aligned at any DPI / figure
+# transData) - it tracks the transform, so it stays aligned at any DPI / figure
 # size / animation frame (a frozen pixel Bbox would drift at savefig dpi). Same
 # clipping technique as the split-vector arrow; here the shapes are already
 # vertical, so an axis-aligned Bbox is exactly the right cut (no rotated path).
@@ -406,7 +406,7 @@ _CLIP_BIG = 1.0e6   # ±∞ in data space for the open sides of a half-plane box
 
 
 class _Stems(Plottable):
-    """Stem plot drawn with explicit line + marker artists (no autoscale —
+    """Stem plot drawn with explicit line + marker artists (no autoscale -
     the panel pins its own limits). Used for both the faint ghost layer and
     the bright processed layer. With `split_side` ('left'/'right') plus a
     `split_mask`, the masked stems are clipped to one side of their own x so a
@@ -424,7 +424,7 @@ class _Stems(Plottable):
         self.split_mask = None if split_mask is None else np.asarray(split_mask, dtype=bool)
 
     def _splits(self, i) -> bool:
-        """Whether point i should be sliced — only where a/b coincide."""
+        """Whether point i should be sliced - only where a/b coincide."""
         if self.split_side is None:
             return False
         return True if self.split_mask is None else bool(self.split_mask[i])
@@ -439,11 +439,11 @@ class _Stems(Plottable):
         artist.set_clip_on(True)
 
     def draw(self, ax):
-        # ONE artist per stem — the line AND its tip marker (markevery=[1] marks
+        # ONE artist per stem - the line AND its tip marker (markevery=[1] marks
         # only the top vertex). Drawing them as a single Line2D means the marker
         # shares the line's exact coordinate, so it can't round to a different
         # sub-pixel column than the stroke (two separate artists drift ~½px apart
-        # — magnified ~5× on zoom, that reads as the circle sitting off-centre).
+        # - magnified ~5× on zoom, that reads as the circle sitting off-centre).
         # snap=False additionally stops matplotlib pixel-snapping the thin stroke
         # away from the (unsnapped) marker. Split stems add fillstyle so the tip
         # shows the correct half-circle, then clip the whole artist (line + tip)
@@ -501,7 +501,7 @@ class _Cursor(Plottable):
 
 
 class _AccumStem(Plottable):
-    """The Sum strip's single heavy stem — the products collapsed into one bar
+    """The Sum strip's single heavy stem - the products collapsed into one bar
     rising (positive sum) or falling (negative sum) from the zero line to the
     current running total, parked at the centre of the unit-wide strip."""
 
@@ -538,7 +538,7 @@ class _AccumStem(Plottable):
 
 class _SumReadout(Plottable):
     """The running total as a big number printed on the side of the zero baseline
-    OPPOSITE the stem's growth — UNDER the baseline for a positive (upward) stem,
+    OPPOSITE the stem's growth - UNDER the baseline for a positive (upward) stem,
     ABOVE it for a negative (downward) stem. The number lands in the empty half
     of the strip, so it never sits on the stem."""
 
@@ -575,7 +575,7 @@ class _CaseText(Plottable):
                  wrap_width=26, zorder=5):
         # Use the TEXT_COLOR constant (#EEEEEE), NOT style.TICK_LABEL_COLOR:
         # animation frames are drawn during _anim.save(), AFTER _unified_style()
-        # has exited and restored TICK_LABEL_COLOR to its #888888 default — so a
+        # has exited and restored TICK_LABEL_COLOR to its #888888 default - so a
         # style.* lookup (eager or lazy) would render gray. TEXT_COLOR equals
         # what TICK_LABEL_COLOR resolves to under the unified style, so the GIF
         # caption matches the static panel's colour.
@@ -600,17 +600,17 @@ class _CaseText(Plottable):
 
 
 # ---------------------------------------------------------------------------
-# Frame content — `count` pairs processed (indices 0..count-1).
+# Frame content - `count` pairs processed (indices 0..count-1).
 # ---------------------------------------------------------------------------
 def _coincide_mask(scn: dict) -> np.ndarray:
-    """Per-sample boolean — where a and b are exactly equal (so their stems
+    """Per-sample boolean - where a and b are exactly equal (so their stems
     coincide and must be split to show both). Elsewhere a/b differ and draw
     whole, since both are already visible."""
     return np.isclose(scn["a_vals"], scn["b_vals"])
 
 
 def _ab_frame(scn: dict, count: int) -> list:
-    """Row 1 — the input sequences a, b light up pair by pair. No signs here."""
+    """Row 1 - the input sequences a, b light up pair by pair. No signs here."""
     items: list = []
     if count > 0:
         items.append(_Cursor(N_IDX[count - 1]))
@@ -626,7 +626,7 @@ def _ab_frame(scn: dict, count: int) -> list:
 
 
 def _product_frame(scn: dict, count: int) -> list:
-    """Row 2 — the per-sample products a·b appear as stems, with the +/−/0
+    """Row 2 - the per-sample products a·b appear as stems, with the +/−/0
     verdict on the zero line."""
     items: list = []
     if count > 0:
@@ -644,7 +644,7 @@ def _running_so_far(scn: dict, count: int) -> float:
 
 
 def _sum_frame(scn: dict, count: int) -> list:
-    """The Sum strip — one heavy stem growing toward the running total as pairs
+    """The Sum strip - one heavy stem growing toward the running total as pairs
     are processed, with the numeric result tracking its tip."""
     val = _running_so_far(scn, count)
     items: list = [_AccumStem(val)]
@@ -654,7 +654,7 @@ def _sum_frame(scn: dict, count: int) -> list:
 
 
 def _ghost_ab(scn: dict) -> list:
-    """Faint full a/b sequences behind row 1 — fixes the layout and previews
+    """Faint full a/b sequences behind row 1 - fixes the layout and previews
     what is coming before it is processed."""
     return [
         _ZeroLine(color=style.DROPLINE_COLOR),
@@ -676,7 +676,7 @@ def _ghost_products(scn: dict) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Panels — one composite row per case: [ stem-stack (a,b / products) | Sum strip
+# Panels - one composite row per case: [ stem-stack (a,b / products) | Sum strip
 # | text box ]. A single `dynamic` flag picks animated (DynamicTimeSeriesPanel +
 # frame_fn) vs static (TimeSeriesPanel + final-frame plottables); both share the
 # same axis kwargs so the two modes stay in lockstep. The two left plots share
@@ -684,7 +684,7 @@ def _ghost_products(scn: dict) -> list:
 # Sum strip is a narrow companion on its own one-bar axis.
 # ---------------------------------------------------------------------------
 def _ab_panel(scn: dict, *, dynamic: bool):
-    """The single input-stem plot (static path) — sequences a, b. As the only
+    """The single input-stem plot (static path) - sequences a, b. As the only
     left-hand plot it now carries the shared x-axis chrome (n label + ticks)."""
     axis = dict(units=(STATIC_STEM_UNITS, 1), x_label="n",
                 xticks=X_TICKS, yticks=SIGNAL_YTICKS,
@@ -711,7 +711,7 @@ def _ab_panel(scn: dict, *, dynamic: bool):
 
 
 def _product_panel(scn: dict, *, dynamic: bool):
-    """Stack row 2 (bottom) — per-sample products a·b + the +/−/0 verdict. Being
+    """Stack row 2 (bottom) - per-sample products a·b + the +/−/0 verdict. Being
     the bottom of the stack, this plot carries the shared x-axis chrome."""
     axis = dict(units=(LEFT_UNITS, 1), x_label="n", xticks=X_TICKS,
                 yticks=SIGNAL_YTICKS, xlim=X_LIM, ylim=SIGNAL_YLIM,
@@ -730,7 +730,7 @@ def _product_panel(scn: dict, *, dynamic: bool):
 
 
 def _sum_panel(scn: dict, *, dynamic: bool):
-    """The Sum strip — a tall narrow companion to the stem stack carrying a
+    """The Sum strip - a tall narrow companion to the stem stack carrying a
     single heavy stem (the running total) on its own one-bar x-axis. Shares the
     running-total y-scale across all three rows so the bars are comparable."""
     # No y-tick labels: the Sum strip is narrow, so a 10/0/−10 axis would strand
@@ -746,7 +746,7 @@ def _sum_panel(scn: dict, *, dynamic: bool):
             num_frames=N + 1, interval_ms=INTERVAL_MS,
             base_plottables=[], **axis)
     panel = TimeSeriesPanel(**axis)
-    # No horizontal zero line — _AccumStem draws a vertical spine instead.
+    # No horizontal zero line - _AccumStem draws a vertical spine instead.
     panel.add(_AccumStem(scn["dot"]))
     panel.add(_SumReadout(scn["dot"]))
     return panel
@@ -754,14 +754,14 @@ def _sum_panel(scn: dict, *, dynamic: bool):
 
 def _case_body(title: str) -> str:
     """The text-box copy for one case: the heading + a quick what's-happening
-    blurb. (Tally/Σ are dropped — the plots already show them.)"""
+    blurb. (Tally/Σ are dropped - the plots already show them.)"""
     i = CASE_TITLES.index(title)
     # Regular-case header (CASE_TITLES are already Title Case) + blank line + body.
     return f"{title}\n\n{CASE_BLURBS[i]}"
 
 
 def _text_panel(scn: dict, title: str) -> TextPanel:
-    """The text box — mirrors figure 1's right-hand caption (`_side_text_panel`)
+    """The text box - mirrors figure 1's right-hand caption (`_side_text_panel`)
     so the two figures share one text treatment: an UPPERCASE section label +
     blank line + body paragraph, all at NORMAL weight in the tick-label colour
     (one type system with the axis chrome), top-anchored and left-justified. The
@@ -776,7 +776,7 @@ def _text_panel(scn: dict, title: str) -> TextPanel:
         fontweight="bold",
         # Figure 1's _side_text_panel treatment exactly (shared across figures):
         # fixed shared caption size (no auto-shrink), ragged-right (justify=False),
-        # top-left anchored, no inner box — the cell border is the only frame.
+        # top-left anchored, no inner box - the cell border is the only frame.
         auto_shrink=False,
         justify=False,
         content_margin_frac=0.05,
@@ -801,7 +801,7 @@ def _case_row(scn: dict, title: str, *, dynamic: bool) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Cycling animation — ONE composite row that plays case 1 → 2 → 3 in sequence.
+# Cycling animation - ONE composite row that plays case 1 → 2 → 3 in sequence.
 # A single global frame index maps to (case, pair); the ghosts and text now live
 # in the per-frame functions because they change with the active case. Every
 # panel runs TOTAL_CYCLE_FRAMES frames so the figure master clock keeps the
@@ -967,13 +967,13 @@ def _build_static_figure(unit_inches=None, dpi=None,
 
 
 def _bolden_spines(fig: Figure) -> None:
-    """Animated paths only — thicken the spines the panels actually drew (the
+    """Animated paths only - thicken the spines the panels actually drew (the
     text panel strips its own). The static PNG uses the figure-1 cell-border
     frame instead (see render()), so it leaves spines at their default weight;
     forcing heavy spines there would compete with the cell border and read as a
     second, mismatched panel frame. Mirrors gen_figure_2_6's _bolden_spines.
 
-    Text panels don't frame themselves with an axes spine — they draw a
+    Text panels don't frame themselves with an axes spine - they draw a
     fill=False Rectangle (base.py `_draw_content_border`) at DEFAULT_SPINE_LINEWIDTH.
     Bold that too, so the text box border matches the plot spine weight instead
     of rendering as a thinner, mismatched frame."""
@@ -1024,15 +1024,15 @@ def _uniform_borders(fig: Figure) -> None:
     The library tiles a fill=False Rectangle per cell (figure.py _draw_cell_borders),
     which leaves two inconsistencies the user can see:
 
-      1. Thickness — perimeter sides snap to the figure edge (x/y = 0 or 1), so
+      1. Thickness - perimeter sides snap to the figure edge (x/y = 0 or 1), so
          half each stroke falls off-canvas and that side renders at HALF width
          (≈1px) while interior dividers show full width (≈2px). Fix: nudge any
          side sitting on the figure edge inward by half a stroke (converted to
          figure fraction) so the whole stroke lands on-canvas.
-      2. Brightness — adjacent cells each draw their shared interior edge, so
+      2. Brightness - adjacent cells each draw their shared interior edge, so
          that seam is painted TWICE; at alpha<1 the two passes stack brighter
          (0.6 → ≈0.84) than a singly-drawn perimeter side, reading as a doubled
-         border. Fix: set the borders opaque so a second pass is idempotent —
+         border. Fix: set the borders opaque so a second pass is idempotent -
          overlaps and perimeter then match exactly.
 
     Post-process (mirrors _inset_ticks / _draw_stack_dividers) so the shared
@@ -1068,11 +1068,11 @@ def _uniform_borders(fig: Figure) -> None:
 
 
 def _inset_ticks(fig: Figure) -> None:
-    """Static path only — point every tick mark INWARD.
+    """Static path only - point every tick mark INWARD.
 
     StaticPanel draws ticks with direction="inout" (static_panel.py), so the
     outward half pokes past the (invisible) spine and crosses the gray cell
-    border that frames each cell — the n-axis marks straddle the top/bottom
+    border that frames each cell - the n-axis marks straddle the top/bottom
     border, the y marks straddle the left. The cell border is the single frame
     here (see render()), so the ticks must live inside it. Tick direction isn't
     a style knob and style.py is off-limits, so we retarget it after build,
@@ -1101,9 +1101,9 @@ def _publish_path(kind: str, ext: str, label: Optional[str] = None) -> str:
 
     Naming: ``{FIG_SLUG}_{kind}_v{N}[_{label}].{ext}`` where N is one past the
     highest v-number seen across the live dir AND archive/ (so versions are
-    monotonic — they never collide or reset). Net effect: the live folder always
+    monotonic - they never collide or reset). Net effect: the live folder always
     holds just the newest composite + cycle, and prior versions accumulate in
-    archive/ — the by_figure convention, automated."""
+    archive/ - the by_figure convention, automated."""
     import re
     import shutil
     live = _default_output_dir()
@@ -1145,7 +1145,7 @@ def render(
     Pass an explicit output_dir/output_filename to write a one-off literal path
     instead (no versioning, no archiving).
 
-    Figure-1 treatment: every panel's frame is the library CELL BORDER — the
+    Figure-1 treatment: every panel's frame is the library CELL BORDER - the
     rectangle that wraps the whole gridspec cell (plot + its tick / axis labels),
     matching gen_figure_1 and gen_figure_2_6. Spines stay at their default thin
     weight so they don't compete with the cell border as a second frame; the
@@ -1155,10 +1155,10 @@ def render(
     with _unified_style(), _static_chrome_style():
         # unit_height derived so the (gutter-absorbing) 2-column text cell is a
         # true square. Stem stack ≈ 8.2" wide; Sum strip ≈ 1.6" wide; text box
-        # square. (4 : 1 : 2 — the square text cell supersedes the earlier 4:1:3.)
+        # square. (4 : 1 : 2 - the square text cell supersedes the earlier 4:1:3.)
         # Shared graph-paper square: same 5" cell (width == height) as every
         # other figure, replacing the back-solved width-locked unit. _square_
-        # unit_height is no longer needed — at a true square cell the 2-wide
+        # unit_height is no longer needed - at a true square cell the 2-wide
         # text column in a 2-tall row is already ~square.
         # 2.5 / 2.6 render as a matched PAIR: shared WIDTH (total_width_inches)
         # and shared per-row cell HEIGHT (unit_height_inches=SHARED_UNIT_INCHES),
@@ -1173,7 +1173,7 @@ def render(
         _uniform_borders(fig)
         # Divider between the two stacked stem plots, in the same gray cell-border
         # style (NEUTRAL_COLOR, 2× spine width) so it reads as one system with
-        # every other border — opaque to match _uniform_borders' flattened alpha.
+        # every other border - opaque to match _uniform_borders' flattened alpha.
         _draw_stack_dividers(fig, color=style.NEUTRAL_COLOR,
                              linewidth=style.DEFAULT_SPINE_LINEWIDTH * 2.0,
                              alpha=1.0)
@@ -1201,10 +1201,10 @@ def save_gif(
     _publish_path); pass `label` to tag the version. Pass an explicit
     output_dir/output_filename for a one-off literal path (no versioning).
 
-    Plays anywhere — embeds in DSP.md and renders on mobile/web without the
+    Plays anywhere - embeds in DSP.md and renders on mobile/web without the
     notebook widget backend the inline FuncAnimation needs. The trailing
     HOLD_TICKS frames are identical, so Pillow folds them into one long final
-    frame — the between-loops pause. fps defaults to match INTERVAL_MS so the
+    frame - the between-loops pause. fps defaults to match INTERVAL_MS so the
     GIF runs at the same pace as the live animation. Returns the path.
     """
     from matplotlib.animation import PillowWriter

@@ -1,14 +1,14 @@
-"""BarPanel — horizontal bar-chart panel (additive; timing report figures).
+"""BarPanel - horizontal bar-chart panel (additive; timing report figures).
 
 A ``StaticPanel`` subclass for horizontal bars. Unlike the vector panels it does
-NOT draw an origin crosshair or lock equal aspect — it mirrors ``HeatmapPanel``'s
+NOT draw an origin crosshair or lock equal aspect - it mirrors ``HeatmapPanel``'s
 "wide cell, data-driven limits, external axis labels" treatment, but the cell is
 filled with bars (``Barh`` plottables) instead of an image. The value axis (x)
 may be linear or log; the category axis (y) carries named tick labels.
 
 It owns only axis chrome (scale, limits, category labels, x-axis decoration); the
 bars themselves are ``Barh`` plottables and any value / in-bar text is composed
-from ``Annotation`` plottables — so the existing plottable vocabulary draws onto
+from ``Annotation`` plottables - so the existing plottable vocabulary draws onto
 it exactly as it does any other panel. Nothing in the base library calls this
 class, so it cannot change how existing figures render.
 """
@@ -75,7 +75,7 @@ class BarPanel(StaticPanel):
         if self.ylim is not None:
             ax.set_ylim(*self.ylim)
 
-        # Category (y) tick labels — one per bar row. When absent (names are
+        # Category (y) tick labels - one per bar row. When absent (names are
         # drawn inside the plot instead), strip the y axis entirely.
         if self.category_labels is not None:
             ax.set_yticks(list(range(len(self.category_labels))))

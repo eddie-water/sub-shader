@@ -1,8 +1,8 @@
-"""gen_figure_2_6_sine_basis — §2.6 of DSP.md.
+"""gen_figure_2_6_sine_basis - §2.6 of DSP.md.
 
 The dot product as a *frequency detector*, swept across every frequency to build
 a spectrum. §2.5 ran the same machinery on plain ±1 sequences; §2.6 swaps the
-arbitrary partner `b` for a **pure sine** — a *basis function* — and then sweeps
+arbitrary partner `b` for a **pure sine** - a *basis function* - and then sweeps
 that sine's frequency across the whole band, one measurement at a time.
 
 ONE signal:
@@ -18,9 +18,9 @@ dot product drops one bar into a spectrum:
 
 A 1 s window pins integer-Hz sines orthogonal (bin spacing = 1/duration = 1 Hz),
 so absent references score *exactly* zero and present ones score exactly their
-amplitude. Sampling at 24 Hz keeps Nyquist (12 Hz) clear of the whole sweep —
+amplitude. Sampling at 24 Hz keeps Nyquist (12 Hz) clear of the whole sweep -
 an 8 Hz tone would vanish at the earlier 16 Hz rate. That collection of
-coefficients across all frequencies IS the spectrum — the bridge into §3, where
+coefficients across all frequencies IS the spectrum - the bridge into §3, where
 this same sweep becomes the Fourier transform. §2.6 measures *every* frequency
 by hand; §3 names the operation.
 
@@ -65,15 +65,15 @@ from ..plottables.base import Plottable
 
 
 # ---------------------------------------------------------------------------
-# Data — ONE signal swept against pure-sine references at every integer Hz.
+# Data - ONE signal swept against pure-sine references at every integer Hz.
 #
 # A 1 s window sampled at 16 Hz (N=16) makes every integer-Hz sine orthogonal,
 # so the measurements are clean: present references score their exact amplitude,
 # absent ones score exactly zero. Coefficients are normalized by N/2 so a unit
-# sine scores 1.0 — identical convention to gen_figure_3_1.
+# sine scores 1.0 - identical convention to gen_figure_3_1.
 # ---------------------------------------------------------------------------
 N = 24
-SAMPLE_RATE_HZ = 24.0                     # Nyquist 12 Hz — keeps the whole 1–10 sweep
+SAMPLE_RATE_HZ = 24.0                     # Nyquist 12 Hz - keeps the whole 1–10 sweep
 DURATION_S = 1.0                          # (and the 10 Hz tone) below the aliasing limit
 T = np.arange(N) / SAMPLE_RATE_HZ
 N_IDX = np.arange(N, dtype=float)
@@ -105,7 +105,7 @@ COEFFS = {f: _coefficient(f) for f in SWEEP_HZ}
 FINAL = COEFFS
 
 # Per-sample running coefficient and product-sign for every reference frequency.
-# RUNNING[f][n] is the normalized partial dot product after n+1 samples — the
+# RUNNING[f][n] is the normalized partial dot product after n+1 samples - the
 # value the spectrum bar shows while frequency f is being accumulated. It climbs
 # to FINAL[f]; for an absent reference it wobbles around zero and settles there.
 RUNNING = {f: np.cumsum(SIGNAL * _sine(f)) / NORM for f in SWEEP_HZ}
@@ -131,7 +131,7 @@ SPEC_YTICKS = [-1.0, 0.0, 1.0]
 TITLE = "Figure 2.6 - Measuring Frequencies"
 TOP_SUBTITLE = "The signal, compared against a sweeping pure-sine reference"
 SPEC_SUBTITLE = "Dot product at each reference frequency  →  spectrum"
-# SCAFFOLD header labels for the text-panel header bands — these captions have no
+# SCAFFOLD header labels for the text-panel header bands - these captions have no
 # title line to promote, so the headers are explicit. Rename to taste (the prose
 # is the user's). Mirrors §2.4.2/§2.5's promoted titles.
 TOP_HEADER = "Signal vs Reference"
@@ -145,7 +145,7 @@ TOTAL_WIDTH_UNITS = WIDTH_UNITS + TEXT_UNITS_W
 
 # Captions are pre-broken into balanced lines and centred (h+v) in their square
 # cell. Manual breaks (not auto-wrap) so the simple centered ax.text path can be
-# used — the wrap pipeline only left-aligns / justifies, never centres.
+# used - the wrap pipeline only left-aligns / justifies, never centres.
 TOP_SUBTITLE_LINES = "The signal, compared\nagainst a sweeping\npure-sine reference"
 SPEC_SUBTITLE_LINES = "Dot product at each\nreference frequency\n→  spectrum"
 
@@ -171,7 +171,7 @@ ZERO_LINE_WIDTH = 3.0
 SPINE_LINEWIDTH = 2.6
 SPEC_STEM_LW = style.DEFAULT_VECTOR_LINEWIDTH        # match the signal stems / shared hero weight
 SPEC_MARKERSIZE = style.DEFAULT_HERO_STEM_MARKERSIZE   # ONE circle size across every stem plot
-SPEC_ALPHA = 0.95          # every coefficient stem at one weight — uniform, keep adding
+SPEC_ALPHA = 0.95          # every coefficient stem at one weight - uniform, keep adding
 SPEC_LABEL_GAP = 0.12      # running-sum number sits this far across the zero line
 COL_WSPACE = 0.18
 ROW_HSPACE = 0.34
@@ -181,11 +181,11 @@ ROW_HSPACE = 0.34
 # bands hug the plots; a wider gutter + compact axis typography + a tucked-in
 # x-label inset keep each plot's tick numbers AND axis label inside the
 # half-gutter above the mid-gutter cell border (otherwise the border line draws
-# straight through "sample n"). Scoped to render() only — the animated
+# straight through "sample n"). Scoped to render() only - the animated
 # notebook/GIF path keeps nb_compact_style's smaller-cell sizing untouched.
 STATIC_ROW_HEIGHTS = [0.26, 1.0, 1.0]
 STATIC_ROW_HSPACE = 0.5
-# One font size for every chrome element in the static figure — title, axis
+# One font size for every chrome element in the static figure - title, axis
 # labels, tick labels, and the right-hand captions all render at STATIC_FONT_SIZE.
 # Applied via the scoped style block (only the static render path), so the
 # compact GIF/notebook path keeps nb_compact_style's own smaller sizes.
@@ -199,17 +199,17 @@ STATIC_LAYOUT_STYLE = {
     # give it the vertical room (see GUTTER / MARGIN below).
     "DEFAULT_X_AXIS_LABEL_INSET_INCHES": 1.15,
     # y-label sits in the in-plot label strip (content_left_pad), left of the
-    # tick numbers — so the inset is larger (within the strip), figure-1 style.
+    # tick numbers - so the inset is larger (within the strip), figure-1 style.
     "DEFAULT_Y_AXIS_LABEL_INSET_INCHES": 1.30,
     # Cell border inherits the ONE common style.DEFAULT_FRAME_LINEWIDTH (4.5,
-    # figure 1's weight) — no per-figure width scaling anymore.
+    # figure 1's weight) - no per-figure width scaling anymore.
     # COLUMN gutter sets the plot↔caption width split: the 3-unit plot + 2 inner
-    # gutters vs the 1-unit caption ≈ a clean 3:1 (three tiles) — small like
+    # gutters vs the 1-unit caption ≈ a clean 3:1 (three tiles) - small like
     # 241/242/243 (with tile_gutters=True the gutters derive from these inches,
     # not the bespoke gridspec wspace that skewed the ratio before).
     "DEFAULT_COLUMN_GUTTER_INCHES": 0.30,
     # ROW gutter must clear the SIGNAL plot's bottom x-label ("sample n" + the
-    # 40pt tick numbers), which sits between the two plot rows — so it can't be
+    # 40pt tick numbers), which sits between the two plot rows - so it can't be
     # tiny like the column gutter. Widened from 0.70 to seat the larger ticks +
     # the dropped x-label without the two colliding.
     "DEFAULT_GUTTER_INCHES": 1.25,
@@ -237,7 +237,7 @@ SIGN_FONTSIZE = 28   # 28"-canvas scale (was 18 at ~13")
 #   local 0          → fresh reference shown, nothing multiplied yet
 #   local 1..N       → speed-run the multiplies, the bar grows pair by pair
 #   local N+1..N+P   → pause on the final coefficient
-INTERVAL_MS = 250           # inner tick — deliberate, matching §2.5's cadence
+INTERVAL_MS = 250           # inner tick - deliberate, matching §2.5's cadence
 PAUSE_TICKS = 9             # hold frames on each finished coefficient
 SEG = N + 1 + PAUSE_TICKS
 TOTAL_FRAMES = len(SWEEP_HZ) * SEG
@@ -284,7 +284,7 @@ def _static_layout_style():
 
 @contextmanager
 def _cell_border_chrome():
-    """Spines off so the gray library CELL BORDER is the single panel frame —
+    """Spines off so the gray library CELL BORDER is the single panel frame -
     figure 2.5's GIF border model. Every cell (plots + caption) reads with one
     identical gray border; no white inner spine box competes, and the caption
     carries no border of its own (the cell border frames it)."""
@@ -353,7 +353,7 @@ class _SineGhost(Plottable):
 
 class _SignalGhost(Plottable):
     """A smooth continuous trace of the composite signal, the orange counterpart
-    to the purple reference sine — so both operands read as continuous waveforms
+    to the purple reference sine - so both operands read as continuous waveforms
     behind the sampled stems the dot product actually multiplies."""
 
     def __init__(self, *, color, alpha=SINE_GHOST_ALPHA,
@@ -434,7 +434,7 @@ class _CoeffLabel(Plottable):
         # Directly under the stem, mirrored across zero: a positive stem points
         # up so its running-sum number sits underneath (below the zero line); a
         # negative stem points down so the number sits above. A value that rounds
-        # to zero reads as a clean "0.00" underneath — never a signed "-0.00".
+        # to zero reads as a clean "0.00" underneath - never a signed "-0.00".
         if self.value > 0.005:
             text, y, va = f"{self.value:.2f}", -SPEC_LABEL_GAP, "top"
         elif self.value < -0.005:
@@ -447,7 +447,7 @@ class _CoeffLabel(Plottable):
 
 
 # ---------------------------------------------------------------------------
-# Frame content — frame k (0..len-1) measures reference SWEEP_HZ[k].
+# Frame content - frame k (0..len-1) measures reference SWEEP_HZ[k].
 # ---------------------------------------------------------------------------
 def _signal_base() -> list:
     """Static background of the top panel: the zero line plus a faint full-length
@@ -491,7 +491,7 @@ def _spectrum_base() -> list:
 def _spectrum_frame(k: int) -> list:
     """Bottom panel for global frame k: locked-in coefficients for every finished
     frequency, plus the current frequency's bar growing with the running partial
-    sum as each pair is multiplied. Every coefficient is neutral white — the
+    sum as each pair is multiplied. Every coefficient is neutral white - the
     result is a magnitude, not an operand; the active bar reads by weight, not
     colour."""
     fi, count = _decode(k)
@@ -597,7 +597,7 @@ def _static_spectrum_panel(highlight_hz: float) -> TimeSeriesPanel:
     coeffs = np.array([COEFFS[f] for f in SWEEP_HZ], dtype=float)
     panel.add(_Stems(freqs, coeffs, color=style.NEUTRAL_COLOR, alpha=SPEC_ALPHA,
                      linewidth=SPEC_STEM_LW, markersize=SPEC_MARKERSIZE, zorder=3))
-    # Uniform stems — label only the two responders' coefficients.
+    # Uniform stems - label only the two responders' coefficients.
     for f in (TONE_A_HZ, TONE_B_HZ):
         panel.add(_CoeffLabel(f, COEFFS[f]))
     return panel
@@ -607,13 +607,13 @@ def _static_spectrum_panel(highlight_hz: float) -> TimeSeriesPanel:
 # Composition + three-mode contract
 # ---------------------------------------------------------------------------
 def _side_text_panel(text: str, header: str | None = None) -> TextPanel:
-    """Right-hand caption beside a plot (STATIC PNG) — Figure 1's _side_text_panel
+    """Right-hand caption beside a plot (STATIC PNG) - Figure 1's _side_text_panel
     treatment, shared across every figure: one 1-unit square tile, top-left
     anchored, ragged-right, at the shared caption font size (no auto-shrink), in
     the bone-white tick colour. The cell border (show_cell_borders) is the only
     frame. Text passed UNBROKEN so the wrap pipeline fits it to the cell width.
 
-    ``header`` adds a title band (figure-header height) above the caption — these
+    ``header`` adds a title band (figure-header height) above the caption - these
     captions are single-line subtitles with no title to promote, so the header is
     passed explicitly (matches §2.4.2/§2.5's header bands)."""
     return TextPanel(
@@ -634,7 +634,7 @@ def _side_text_panel(text: str, header: str | None = None) -> TextPanel:
 
 
 def _gif_text_panel(text: str) -> TextPanel:
-    """Right-hand caption for the GIF — figure 2.5's caption treatment exactly.
+    """Right-hand caption for the GIF - figure 2.5's caption treatment exactly.
     Top-anchored, left-aligned text that draws NO border of its own: the gray
     library cell border (show_cell_borders=True, spines off via
     _cell_border_chrome) is the single frame, identical to every plot cell. The
@@ -655,7 +655,7 @@ def _gif_text_panel(text: str) -> TextPanel:
         top_anchor=True,
         cell_padding_frac=0.0,
         content_margin_frac=0.06,
-        # No inner box — the gray cell border is the ONE and only frame, exactly
+        # No inner box - the gray cell border is the ONE and only frame, exactly
         # as figure 2.5's text panel relies on the cell border.
         show_ghost_border=False,
         facecolor="none",
@@ -669,8 +669,8 @@ def _compose(signal_panel, spectrum_panel, *, unit_inches=None, dpi=None,
              total_height_inches=None, tile_gutters=False) -> Figure:
     # Both paths frame every cell with the gray library cell border
     # (show_cell_borders=True). Only the caption text style differs:
-    #   Static PNG  — small CENTRED captions, pre-broken into balanced lines.
-    #   GIF         — figure 2.5's caption: top-anchored, left-aligned, the
+    #   Static PNG  - small CENTRED captions, pre-broken into balanced lines.
+    #   GIF         - figure 2.5's caption: top-anchored, left-aligned, the
     #                 UNBROKEN sentence word-wrapped, no border of its own.
     if gif_caption:
         top_text = _gif_text_panel(TOP_SUBTITLE)
@@ -688,7 +688,7 @@ def _compose(signal_panel, spectrum_panel, *, unit_inches=None, dpi=None,
     # tile_gutters=True (the static PNG): pass wspace/hspace=None so compose
     # derives the gridspec gutters from the PHYSICAL-INCH tile constants
     # (DEFAULT_COLUMN_GUTTER_INCHES / DEFAULT_GUTTER_INCHES) exactly like
-    # 241/242/243 — so the 3-unit plot renders a clean 3:1 (three tiles) next to
+    # 241/242/243 - so the 3-unit plot renders a clean 3:1 (three tiles) next to
     # the 1-unit square caption. The GIF path keeps its bespoke gridspec spacing.
     kwargs = dict(
         rows=rows,
@@ -747,7 +747,7 @@ def _bolden_spines(fig: Figure) -> None:
 def _inset_ticks(fig: Figure) -> None:
     """Point every tick mark INWARD (figure 2.5's GIF treatment). StaticPanel
     draws ticks "inout", so the outward half pokes past the invisible spine and
-    crosses the gray cell border that frames each cell — the x marks straddle the
+    crosses the gray cell border that frames each cell - the x marks straddle the
     border, the y marks straddle the left. With the cell border as the single
     frame, the ticks must live inside it. Retargeted after build (tick direction
     isn't a style knob), mirroring _bolden_spines."""
@@ -779,7 +779,7 @@ def render(
             total_width_inches=style.PAIR_25_26_WIDTH_INCHES,
             unit_height_inches=style.SHARED_UNIT_INCHES)
         fig.render()
-        # NB: spines left at their default (thin) weight here — the bolded
+        # NB: spines left at their default (thin) weight here - the bolded
         # cell border is the visible frame (figure-1 / template look), so a
         # heavy spine would compete with it and read as "the" panel border
         # with the axis labels stranded outside it.
@@ -800,7 +800,7 @@ def save_gif(
         output_dir = _default_output_dir()
     # Figure 2.5's GIF border model: the gray library cell border frames every
     # cell, spines off (_cell_border_chrome) so no white box competes, caption
-    # framed by the cell border not its own. No _bolden_spines — there are no
+    # framed by the cell border not its own. No _bolden_spines - there are no
     # visible spines to bold; the cell border IS the frame.
     with nb_compact_style(), _unified_style(), _cell_border_chrome():
         fig = _build_dynamic_figure(unit_inches=2.5, unit_height_inches=1.7, dpi=90)

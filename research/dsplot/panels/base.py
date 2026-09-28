@@ -1,7 +1,7 @@
-"""Panel abstract base — container that owns one mpl Axes and a list of Plottables.
+"""Panel abstract base - container that owns one mpl Axes and a list of Plottables.
 
 Concrete subclasses (StaticPanel / future DynamicPanel / InteractivePanel)
-differ only in WHEN they call render() — the composition contract (`add`,
+differ only in WHEN they call render() - the composition contract (`add`,
 `attach`, `render`) is shared.
 
 Lifecycle:
@@ -12,7 +12,7 @@ Lifecycle:
   4. The owning Figure calls `panel.render()` to draw all plottables onto
      the attached axes.
 
-A caller that invokes `render()` before `attach()` hits a RuntimeError — this
+A caller that invokes `render()` before `attach()` hits a RuntimeError - this
 is intentional. Figure.render() handles the attach + render handshake.
 """
 from __future__ import annotations
@@ -38,11 +38,11 @@ class Panel(ABC):
     # default to derive figsize, gridspec width, and per-panel colspan.
     default_units: ClassVar[Tuple[int, int]] = (1, 1)
 
-    # Set to True on TextPanel subclasses — Figure.compose excludes these
+    # Set to True on TextPanel subclasses - Figure.compose excludes these
     # cells when auto-centering chrome (e.g. figure_number) on the plot area.
     is_text_only: ClassVar[bool] = False
 
-    # Base reservation (subclasses override) for in-figure controls — e.g.
+    # Base reservation (subclasses override) for in-figure controls - e.g.
     # InteractivePanel sets _base_bottom_pad = 0.18 for its prev/next
     # buttons. Subtitle bottom padding is added on top at instance level
     # via the requires_bottom_pad property.
@@ -86,7 +86,7 @@ class Panel(ABC):
         Shared "big box just inside the cell" used by text panels. The box
         extends OUT past the axes to the cell border (by
         ``style.DEFAULT_PAD_INCHES`` on each side) then insets by
-        ``style.DEFAULT_CONTENT_BORDER_INSET_FRAC`` of the cell width — so the
+        ``style.DEFAULT_CONTENT_BORDER_INSET_FRAC`` of the cell width - so the
         border reads as the cell's content frame, much larger than the tight
         axes spine. Vertically it sits at the axes edge (the spine line of a
         normal panel).
@@ -148,7 +148,7 @@ class Panel(ABC):
             # Title V-centered between the panel spine and the cell border
             # above. The chrome zone above the spine equals one PAD (= half
             # the inter-cell gutter), so the title sits PAD/2 above the
-            # spine — exactly midway between the plot and the cell border.
+            # spine - exactly midway between the plot and the cell border.
             bbox = ax.get_position()
             fig_h_in = ax.figure.get_size_inches()[1]
             axes_h_in = max(bbox.height * fig_h_in, 0.1)

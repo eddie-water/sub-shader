@@ -155,7 +155,7 @@ def downsample_spec(arr, max_rows=None, max_cols=None):
 
 
 # =============================================================================
-# ATOMIC PLOTTERS — single-Axes renderers for standalone figure layouts
+# ATOMIC PLOTTERS - single-Axes renderers for standalone figure layouts
 # =============================================================================
 
 def plot_time_series(ax, signal, sr, *,
@@ -294,7 +294,7 @@ def render_image_row(ax, img_path, *,
 
 
 # =============================================================================
-# GRID SCAFFOLD — standalone N×M layout (use create_figure_scaffold for the
+# GRID SCAFFOLD - standalone N×M layout (use create_figure_scaffold for the
 # stacked-rows-with-shared-spectrogram pattern instead)
 # =============================================================================
 
@@ -339,7 +339,7 @@ def create_grid_scaffold(n_rows, n_cols, *,
 
 
 # =============================================================================
-# FOUNDATION-FIGURE SCAFFOLDS — small, square-panel layouts for the §2 vector
+# FOUNDATION-FIGURE SCAFFOLDS - small, square-panel layouts for the §2 vector
 # figures (and future polar / sequence figures). Distinct from the comparison
 # grid scaffold above: smaller per-panel size, square aspect, one shared
 # suptitle. Use create_grid_scaffold for spectrogram-sized panels.
@@ -377,7 +377,7 @@ def create_panel_row(n_panels, *, panel_size=None, height=None,
 
 
 # =============================================================================
-# VECTOR PLOTTERS — atomic helpers for §2 foundation figures. All visual
+# VECTOR PLOTTERS - atomic helpers for §2 foundation figures. All visual
 # constants routed through style.py.
 # =============================================================================
 
@@ -516,7 +516,7 @@ def plot_projection(ax, a, b, *,
                     show_dropline=True):
     """Draw vectors a, b, and the scalar projection of b onto a.
 
-    The projection vector is `((a·b)/(a·a)) * a` — a vector along a whose tip
+    The projection vector is `((a·b)/(a·a)) * a` - a vector along a whose tip
     is the foot of the perpendicular from b. A dashed dropline from b's tip to
     the projection foot makes the right-angle decomposition visible.
     """
@@ -553,7 +553,7 @@ def plot_projection(ax, a, b, *,
 
 
 # =============================================================================
-# CWT WRAPPER — single-shot full-signal computation
+# CWT WRAPPER - single-shot full-signal computation
 # =============================================================================
 
 def compute_full_cwt(signal, sr, *,
@@ -581,7 +581,7 @@ def compute_full_cwt(signal, sr, *,
     from subshader.renderer.frame_buffer import CircularFrameBuffer
     from subshader.utils import gpu_available
 
-    # Bypass get_default_config() to skip its audio-file existence check —
+    # Bypass get_default_config() to skip its audio-file existence check -
     # figure generation doesn't load any audio file. The dataclass default
     # field values are all we need for the CWT parameters (chunk_size,
     # root_note_hz, num_octaves, num_cycles, overlap_factor), and the caller

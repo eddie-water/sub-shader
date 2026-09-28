@@ -1,4 +1,4 @@
-"""CompositePanel — one-level-nested Panel that hosts a sub-grid of child Panels.
+"""CompositePanel - one-level-nested Panel that hosts a sub-grid of child Panels.
 
 Allows a Figure.compose row to embed a small N×M grid of child panels inside a
 single outer cell. Strictly one level of nesting: a CompositePanel cannot
@@ -46,7 +46,7 @@ class CompositePanel(Panel):
             for p in row:
                 if isinstance(p, CompositePanel):
                     raise ValueError(
-                        "CompositePanel cannot contain another CompositePanel — "
+                        "CompositePanel cannot contain another CompositePanel - "
                         "one level of nesting only"
                     )
 
@@ -63,7 +63,7 @@ class CompositePanel(Panel):
         self.wspace = wspace
 
         if share_x:
-            # Vertically stacked panels share a time/x axis — strip x decoration
+            # Vertically stacked panels share a time/x axis - strip x decoration
             # from every row except the last so only the bottom row carries
             # xtick labels + xlabel. Done at construction so the children render
             # without ever drawing the suppressed decoration.
@@ -103,7 +103,7 @@ class CompositePanel(Panel):
         # of how the composite was sized.
         #
         # share_x=True means the rows stack with a shared time axis (e.g. a
-        # stem quartet). Inner row gutter must be 0 so the rows touch — any
+        # stem quartet). Inner row gutter must be 0 so the rows touch - any
         # gap reads as misalignment with the conceptual "one stacked view."
         # Inner column gutter is unaffected.
         fig_w_in, fig_h_in = self.ax.figure.get_size_inches()
@@ -147,7 +147,7 @@ class CompositePanel(Panel):
                 if self.share_x and r != n_rows - 1 and projection is None:
                     # Suppress matplotlib's auto-drawn x ticks/labels on every
                     # row except the last, even if the child Panel did not set
-                    # xticks itself — share_x means the bottom row owns x.
+                    # xticks itself - share_x means the bottom row owns x.
                     child_ax.tick_params(
                         axis="x", which="both",
                         bottom=False, labelbottom=False,

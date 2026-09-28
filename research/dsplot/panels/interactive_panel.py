@@ -1,4 +1,4 @@
-"""InteractivePanel — multi-frame Panel driven by matplotlib widget controls.
+"""InteractivePanel - multi-frame Panel driven by matplotlib widget controls.
 
 Frame model matches DynamicPanel: `frames: list[list[Plottable]]`. Stepping
 happens through `matplotlib.widgets.Button` (Prev / Next, always present),
@@ -17,7 +17,7 @@ Backend behavior:
 
 Per-frame artist cleanup uses tracked-artist removal (NOT `ax.cla()`) so the
 background, spines, axes setup, and base_plottables persist across stepping
-— same pattern as DynamicPanel.
+- same pattern as DynamicPanel.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from ..axes_setup import setup_vector_axes
 from .base import Panel
 
 
-Frame = List["Plottable"]  # noqa: F821 — forward reference for typing only
+Frame = List["Plottable"]  # noqa: F821 - forward reference for typing only
 
 
 class InteractivePanel(Panel):

@@ -1,4 +1,4 @@
-"""figure_2_4_2 — §2.4.2 Projection onto Another Vector (4 synced panels).
+"""figure_2_4_2 - §2.4.2 Projection onto Another Vector (4 synced panels).
 
 Four panels driven by ONE shared sweep clock so they animate in lockstep (the
 figure's master FuncAnimation ticks every DynamicPanel from the same global
@@ -9,13 +9,13 @@ projection lands cleanly at each. Then it repeats.
 
 The figure is split into two conceptual halves, each a 2-panel column group:
 
-  COSINE FORM (A, B) — the relative angle controls the size of the projection:
+  COSINE FORM (A, B) - the relative angle controls the size of the projection:
     - Panel A: a, b and the angle θ between them.
     - Panel B: a, b plus the live white projection shadow of a onto b's line.
 
-  COMPONENT FORM (C, D) — the angle is already baked into the components:
+  COMPONENT FORM (C, D) - the angle is already baked into the components:
     - Panel C: a, b with their x/y components drawn (the staircase view).
-    - Panel D: the SAME components abstracted into a "stem" panel — each
+    - Panel D: the SAME components abstracted into a "stem" panel - each
       component (aₓ, aᵧ, bₓ, bᵧ) drawn as a colored arrow whose height is its
       value, so the bars read with the same arrow vocabulary as A/B/C.
 
@@ -59,7 +59,7 @@ _UNIT_INCHES = 4.2
 _LIM = (-4.0, 4.0)
 
 
-# Shared sweep parameters — ONE clock for all four panels. STEP_RAD=pi/24 ->
+# Shared sweep parameters - ONE clock for all four panels. STEP_RAD=pi/24 ->
 # 48 angles/rev; TWO revolutions so the whole loop is 2 turns of A around B.
 _SWEEP_STEP_RAD = math.pi / 24.0
 _SWEEP_FRAMES_PER_REV = 48
@@ -73,7 +73,7 @@ _SWEEP_INTERVAL_MS = 175
 # grows 2 -> 3. The period equals the whole sweep.
 _SWEEP_MAG_PERIOD = 2 * _SWEEP_FRAMES_PER_REV  # 96 logical frames
 
-# B — fixed reference at 45° (pi/4) for the whole sweep. Off-axis so b has BOTH
+# B - fixed reference at 45° (pi/4) for the whole sweep. Off-axis so b has BOTH
 # an x- and a y-component; A starts collinear with B at the same angle.
 _B_SWEEP_MAG = 3.0
 _B_SWEEP_ANGLE = math.pi / 4.0
@@ -103,10 +103,10 @@ _ANGLE_LABEL_ACUTE_DEG = 32.0
 _ANGLE_LABEL_OUTSIDE_MARGIN_DEG = 13.0
 _ANGLE_LABEL_OUTSIDE_RADIUS = 1.5
 # Near-collinear a & b: the white projection shadow stacks on the bold vectors
-# and reads as a "chewed" arrow (it's degenerate there — equals a). Drop it.
+# and reads as a "chewed" arrow (it's degenerate there - equals a). Drop it.
 _PROJECTION_MIN_DEG = 8.0
 
-# Stem panel D: TWO slots — an "x" slot and a "y" slot. At each slot the two
+# Stem panel D: TWO slots - an "x" slot and a "y" slot. At each slot the two
 # multiplicands of that term sit side by side (aₓ next to bₓ; aᵧ next to bᵧ) so
 # the pairs the dot product multiplies read at a glance. a-family on the left of
 # each slot, b-family on the right.
@@ -117,7 +117,7 @@ _PAIR_LABEL_DY = 0.32  # label clears the arrow tip
 _SLOT_TICK_HALF = 0.16
 _SLOT_LABEL_Y = -3.6
 
-# Faded ghost outline for the decomposed vectors in panel C — muted so the
+# Faded ghost outline for the decomposed vectors in panel C - muted so the
 # components stay the hero, but visible enough to read what's being decomposed.
 _GHOST_ALPHA = 0.30
 
@@ -250,7 +250,7 @@ def _common_panel_kwargs() -> dict:
 
 
 def _cosine_panel_kwargs() -> dict:
-    """Chrome for the cosine half (A, B) — x/y line axes, grid, and ticks, same
+    """Chrome for the cosine half (A, B) - x/y line axes, grid, and ticks, same
     as the component half so the two halves share a coordinate frame."""
     return dict(
         lim=_LIM,
@@ -336,14 +336,14 @@ def _angle_label(a: tuple[float, float], b: tuple[float, float]) -> list:
         radius = _ANGLE_LABEL_RADIUS
 
     xy = (radius * math.cos(label_angle), radius * math.sin(label_angle))
-    # Bold mathtext lowercase theta — the capital "Θ" glyph read as an O with a
+    # Bold mathtext lowercase theta - the capital "Θ" glyph read as an O with a
     # thin crossbar; the bold cursive theta has a heavier, unmistakable bar.
     return [Annotation(r"$\boldsymbol{\theta}$", xy=xy, color="white",
                        fontsize=style.DEFAULT_AXIS_LABEL_SIZE + _THETA_FONT_OFFSET,
                        zorder=5)]
 
 
-# Panel A — cosine form: a, b and the angle between them =====================
+# Panel A - cosine form: a, b and the angle between them =====================
 
 
 def _angle_frame(frame_idx: int) -> list:
@@ -365,7 +365,7 @@ def _panel_a() -> DynamicPanel:
     )
 
 
-# Panel B — cosine form: the projection shadow ==============================
+# Panel B - cosine form: the projection shadow ==============================
 
 
 def _projection_frame(frame_idx: int) -> list:
@@ -390,7 +390,7 @@ def _panel_b() -> DynamicPanel:
     )
 
 
-# Panel C — component form: the x/y component staircase ======================
+# Panel C - component form: the x/y component staircase ======================
 
 
 def _components_overlay(a: tuple[float, float],
@@ -429,11 +429,11 @@ def _panel_c() -> DynamicPanel:
     )
 
 
-# Panel D — component form: the components as a stem of arrows ===============
+# Panel D - component form: the components as a stem of arrows ===============
 
 
 def _slot_chrome() -> list:
-    """The horizontal baseline plus an 'x' and a 'y' tick — the two slots that
+    """The horizontal baseline plus an 'x' and a 'y' tick - the two slots that
     hold each multiplied pair. Drawn fresh each frame (DynamicPanel clears)."""
     chrome: list = [
         Line(np.array([-3.6, 3.6]), np.array([0.0, 0.0]),
@@ -458,7 +458,7 @@ def _mid_label(text: str, x: float, value: float, color: str) -> Annotation:
     rides alongside the component it names rather than chasing the tip. a-labels
     sit to the arrow's left, b-labels to its right."""
     # Match the a / b vector labels exactly: DEFAULT_LABEL_FONT_SIZE, bold, and
-    # the default font family (no Ubuntu override) — Vector.draw uses the same.
+    # the default font family (no Ubuntu override) - Vector.draw uses the same.
     return Annotation(text, xy=(x, value / 2.0), color=color,
                       fontsize=style.DEFAULT_LABEL_FONT_SIZE,
                       fontweight="bold", zorder=6)
@@ -466,7 +466,7 @@ def _mid_label(text: str, x: float, value: float, color: str) -> Annotation:
 
 def _overlap_pair(a_val: float, b_val: float, x_center: float,
                   a_label: str, b_label: str) -> list:
-    """a- and b-components of one axis drawn OVERLAPPING at a single x-slot —
+    """a- and b-components of one axis drawn OVERLAPPING at a single x-slot -
     the two multiplicands of one dot-product term. The shorter arrow draws in
     front so it stays visible against the taller one. Labels flank the slot
     (a on the left, b on the right) so they never collide."""
@@ -659,7 +659,7 @@ def show(debug: bool = False) -> Figure:
 
 
 # ===========================================================================
-# STATIC redesign — two stacked 2.5-style rows: [ visual | a·b strip | text ].
+# STATIC redesign - two stacked 2.5-style rows: [ visual | a·b strip | text ].
 # Both rows show the SAME dot product so the accumulator bars line up vertically
 # ("two forms, one answer"). The dynamic/notebook path above is unchanged.
 # ===========================================================================
@@ -672,22 +672,22 @@ _B_STATIC = (3.0, 1.0)
 # Strip y-scale: spans the dot value with headroom for the readout below.
 _ACCUM_YLIM = (-10.0, 10.0)
 # Static gauge y-scale: SYMMETRIC about zero so the zero baseline sits dead-
-# center of the square cell and the bar grows up from the middle — figure 2.5's
+# center of the square cell and the bar grows up from the middle - figure 2.5's
 # accumulator look. ±1.4×value (matches 2.5's RUNNING_YLIM headroom factor), so
 # a·b=+9 reaches near the top with the zero line centered.
 _ACCUM_GAUGE_YLIM = (-12.6, 12.6)
 
 # Bone-white unified chrome + tight spacing for the static PNG, mirroring
 # gen_figure_241 / 2_5 so §2.4.2 shares their look. (To be lifted into the
-# library as a shared chrome profile — see the visual-coherence plan.)
+# library as a shared chrome profile - see the visual-coherence plan.)
 _STATIC_CHROME = {
     "TICK_LABEL_COLOR": "#EEEEEE",
     # Header text bone-white (#EEEEEE) so every figure's title reads at the same
     # bright weight across the montage.
     "SUPTITLE_COLOR": "#EEEEEE",
     # FRAME MODEL: the library cell border (#EEEEEE, DEFAULT_FRAME_LINEWIDTH=2.0)
-    # frames EVERY cell — visuals, accum strips, text boxes, and the header band
-    # — matching gen_figure_2_5 / 2_6. Per-panel spines/ghost-borders are OFF;
+    # frames EVERY cell - visuals, accum strips, text boxes, and the header band
+    # - matching gen_figure_2_5 / 2_6. Per-panel spines/ghost-borders are OFF;
     # show_cell_borders=True in render() draws the boxes.
     "SPINE_COLOR": "#EEEEEE",
     "DEFAULT_SPINE_LINEWIDTH": 2.0,
@@ -703,7 +703,7 @@ _STATIC_CHROME = {
     # they read identically to §2.4.1 instead of thinner.
     "DEFAULT_AXIS_LABEL_SIZE": 42,
     # In-plot vector labels (a, b) match the x/y axis glyphs (axis_label_size =
-    # AXIS_LABEL_SIZE − 2 = 40) — they were reading too small next to x/y.
+    # AXIS_LABEL_SIZE − 2 = 40) - they were reading too small next to x/y.
     "DEFAULT_LABEL_FONT_SIZE": 40,
 }
 
@@ -722,22 +722,22 @@ def _static_chrome():
 
 # Header font for the single top band (figure NUMBER + NAME, the 2.5 convention).
 # Larger than §2.4.1's 28pt because this figure is ~21" wide (5 units) vs 2.4.1's
-# ~12.6" — the title must scale with the canvas to read at the same visual weight.
+# ~12.6" - the title must scale with the canvas to read at the same visual weight.
 _HEADER_FONT_SIZE = 46
-# RHS text-box copy (scaffold — final prose is the user's).
+# RHS text-box copy (scaffold - final prose is the user's).
 _COSINE_TEXT = (
     "Dot Product - Cosine Form\n\n"
     "a · b = |a| |b| cos θ. The angle between a and b sets how much of a lies "
-    "along b — the projection. A wider angle shrinks it; at 90° it is zero."
+    "along b - the projection. A wider angle shrinks it; at 90° it is zero."
 )
 _COMPONENT_TEXT = (
     "Dot Product - Component Form\n\n"
-    "a · b = aₓbₓ + aᵧbᵧ. The angle is already baked into the components — "
+    "a · b = aₓbₓ + aᵧbᵧ. The angle is already baked into the components - "
     "multiply matching axes and add. Same answer, no angle measured."
 )
 
 
-# Static fill limits — SYMMETRIC so the origin (0,0) sits dead-center of the
+# Static fill limits - SYMMETRIC so the origin (0,0) sits dead-center of the
 # square visual cell with all four quadrants shown equally. a=(2,3), b=(3,1)
 # (both in Q1, max coord 3) sit comfortably inside the +4 reach. Equal range on
 # both axes keeps equal-aspect geometry honest.
@@ -745,7 +745,7 @@ _STATIC_FILL = (-4.0, 4.0)
 
 
 def _static_visual_kwargs() -> dict:
-    """Cosine/component StaticPanel chrome (no fill_cell — StaticPanel-safe).
+    """Cosine/component StaticPanel chrome (no fill_cell - StaticPanel-safe).
 
     units=(1, 1) with the body rows at row_heights=1.0 makes each visual cell a
     true SQUARE on the shared-tile canvas (1·unit wide × 1·unit tall = fig-1's
@@ -758,7 +758,7 @@ def _static_visual_kwargs() -> dict:
         axis_style="line",
         axis_labels=True,
         axis_label_size=style.DEFAULT_AXIS_LABEL_SIZE - 2,
-        # Spines OFF — the library cell border is the single frame for every
+        # Spines OFF - the library cell border is the single frame for every
         # cell (the unified 2.5 / 2.6 model). show_cell_borders=True in render().
         show_border=False,
         # No inset tick nubs (matches §2.4.1); the grid carries the scale.
@@ -796,7 +796,7 @@ def _static_component_visual() -> StaticPanel:
 
 
 def _accum_strip_panel() -> TimeSeriesPanel:
-    """The a·b accumulator strip — identical value in both rows so bars align.
+    """The a·b accumulator strip - identical value in both rows so bars align.
 
     Figure 2.5's accumulator look: the y-range is SYMMETRIC about zero so the
     baseline sits centered in the square cell and the bar grows up from the
@@ -807,9 +807,9 @@ def _accum_strip_panel() -> TimeSeriesPanel:
         units=(1, 1), xticks=[], yticks=[],
         xlim=(-1.0, 1.0), ylim=_ACCUM_GAUGE_YLIM,
         show_xticklabels=False, show_yticklabels=False,
-        # Spine OFF — the cell border frames this strip too (unified model).
+        # Spine OFF - the cell border frames this strip too (unified model).
         show_border=False,
-        # No x/y crosshair — the AccumulatorStrip draws its OWN horizontal zero
+        # No x/y crosshair - the AccumulatorStrip draws its OWN horizontal zero
         # baseline; the default "line" axis would add a stray vertical line at
         # x=0 that the centered bar sits on (reads as an artifact).
         axis_style="none",
@@ -819,7 +819,7 @@ def _accum_strip_panel() -> TimeSeriesPanel:
         # Bar centered in the strip cell; the readout drops into the empty well
         # below the baseline (AccumulatorStrip handles the clean placement).
         x=0.0,
-        # Crisp bone-white bar at FULL opacity — the a·b RESULT reads as a neutral
+        # Crisp bone-white bar at FULL opacity - the a·b RESULT reads as a neutral
         # gauge (not a colored accent), distinct from the orange vectors it scores.
         # Full alpha keeps it solid, not the faint washed-out pill alpha<1 gave.
         color="#EEEEEE", alpha=1.0,
@@ -829,7 +829,7 @@ def _accum_strip_panel() -> TimeSeriesPanel:
         markersize=style.DEFAULT_ACCUM_MARKERSIZE,
         readout_color="#EEEEEE", readout_font_size=34,
         # VERTICAL spine (no grid): a bone-white axis line down the strip center
-        # that the bar rides — same color / alpha / weight as the vector panels'
+        # that the bar rides - same color / alpha / weight as the vector panels'
         # axis lines. The +9 readout sits a fixed 1 unit from the origin in the
         # empty well below the bar.
         vertical_spine=True,
@@ -842,7 +842,7 @@ def _accum_strip_panel() -> TimeSeriesPanel:
 
 
 def _static_text_panel(text: str) -> TextPanel:
-    """RHS caption box — Figure 1's _side_text_panel treatment exactly: one
+    """RHS caption box - Figure 1's _side_text_panel treatment exactly: one
     1-unit square tile (= fig-1's text box), uppercase head + ragged-right body,
     top-left anchored at the shared caption font size, normal weight, no inner
     box (the cell border is the frame). One type system across every figure."""
@@ -866,7 +866,7 @@ def _static_rows() -> list:
                        units=(3, 1))
     ]
     # Three bordered cells per row: [ visual | a·b strip | text ]. The strip is
-    # its OWN cell with its own cell border (own left+right frame) — previously
+    # its OWN cell with its own cell border (own left+right frame) - previously
     # it shared a borderless CompositePanel cell with the text, which left it
     # with no right border. Separating also gives the text its own framed box.
     cosine_row = [
@@ -884,7 +884,7 @@ def _static_rows() -> list:
 
 def render(output_dir: str,
            output_filename: str = "projection_onto_vector/baseline.png") -> str:
-    """Render the static §2.4.2 — two stacked rows (cosine / component form),
+    """Render the static §2.4.2 - two stacked rows (cosine / component form),
     each [ visual | a·b strip | text ], both strips showing the same dot product."""
     with _static_chrome():
         fig = Figure.compose(

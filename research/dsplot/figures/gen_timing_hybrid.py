@@ -266,38 +266,55 @@ def build_deadline_strip(work_ms, out_path, dead_ms=186.0):
 
 
 def build_rate_check(work_ms, out_path, play_k=SAMPLE_RATE_K):
-    """Playback rate vs pipeline throughput, both bars to scale (K samples/s)."""
+    """Playback rate vs pipeline throughput, both bars to scale (K samples/s),
+    framed like the modules flowchart and sized from the README display spec."""
     pipe_k = CHUNK_SAMPLES / work_ms
     factor = int(pipe_k / play_k)
     MS = 0.1
     BH = play_k * MS                             # square playback box
     RS, GAP = RADIUS * BH, 0.7 * BH
+    PAD = 0.4 * BH                               # frame inset, the modules pad / box ratio
     fig, ax = _new_axes((27.0, 3.4))
+    boxes, rules, labels, ticks = [], [], [], []
 
-    def rbox(x, y, w, lw=LW):
-        ax.add_patch(FancyBboxPatch(
+    def rbox(x, y, w):
+        boxes.append(ax.add_patch(FancyBboxPatch(
             (x, y), w, BH, boxstyle=f"round,pad=0,rounding_size={RS}",
-            facecolor=BG, edgecolor=WHITE, linewidth=lw, zorder=3))
+            facecolor=BG, edgecolor=WHITE, zorder=3)))
 
     y_play = BH + GAP
     rbox(0, y_play, play_k * MS)
-    ax.text(play_k * MS + 0.35 * BH, y_play + BH / 2,
-            f"{play_k:.1f}K s/s - playback", color=WHITE, fontsize=20,
-            fontweight="bold", ha="left", va="center", zorder=5)
+    labels.append(ax.text(play_k * MS + 0.35 * BH, y_play + BH / 2,
+                          f"{play_k:.1f}K s/s - playback", color=WHITE,
+                          fontweight="bold", ha="left", va="center", zorder=5))
     rbox(0, 0, pipe_k * MS)
-    ax.text(pipe_k * MS / 2, BH / 2, f"{factor}× faster than playback",
-            color=WHITE, fontsize=20, fontweight="bold", ha="center",
-            va="center", zorder=5)
+    labels.append(ax.text(pipe_k * MS / 2, BH / 2, f"{factor}× faster than playback",
+                          color=WHITE, fontweight="bold", ha="center",
+                          va="center", zorder=5))
     AXY = -0.35 * BH
-    ax.plot([0, pipe_k * MS], [AXY, AXY], color=WHITE, lw=2.4, zorder=2)
-    marks = [(0, "0", "center"), (500, "500K", "center"),
+    rules += ax.plot([0, pipe_k * MS], [AXY, AXY], color=WHITE, zorder=2)
+    marks = [(0, "0", "left"), (500, "500K", "center"),
              (1000, "1M", "center"), (pipe_k, f"{pipe_k / 1000:.1f}M s/s", "right")]
     for x, lab, ha in marks:
-        ax.plot([x * MS] * 2, [AXY, AXY - 0.13 * BH], color=WHITE, lw=2.4)
-        ax.text(x * MS, AXY - 0.27 * BH, lab, color=WHITE, fontsize=17,
-                fontweight="bold", ha=ha, va="top")
-    ax.set_xlim(-0.35, pipe_k * MS + 0.35)
-    ax.set_ylim(AXY - 0.75 * BH, y_play + BH + 0.3)
+        rules += ax.plot([x * MS] * 2, [AXY, AXY - 0.13 * BH], color=WHITE)
+        ticks.append(ax.text(x * MS, AXY - 0.27 * BH, lab, color=WHITE,
+                             fontweight="bold", ha=ha, va="top"))
+    x0, x1 = -PAD, pipe_k * MS + PAD
+    y0, y1 = AXY - 0.27 * BH - 0.45 * BH - PAD, y_play + BH + PAD
+    frame = ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, facecolor="none",
+                                   edgecolor=WHITE, clip_on=False, zorder=6))
+    ax.set_xlim(x0, x1)
+    ax.set_ylim(y0, y1)
+    fig.canvas.draw()
+    content_in = ax.get_window_extent().width / fig.dpi
+    pt = lambda px: style.readme_pt(px, content_in)
+    frame.set_linewidth(pt(style.README_FRAME_PX))
+    for artist in boxes + rules:
+        artist.set_linewidth(pt(style.README_LINE_PX))
+    for t in labels:
+        t.set_fontsize(pt(style.README_TEXT_PX))
+    for t in ticks:
+        t.set_fontsize(0.85 * pt(style.README_TEXT_PX))
     return _save(fig, out_path)
 
 

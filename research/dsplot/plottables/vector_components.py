@@ -1,4 +1,4 @@
-"""VectorComponents — x/y decomposition of a 2D vector (2D only).
+"""VectorComponents - x/y decomposition of a 2D vector (2D only).
 
 Renders the tip-to-tail reconstruction of a vector as two dashed component
 arrows, plus optional droplines from the tip perpendicular to each axis.
@@ -17,7 +17,7 @@ class VectorComponents(Plottable):
 
     `first_axis="x"` renders the x-component from origin, then the y-component
     from the x-component's tip. `first_axis="y"` does the reverse. Either order
-    terminates at the same tip — the decomposition is commutative, which the
+    terminates at the same tip - the decomposition is commutative, which the
     figure puts on display.
     """
 
@@ -37,7 +37,7 @@ class VectorComponents(Plottable):
         vec_t = tuple(vec)
         if len(vec_t) != 2:
             raise ValueError(
-                "VectorComponents is 2D only — pass a 2-tuple"
+                "VectorComponents is 2D only - pass a 2-tuple"
             )
         if first_axis not in ("x", "y"):
             raise ValueError(
@@ -105,7 +105,7 @@ class VectorComponents(Plottable):
 
         if self.show_droplines:
             # Droplines are subordinate to the bold vector + dashed components,
-            # so they're thinner and a darker gray than the components — closer
+            # so they're thinner and a darker gray than the components - closer
             # to the panel background so they read as a quiet "construction
             # line" not a primary decoration.
             dropline_kwargs = dict(

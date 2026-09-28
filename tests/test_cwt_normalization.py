@@ -8,9 +8,7 @@ low-frequency bands: wavelet kernel L1 norm scales as 1/f without normalization.
 import numpy as np
 import pytest
 
-from subshader.config import WaveletConfig
 from subshader.dsp.wavelet_kernel import WaveletKernel
-from subshader.dsp.wavelet import NpWavelet
 
 
 # =============================================================================
@@ -59,7 +57,7 @@ class TestWaveletKernelNormalization:
 class TestCwtBrightnessBias:
     """Equal-amplitude tones across the frequency range must produce comparable CWT magnitudes."""
 
-    def test_equal_amplitude_tones_produce_comparable_magnitudes(self, numpy_wavelet):
+    def test_equal_amplitude_tones_produce_comparable_magnitudes(self, cpu_cwt):
         """
         Synthetic signal with equal-amplitude sinusoids at 100, 500, 1000, 5000,
         and 10000 Hz must produce CWT peak magnitudes within 2x of each other.
@@ -75,12 +73,12 @@ class TestCwtBrightnessBias:
         signal = sum(np.sin(2 * np.pi * f * t) for f in test_freqs) / len(test_freqs)
         signal = signal.astype(np.float64)
 
-        cwt_output = numpy_wavelet.cwt(signal)
+        cwt_output = cpu_cwt.process(signal)
 
         # For each test frequency, find the closest row in the wavelet freq array
         peak_magnitudes = []
         for test_f in test_freqs:
-            closest_idx = np.argmin(np.abs(numpy_wavelet.freqs - test_f))
+            closest_idx = np.argmin(np.abs(cpu_cwt.freqs - test_f))
             row_max = np.max(cwt_output[closest_idx])
             peak_magnitudes.append(row_max)
 
@@ -102,17 +100,17 @@ class TestCwtBrightnessBias:
 # =============================================================================
 
 class TestNormalizeByScale:
-    """AntsWavelet.normalize_by_scale must be a no-op after kernel normalization handles bias."""
+    """CWT._normalize_by_scale must be a no-op after kernel normalization handles bias."""
 
-    def test_normalize_by_scale_is_noop(self, numpy_wavelet):
-        """normalize_by_scale must return its input array unchanged."""
+    def test_normalize_by_scale_is_noop(self, cpu_cwt):
+        """_normalize_by_scale must return its input array unchanged."""
         rng = np.random.default_rng(42)
-        num_freqs = numpy_wavelet.num_freqs
-        input_n = numpy_wavelet.input_n
+        num_freqs = cpu_cwt.num_freqs
+        input_n = cpu_cwt.input_n
         coefs = rng.standard_normal((num_freqs, input_n)) + 1j * rng.standard_normal((num_freqs, input_n))
         coefs = coefs.astype(np.complex128)
 
-        result = numpy_wavelet.normalize_by_scale(coefs)
+        result = cpu_cwt._normalize_by_scale(coefs)
 
         assert np.array_equal(result, coefs), (
             "normalize_by_scale must return its input unchanged. "

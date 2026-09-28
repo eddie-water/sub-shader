@@ -1,0 +1,59 @@
+--- a/src/subshader/dsp/cwt.py
++++ b/src/subshader/dsp/cwt.py
+@@ -134,7 +134,7 @@
+             2. Convert to magnitude
+             3. Discard edge-artifact region
+             4. Extract non-overlapping hop center
+-            5. Downsample to target_width
++            5. Max-pool down to target_width
+ 
+         Args:
+             raw: Complex coefficients from transform(), shape (num_freqs, input_n).
+@@ -267,10 +267,19 @@
+         coefs: np.ndarray,
+         target_width: Optional[int] = None,
+     ) -> np.ndarray:
+-        """Downsample the time dimension to target_width by uniform index selection.
++        """Downsample the time dimension to target_width by block max-pooling.
++
++        Each output bin is the maximum over its contiguous block of input
++        columns (peak-hold envelope, the display detector used by spectrum
++        analyzers). Uniform index selection was used previously, but keeping
++        1 of every ~128 columns aliased short transients: a high-frequency
++        click whose CWT response fell between kept columns vanished from the
++        frame entirely. Max-pooling guarantees every column lands in exactly
++        one block, so no event can disappear. Runs on magnitudes at the very
++        end of the visualization path - nothing downstream requires linearity.
+ 
+         Args:
+-            coefs: Input coefficients, shape (freq_bins, num_samples).
++            coefs: Magnitude coefficients, shape (freq_bins, num_samples).
+             target_width: Target number of time bins.
+ 
+         Returns:
+@@ -282,7 +291,7 @@
+         if target_width is None:
+             target_width = self.output_n
+ 
+-        _, num_samples = coefs.shape
++        num_freqs, num_samples = coefs.shape
+ 
+         if target_width <= 0 or target_width > num_samples:
+             raise ValueError(
+@@ -290,10 +299,12 @@
+                 f"(must be between 1 and {num_samples})"
+             )
+ 
+-        hop = num_samples / target_width
+-        indices = np.floor(np.arange(target_width) * hop).astype(int)
+-        indices = np.clip(indices, 0, num_samples - 1)
+-        downsampled = coefs[:, indices]
++        if num_samples % target_width == 0:
++            block = num_samples // target_width
++            downsampled = coefs.reshape(num_freqs, target_width, block).max(axis=2)
++        else:
++            edges = np.linspace(0, num_samples, target_width + 1).astype(int)
++            downsampled = np.maximum.reduceat(coefs, edges[:-1], axis=1)
+ 
+         log.debug(f"Downsampled: {coefs.shape} -> {downsampled.shape}")
+         return downsampled

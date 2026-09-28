@@ -1,9 +1,9 @@
-"""RichText Plottable — a single line of text with per-segment colors.
+"""RichText Plottable - a single line of text with per-segment colors.
 
 A line is given as a list of ``(text, color)`` segments; the segments are laid
 out left-to-right (via matplotlib's offsetbox HPacker, which measures and packs
 them) and the whole run is centered on ``xy``. Use it when one line mixes
-colors — e.g. an equation where the ``a`` terms are orange, the ``b`` terms are
+colors - e.g. an equation where the ``a`` terms are orange, the ``b`` terms are
 purple, and the operators / result are white.
 
 Placement mirrors Annotation: ``transform="axes"`` (default) anchors ``xy`` in

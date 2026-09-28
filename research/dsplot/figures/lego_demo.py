@@ -1,4 +1,4 @@
-"""lego_demo — exercises Figure.compose with the panel-unit OOP layer.
+"""lego_demo - exercises Figure.compose with the panel-unit OOP layer.
 
 Two 4-unit rows: row 1 = StaticPanel + HeatmapPanel(2) + HeatmapPanel;
 row 2 = StaticPanel3D + CompositePanel(2, 3-row stack) + HeatmapPanel.
@@ -41,7 +41,7 @@ LIM_3D = 5.0
 # Aggressive iterated-log chirp: 2 Hz → 100 Hz over 1 s. The inst freq
 # follows f0 * (f1/f0)^((t/t1)^N) with N >> 1, so the curve stays near
 # f0 for most of the duration and snaps up to f1 only in the final
-# fraction — a much more aggressive ramp than a plain logarithmic chirp.
+# fraction - a much more aggressive ramp than a plain logarithmic chirp.
 CHIRP_DURATION_S = 1.0
 CHIRP_F0_HZ = 2.0
 CHIRP_F1_HZ = 100.0
@@ -52,7 +52,7 @@ CHIRP_RAMP_POWER = 2.5
 def _build_chirp() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Iterated-log chirp: inst freq follows f0 * (f1/f0)^((t/t1)^N) with
     N = CHIRP_RAMP_POWER. For N > 1 the curve hugs f0 for most of the
-    duration and snaps up to f1 only in the final fraction — far more
+    duration and snaps up to f1 only in the final fraction - far more
     aggressive than scipy.signal.chirp's plain 'logarithmic' method.
 
     Signal is reconstructed by numerically integrating inst_f to a phase
@@ -74,7 +74,7 @@ def _build_sine() -> tuple[np.ndarray, np.ndarray]:
 
 
 def _build_gaf(n: int = GRID_N, base_freq_hz: float = 2.0) -> np.ndarray:
-    """Gramian Angular Field of a single-frequency sine — produces the woven
+    """Gramian Angular Field of a single-frequency sine - produces the woven
     diagonal-band pattern seen in the pyts plot_single_gaf example.
 
     The raw GAF lands in [-1, 1] with peaks at +1 and troughs at -1; under the
@@ -98,8 +98,8 @@ def _build_gaussian(sigma: float) -> np.ndarray:
 def build_figure() -> Figure:
     """Compose the lego_demo Figure: two 4-unit rows.
 
-    Row 1 — Vector, 2-unit Heatmap, Field.
-    Row 2 — StaticPanel3D, a 3-row CompositePanel (Field / Signal / Field)
+    Row 1 - Vector, 2-unit Heatmap, Field.
+    Row 2 - StaticPanel3D, a 3-row CompositePanel (Field / Signal / Field)
             occupying 2 units, and a trailing HeatmapPanel.
     """
     _, sin = _build_sine()
@@ -131,8 +131,8 @@ def build_figure() -> Figure:
     ))
 
     # Inst-freq twin axis: log range spanning the chirp; inst_f is plotted
-    # twice — a wider near-black backing line first, then the orange line on
-    # top — so the orange has a soft dark border that lifts it off the gray
+    # twice - a wider near-black backing line first, then the orange line on
+    # top - so the orange has a soft dark border that lifts it off the gray
     # waveform underneath.
     wide_signal = TimeSeriesPanel(
         title="Time Series + Linear Plot",
@@ -279,7 +279,7 @@ def build_figure() -> Figure:
 
     return Figure.compose(
         rows=[row1, row2],
-        suptitle="dsplot — Sample Template",
+        suptitle="dsplot - Sample Template",
         show_cell_borders=True,
     )
 

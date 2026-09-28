@@ -1,4 +1,4 @@
-"""dsplot style override demo — D-05 BOTH modes, side-by-side.
+"""dsplot style override demo - D-05 BOTH modes, side-by-side.
 
 Run as:
 
@@ -6,10 +6,10 @@ Run as:
 
 Produces three PNGs in ``assets/images/dsp/style_override_demo/``:
 
-  * ``default_palette.png``   — baseline, uses the inherited dsplot.style template.
-  * ``global_override.png``   — Mode 1 (D-05): reassigns ``style.PRIMARY_COLOR``
+  * ``default_palette.png``   - baseline, uses the inherited dsplot.style template.
+  * ``global_override.png``   - Mode 1 (D-05): reassigns ``style.PRIMARY_COLOR``
                                  etc. Affects every figure rendered after.
-  * ``local_override.png``    — Mode 2 (D-05): a single figure module defines its
+  * ``local_override.png``    - Mode 2 (D-05): a single figure module defines its
                                  own module-local constants (``MY_PRIMARY`` etc.)
                                  and passes them to the renderer. ``style.*``
                                  is NOT touched, so other figures keep the inherited
@@ -28,7 +28,7 @@ Why both modes matter:
     derive from the default; if you reassigned the module-level constant it
     would only affect motivator).
 
-This demo is consumer code, not library code — it lives at
+This demo is consumer code, not library code - it lives at
 ``research/dsplot/figures/`` alongside the canonical DSP.md figure renderers.
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 # Invoked as ``python -m research.dsplot.figures.style_override_demo`` from the
-# repo root — the package context lets relative imports resolve without any
+# repo root - the package context lets relative imports resolve without any
 # sys.path bootstrap (qbo-260521: dropped the absolute import + bootstrap).
 # `style` is the module object itself; assigning `style.PRIMARY_COLOR = ...`
 # below mutates the shared module attribute, which is what Mode 1 (global
@@ -60,7 +60,7 @@ def _render_one(filename: str,
                 tertiary_color: str) -> str:
     """Render a 1x3 figure with three vectors in the supplied colors.
 
-    Colors are taken from the function arguments, NOT from ``dsplot.style`` —
+    Colors are taken from the function arguments, NOT from ``dsplot.style`` -
     this is what lets the caller demonstrate the override modes by deciding
     where the colors come from at the call site.
     """
@@ -137,7 +137,7 @@ def main() -> int:
 
         # ------ Mode 2: LOCAL figure override (per D-05) ------
         # Module-local constants for THIS figure only. Other figures still
-        # inherit the global style.* defaults — they are NOT touched.
+        # inherit the global style.* defaults - they are NOT touched.
         # This is the same pattern motivator.py uses to derive its own
         # LAYOUT_HSPACE / LAYOUT_LABEL_RATIO / etc. from the defaults.
         MY_PRIMARY   = "#facc15"  # yellow

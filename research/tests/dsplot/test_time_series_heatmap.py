@@ -12,7 +12,7 @@ Each behavior in the plan maps to one test:
   8. D-05 lazy lookup: reassigning style.DEFAULT_HEATMAP_CMAP between construction
      and draw is observable on the resulting artist.
 
-Test 8 uses try/finally to restore the style default — global reassignment must
+Test 8 uses try/finally to restore the style default - global reassignment must
 not leak across tests.
 """
 from __future__ import annotations

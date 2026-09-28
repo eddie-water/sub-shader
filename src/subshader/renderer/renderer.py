@@ -1,10 +1,10 @@
 """
-Renderer module — OpenGL-based real-time visualization.
+Renderer module - OpenGL-based real-time visualization.
 
-Renderer   — top-level orchestrator: creates window, frame buffer, GPU renderer,
+Renderer   - top-level orchestrator: creates window, frame buffer, GPU renderer,
              and drives the render loop each frame.
-GLContext  — GLFW window and OpenGL context lifecycle.
-GPURenderer — low-level shader compilation, texture management, and draw calls.
+GLContext  - GLFW window and OpenGL context lifecycle.
+GPURenderer - low-level shader compilation, texture management, and draw calls.
 """
 
 import os
@@ -282,7 +282,7 @@ class GPURenderer:
             ValueError: If texture data is invalid.
         """
         if texture_data is None:
-            raise ValueError("Texture data is None — cannot upload to GPU texture")
+            raise ValueError("Texture data is None - cannot upload to GPU texture")
 
         if not hasattr(texture_data, 'shape'):
             raise ValueError(f"Texture data has no shape attribute: {type(texture_data)}")
@@ -399,7 +399,7 @@ class Renderer:
         self.config = config
         self.file_path = config.file_path
 
-        # Fixed intensity reference — set by set_fixed_intensity_max() before run()
+        # Fixed intensity reference - set by set_fixed_intensity_max() before run()
         self._fixed_intensity_max = 1.0
 
         # Circular buffer to store data frames in chronological order
@@ -432,7 +432,7 @@ class Renderer:
         self.frame_buffer.push_frame(coefs)
 
         # Upload and render entire chronologically ordered buffer to the texture.
-        # intensity_max was set once via set_fixed_intensity_max() — shader uniform persists.
+        # intensity_max was set once via set_fixed_intensity_max() - shader uniform persists.
         self.gpu_renderer.update_texture(self.frame_buffer.get_flattened_buffer())
         self.gl_context.clear_graphic()
         self.gpu_renderer.render_graphic()
@@ -463,6 +463,6 @@ class Renderer:
 
     def cleanup(self) -> None:
         """
-        Clean shutdown — terminate GLFW.
+        Clean shutdown - terminate GLFW.
         """
         glfw.terminate()

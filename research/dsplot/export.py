@@ -28,3 +28,19 @@ def crop_to_content(path: str, pad_px: int = style.README_EDGE_PAD_PX,
     out.paste(im.crop((x0, y0, x1, y1)), (pad_px, pad_px))
     out.save(path)
     return path
+
+
+def fit_readme_width(path: str, shown_px: int = style.README_SHOWN_PX) -> str:
+    """Crop to content, then scale so the PNG is README_SUPERSAMPLE x its shown
+    width: one exported pixel means the same on-screen size in every figure."""
+    crop_to_content(path)
+    im = Image.open(path).convert("RGB")
+    pad = style.README_EDGE_PAD_PX
+    content = im.crop((pad, pad, im.width - pad, im.height - pad))
+    w = shown_px * style.README_SUPERSAMPLE - 2 * pad
+    content = content.resize((w, round(content.height * w / content.width)), Image.LANCZOS)
+    bg_rgb = tuple(int(style.BG_COLOR.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+    out = Image.new("RGB", (w + 2 * pad, content.height + 2 * pad), bg_rgb)
+    out.paste(content, (pad, pad))
+    out.save(path)
+    return path

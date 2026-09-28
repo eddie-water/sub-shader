@@ -123,14 +123,14 @@ def test_kernel_energy_per_scale():
 
     # L1 norm should be ≈ 1.0 for all kernels after Phase 2 normalization
     assert l1_cv < 0.01, (
-        f"L1 norm coefficient of variation: {l1_cv:.4f} (expect < 0.01 — all kernels should be L1-normalized)"
+        f"L1 norm coefficient of variation: {l1_cv:.4f} (expect < 0.01 - all kernels should be L1-normalized)"
     )
     assert abs(np.mean(l1_norms) - 1.0) < 0.01, (
-        f"Mean L1 norm: {np.mean(l1_norms):.4f} (expect ≈ 1.0 — L1 normalization applied)"
+        f"Mean L1 norm: {np.mean(l1_norms):.4f} (expect ≈ 1.0 - L1 normalization applied)"
     )
     # With L1 normalization, L2 norm scales as sqrt(f): longer low-freq kernels
     # have more samples at the same per-sample magnitude → lower L2 per sample.
     assert abs(slope - 0.5) < 0.15, (
         f"L2 norm vs freq log-log slope: {slope:.3f} "
-        f"(expect ~+0.5 after L1 normalization — shorter high-freq kernels have proportionally higher L2)"
+        f"(expect ~+0.5 after L1 normalization - shorter high-freq kernels have proportionally higher L2)"
     )

@@ -1,8 +1,8 @@
 """
 Frame buffer classes for the renderer module.
 
-CircularFrameBuffer — stores CWT frames in a circular array for scrolling visualization.
-AudioFrameBuffer   — stores audio chunks in a circular array for waveform display.
+CircularFrameBuffer - stores CWT frames in a circular array for scrolling visualization.
+AudioFrameBuffer   - stores audio chunks in a circular array for waveform display.
 """
 
 import numpy as np

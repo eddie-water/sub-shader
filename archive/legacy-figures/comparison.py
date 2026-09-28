@@ -43,7 +43,7 @@ from utilities.wav_export import export_signal_to_wav
 
 
 # =============================================================================
-# COMPARISON METHODS — extensible method config list
+# COMPARISON METHODS - extensible method config list
 # =============================================================================
 
 def _run_numpy_cwt(chunk, npwt):
@@ -102,7 +102,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
     )
     chirp_n_frames = max(chirp_n_frames, NUM_FRAMES)
 
-    # DAW reference images (row 1) — placeholders until user generates Edison screenshots
+    # DAW reference images (row 1) - placeholders until user generates Edison screenshots
     signal_specs = [
         {"label": "Bouncing Chirp", "type": "chirp", "daw_image": DAW_IMAGE_COMPARISON_1},
         {"label": "MIDI Sine Waves", "type": "file", "path": AUDIO_COMPARISON_2, "daw_image": DAW_IMAGE_COMPARISON_2},
@@ -304,13 +304,13 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         for c in range(GRID_DATA_COLS + 1):
             row_axes.append(fig.add_subplot(gs[r, c]))
         axes.append(row_axes)
-    # Hide label column axes — labels placed after layout is finalized (below)
+    # Hide label column axes - labels placed after layout is finalized (below)
     for r in range(GRID_ROWS):
         axes[r][0].axis("off")
 
     for col_idx, (col, spec) in enumerate(zip(column_data, signal_specs)):
         dc = col_idx + 1  # data column (0 is label column)
-        # ── Row 0: Reference — waveform time series / instantaneous freq ──
+        # ── Row 0: Reference - waveform time series / instantaneous freq ──
         ax_ref = axes[0][dc]
 
         if spec["type"] == "chirp":
@@ -348,7 +348,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
         plt.setp(ax_ref.get_xticklabels(), visible=False)
         ax_ref.tick_params(axis="x", length=0)
 
-        # ── Row 1: DAW — placeholder / reference image ───────────────────
+        # ── Row 1: DAW - placeholder / reference image ───────────────────
         ax_daw = axes[1][dc]
 
         daw_path = spec.get("daw_image")
@@ -358,7 +358,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
                           extent=[0, col["duration_s"], 0, col["n_cwt_freqs"]])
         else:
             ax_daw.set_facecolor("#2a2a2a")
-            ax_daw.text(0.5, 0.5, "placeholder — generate in FL Studio",
+            ax_daw.text(0.5, 0.5, "placeholder - generate in FL Studio",
                         transform=ax_daw.transAxes, ha="center", va="center",
                         fontsize=18, color="#666666", style="italic")
             ax_daw.set_ylim(0, col["n_cwt_freqs"])
@@ -412,7 +412,7 @@ def generate_comparison_grid(stub_pywt: bool = False, dpi: int = 0, comparison: 
                 plt.setp(ax.get_xticklabels(), visible=False)
                 ax.tick_params(axis="x", length=0)
 
-    # Column labels across the top (data columns only) — use GRID_TITLE_PAD for breathing room
+    # Column labels across the top (data columns only) - use GRID_TITLE_PAD for breathing room
     for col_idx, col in enumerate(column_data):
         axes[0][col_idx + 1].set_title(
             col["label"], fontsize=style.LABEL_FONT_SIZE, fontweight="bold",

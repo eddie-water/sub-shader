@@ -1,4 +1,4 @@
-"""Panel containers — own one mpl Axes and a list of Plottables."""
+"""Panel containers - own one mpl Axes and a list of Plottables."""
 from .base import Panel
 from .bar_panel import BarPanel
 from .composite_panel import CompositePanel

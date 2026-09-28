@@ -1,7 +1,7 @@
 """Tests for IntensityTracker fixed-reference normalization.
 
 IntensityTracker now holds a fixed reference value set at construction.
-update() is a no-op — the value never changes during playback.
+update() is a no-op - the value never changes during playback.
 """
 
 import numpy as np
@@ -43,7 +43,7 @@ def test_color_normalization_config_has_no_retention_rate():
     """ColorNormalizationConfig no longer has retention_rate field."""
     from subshader.config import ColorNormalizationConfig
     config = ColorNormalizationConfig()
-    assert not hasattr(config, "retention_rate"), "retention_rate field still exists — should be removed"
+    assert not hasattr(config, "retention_rate"), "retention_rate field still exists - should be removed"
 
 
 def test_color_normalization_config_validate_passes():

@@ -1,20 +1,20 @@
-"""Spotlight Plottable — highlight overlay for emphasizing a value or region.
+"""Spotlight Plottable - highlight overlay for emphasizing a value or region.
 
 Three rendering modes:
 
-  - ``"rectangle"`` — axvspan(x_range) and/or axhspan(y_range). Either or
+  - ``"rectangle"`` - axvspan(x_range) and/or axhspan(y_range). Either or
     both may be supplied; passing neither raises ValueError on draw. Used
     by the alignment diagnostic to mark burst-time bands.
-  - ``"scatter"`` — single emphasized point at ``xy`` (large dot, white
+  - ``"scatter"`` - single emphasized point at ``xy`` (large dot, white
     edge). Used to mark a peak or sample-of-interest.
-  - ``"glow"`` — alpha-graded Circle at ``xy`` with configurable
+  - ``"glow"`` - alpha-graded Circle at ``xy`` with configurable
     ``radius``. Useful for animation focus where the spotlight moves.
 
-Default color is ``style.TERTIARY_COLOR`` (gold — high visibility against
+Default color is ``style.TERTIARY_COLOR`` (gold - high visibility against
 the dark background). Style knobs resolve against ``dsplot.style.*`` at
 draw() time per D-05.
 
-Validation runs at ``draw()``, not in ``__init__`` — matches the rest of
+Validation runs at ``draw()``, not in ``__init__`` - matches the rest of
 the library's defer-failure-to-render contract.
 """
 from __future__ import annotations

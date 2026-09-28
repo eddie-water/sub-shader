@@ -4,14 +4,15 @@ Configuration Module for SubShader.
 Centralized configuration management for SubShader module components using
 a flat inheritance hierarchy:
 
-  PipelineConfig       — base: file_path, chunk_size, overlap, sample_rate, total_samples
-    CWTConfig          — adds wavelet-specific params (notes, octaves, root freq, etc.)
-    RendererConfig     — adds rendering params (num_frames, color normalization)
+  PipelineConfig       - base: file_path, chunk_size, overlap, sample_rate, total_samples
+    CWTConfig          - adds wavelet-specific params (notes, octaves, root freq, etc.)
+    RendererConfig     - adds rendering params (num_frames, color normalization)
 
 All config objects flow through the pipeline. AudioStream discovers runtime
 values (sample_rate, total_samples) and writes them back to the shared config.
 """
 
+import functools
 import os
 from dataclasses import dataclass, field
 from typing import Tuple, List
@@ -23,9 +24,15 @@ from .utils.logging import get_logger
 log = get_logger(__name__)
 
 
+@functools.lru_cache(maxsize=1)
 def _get_system_display_size() -> Tuple[int, int]:
     """
     Get system display dimensions with fallback.
+
+    Memoized (lru_cache) so window_width and window_height - each populated by
+    its own default_factory lambda on RendererConfig - share one real probe
+    instead of instantiating tk.Tk() twice per construction. The screen doesn't
+    change mid-process, so caching across the process lifetime is safe.
 
     Returns:
         Tuple[int, int]: Screen width and height in pixels
@@ -196,7 +203,7 @@ class RendererConfig(PipelineConfig):
     # Color normalization parameters (gamma, percentiles, decay)
     color_norm: ColorNormalizationConfig = field(default_factory=ColorNormalizationConfig)
 
-    # Window dimensions — auto-detected from system display, fallback to Full HD
+    # Window dimensions - auto-detected from system display, fallback to Full HD
     window_width: int = field(default_factory=lambda: _get_system_display_size()[0])
     window_height: int = field(default_factory=lambda: _get_system_display_size()[1])
 

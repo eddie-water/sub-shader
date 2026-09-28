@@ -1,4 +1,4 @@
-"""Figure orchestrator tests — Plan 09-02 Task 2.
+"""Figure orchestrator tests - Plan 09-02 Task 2.
 
 Verifies:
   - Figure constructs and composes Panels into one mpl Figure via gridspec
@@ -27,7 +27,7 @@ pytest.importorskip("dsplot", reason="dsplot package not yet available (depends 
 
 
 def _make_blank_panel():
-    """Build a no-op StaticPanel — useful when only the Panel scaffolding matters."""
+    """Build a no-op StaticPanel - useful when only the Panel scaffolding matters."""
     from dsplot.panels import StaticPanel
     return StaticPanel()
 
@@ -109,7 +109,7 @@ def test_figure_end_to_end_with_real_vector(tmp_path):
 
 def test_figure_rowspan_colspan_spans_multiple_cells():
     """A panel placed at row=0, col=0 with rowspan=2/colspan=2 on a 3x3 grid
-    must span a larger bbox than a single-cell panel — proving the spanned
+    must span a larger bbox than a single-cell panel - proving the spanned
     cell really is multi-cell."""
     from dsplot import Figure
     fig_span = Figure(n_rows=3, n_cols=3)

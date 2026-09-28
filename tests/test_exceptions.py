@@ -31,16 +31,11 @@ class TestExceptionHierarchy:
 
 
 class TestNoDuplicateExceptions:
-    """Verify audio_input.py uses canonical exceptions, not local copies."""
+    """Verify audio reader.py uses canonical exceptions, not local copies."""
 
-    def test_audio_input_uses_canonical_audio_file_not_found(self):
-        from subshader.audio.audio_input import AudioFileNotFoundError as AudioVersion
+    def test_audio_reader_uses_canonical_audio_file_not_found(self):
+        from subshader.audio.reader import AudioFileNotFoundError as AudioVersion
         from subshader.exceptions import AudioFileNotFoundError as CanonicalVersion
-        assert AudioVersion is CanonicalVersion
-
-    def test_audio_input_uses_canonical_end_of_audio(self):
-        from subshader.audio.audio_input import EndOfAudioException as AudioVersion
-        from subshader.exceptions import EndOfAudioException as CanonicalVersion
         assert AudioVersion is CanonicalVersion
 
 

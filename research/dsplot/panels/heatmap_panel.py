@@ -1,4 +1,4 @@
-"""HeatmapPanel — semantic StaticPanel subclass for 2D field displays.
+"""HeatmapPanel - semantic StaticPanel subclass for 2D field displays.
 
 Default (1, 1) is square; callers pass `units=(N, 1)` for wide spectrograms.
 Overrides `render()` to drive the axes lim from the contained Heatmap's
@@ -8,13 +8,13 @@ labels and axis labels land in the surrounding gutter.
 
 **Line overlays on HeatmapPanel:** A `Line` plottable added via
 `panel.add(Line(...))` draws onto the panel's primary axis, which is in
-HEATMAP COORDINATE SPACE — i.e. x is duration (seconds, or whatever
+HEATMAP COORDINATE SPACE - i.e. x is duration (seconds, or whatever
 `Heatmap.extent`'s x-range is) and y is BIN INDEX (0 to `len(freqs)`),
 NOT Hz. Callers overlaying a frequency-domain curve (e.g. instantaneous
 frequency in Hz) must pre-transform the y-values into bin-space before
 constructing the Line, typically via
 `np.interp(inst_freq_hz, freqs, np.arange(len(freqs)))`. HeatmapPanel does
-NOT support a twin y-axis — overlays share the primary axis only. See
+NOT support a twin y-axis - overlays share the primary axis only. See
 `dsplot/figures/gen_figure_1_stft_vs_cwt.py::_build_3row_figure` for the canonical pattern
 (twin-axis Line on row 1's TimeSeriesPanel; primary-axis Line overlays
 available on rows 2/3's HeatmapPanels via the bin-space transform).
@@ -99,7 +99,7 @@ def _apply_axis_decoration(
         ax.set_yticks(list(yticks))
         ax.tick_params(axis="y", **tick_kwargs)
     # show_{x,y}ticklabels controls whether tick LABELS show (tick MARKS
-    # are unaffected). Explicitly drive BOTH directions every call — mpl's
+    # are unaffected). Explicitly drive BOTH directions every call - mpl's
     # tick_params is sticky, so an earlier call that hid labels would
     # otherwise survive a later call that wants them visible.
     #
@@ -117,7 +117,7 @@ def _apply_axis_decoration(
     else:
         ax.tick_params(axis="y", labelleft=show_yticklabels, labelright=False)
     # Axis labels sit DEFAULT_{X,Y}_AXIS_LABEL_INSET_INCHES from the spine via
-    # set_label_coords. The ONLY clamp is the figure-edge clamp — labels live
+    # set_label_coords. The ONLY clamp is the figure-edge clamp - labels live
     # OUTSIDE the spine in the chrome zone, so an own-axes clamp wouldn't
     # protect anything useful and would break the style-template derivation
     # (tiny inner composite cells would silently use a different inset than
@@ -155,7 +155,7 @@ def _apply_axis_decoration(
             labelpad=0,
         )
         # va='center' so the label CENTER aligns with set_label_coords. Default
-        # va='top' would put the top edge at the position — that adds label
+        # va='top' would put the top edge at the position - that adds label
         # height to one side and breaks the spine↔cell-border centering.
         ax.xaxis.label.set_va("center")
         x_offset_axes = x_inset_in / axes_h_in
@@ -198,7 +198,7 @@ def _pin_extreme_ticklabels(ax) -> None:
     inter-row/column gutter size.
 
     Connected as a draw_event callback because matplotlib regenerates tick
-    label defaults on autoscale/draw cycles — applying va/ha once doesn't
+    label defaults on autoscale/draw cycles - applying va/ha once doesn't
     survive interactive backends. Idempotent: tags the Axes so repeated
     setup calls don't accumulate duplicate listeners.
     """

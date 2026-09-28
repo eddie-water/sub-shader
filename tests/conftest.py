@@ -3,8 +3,8 @@
 import pytest
 import os
 
-from subshader.config import WaveletConfig
-from subshader.dsp.wavelet import NpWavelet
+from subshader.config import CWTConfig
+from subshader.dsp.cwt import CpuCWT
 
 
 @pytest.fixture
@@ -20,12 +20,12 @@ def valid_audio_path():
 
 
 @pytest.fixture
-def wavelet_config():
-    """Return a WaveletConfig with default parameters."""
-    return WaveletConfig()
+def cwt_config():
+    """Return a CWTConfig with default parameters."""
+    return CWTConfig(chunk_size=16384, sample_rate=44100.0)
 
 
 @pytest.fixture
-def numpy_wavelet(wavelet_config):
-    """Return an NpWavelet with standard test parameters."""
-    return NpWavelet(sample_rate=44100, input_n=16384, config=wavelet_config)
+def cpu_cwt(cwt_config):
+    """Return a CpuCWT with standard test parameters."""
+    return CpuCWT(cwt_config)

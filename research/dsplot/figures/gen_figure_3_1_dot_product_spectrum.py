@@ -1,9 +1,9 @@
-"""gen_figure_3_1_dot_product_spectrum — §3.1 of DSP.md.
+"""gen_figure_3_1_dot_product_spectrum - §3.1 of DSP.md.
 
 The dot product as a frequency-measurement operation. A two-tone signal is
 swept against a family of sine references; each dot product becomes one bar
 of a spectrum. The signal carries 1.0 of 2 Hz and 0.5 of 5 Hz, and the
-spectrum reads back exactly those amplitudes at exactly those bins — the
+spectrum reads back exactly those amplitudes at exactly those bins - the
 essence of the Fourier transform.
 
 Numbers mirror research/dot.py (the console sandbox this figure grew out of):

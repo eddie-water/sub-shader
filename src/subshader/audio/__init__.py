@@ -1,4 +1,4 @@
-"""Audio module — file I/O and playback facade."""
+"""Audio module - file I/O and playback facade."""
 
 from .audio_stream import AudioStream
 

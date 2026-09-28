@@ -4,7 +4,7 @@ Per LOCKED D-02 + D-04: this figure uses the polymorphic Vector Plottable
 with 3-tuples (no separate Vector3D class) on an Axes3D cell obtained via
 ``Figure.add_panel(panel, ..., projection="3d")``. The 3D-axis chrome
 (spines through origin + axis labels) lives in StaticPanel3D, not in the
-figure module — figures are composers of Plottables and Panels.
+figure module - figures are composers of Plottables and Panels.
 
 Three neutral spines + a neutral vector ``a`` + two dashed reconstruction
 paths (x→y→z and z→y→x) showcase that the component arrows can be added in
@@ -57,7 +57,7 @@ def render(
                      origin=(a[0], a[1], 0.0),
                      color=style.TERTIARY_COLOR, **seg_kwargs))
 
-    # Path 2: z → y → x — same dimension-color rule applies.
+    # Path 2: z → y → x - same dimension-color rule applies.
     panel.add(Vector((0.0, 0.0, a[2]),
                      origin=(0.0, 0.0, 0.0),
                      color=style.TERTIARY_COLOR, **seg_kwargs))
@@ -68,7 +68,7 @@ def render(
                      origin=(0.0, a[1], a[2]),
                      color=style.PRIMARY_COLOR, **seg_kwargs))
 
-    # Vector a — bold neutral, with scatter tip + 3D label.
+    # Vector a - bold neutral, with scatter tip + 3D label.
     panel.add(Vector(
         a,
         color=style.NEUTRAL_COLOR,
@@ -78,7 +78,7 @@ def render(
         zorder=5,
     ))
 
-    # Legend — placed at axes-relative coords via the Annotation Plottable
+    # Legend - placed at axes-relative coords via the Annotation Plottable
     # so the 3D scene controls placement, not the data extent.
     legend_kwargs = dict(
         color=style.NEUTRAL_COLOR,

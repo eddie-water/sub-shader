@@ -1,18 +1,18 @@
-"""Method comparison — time the four transforms on real audio, side by side.
+"""Method comparison - time the four transforms on real audio, side by side.
 
 Times STFT vs PyWavelet CWT vs CWT (CPU) vs CWT (GPU) on the same chunks of a
 real song, and records each method's *native* frequency-resolution character
 alongside its cost. They all resample to the same chromatic output grid, so the
 interesting difference is the underlying resolution model:
 
-    STFT          linear  — one fixed Hz spacing everywhere (sample_rate/nperseg).
+    STFT          linear  - one fixed Hz spacing everywhere (sample_rate/nperseg).
                             Too coarse to separate low notes (a bass semitone is
                             < 2 Hz), wasteful up high.
-    CWT (all 3)   log     — constant-Q: one *semitone* everywhere, so it resolves
+    CWT (all 3)   log     - constant-Q: one *semitone* everywhere, so it resolves
                             notes at every octave. This is the project's thesis.
 
 Results go to ``assets/timing/timing_methods.csv``; the report's Overview table
-reads the latest set. This benchmark is pure DSP — no renderer / window — so it
+reads the latest set. This benchmark is pure DSP - no renderer / window - so it
 runs anywhere CuPy + the audio file are available.
 
 Usage:
@@ -37,7 +37,7 @@ from utilities.timing_results import git_sha, _timestamp
 
 CHUNK_SIZE = 16384
 # PyWavelet's pywt.cwt is ~50 s PER CALL over 116 scales, so keep the chunk count
-# tiny — its cost is deterministic, one or two samples give a representative mean.
+# tiny - its cost is deterministic, one or two samples give a representative mean.
 # The other three methods are milliseconds, so a small N is fine for them too.
 N_CHUNKS = 2
 WARMUP = 1        # one untimed call first (mainly to plan the GPU cuFFT / pywt setup)
@@ -57,8 +57,8 @@ def _load_chunks(path, chunk_size, n_chunks):
 def _resolution(method_obj, sr, chunk_size, kind):
     """(native_res string, res_kind) for a method.
 
-    STFT: uniform Hz spacing (sample_rate / nperseg) — linear.
-    CWT family: a semitone everywhere — log / constant-Q. The absolute Hz gap is
+    STFT: uniform Hz spacing (sample_rate / nperseg) - linear.
+    CWT family: a semitone everywhere - log / constant-Q. The absolute Hz gap is
     smallest at the lowest note, so we report that bottom gap to expose how STFT's
     fixed bin is too coarse there.
     """
@@ -89,7 +89,7 @@ def _time_method(obj, chunks):
 
 def run_methods(audio_path=AUDIO_BELTRAN, chunk_size=CHUNK_SIZE, n_chunks=N_CHUNKS):
     """Benchmark all available methods on the clip; append to the methods CSV."""
-    print(f"\nSubShader Method Comparison — {n_chunks} chunks of "
+    print(f"\nSubShader Method Comparison - {n_chunks} chunks of "
           f"{os.path.basename(audio_path)} @ chunk {chunk_size}\n")
 
     chunks, sr, total = _load_chunks(audio_path, chunk_size, n_chunks)
@@ -105,7 +105,7 @@ def run_methods(audio_path=AUDIO_BELTRAN, chunk_size=CHUNK_SIZE, n_chunks=N_CHUN
     if gpu_available():
         specs.append(("CWT", "GPU", lambda: GpuCWT(config), "log"))
     else:
-        print("  GPU unavailable — skipping GpuCWT.")
+        print("  GPU unavailable - skipping GpuCWT.")
 
     ts, sha = _timestamp(), git_sha()
     rows = []

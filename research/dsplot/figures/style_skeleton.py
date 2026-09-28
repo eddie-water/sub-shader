@@ -1,7 +1,7 @@
-"""dsplot canonical style skeleton — kitchen-sink reference figure.
+"""dsplot canonical style skeleton - kitchen-sink reference figure.
 
 Every panel type and plottable exercised in a single 2x3 Figure; every
-styling value flows from `dsplot.style.*` — zero literal style knobs.
+styling value flows from `dsplot.style.*` - zero literal style knobs.
 """
 from __future__ import annotations
 
@@ -26,14 +26,14 @@ from .. import (
 )
 
 
-# Dummy content constants (data, not style) — only literals allowed.
+# Dummy content constants (data, not style) - only literals allowed.
 A2 = (2.0, 3.0)
 A3 = (2.0, 3.0, 1.0)
 LIM_2D = 4.0                 # symmetric ±4 fits A2 with headroom for label offset
 LIM_3D = 4.0                 # symmetric ±4 fits A3 in all three axes
 SAMPLE_RATE = 1000.0         # Hz
 DURATION = 1.0               # s
-SIGNAL_FREQ = 2.0            # Hz — ~2 cycles over DURATION
+SIGNAL_FREQ = 2.0            # Hz - ~2 cycles over DURATION
 GRID_N = 32                  # heatmap grid size
 BUILDUP_FRAMES = 5           # DynamicPanel frame count
 SLIDER_FRAMES = 5            # InteractivePanel sweep length
@@ -154,7 +154,7 @@ def _panel_static_3d_vector() -> StaticPanel3D:
             linewidth=style.DEFAULT_VECTOR_BOLD_LINEWIDTH,
         )
     )
-    # Dashed projection rays — Dropline is 2D-only; in 3D use Vector with show_tip=False.
+    # Dashed projection rays - Dropline is 2D-only; in 3D use Vector with show_tip=False.
     panel.add(
         Vector(
             (0.0, 0.0, -az_val),
@@ -265,7 +265,7 @@ def build_figure(*, static_export: bool = False) -> Figure:
         n_rows=2,
         n_cols=3,
         width_ratios=[1, 2, 1],
-        suptitle="dsplot — Canonical Style Skeleton",
+        suptitle="dsplot - Canonical Style Skeleton",
     )
     fig.add_panel(_panel_static_vector_arrow_axes(), row=0, col=0)
     fig.add_panel(_panel_static_timeseries(),        row=0, col=1)
@@ -293,7 +293,7 @@ def overlay_layout_guides(fig: Figure) -> None:
     mpl_fig = fig._mpl_fig
     gs = fig._gs
     # All boundaries derive from style.DEFAULT_MARGIN_INCHES via
-    # Figure.render() — a single inch value converted to fractions per
+    # Figure.render() - a single inch value converted to fractions per
     # figsize. Recompute the fractions here so guide lines land exactly
     # at the resolved subplots_adjust boundaries.
     fig_w, fig_h = mpl_fig.get_size_inches()
@@ -333,7 +333,7 @@ def overlay_layout_guides(fig: Figure) -> None:
         figure=mpl_fig,
     ))
     mpl_fig.text(
-        0.5, 0.992, "figure perimeter — savefig saves at figsize × dpi exactly",
+        0.5, 0.992, "figure perimeter - savefig saves at figsize × dpi exactly",
         ha="center", va="top",
         **{k: v for k, v in label_kwargs.items() if k not in ("ha", "va")},
     )
@@ -389,7 +389,7 @@ def overlay_layout_guides(fig: Figure) -> None:
             **label_kwargs,
         )
 
-    # --- Per-panel chrome (title-Y, subtitle-Y) — sampled from row-0 col-0
+    # --- Per-panel chrome (title-Y, subtitle-Y) - sampled from row-0 col-0
     # which uses the canonical StaticPanel chrome. ---
     if row_bounds:
         bb = gs[0, 0].get_position(mpl_fig)

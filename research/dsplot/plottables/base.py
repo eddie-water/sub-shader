@@ -1,8 +1,8 @@
-"""Plottable abstract base — the contract every concrete Plottable implements.
+"""Plottable abstract base - the contract every concrete Plottable implements.
 
 Concrete subclasses store style knobs (color, linewidth, alpha, linestyle,
 label, zorder) as plain attributes. When a knob is None at construction, the
-subclass's draw() resolves it against dsplot.style.* (LAZY lookup per D-05) —
+subclass's draw() resolves it against dsplot.style.* (LAZY lookup per D-05) -
 this is what makes runtime style reassignment between construction and draw
 observable.
 """

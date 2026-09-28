@@ -1,0 +1,198 @@
+--- a/src/subshader/dsp/cwt.py
++++ b/src/subshader/dsp/cwt.py
+@@ -36,6 +36,13 @@
+ PI: Final[float] = float(np.pi)
+ 
+ 
++def _array_module(array):
++    """Return the array namespace (numpy or cupy) that owns `array`."""
++    if _CUPY_AVAILABLE and isinstance(array, cp.ndarray):
++        return cp
++    return np
++
++
+ class CWT(DSP):
+     """
+     CWT base class implementing the ANTS wavelet convolution algorithm.
+@@ -102,6 +109,9 @@
+         # Reliable center slice (discards edge artifacts from widest wavelet)
+         self.reliable_slice: slice = self._create_reliable_slice(self.wavelets)
+ 
++        # Max-pool gather indices, built lazily per (num_samples, target_width)
++        self._block_gather_cache: dict = {}
++
+     # -------------------------------------------------------------------------
+     # DSP pipeline stages
+     # -------------------------------------------------------------------------
+@@ -126,21 +136,27 @@
+             )
+         return np.asarray(chunk, dtype=np.float64)
+ 
+-    def post(self, raw: np.ndarray) -> np.ndarray:
++    def post(self, raw) -> np.ndarray:
+         """Post-process raw complex CWT coefficients into a visualization-ready array.
+ 
++        Every step is written against the array namespace that owns `raw`, so
++        the same code runs on a NumPy matrix (CpuCWT) or a CuPy matrix that
++        never left the device (GpuCWT). Only the final frame crosses back to
++        host memory.
++
+         Steps:
+             1. Normalize by scale (no-op - L1 kernel normalization handles energy bias)
+             2. Convert to magnitude
+             3. Discard edge-artifact region
+             4. Extract non-overlapping hop center
+             5. Max-pool down to target_width
++            6. Download to host (identity on CPU)
+ 
+         Args:
+             raw: Complex coefficients from transform(), shape (num_freqs, input_n).
+ 
+         Returns:
+-            Float32 array of shape (num_freqs, target_width).
++            Host array of shape (num_freqs, target_width).
+         """
+         # Energy bias correction is handled at WaveletKernel construction (L1 normalization);
+         # normalize_by_scale is a no-op kept for API symmetry.
+@@ -148,15 +164,24 @@
+         mag = self._compute_mag(normed)
+         reliable = self.discard_unreliable_coefs(mag)
+         hop_center = self.extract_hop_center(reliable)
+-        return self.downsample(hop_center, self.output_n)
++        downsampled = self.downsample(hop_center, self.output_n)
++        return self._download(downsampled)
+ 
+     # -------------------------------------------------------------------------
+     # Abstract: implemented by CpuCWT / GpuCWT
+     # -------------------------------------------------------------------------
+ 
+-    def transform(self, data: np.ndarray) -> np.ndarray:
++    def transform(self, data: np.ndarray):
+         raise NotImplementedError("Subclasses must implement transform()")
+ 
++    def _sync_stage(self) -> None:
++        """Block until the current stage's work has finished. No-op on CPU."""
++        return None
++
++    def _download(self, frame) -> np.ndarray:
++        """Bring the finished frame into host memory. Identity on CPU."""
++        return frame
++
+     def get_output_shape(self) -> tuple:
+         """Return the shape of the processed output."""
+         return self.output_shape
+@@ -218,9 +243,11 @@
+         return cwt_coefs
+ 
+     @timed
+-    def _compute_mag(self, cwt_coefs: np.ndarray) -> np.ndarray:
++    def _compute_mag(self, cwt_coefs):
+         """Convert complex CWT coefficients to real magnitudes."""
+-        return np.abs(cwt_coefs)
++        mag = _array_module(cwt_coefs).abs(cwt_coefs)
++        self._sync_stage()
++        return mag
+ 
+     @timed
+     def discard_unreliable_coefs(self, coefs: np.ndarray) -> np.ndarray:
+@@ -303,12 +330,38 @@
+             block = num_samples // target_width
+             downsampled = coefs.reshape(num_freqs, target_width, block).max(axis=2)
+         else:
+-            edges = np.linspace(0, num_samples, target_width + 1).astype(int)
+-            downsampled = np.maximum.reduceat(coefs, edges[:-1], axis=1)
++            gather = self._block_gather_indices(num_samples, target_width, _array_module(coefs))
++            downsampled = coefs[:, gather].max(axis=2)
++        self._sync_stage()
+ 
+         log.debug(f"Downsampled: {coefs.shape} -> {downsampled.shape}")
+         return downsampled
+ 
++    def _block_gather_indices(self, num_samples: int, target_width: int, xp):
++        """Column indices grouping num_samples into target_width contiguous blocks.
++
++        Block edges follow np.linspace(0, num_samples, target_width + 1), the
++        same partition np.maximum.reduceat would use, so block widths differ by
++        at most one column. Each row of the (target_width, widest_block) index
++        matrix is padded by repeating its last column - a duplicated element
++        never changes a max - which turns the ragged reduction into one gather
++        followed by a dense max over the last axis. CuPy has no reduceat, and
++        this formulation runs identically on either array namespace.
++
++        Returns:
++            Integer index matrix on `xp`, cached per (num_samples, target_width).
++        """
++        key = (num_samples, target_width, xp.__name__)
++        indices = self._block_gather_cache.get(key)
++        if indices is None:
++            edges = np.linspace(0, num_samples, target_width + 1).astype(int)
++            widths = np.diff(edges)
++            offsets = np.arange(widths.max())
++            host_indices = edges[:-1, None] + np.minimum(offsets[None, :], widths[:, None] - 1)
++            indices = xp.asarray(host_indices)
++            self._block_gather_cache[key] = indices
++        return indices
++
+     def cleanup(self) -> None:
+         """Release resources. Subclasses override for GPU memory cleanup."""
+         pass
+@@ -348,9 +401,12 @@
+     """CuPy-based CWT using FFT convolution on GPU.
+ 
+     Uploads the kernel bank to GPU at init. Each transform() call uploads
+-    the input, performs the full convolution on-device, and downloads only
+-    the trimmed result (num_freqs × input_n) to avoid a large intermediate
+-    transfer of shape (num_freqs × max_conv_n).
++    the input and performs the full convolution on-device; the complex
++    result stays resident through every post() stage, and only the finished
++    float32 frame (num_freqs × target_width) is downloaded. CuPy launches
++    kernels asynchronously, so each timed stage synchronizes the stream
++    before returning - otherwise the stopwatch would measure launch cost and
++    the final download would absorb everything upstream.
+     """
+ 
+     @timed
+@@ -375,14 +431,14 @@
+         # (or skip building it for the GPU path) to reclaim the memory.
+ 
+     @timed
+-    def transform(self, data: np.ndarray) -> np.ndarray:
++    def transform(self, data: np.ndarray):
+         """Perform CWT via CuPy FFT convolution (GPU).
+ 
+         Args:
+             data: 1D float64 audio samples of length input_n (CPU array).
+ 
+         Returns:
+-            Complex TF matrix (num_freqs, input_n) as NumPy array (CPU).
++            Complex TF matrix (num_freqs, input_n) as a CuPy array (GPU resident).
+         """
+         log.info(f"CPU→GPU: Uploading input data of size {data.shape[0]}")
+         input_f_gpu = cp.asarray(
+@@ -392,15 +448,24 @@
+         conv_f_gpu = input_f_gpu * self.kernel_f_bank_gpu
+         conv_tf_gpu = cp_fft.ifft(conv_f_gpu, axis=1)
+         conv_tf_trimmed = conv_tf_gpu[:, : self.input_n]
++        self._sync_stage()
++        return conv_tf_trimmed
+ 
+-        log.info(f"GPU→CPU: Transferring trimmed result {conv_tf_trimmed.shape}")
+-        return cp.asnumpy(conv_tf_trimmed)
++    def _sync_stage(self) -> None:
++        cp.cuda.get_current_stream().synchronize()
++
++    @timed
++    def _download(self, frame) -> np.ndarray:
++        """Transfer the finished frame to host. Passes host arrays through untouched."""
++        log.info(f"GPU→CPU: Transferring frame {frame.shape}")
++        return cp.asnumpy(frame)
+ 
+     def cleanup(self) -> None:
+         """Free GPU memory pool allocations."""
+         try:
+             if hasattr(self, "kernel_f_bank_gpu") and self.kernel_f_bank_gpu is not None:
+                 del self.kernel_f_bank_gpu
++            self._block_gather_cache.clear()
+             if _CUPY_AVAILABLE:
+                 cp.get_default_memory_pool().free_all_blocks()
+                 cp.get_default_pinned_memory_pool().free_all_blocks()

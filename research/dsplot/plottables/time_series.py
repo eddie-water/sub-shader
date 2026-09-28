@@ -1,4 +1,4 @@
-"""TimeSeries Plottable — 1D signal vs time via fill_between.
+"""TimeSeries Plottable - 1D signal vs time via fill_between.
 
 A bare TimeSeries renders in the NEUTRAL palette slot because the dsplot
 palette reserves PRIMARY (vector a) and SECONDARY (vector b) for vector
@@ -27,7 +27,7 @@ class TimeSeries(Plottable):
     `dsplot.style` so a TimeSeries always looks consistent across figures.
 
     The default color is `style.NEUTRAL_COLOR` (the palette's non-identity
-    slot) — a bare TimeSeries is generic data display, not a vector identity.
+    slot) - a bare TimeSeries is generic data display, not a vector identity.
     Pass `color=` to brand a specific timeseries.
     """
 

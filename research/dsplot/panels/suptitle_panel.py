@@ -1,4 +1,4 @@
-"""SuptitlePanel — text-only Panel for figure-level supertitle text.
+"""SuptitlePanel - text-only Panel for figure-level supertitle text.
 
 A subclass of TextPanel with distinct style defaults (SUPTITLE_FONT_SIZE /
 SUPTITLE_COLOR / SUPTITLE_WEIGHT instead of TITLE_FONT_SIZE / TICK_LABEL_COLOR)
@@ -7,13 +7,13 @@ not be shrunk to fit a narrow cell).
 
 Two ways to use it:
 
-  * Sugar path — Figure.compose(suptitle="…"): the legacy
+  * Sugar path - Figure.compose(suptitle="…"): the legacy
     `_mpl_fig.suptitle(...)` rendering path is preserved bit-identically.
     SuptitlePanel is not directly involved in rendering, but the
     SUPTITLE_* style constants still drive that path's visual contract by
     mirroring the existing render values.
 
-  * Explicit path — rows=[[SuptitlePanel("…", units=(N,1))], …]: the
+  * Explicit path - rows=[[SuptitlePanel("…", units=(N,1))], …]: the
     SuptitlePanel participates in the panel-grid as a real first-row Panel,
     renders via TextPanel.render(), and is validated by the existing
     width-equality check in Figure.compose.
@@ -62,7 +62,7 @@ class SuptitlePanel(TextPanel):
             auto_shrink=auto_shrink,
             # Optical V-centering: matplotlib's va="center" aligns on the
             # bbox midline (includes descender slack even when the string
-            # has none) — a string like "Fourier vs Wavelet Decomposition"
+            # has none) - a string like "Fourier vs Wavelet Decomposition"
             # ends up visibly low. "center_baseline" pivots on the line
             # baseline midline instead and reads as true V-center.
             va="center_baseline",

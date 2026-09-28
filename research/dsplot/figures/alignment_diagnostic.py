@@ -1,10 +1,10 @@
-"""dsp_alignment_diagnostic.png renderer — exposes freq-dependent CWT shift.
+"""dsp_alignment_diagnostic.png renderer - exposes freq-dependent CWT shift.
 
 Multi-tone burst signal (80/250/600 Hz Gaussian-windowed sines, all
 centered at the same instant). A correctly-aligned CWT would show three
 bright spots at the SAME displayed x; with the current `conv_tf[:, :input_n]`
 trim each row is shifted right by half_width(f), so the spots fan out
-— most-shifted at low freq, least at high freq. The figure stacks the
+- most-shifted at low freq, least at high freq. The figure stacks the
 input time series above the CWT magnitude spectrogram with a shared
 "true burst time" annotation line so the misalignment reads at a glance.
 
@@ -36,7 +36,7 @@ BURST_FREQS = (80.0, 250.0, 600.0)
 F_LO = 50.0
 F_HI = 1000.0
 
-# Cyan plays the "ground truth time" role here — high-contrast against the
+# Cyan plays the "ground truth time" role here - high-contrast against the
 # inferno spectrogram so the misalignment is unmistakable.
 TRUE_BURST_COLOR = style.HIGHLIGHT_COLOR
 

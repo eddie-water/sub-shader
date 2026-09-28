@@ -1,4 +1,4 @@
-"""InteractivePanel tests — Plan 09-04 Task 2 (mpl-widgets pivot).
+"""InteractivePanel tests - Plan 09-04 Task 2 (mpl-widgets pivot).
 
 Verifies the InteractivePanel behaviors after the mpl-widgets migration:
   1. constructs with frames list
@@ -83,7 +83,7 @@ def test_interactive_panel_set_frame_swaps_artists():
 
 def test_interactive_panel_creates_prev_next_buttons():
     """In Agg backend, mpl Button widgets are created and exposed on
-    panel._widgets — no ipywidgets dependency, no warning."""
+    panel._widgets - no ipywidgets dependency, no warning."""
     from dsplot import InteractivePanel, Vector
     panel = InteractivePanel(
         frames=[[Vector((1, 0))], [Vector((0, 1))]]

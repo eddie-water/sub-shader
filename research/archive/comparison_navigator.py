@@ -1135,7 +1135,7 @@ class TopLevelComparisonNavigator(NavigatorBase):
         self.cpwt = cpwt
         self.sample_rate = audio_input.get_sample_rate()
 
-        # STFT setup — crop to the same freq range as the chromatic scale
+        # STFT setup - crop to the same freq range as the chromatic scale
         self.stft_nperseg = 1024
         stft_freqs = np.fft.rfftfreq(self.stft_nperseg, d=1.0 / self.sample_rate)
         freq_min = self.pywt.freqs[0]

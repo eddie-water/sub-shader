@@ -166,7 +166,7 @@ def test_cross_implementation_agreement():
         print(f"  @ {f_target:.1f} Hz: CpuCWT bin={np_bin}, PywaveletCWT bin={py_bin}")
 
         assert abs(np_bin - py_bin) <= 1, (
-            f"@ {f_target:.1f} Hz: CpuCWT bin={np_bin}, PywaveletCWT bin={py_bin} — "
+            f"@ {f_target:.1f} Hz: CpuCWT bin={np_bin}, PywaveletCWT bin={py_bin} - "
             f"bins differ by more than 1"
         )
 
@@ -366,7 +366,7 @@ def test_reliable_region_consistency():
 
     CpuCWT and PywaveletCWT have different output shapes by design:
     - CpuCWT applies reliable-region trimming and downsampling → (num_freqs, target_width)
-    - PywaveletCWT has stub post() → (num_freqs, chunk_size) — raw complex coefficients (D-14)
+    - PywaveletCWT has stub post() → (num_freqs, chunk_size) - raw complex coefficients (D-14)
 
     This test verifies each backend's self-consistency, not cross-backend shape equality.
     """

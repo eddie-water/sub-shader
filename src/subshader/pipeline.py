@@ -1,10 +1,10 @@
-"""SubShader pipeline — audio visualization orchestrator."""
+"""SubShader pipeline - audio visualization orchestrator."""
 
 import numpy as np
 
 from subshader.utils.logging import get_logger
 from subshader.utils.gpu import gpu_available
-from subshader.utils.timing import timed
+from subshader.utils.timing import timed, timed_block
 from subshader.config import PipelineConfig, CWTConfig, RendererConfig
 from subshader.audio import AudioStream
 from subshader.dsp.cwt import GpuCWT, CpuCWT
@@ -45,7 +45,7 @@ class SubShader:
         # Construct CWTConfig with all discovered runtime values.
         # sample_rate is now populated by AudioStream. Wavelet-specific params are
         # carried over from the incoming config when present (it may already be a
-        # CWTConfig), falling back to CWTConfig defaults for a base PipelineConfig —
+        # CWTConfig), falling back to CWTConfig defaults for a base PipelineConfig -
         # otherwise num_octaves/notes_per_octave/etc. would be silently dropped.
         cwt_config = CWTConfig(
             file_path=config.file_path,
@@ -61,11 +61,16 @@ class SubShader:
             num_fwhm_cycles=getattr(config, "num_fwhm_cycles", CWTConfig.num_fwhm_cycles),
         )
 
-        # Select CWT backend based on GPU availability
-        if gpu_available():
+        # Select CWT backend based on GPU availability. gpu_available() makes the
+        # first CuPy call, which creates the CUDA context - a ~300 ms one-time
+        # cost, timed here as its own init substage (init:cuda) instead of being
+        # buried inside the general construction residual.
+        with timed_block(self, "cuda"):
+            gpu = gpu_available()
+        if gpu:
             self.dsp = GpuCWT(cwt_config)
         else:
-            log.warning("GPU unavailable — running CpuCWT. Expect slower performance.")
+            log.warning("GPU unavailable - running CpuCWT. Expect slower performance.")
             self.dsp = CpuCWT(cwt_config)
 
         # Renderer creates the GLFW window and GPU rendering pipeline.
@@ -86,6 +91,10 @@ class SubShader:
         # Must happen after Renderer is constructed (renderer_config carries the percentile).
         self._fixed_intensity_max = self._prescan_intensity(renderer_config)
         self.renderer.set_fixed_intensity_max(self._fixed_intensity_max)
+
+        # Pay all first-use GPU costs during construction, so runtime frames
+        # start at steady state.
+        self._prime_pipeline()
 
         log.info("SubShader pipeline initialized")
 
@@ -132,6 +141,25 @@ class SubShader:
         log.info(f"Pre-scan complete: fixed intensity_max = {intensity_max:.4f}")
         return intensity_max
 
+    @timed
+    def _prime_pipeline(self) -> None:
+        """Run one silent frame through the full DSP + render path.
+
+        The first pass through each GPU code path carries one-time costs that
+        later passes never pay: CUDA kernel JIT, cuFFT plan creation, memory
+        pool growth, and the GL driver's lazy first-draw setup. The pre-scan
+        already warms the CWT path; this warms the renderer. Doing it here
+        moves those costs into construction, where they conceptually belong -
+        no runtime frame should carry warmup.
+
+        A silent chunk exercises identical shapes and code paths, and renders
+        as one black frame - indistinguishable from the renderer's zeroed
+        initial state.
+        """
+        silence = np.zeros(self.audio._reader.chunk_size, dtype=np.float64)
+        coefs = self.dsp.process(silence)
+        self.renderer.update(coefs)
+
     def run(self) -> None:
         """Main visualization loop.
 
@@ -143,7 +171,7 @@ class SubShader:
         while not self.renderer.should_close():
             chunk = self.audio.next_chunk()
             if chunk is None:
-                # End of file — audio will loop; next_chunk() handles the reset
+                # End of file - audio will loop; next_chunk() handles the reset
                 continue
             coefs = self.dsp.process(chunk)
             self.renderer.update(coefs)

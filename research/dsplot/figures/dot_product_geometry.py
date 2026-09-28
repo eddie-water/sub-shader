@@ -1,4 +1,4 @@
-"""dot_product_geometry.png renderer — 4 canonical angle cases.
+"""dot_product_geometry.png renderer - 4 canonical angle cases.
 
 Each panel shows two vectors a, b plus a sign-of-result annotation beneath
 the panel, so the reader sees angle → sign at a glance. Originals in

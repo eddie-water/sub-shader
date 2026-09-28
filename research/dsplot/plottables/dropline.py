@@ -1,4 +1,4 @@
-"""Dropline Plottable — dashed perpendicular indicator between two points.
+"""Dropline Plottable - dashed perpendicular indicator between two points.
 
 Used by the projection-reconstruction figure to close parallelograms and
 by the alignment diagnostic for burst-time markers. All style knobs
@@ -34,7 +34,7 @@ class Dropline(Plottable):
     ) -> None:
         # NB: Plottable base has fixed defaults for alpha (1.0) and linestyle ("-"),
         # which we override here. We store the raw None on the instance and resolve
-        # at draw() time instead — keeps the lazy-lookup contract per D-05.
+        # at draw() time instead - keeps the lazy-lookup contract per D-05.
         super().__init__(
             color=color,
             linewidth=linewidth,

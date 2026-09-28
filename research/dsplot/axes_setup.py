@@ -7,7 +7,7 @@ the corresponding axis tips. Optional panel title + result-text annotations
 mirror the legacy `setup_vector_axes` in `research.utilities.plotting`.
 
 All `None`-valued kwargs resolve LAZILY against `dsplot.style.DEFAULT_*` at
-call time (per D-05) — reassigning a style constant between this call and a
+call time (per D-05) - reassigning a style constant between this call and a
 later one observes the new value. Concrete fallback values for `axis_alpha`
 and `axis_linewidth` stay inline because they're legacy crosshair-weight
 constants; figures wanting different values pass them per-call.
@@ -61,7 +61,7 @@ def setup_vector_axes(
     # Per-axis limits: `lim` (float → symmetric, or a (lo, hi) tuple applied to
     # both axes) is the simple knob; explicit `xlim` / `ylim` override per axis.
     # An asymmetric pair shifts the origin off-center so a vector that lives in
-    # one quadrant fills the cell instead of wasting the opposite quadrants —
+    # one quadrant fills the cell instead of wasting the opposite quadrants -
     # while EQUAL ranges on both axes keep the equal-aspect geometry honest.
     x_lo, x_hi = _resolve_lo_hi(xlim, lim)
     y_lo, y_hi = _resolve_lo_hi(ylim, lim)

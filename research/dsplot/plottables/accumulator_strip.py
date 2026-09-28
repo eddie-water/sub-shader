@@ -1,4 +1,4 @@
-"""AccumulatorStrip — one heavy stem + a big readout on a zero baseline.
+"""AccumulatorStrip - one heavy stem + a big readout on a zero baseline.
 
 A tall narrow strip that collapses a quantity into a SINGLE bar rising (positive)
 or falling (negative) from a zero line to ``value``, with ``value`` printed big on
@@ -8,7 +8,7 @@ number never sits on the bar. Lifted from figure 2.5's "Sum strip" (``_AccumStem
 / 2.6 share one accumulator vocabulary.
 
 Drop it into any panel whose y-scale spans the value range (the strip draws no
-ticks of its own — the readout carries magnitude, the zero line carries sign):
+ticks of its own - the readout carries magnitude, the zero line carries sign):
 
     panel = TimeSeriesPanel(xticks=[], yticks=[], xlim=(-1, 1), ylim=(-12, 12))
     panel.add(AccumulatorStrip(dot_product))
@@ -29,7 +29,7 @@ from .base import Plottable
 
 # How far into the empty well (as a fraction of |value|) the readout chip sits.
 # 0.5 centers it in the well opposite the bar given the conventional ±1.4×value
-# y-range — clear of the zero line, clear of the bar, clear of the cell edge.
+# y-range - clear of the zero line, clear of the bar, clear of the cell edge.
 _READOUT_WELL_FRACTION = 0.5
 
 
@@ -81,7 +81,7 @@ class AccumulatorStrip(Plottable):
         self.zero_line_width = zero_line_width
         # vertical_spine draws the baseline as a VERTICAL axis line through the
         # strip center (a number-line the bar rides) instead of the horizontal
-        # y=0 baseline — the gauge then reads as "a value marked on a vertical
+        # y=0 baseline - the gauge then reads as "a value marked on a vertical
         # axis". readout_origin_offset, when set, parks the readout a FIXED number
         # of data units from the origin (in the empty well opposite the bar)
         # instead of scaling its position with the bar's height.
@@ -136,7 +136,7 @@ class AccumulatorStrip(Plottable):
         )
         stem.set_snap(False)
 
-        # Readout sits centered in the EMPTY half of the strip — the well OPPOSITE
+        # Readout sits centered in the EMPTY half of the strip - the well OPPOSITE
         # the bar (below the baseline for an upward stem, above for a downward one).
         # Placed in DATA coords at a fraction of the value's magnitude into that
         # well (not a few points off the baseline) so the number stands cleanly

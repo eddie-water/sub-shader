@@ -19,7 +19,7 @@ log = get_logger(__name__)
 
 
 class STFT(DSP):
-    """Short-Time Fourier Transform backend — used for comparison only.
+    """Short-Time Fourier Transform backend - used for comparison only.
 
     Computes STFT via scipy.signal.stft, resamples the time axis to
     target_width, then log-frequency-interpolates frequency bins to match
@@ -42,7 +42,7 @@ class STFT(DSP):
         freqs = np.float64(config.root_note_hz) * (scale_factor ** i)
         self.freqs: np.ndarray = freqs[freqs < self.nyquist_freq].astype(np.float64)
 
-        # STFT window size — use chunk_size as nperseg for maximum frequency resolution
+        # STFT window size - use chunk_size as nperseg for maximum frequency resolution
         self.nperseg: int = int(config.chunk_size)
 
         # Pre-compute the STFT frequency axis and frequency mask covering the CWT range
@@ -56,7 +56,7 @@ class STFT(DSP):
         self.cropped_freqs: np.ndarray = stft_freqs[self.freq_mask]
 
     def pre(self, chunk: np.ndarray) -> np.ndarray:
-        """Pass-through stub (D-14 — no pre-processing defined for STFT backend)."""
+        """Pass-through stub (D-14 - no pre-processing defined for STFT backend)."""
         return chunk
 
     @timed
@@ -96,5 +96,5 @@ class STFT(DSP):
         return stft_log.astype(np.float32)
 
     def post(self, raw: np.ndarray) -> np.ndarray:
-        """Pass-through stub (D-14 — no post-processing defined for STFT backend)."""
+        """Pass-through stub (D-14 - no post-processing defined for STFT backend)."""
         return raw

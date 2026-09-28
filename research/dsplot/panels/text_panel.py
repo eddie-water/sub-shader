@@ -1,4 +1,4 @@
-"""TextPanel — text-only Panel that renders a centered string in its cell.
+"""TextPanel - text-only Panel that renders a centered string in its cell.
 
 Use for row labels, section headers, or any cell that should hold only
 prose. The Axes is stripped of spines, ticks, and ticklabels; the cell
@@ -6,14 +6,14 @@ background fills with ``style.BG_COLOR``.
 
 Multi-line text via embedded ``\\n``. When ``auto_shrink=True`` the font
 is scaled down (never up, never below ``min_font_size``) so the rendered
-text bbox fits inside the cell — text never overflows its panel unit.
+text bbox fits inside the cell - text never overflows its panel unit.
 
 Justify mode: pass ``justify=True`` to distribute words evenly across each
 line (Microsoft Word "Justify" alignment). The justification target is the
 axes (= plot-area) width minus ``cell_padding_frac`` on each side, so the
 text occupies the same rectangle a plot would. Each ``\\n``-separated
 paragraph is FIRST word-wrapped to fit that width at the chosen font size,
-THEN every wrapped line is spread across the full width — so a long
+THEN every wrapped line is spread across the full width - so a long
 paragraph reads as a justified block of multiple lines rather than a single
 overflowing row. Auto-shrink jointly searches (size, wrapped-line-count)
 for the largest font where wrapped width fits AND total stacked height
@@ -95,12 +95,12 @@ class TextPanel(Panel):
         # Cell background fill. Defaults to style.BG_COLOR (opaque). Pass "none"
         # for a transparent cell so content bleeding in from an adjacent panel
         # (e.g. a neighbour's right-side tick labels rendering into this cell's
-        # empty margin) isn't painted over — the figure background shows through
+        # empty margin) isn't painted over - the figure background shows through
         # identically when it already equals BG_COLOR.
         self.facecolor = facecolor
         # When set, the justify layout ignores the (cell-spanning) content-border
         # rect and instead lays text inside the AXES box inset by this fraction on
-        # every side — i.e. text starts hard in the top-left with a tiny uniform
+        # every side - i.e. text starts hard in the top-left with a tiny uniform
         # margin. None keeps the legacy content-border behaviour.
         self.content_margin_frac = content_margin_frac
         # Header band: a titled strip at the TOP of the cell, the same physical
@@ -151,7 +151,7 @@ class TextPanel(Panel):
             self._draw_header_band(header_title)
 
         # Use the wrap pipeline whenever justify OR top_anchor OR a header is set
-        # — all require per-line layout (justify spreads words; top_anchor/header
+        # - all require per-line layout (justify spreads words; top_anchor/header
         # need to know the wrapped line count to start at a specific top edge).
         if self.justify or self.top_anchor or header_title is not None:
             self._render_justified(resolved_size, resolved_color, text=body_text)
@@ -212,7 +212,7 @@ class TextPanel(Panel):
         cell_top = 1.0 + half_row
         divider_y = 1.0 - frac
         # Divider is part of the CELL FRAME system (it already uses the frame
-        # linewidth), so it takes the frame COLOR too — not SPINE_COLOR. This
+        # linewidth), so it takes the frame COLOR too - not SPINE_COLOR. This
         # keeps it visible in figures that turn spines off (SPINE_COLOR="none")
         # to let the cell border be the single frame (e.g. fig 2.5); figures that
         # keep light spines are unaffected (frame color == spine color there).
@@ -443,7 +443,7 @@ class TextPanel(Panel):
                 size -= 1.0
                 continue
             # Width check on each wrapped line (textwrap is char-budget so
-            # actual proportional-font width may overshoot — verify).
+            # actual proportional-font width may overshoot - verify).
             overflow = False
             for para_lines in wrap:
                 for line in para_lines:
@@ -466,7 +466,7 @@ class TextPanel(Panel):
         Anchored to the CELL border, not the inset axes box: the axes sits
         half-a-gutter inside the visible cell border on every side, so the
         region is extended OUT to the cell border (by the measured half-gutter
-        per side) then inset by ``content_margin_frac`` — making the value a
+        per side) then inset by ``content_margin_frac`` - making the value a
         literal "tiny margin from the cell's top-left corner" regardless of
         gutter size. Shared by the justify renderer and the ghost-border draw
         so the outlined box matches exactly where the text lays out.
@@ -486,7 +486,7 @@ class TextPanel(Panel):
 
         A side that has a band-sharing sibling is an interior gutter (border at
         half-a-gutter past the axes). A side with no sibling is a perimeter edge
-        — its cell border is the figure edge (fig-fraction 0 or 1), which can be
+        - its cell border is the figure edge (fig-fraction 0 or 1), which can be
         a full margin past the axes, much further than a half-gutter. Using the
         true border on each side keeps the content margin even even for an edge
         cell (e.g. the rightmost caption column, whose right border is the figure
@@ -570,7 +570,7 @@ class TextPanel(Panel):
 
         Kept as a thin alias so existing TextPanel call sites and the justify
         layout keep working while the geometry lives in the shared base helper
-        — the "big box just inside the cell" is now common to all text panels.
+        - the "big box just inside the cell" is now common to all text panels.
         """
         return self._content_border_rect_axes()
 
@@ -597,7 +597,7 @@ class TextPanel(Panel):
 
     def _measure_text_px(self, text: str, size: float, renderer) -> float:
         ax = self.ax
-        # Off-axes probe text — y=-1 keeps it out of the visible draw area
+        # Off-axes probe text - y=-1 keeps it out of the visible draw area
         # without affecting axes limits (xlim/ylim already set to [0,1]).
         probe = ax.text(
             0.0, -1.0, text,

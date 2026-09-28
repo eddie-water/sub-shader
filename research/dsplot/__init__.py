@@ -1,4 +1,4 @@
-"""dsplot — standalone matplotlib-based plotting library.
+"""dsplot - standalone matplotlib-based plotting library.
 
 Two layers: **Plottables** (units drawn onto a matplotlib Axes) and **Panels**
 (containers that own an Axes and orchestrate static / animated / interactive
@@ -59,6 +59,8 @@ from .plottables import (
     Spotlight,
     Stem,
     StemArrows,
+    SurfaceHeatmap,
+    TileBars,
     TimeSeries,
     Vector,
     VectorComponents,
@@ -75,6 +77,8 @@ __all__ = [
     "Annotation",
     "TimeSeries",
     "Heatmap",
+    "SurfaceHeatmap",
+    "TileBars",
     "Line",
     "RichText",
     "Spotlight",

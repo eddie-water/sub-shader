@@ -1,8 +1,8 @@
-"""Stem Plottable — discrete-time array view (vertical lines + markers).
+"""Stem Plottable - discrete-time array view (vertical lines + markers).
 
 Renders y[n] vs x[n] as a classical "stem" plot: a vertical line from a
 baseline to each sample with a marker at the tip. Useful for showing the
-discrete-sample interpretation of a continuous signal — pair a Stem panel
+discrete-sample interpretation of a continuous signal - pair a Stem panel
 underneath a TimeSeries panel of the same source signal to make the
 sampling step visually explicit.
 
@@ -86,7 +86,7 @@ class Stem(Plottable):
         stemlines.set_alpha(self.alpha)
         stemlines.set_zorder(self.zorder)
 
-        # Force axis limits to fit the data — StaticPanel.render() sets a
+        # Force axis limits to fit the data - StaticPanel.render() sets a
         # default vector lim of ±4 which would clip the stems out of view
         # for typical signal amplitudes.
         if len(self.x) > 0:

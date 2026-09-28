@@ -3,7 +3,7 @@ PyWavelets CWT backend for SubShader.
 
 PywaveletCWT wraps the pywt.cwt() library function, used for comparison and
 validation against SubShader's hand-rolled ANTS implementation. Not intended
-for production pipeline use — pre/post are stubs (D-14).
+for production pipeline use - pre/post are stubs (D-14).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ log = get_logger(__name__)
 
 
 class PywaveletCWT(DSP):
-    """PyWavelets library CWT backend — used for comparison and testing only.
+    """PyWavelets library CWT backend - used for comparison and testing only.
 
     Wraps pywt.cwt() with a complex Morlet wavelet, using scale arrays derived
     from the same chromatic frequency list as the ANTS CWT backends. Scale-
@@ -52,7 +52,7 @@ class PywaveletCWT(DSP):
         self.scales: np.ndarray = pywt.frequency2scale(self.wavelet_name, f_norm)
 
     def pre(self, chunk: np.ndarray) -> np.ndarray:
-        """Pass-through stub (D-14 — no pre-processing defined for PyWavelets backend)."""
+        """Pass-through stub (D-14 - no pre-processing defined for PyWavelets backend)."""
         return chunk
 
     @timed
@@ -79,13 +79,13 @@ class PywaveletCWT(DSP):
         return coefs_raw / np.sqrt(self.scales)[:, np.newaxis]
 
     def post(self, raw: np.ndarray) -> np.ndarray:
-        """Pass-through stub (D-14 — no post-processing defined for PyWavelets backend)."""
+        """Pass-through stub (D-14 - no post-processing defined for PyWavelets backend)."""
         return raw
 
     def get_output_shape(self) -> tuple:
         """Return the shape of the process() output.
 
-        PywaveletCWT.post() is a stub — process() returns raw complex CWT coefficients
+        PywaveletCWT.post() is a stub - process() returns raw complex CWT coefficients
         of shape (num_freqs, chunk_size). No reliable-region trimming or downsampling
         is applied (D-14).
         """

@@ -59,7 +59,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 print(f"ROUND = {ROUND}  ->  {OUT_DIR}")
 
 
-# Published Figure 1 (the user's chosen reference render) — used as-is in the
+# Published Figure 1 (the user's chosen reference render) - used as-is in the
 # montage rather than re-rendered, so the montage shows the canonical fig-1.
 FIG1_PUBLISHED = (
     "assets/images/dsp/figures/by_figure/fig_1_fourier_vs_wavelet/"
@@ -74,27 +74,31 @@ def _render_all():
         gen_figure_243_dot_product_3d as f243,
         gen_figure_2_5_sign_accumulation as f25,
         gen_figure_2_6_sine_basis as f26,
+        gen_figure_3_3_spectrogram_collision as f33,
+        gen_figure_3_4_resolution_budget as f34,
     )
     items = []
-    items.append(("fig 1 — fourier vs wavelet", os.path.abspath(FIG1_PUBLISHED)))
-    items.append(("fig 2.4.1 — xy recombine",   f241.render(OUT_DIR, f"f241_{ROUND}.png")))
-    items.append(("fig 2.4.2 — a onto b",       f242.render(OUT_DIR, f"f242_{ROUND}.png")))
-    items.append(("fig 2.4.3 — dot product 3d", f243.render(OUT_DIR, f"f243_{ROUND}.png")))
-    items.append(("fig 2.5 — sign accumulation", f25.render(OUT_DIR, f"f25_{ROUND}.png")))
-    items.append(("fig 2.6 — sine basis",        f26.render(OUT_DIR, f"f26_{ROUND}.png")))
+    items.append(("fig 1 - fourier vs wavelet", os.path.abspath(FIG1_PUBLISHED)))
+    items.append(("fig 2.4.1 - xy recombine",   f241.render(OUT_DIR, f"f241_{ROUND}.png")))
+    items.append(("fig 2.4.2 - a onto b",       f242.render(OUT_DIR, f"f242_{ROUND}.png")))
+    items.append(("fig 2.4.3 - dot product 3d", f243.render(OUT_DIR, f"f243_{ROUND}.png")))
+    items.append(("fig 2.5 - sign accumulation", f25.render(OUT_DIR, f"f25_{ROUND}.png")))
+    items.append(("fig 2.6 - sine basis",        f26.render(OUT_DIR, f"f26_{ROUND}.png")))
+    items.append(("fig 3.3 - spectrogram collision", f33.render(OUT_DIR, f"f33_{ROUND}.png")))
+    items.append(("fig 3.4 - resolution budget", f34.render(OUT_DIR, f"f34_{ROUND}.png")))
     return items
 
 
 def _montage(items):
     # Tile at ONE uniform scale so grid squares stay equal across figures (the
     # whole point of the shared-square model). The WIDEST figure is scaled to
-    # MAX_W; every other figure gets the SAME scale factor — so a narrow figure
+    # MAX_W; every other figure gets the SAME scale factor - so a narrow figure
     # (fewer columns) renders narrower, NOT stretched to match. Figures are
     # centered on a canvas sized to the widest. No per-figure width normalization.
     MAX_W = 2200
     PAD = 24
-    # White PAGE background (the canvas the figures sit on) — the figures keep
-    # their own dark panel backgrounds. No inter-figure caption strips — each
+    # White PAGE background (the canvas the figures sit on) - the figures keep
+    # their own dark panel backgrounds. No inter-figure caption strips - each
     # figure already carries its own title band, so the montage just stacks them.
     BG = (255, 255, 255)
 

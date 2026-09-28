@@ -1,14 +1,14 @@
-"""dsp_motivator_v*.png renderers — 3-row signal/STFT/CWT motivator figures.
+"""dsp_motivator_v*.png renderers - 3-row signal/STFT/CWT motivator figures.
 
 Each motivator is a vertical stack:
-  row 0 — time-series + instantaneous-frequency overlay (twin y-axes)
-  row 1 — STFT magnitude spectrogram (log-frequency y, time x)
-  row 2 — CWT magnitude spectrogram (log-frequency y, time x)
+  row 0 - time-series + instantaneous-frequency overlay (twin y-axes)
+  row 1 - STFT magnitude spectrogram (log-frequency y, time x)
+  row 2 - CWT magnitude spectrogram (log-frequency y, time x)
 
 Row 0 is the canonical TWIN-AXIS ESCAPE HATCH: the time-series and
 inst-freq curves share an x-axis but live on independent y-scales, which
 doesn't fit the single-Axes Plottable contract. The figure uses
-matplotlib's `twinx()` directly, scoped to this module — no Plottable
+matplotlib's `twinx()` directly, scoped to this module - no Plottable
 abstraction.
 
 Per D-01, this figure module is consumer code and may import canonical
@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 
 from .. import style
 
-# Canonical figure utilities — allowed import per D-01 (figures/ is
+# Canonical figure utilities - allowed import per D-01 (figures/ is
 # consumer code that may use research.utilities for raw signal/CWT math).
 from utilities import (
     BouncingChirpConfig,
@@ -42,7 +42,7 @@ from utilities.dsp_helpers import build_bouncing_chirp, build_waypoint_chirp
 
 
 # ============================================================
-# Local layout — derived from dsplot.style defaults per D-05.
+# Local layout - derived from dsplot.style defaults per D-05.
 # Override globally by reassigning dsplot.style.DEFAULT_*; override
 # motivator-only by editing these module-level constants.
 # ============================================================
@@ -71,17 +71,17 @@ def _friendly_xticks(duration_s: float):
 
     First pass tries for an exact landing on duration_s (clean durations
     like 1.0, 0.5, 2.0). If duration_s is "messy" (e.g. 0.9429 from a
-    CWT-trim re-zero), fall back to a clean step that gives 4–6 ticks —
+    CWT-trim re-zero), fall back to a clean step that gives 4–6 ticks -
     the final tick may fall short of duration_s, which is fine; the
     right-edge padding just shows a sliver of empty time.
     """
     import numpy as np
-    # Pass 1 — exact match (final tick == duration_s)
+    # Pass 1 - exact match (final tick == duration_s)
     for step in (0.05, 0.1, 0.2, 0.25, 0.5, 1.0, 2.0):
         n = round(duration_s / step)
         if 3 <= n <= 6 and abs(n * step - duration_s) < step * 0.01:
             return np.round(step * np.arange(n + 1), 6)
-    # Pass 2 — clean step, final tick may fall short of duration_s
+    # Pass 2 - clean step, final tick may fall short of duration_s
     for step in (0.2, 0.25, 0.1, 0.5, 0.05, 1.0):
         n = int(duration_s / step)
         if 3 <= n <= 6:
@@ -114,7 +114,7 @@ class MotivatorConfig:
 
 
 # ============================================================
-# Canonical six versions — same parameters as research.dsp_figures.
+# Canonical six versions - same parameters as research.dsp_figures.
 # ============================================================
 VERSIONS: tuple[MotivatorConfig, ...] = (
     MotivatorConfig(
@@ -179,7 +179,7 @@ VERSIONS: tuple[MotivatorConfig, ...] = (
         ),
         output_filename="vw3_aggressive_100-2000hz_0.5s.png",
     ),
-    # §1 motivator: waypoint chirp shaped like vw4 — three audibly distinct
+    # §1 motivator: waypoint chirp shaped like vw4 - three audibly distinct
     # bounces between 200 Hz and ~4.5 kHz, each peak higher than the last,
     # then a final ascending leg to 20 kHz that visually suggests the
     # pattern would continue forever. Keeping most of the energy below
@@ -193,9 +193,9 @@ VERSIONS: tuple[MotivatorConfig, ...] = (
             # (~7 ms more from the head) → ~2.0 s visible (clean final tick).
             duration_s=2.36,
             # Sub-trim 22 Hz waypoint at frac 0.05 (~0.118 s, well inside
-            # head trim of ~0.175 s) — invisible, but bleeds 22 Hz CWT
+            # head trim of ~0.175 s) - invisible, but bleeds 22 Hz CWT
             # energy forward into the visible window via the wavelet's
-            # ~180 ms time support. Same "old vw4 hack" — gives the CWT
+            # ~180 ms time support. Same "old vw4 hack" - gives the CWT
             # panel its characteristic glow entering from the left edge,
             # and by the time the visible window starts the chirp has
             # already risen past ~200 Hz on its climb to peak 1.
@@ -204,15 +204,15 @@ VERSIONS: tuple[MotivatorConfig, ...] = (
             # dip is intentionally below the STFT smear threshold (~200 Hz);
             # the secondary trough stays at 2 kHz so STFT doesn't smear there.
             # Final off-screen waypoint lets the spline rise cleanly off the
-            # right edge — no plateau.
+            # right edge - no plateau.
             waypoints=(
                 (0.00, 50.0),
-                (0.05, 22.0),      # sub-trim — left-edge CWT glow
-                (0.18, 800.0),     # peak 1 — displayed ≈ 0.25 s
-                (0.32, 60.0),      # deep dip — displayed ≈ 0.58 s — only STFT-smearing trough
-                (0.55, 12000.0),   # peak 2 — big bounce, displayed ≈ 1.12 s
-                (0.75, 2000.0),    # modest trough — displayed ≈ 1.59 s — above smear range
-                (1.00, 25000.0),   # tail-trim — clean off-screen ascent
+                (0.05, 22.0),      # sub-trim - left-edge CWT glow
+                (0.18, 800.0),     # peak 1 - displayed ≈ 0.25 s
+                (0.32, 60.0),      # deep dip - displayed ≈ 0.58 s - only STFT-smearing trough
+                (0.55, 12000.0),   # peak 2 - big bounce, displayed ≈ 1.12 s
+                (0.75, 2000.0),    # modest trough - displayed ≈ 1.59 s - above smear range
+                (1.00, 25000.0),   # tail-trim - clean off-screen ascent
             ),
             clip_to_waypoints=False,
         ),
@@ -274,11 +274,11 @@ def render_one(cfg: MotivatorConfig, output_dir: str) -> str:
     signal, inst_freq, t, f_lo, f_hi = _build_signal(cfg)
     sr = cfg.chirp.sr
 
-    # Displayed frequency range — defaults to the chirp's own range, but can
+    # Displayed frequency range - defaults to the chirp's own range, but can
     # be widened (e.g. 20–21500 Hz full audible band) via cfg.display_freq_lim_hz.
     # The CWT wavelet bank extends down to min(f_lo, disp_lo) so the panel's
     # low-freq region (below the chirp's f_lo but inside the display range)
-    # is filled with REAL wavelet response — wavelet-bandwidth leakage from
+    # is filled with REAL wavelet response - wavelet-bandwidth leakage from
     # nearby chirp content produces a natural fade, not a hard zero-pad floor.
     # Trade-off: lower CWT root → wider slowest-wavelet time support → bigger
     # chunk-boundary trim. Pick duration_s wide enough to absorb the trim.
@@ -311,7 +311,7 @@ def render_one(cfg: MotivatorConfig, output_dir: str) -> str:
     # trim+re-zero leaves signal[0] / signal[-1] at arbitrary phase, and
     # plot_time_series's fill_between(signal, 0) draws a tall slab from
     # that phase value down to y=0 at the panel edges. Shift is at most
-    # half a cycle (~2.5 ms at 200 Hz) — imperceptible against a 2.0 s
+    # half a cycle (~2.5 ms at 200 Hz) - imperceptible against a 2.0 s
     # panel. cwt_data is sliced to match so the three panels stay aligned.
     if len(signal) > 1:
         sign_changes = np.where(np.diff(np.sign(signal)) != 0)[0]
@@ -340,7 +340,7 @@ def render_one(cfg: MotivatorConfig, output_dir: str) -> str:
 
     ax_top, ax_stft, ax_cwt = axes[0][1], axes[1][1], axes[2][1]
 
-    # Lock the x-axis across all three data panels — the plot_* helpers
+    # Lock the x-axis across all three data panels - the plot_* helpers
     # each call ax.set_xlim with slightly different right-edge values
     # (t[-1] = (N-1)/sr for time-series/inst-freq vs duration_s for
     # STFT/CWT; scipy's pcolormesh also extends past signal end by a
@@ -349,7 +349,7 @@ def render_one(cfg: MotivatorConfig, output_dir: str) -> str:
     ax_stft.sharex(ax_top)
     ax_cwt.sharex(ax_top)
 
-    # Row 0 — TWIN-AXIS ESCAPE HATCH: time-series + inst-freq on
+    # Row 0 - TWIN-AXIS ESCAPE HATCH: time-series + inst-freq on
     # independent y-scales sharing one x. Time-series y-axis hidden so
     # the inst-freq twin tells the whole "y = frequency" story.
     plot_time_series(ax_top, signal, cfg.chirp.sr)
@@ -377,7 +377,7 @@ def render_one(cfg: MotivatorConfig, output_dir: str) -> str:
 
     # Clip CWT + inst-freq panels (both bin-indexed) to the displayed
     # frequency range. cwt_freqs is geometric (log-spaced), so the bin
-    # position of any target freq — even outside the cwt_freqs range — is
+    # position of any target freq - even outside the cwt_freqs range - is
     # a linear function of log2(freq). This lets us position 20 Hz below
     # bin 0 to expose the empty band below the chirp's f_lo.
     log_f0 = np.log2(cwt_freqs[0])
@@ -401,7 +401,7 @@ def render_one(cfg: MotivatorConfig, output_dir: str) -> str:
         ax_stft.set_yticks(list(hz_ticks))
         ax_stft.set_yticklabels(labels)
 
-    # STFT + CWT freq ticks stay on the LEFT (matplotlib default — explicit
+    # STFT + CWT freq ticks stay on the LEFT (matplotlib default - explicit
     # so future style edits don't drift). Suppress any right-side mirror ticks.
     for ax in (ax_stft, ax_cwt):
         ax.yaxis.tick_left()

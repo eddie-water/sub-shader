@@ -1,4 +1,4 @@
-"""optichrome_overview — the Optichrome palette + DSPlot showcase, one figure.
+"""optichrome_overview - the Optichrome palette + DSPlot showcase, one figure.
 
 A landscape, six-column overview built with the dsplot composition API
 (`Figure.compose` + a `CompositePanel` per column). Columns, left to right:
@@ -13,7 +13,7 @@ A landscape, six-column overview built with the dsplot composition API
     Blue Continuous        /   Weave fields (equal squares) through that cmap.
 
 "Block Continuous" is an equal-spaced smooth interpolation of the 13 block
-colors (`optichrome_rwbk_block`), registered inline here — distinct from
+colors (`optichrome_rwbk_block`), registered inline here - distinct from
 `optichrome_rwbk`, whose nodes are placed proportional to canvas area.
 
 The synthetic fields come from `optichrome_showcase` (_build_weave /
@@ -21,8 +21,8 @@ _build_centroid / _build_cwt); the CWT is resized to a 96x96 square so its
 showcase panel stays square like the others (a wide CWT used to overflow its
 title across the narrow columns).
 
-Edit the CONSTANTS block below to retune — version/output name, the three font
-sizes, colors, and spacing — then re-run:
+Edit the CONSTANTS block below to retune - version/output name, the three font
+sizes, colors, and spacing - then re-run:
 
     PYTHONPATH=research python -m dsplot.figures.optichrome_overview
 
@@ -60,7 +60,7 @@ from .optichrome_showcase import _build_centroid, _build_cwt, _build_weave
 
 
 # ---------------------------------------------------------------------------
-# CONSTANTS — hand-edit these.
+# CONSTANTS - hand-edit these.
 # ---------------------------------------------------------------------------
 VERSION = "v52"
 DEFAULT_OUTPUT_DIR = "assets/images/dsp/figures/optichrome_rwbk"
@@ -80,10 +80,10 @@ TEXT_COLOR = "#1A1A1A"     # near-black ink
 SEPARATOR_COLOR = "#1A1A1A"
 SPINE_COLOR = "#CCCCCC"    # light-grey spines/borders
 
-# Spacing (inches) — tight landscape layout.
+# Spacing (inches) - tight landscape layout.
 MARGIN_INCHES = 0.5
 # Section-2 gutters (row + column) are derived below as ONE THIRD of a spectrum
-# row's height — see EVEN_GUTTER_INCHES after UNIT_INCHES / SPECTRUM_ROW_HEIGHT.
+# row's height - see EVEN_GUTTER_INCHES after UNIT_INCHES / SPECTRUM_ROW_HEIGHT.
 INNER_GUTTER_INCHES = 0.22  # gap between the block + continuous strips in a cell
 PANEL_TITLE_RESERVE_INCHES = 0.40
 UNIT_INCHES = 2.4          # bigger unit -> wider canvas / more horizontal spread
@@ -91,13 +91,13 @@ TOP_RESERVE_INCHES = 4.7   # body starts lower -> bigger gap below the suptitle
 HEADER_GAP_INCHES = 0.65   # gap from body top up to the (larger) column headers
 BODY_ROW_HEIGHT = 6.0      # (legacy) unused by the row-per-spectrum layout
 
-# Row-per-spectrum layout (section 2): each spectrum is one wide row —
+# Row-per-spectrum layout (section 2): each spectrum is one wide row -
 # [stacked block+continuous strips] · Centroid · Energy Spectrum · Weave.
 FIELD_UNITS = 2            # field cell width (in layout units)
 STRIP_UNITS = 2 * FIELD_UNITS  # spectrum spans exactly TWO field columns (clean multiple)
 TOTAL_UNITS = STRIP_UNITS + 3 * FIELD_UNITS   # = 10
 # Row height is DECOUPLED from FIELD_UNITS so rows stay thin while the canvas
-# grows wide — fields read as wide landscape rectangles, not squares.
+# grows wide - fields read as wide landscape rectangles, not squares.
 SPECTRUM_ROW_HEIGHT = float(FIELD_UNITS)        # rows as tall as fields are wide -> SQUARE heatmaps
 TOP_ROW_HEIGHT = 3.0       # taller band -> bigger palette-origin paintings (square)
 
@@ -141,7 +141,7 @@ def _apply_style_knobs() -> None:
     style.DEFAULT_INNER_GUTTER_INCHES = INNER_GUTTER_INCHES
     style.DEFAULT_PANEL_TITLE_RESERVE_INCHES = PANEL_TITLE_RESERVE_INCHES
     # SuptitlePanel resolves its size from style.SUPTITLE_FONT_SIZE at
-    # construction (NOT DEFAULT_SUPTITLE_FONT_SIZE) — set both so the lifted
+    # construction (NOT DEFAULT_SUPTITLE_FONT_SIZE) - set both so the lifted
     # suptitle actually honors SUPTITLE_FONT_PT.
     style.SUPTITLE_FONT_SIZE = SUPTITLE_FONT_PT
     style.DEFAULT_SUPTITLE_FONT_SIZE = SUPTITLE_FONT_PT
@@ -196,7 +196,7 @@ def _square_cwt() -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Derived spectra — the six spectrum columns of the bottom matrix.
+# Derived spectra - the six spectrum columns of the bottom matrix.
 #
 # Vertical period (symmetric loop): BLACK -> warm -> WHITE*2 -> cool -> BLACK,
 # with black at BOTH ends (2 steps) mirroring white's 2 center steps. The four
@@ -210,11 +210,11 @@ _COOL = [_C.OPTI_FROST, _C.OPTI_AQUA, _C.OPTI_CYAN, _C.OPTI_ROYAL,
 _COOL_CONDENSED = [_C.OPTI_FROST, _C.OPTI_CYAN, _C.OPTI_OCEAN, _C.OPTI_NAVY]
 _BLK, _WHT = _C.OPTI_BLACK, _C.OPTI_WHITE
 
-# col 3 — raw vertical period (asymmetric: cool keeps all 7).
+# col 3 - raw vertical period (asymmetric: cool keeps all 7).
 _PERIOD = [_BLK] + _WARM + [_WHT, _WHT] + _COOL + [_BLK]
-# col 4 — white forced dead-center; blues condensed to match the warm count.
+# col 4 - white forced dead-center; blues condensed to match the warm count.
 _WHITE_CENTERED = [_BLK] + _WARM + [_WHT] + _COOL_CONDENSED + [_BLK]
-# col 5 / col 6 — both run BLACK -> WHITE (monotonic magnitude maps). Warm
+# col 5 / col 6 - both run BLACK -> WHITE (monotonic magnitude maps). Warm
 # climbs black -> warm -> white; cool climbs black -> cool(dark->light) -> white.
 _WARM_FROM_WHITE = [_BLK, _C.OPTI_MAROON, _C.OPTI_RED, _C.OPTI_ORANGE,
                     _C.OPTI_YELLOW, _WHT]
@@ -287,7 +287,7 @@ def _muted_one_period(replica: Image.Image) -> np.ndarray:
 
 def _replica_families() -> np.ndarray:
     """Nearest color-loop family index for every (row, col) block of the
-    replica grid — same snap as _build_replica, kept as integer indices."""
+    replica grid - same snap as _build_replica, kept as integer indices."""
     pal255 = _loop_rgb() * 255
     im = Image.open(SOURCE_SCAN).convert("RGB")
     blocks = np.asarray(im.resize((GRID_COLS, GRID_ROWS), Image.BOX)).astype(float)
@@ -329,7 +329,7 @@ def _stacked_strips(spec):
 
 def _shrink_strip_pairs(strip_pairs) -> None:
     """Squeeze each block/continuous pair to the top and bottom THIRDS of its
-    row, leaving the middle third empty — block hugs the top edge, continuous
+    row, leaving the middle third empty - block hugs the top edge, continuous
     hugs the bottom edge, both at one third of the row's height."""
     for block, cont in strip_pairs:
         if block.ax is None or cont.ax is None:
@@ -348,7 +348,7 @@ def _square_field_plots(fig, spectrum_rows, strip_pairs) -> None:
     """Square the three field plots (Centroid / Energy Spectrum / Weave) in each
     row. Their cells render wider than tall (the width unit stretches to fill the
     figure while the height unit is fixed), so trim each to a centered square of
-    its own height — keeps row height + column-header alignment, just drops the
+    its own height - keeps row height + column-header alignment, just drops the
     extra width.
 
     Centering each square leaves a side pad inside its cell, so the gutter
@@ -412,7 +412,7 @@ def _draw_separator(fig, sep_panel) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Figure assembly — top 3-cell section · separator · 6x5 spectrum matrix.
+# Figure assembly - top 3-cell section · separator · 6x5 spectrum matrix.
 # ---------------------------------------------------------------------------
 def _build_figure():
     _apply_style_knobs()
@@ -431,7 +431,7 @@ def _build_figure():
         "weave": _build_weave(base_freq_hz=2.0),
     }
 
-    # Top section — three palette-origin cells. TOTAL=10 isn't divisible by 3,
+    # Top section - three palette-origin cells. TOTAL=10 isn't divisible by 3,
     # so widths are [3,4,3]; the square-padded paintings letterbox to equal
     # size regardless of cell width.
     side_w = TOTAL_UNITS // 3
@@ -442,7 +442,7 @@ def _build_figure():
         _img_panel("One Vertical Period", muted_sq, units=(side_w, 1)),
     ]
 
-    # Section 2 — one wide ROW per spectrum:
+    # Section 2 - one wide ROW per spectrum:
     #   [stacked block+continuous strips] · Centroid · Energy Spectrum · Weave
     spectrum_rows = []
     strip_pairs = []
@@ -495,7 +495,7 @@ def _draw_section2_chrome(fig, spectrum_rows, spectra, strip_pairs) -> None:
     mfig = fig._mpl_fig
     _, fig_h_in = mfig.get_size_inches()
 
-    # Column headers — centered above the first spectrum row's four cells.
+    # Column headers - centered above the first spectrum row's four cells.
     first_row = spectrum_rows[0]
     header_y = max(p.ax.get_position().y1 for p in first_row if p.ax is not None)
     header_y += HEADER_GAP_INCHES / fig_h_in
@@ -507,7 +507,7 @@ def _draw_section2_chrome(fig, spectrum_rows, spectra, strip_pairs) -> None:
                   color=TEXT_COLOR, fontsize=MATRIX_HEADER_FONT_PT,
                   fontweight="bold", ha="center", va="bottom")
 
-    # Spectrum names — horizontal, centered (both axes) in the empty middle-third
+    # Spectrum names - horizontal, centered (both axes) in the empty middle-third
     # gap between each block strip (top) and continuous strip (bottom).
     for (block, cont), spec in zip(strip_pairs, spectra):
         if block.ax is None or cont.ax is None:

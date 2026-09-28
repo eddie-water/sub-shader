@@ -6,21 +6,21 @@ latency per stage, identify the bottleneck, and compare against DAW STFT
 baseline expectations.
 
 Stages measured:
-  - AudioInput.get_chunk()        — disk/memory seek + read
-  - fft (CPU pre-processing)      — NumPy FFT before GPU upload
-  - GPU upload                    — cp.asarray (host → device)
-  - GPU multiply                  — frequency-domain convolution
-  - GPU download                  — cp.asnumpy (device → host)
-  - ifft (CPU post-processing)    — NumPy IFFT
-  - CWT total                     — wavelet.cwt() end-to-end
-  - normalize_by_scale            — scale normalization
-  - compute_mag                   — |x| magnitude
-  - discard_unreliable_coefs      — reliable region slice
-  - extract_hop_center            — hop-center trim
-  - downsample                    — time-axis downsampling
-  - CircularFrameBuffer.push_frame — buffer update + flattening
-  - Renderer.update_texture       — texture upload (CPU→OpenGL)
-  - gl_context operations         — clear + render + swap
+  - AudioInput.get_chunk()        - disk/memory seek + read
+  - fft (CPU pre-processing)      - NumPy FFT before GPU upload
+  - GPU upload                    - cp.asarray (host → device)
+  - GPU multiply                  - frequency-domain convolution
+  - GPU download                  - cp.asnumpy (device → host)
+  - ifft (CPU post-processing)    - NumPy IFFT
+  - CWT total                     - wavelet.cwt() end-to-end
+  - normalize_by_scale            - scale normalization
+  - compute_mag                   - |x| magnitude
+  - discard_unreliable_coefs      - reliable region slice
+  - extract_hop_center            - hop-center trim
+  - downsample                    - time-axis downsampling
+  - CircularFrameBuffer.push_frame - buffer update + flattening
+  - Renderer.update_texture       - texture upload (CPU→OpenGL)
+  - gl_context operations         - clear + render + swap
 
 Usage:
     cd research/
@@ -74,17 +74,17 @@ class InstrumentedCuWavelet:
     Wraps CuWavelet and captures per-sub-stage timing on every cwt() call.
 
     Sub-stages tracked:
-        fft_cpu      — NumPy FFT (input signal, CPU)
-        gpu_upload   — cp.asarray (host → device)
-        gpu_multiply — frequency-domain elementwise multiply
-        gpu_download — cp.asnumpy (device → host)
-        ifft_cpu     — NumPy IFFT + slice (CPU)
-        normalize    — normalize_by_scale
-        mag          — compute_mag
-        discard      — discard_unreliable_coefs
-        hop_center   — extract_hop_center
-        downsample   — downsample
-        cwt_total    — full cwt() wall time
+        fft_cpu      - NumPy FFT (input signal, CPU)
+        gpu_upload   - cp.asarray (host → device)
+        gpu_multiply - frequency-domain elementwise multiply
+        gpu_download - cp.asnumpy (device → host)
+        ifft_cpu     - NumPy IFFT + slice (CPU)
+        normalize    - normalize_by_scale
+        mag          - compute_mag
+        discard      - discard_unreliable_coefs
+        hop_center   - extract_hop_center
+        downsample   - downsample
+        cwt_total    - full cwt() wall time
     """
 
     SUBSTAGES = [
@@ -275,7 +275,7 @@ def compute_structural_latency(chunk_size, overlap_factor, sample_rate):
 
     Structural latency is the latency baked into the configuration before
     any code runs. The CWT must receive chunk_size samples before it can
-    produce a frame — the audio is already chunk_duration_ms old by the
+    produce a frame - the audio is already chunk_duration_ms old by the
     time processing starts.
     """
     hop_size = int(chunk_size * (1.0 - overlap_factor))
@@ -351,7 +351,7 @@ def run_profile(n_frames: int, headless: bool):
     section("Structural Latency Analysis")
     print(f"  The CWT MUST see {chunk_size} samples before producing a frame.")
     print(f"  This means the visualization is ALWAYS at least")
-    print(f"  {structural['chunk_duration_ms']:.0f} ms behind real-time — before any processing.")
+    print(f"  {structural['chunk_duration_ms']:.0f} ms behind real-time - before any processing.")
     print()
     print(f"  Visual updates fire every {structural['hop_duration_ms']:.1f} ms ({structural['frames_per_sec']:.1f} fps).")
     print(f"  Between updates, the visualization is frozen.")
@@ -360,9 +360,9 @@ def run_profile(n_frames: int, headless: bool):
     daw_hop_ms    = (256  / sample_rate) * 1000
     daw_fps       = sample_rate / 256
     print(f"  DAW STFT baseline (typical): 1024 samples, 256-sample hop")
-    print(f"    Window:  {daw_window_ms:.1f} ms  (vs {structural['chunk_duration_ms']:.0f} ms — {structural['chunk_duration_ms']/daw_window_ms:.0f}x longer)")
-    print(f"    Hop:     {daw_hop_ms:.1f} ms  (vs {structural['hop_duration_ms']:.1f} ms — {structural['hop_duration_ms']/daw_hop_ms:.0f}x longer)")
-    print(f"    Rate:    {daw_fps:.0f} fps  (vs {structural['frames_per_sec']:.1f} fps — {daw_fps/structural['frames_per_sec']:.0f}x more frequent)")
+    print(f"    Window:  {daw_window_ms:.1f} ms  (vs {structural['chunk_duration_ms']:.0f} ms - {structural['chunk_duration_ms']/daw_window_ms:.0f}x longer)")
+    print(f"    Hop:     {daw_hop_ms:.1f} ms  (vs {structural['hop_duration_ms']:.1f} ms - {structural['hop_duration_ms']/daw_hop_ms:.0f}x longer)")
+    print(f"    Rate:    {daw_fps:.0f} fps  (vs {structural['frames_per_sec']:.1f} fps - {daw_fps/structural['frames_per_sec']:.0f}x more frequent)")
 
     # ── Init audio input ────────────────────────────────────────────────────
     section("Initialization")
@@ -405,7 +405,7 @@ def run_profile(n_frames: int, headless: bool):
         backend = "NpWavelet (CPU)"
         instrumented_wavelet = InstrumentedNpWavelet(wavelet_raw)
         gpu_mode = False
-        print(f"  NpWavelet init:    {t_wavelet_init:.1f} ms  [CPU mode — GPU unavailable: {e}]")
+        print(f"  NpWavelet init:    {t_wavelet_init:.1f} ms  [CPU mode - GPU unavailable: {e}]")
         print(f"  num_freqs:         {wavelet_raw.num_freqs}")
         print(f"  max_conv_n:        {wavelet_raw.max_conv_n}")
 
@@ -488,7 +488,7 @@ def run_profile(n_frames: int, headless: bool):
         frames_done += 1
 
     if frames_done == 0:
-        print("No frames processed — check audio file path.")
+        print("No frames processed - check audio file path.")
         return
 
     # ── Print runtime results ────────────────────────────────────────────────

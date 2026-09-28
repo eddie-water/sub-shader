@@ -2,20 +2,20 @@
 
 ``GpuCWT.transform`` runs as one ``@timed`` blob. Because CuPy is asynchronous,
 the individual GPU legs (upload, multiply, ifft, download) can't be measured by a
-plain stopwatch — work is only *queued* until something blocks (the final
+plain stopwatch - work is only *queued* until something blocks (the final
 ``cp.asnumpy`` download). The blob *total* is honest, but the per-leg split is not.
 
 ``InstrumentedGpuCWT`` subclasses the production ``GpuCWT`` and overrides
 ``transform`` to run the **identical** computation with a device sync after each
-leg, so each leg's time is real. This lives in ``research/`` only — ``src/`` is
+leg, so each leg's time is real. This lives in ``research/`` only - ``src/`` is
 untouched and carries zero sync overhead in production.
 
 Legs recorded per call in ``self.leg_times_ms``:
-    fft_cpu   — CPU FFT of the input (numpy)
-    upload    — host→device transfer of the FFT'd input   (transfer bottleneck)
-    multiply  — elementwise kernel multiply on GPU
-    ifft      — inverse FFT on GPU (+ trim)
-    download  — device→host transfer of the trimmed result (transfer bottleneck)
+    fft_cpu   - CPU FFT of the input (numpy)
+    upload    - host→device transfer of the FFT'd input   (transfer bottleneck)
+    multiply  - elementwise kernel multiply on GPU
+    ifft      - inverse FFT on GPU (+ trim)
+    download  - device→host transfer of the trimmed result (transfer bottleneck)
 """
 
 import time
@@ -71,11 +71,15 @@ class InstrumentedGpuCWT(GpuCWT):
         _sync()
         legs["ifft"] = (clock() - t0) * 1000.0
 
-        t0 = clock()
-        out = cp.asnumpy(conv_tf_trimmed)
-        legs["download"] = (clock() - t0) * 1000.0
-
         self.leg_times_ms = legs
+        return conv_tf_trimmed
+
+    def _download(self, frame) -> np.ndarray:
+        """The download leg now sits at the end of post(): only the finished
+        frame crosses to host, after the GPU-resident post stages."""
+        t0 = time.perf_counter()
+        out = cp.asnumpy(frame)
+        self.leg_times_ms["download"] = (time.perf_counter() - t0) * 1000.0
         return out
 
 

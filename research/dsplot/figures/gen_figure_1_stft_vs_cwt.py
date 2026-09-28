@@ -1497,7 +1497,7 @@ def _build_contender_stacked_figure(
     # row in the grid shares one height.
     if header_titles is not None:
         header_rows = [
-            [SuptitlePanel(t, units=(total_w, 1), font_size=44)]
+            [SuptitlePanel(t, units=(total_w, 1), font_size=style.DEFAULT_TICK_LABEL_SIZE)]
             for t in header_titles
         ]
         rows = [r for pair in zip(header_rows, rows) for r in pair]
@@ -1946,6 +1946,27 @@ def render_hero_stacked(
 
 
 HERO_SPLIT_ROW_KEYS = ("audio", "fourier", "wavelet")
+# README hero pieces: frame and labels from the README display spec. The
+# converter needs the canvas content width, which the split layout fixes.
+HERO_SPLIT_CONTENT_IN = 42.6
+HERO_FRAME_PT = style.readme_pt(style.README_FRAME_PX, HERO_SPLIT_CONTENT_IN)
+HERO_README_STYLE = {
+    "DEFAULT_FRAME_LINEWIDTH": HERO_FRAME_PT,
+    "DEFAULT_FRAME_EDGE_GAP_INCHES": HERO_FRAME_PT / 144 + 0.02,   # the whole stroke clears the canvas edge
+    "DEFAULT_TICK_LABEL_SIZE": style.readme_pt(style.README_TEXT_PX, HERO_SPLIT_CONTENT_IN),
+}
+
+
+@contextmanager
+def _hero_readme_style():
+    orig = {k: getattr(style, k) for k in HERO_README_STYLE}
+    try:
+        for k, v in HERO_README_STYLE.items():
+            setattr(style, k, v)
+        yield
+    finally:
+        for k, v in orig.items():
+            setattr(style, k, v)
 
 
 def render_hero_split(
@@ -1981,7 +2002,7 @@ def render_hero_split(
     for row_idx, key in enumerate(HERO_SPLIT_ROW_KEYS, start=1):
         if row_idx not in rows:
             continue
-        with _contender_tight_style():
+        with _contender_tight_style(), _hero_readme_style():
             fig = _build_contender_stacked_figure(
                 data=data,
                 display_freq_lim_hz=HERO_DISPLAY_FREQ_LIM_HZ,

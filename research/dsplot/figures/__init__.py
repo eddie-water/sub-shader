@@ -1,4 +1,4 @@
-"""Figure renderers — one module per DSP.md figure.
+"""Figure renderers - one module per DSP.md figure.
 
 Each module exposes a ``render(...)`` function returning the absolute output
 path. The ``__main__`` dispatcher in this subpackage regenerates every figure
@@ -9,7 +9,7 @@ allowed to bridge ``research.utilities`` for CWT computation. The library
 isolation grep excludes this directory:
     grep -rIn "subshader" research/dsplot/ --exclude-dir=figures
 
-Notebook re-exports — figures that ship with a ``show()`` for inline
+Notebook re-exports - figures that ship with a ``show()`` for inline
 display in dsp.ipynb are re-exported here under their figure-number alias
 so a single ``from dsplot.figures import figure_X_Y_Z`` import wires up
 every cell's one-line invocation. Add new entries below as new figures
@@ -37,8 +37,8 @@ with identical signatures:
         ``target=None`` behaves like show() without chrome suppression
         (subshader tests / benchmarks own their own display loop).
         ``target: matplotlib.axes.Axes`` re-hosts a single panel into the
-        caller's Axes — only supported by single-panel figure modules.
-        ``target: matplotlib.figure.Figure`` re-hosts the whole layout —
+        caller's Axes - only supported by single-panel figure modules.
+        ``target: matplotlib.figure.Figure`` re-hosts the whole layout -
         supported only where the layout can adapt cleanly.
 
 Implementation pattern: a private ``_build_figure(unit_inches=None,
@@ -52,6 +52,8 @@ from .gen_figure_243_dot_product_3d import show as figure_2_4_3
 from .gen_figure_2_5_sign_accumulation import show as figure_2_5
 from .gen_figure_2_6_sine_basis import show as figure_2_6
 from .gen_figure_1_stft_vs_cwt import show_hero as figure_1
+from .gen_figure_3_3_spectrogram_collision import show as figure_3_3
+from .gen_figure_3_4_resolution_budget import show as figure_3_4
 from . import sample_template
 
 __all__ = [
@@ -61,5 +63,7 @@ __all__ = [
     "figure_2_4_3",
     "figure_2_5",
     "figure_2_6",
+    "figure_3_3",
+    "figure_3_4",
     "sample_template",
 ]

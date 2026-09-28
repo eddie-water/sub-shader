@@ -1,7 +1,7 @@
-"""sample_template — kitchen-sink dsplot showcase (v3).
+"""sample_template - kitchen-sink dsplot showcase (v3).
 
 Exercises Panel kinds and Plottables in a four-row composition. Visual style
-derives from the v52 lego_demo language via dsplot.style — no hardcoded
+derives from the v52 lego_demo language via dsplot.style - no hardcoded
 style literals.
 
 Three-mode contract (the canonical convention every figure module should
@@ -16,8 +16,8 @@ v3 Layout (4 columns wide)
 --------------------------
 Row 0  SuptitlePanel(4,1)
 Row 1  StaticPanel(1,1) 2D | StaticPanel3D(1,1) 3D | HeatmapPanel(1,1) GAF | HeatmapPanel(1,1) centroid
-Row 2  TimeSeriesPanel(4,1) — chirp + twin inst-freq Line
-Row 3  CompositePanel(2,1) — 4 stacked stem rows  |  CompositePanel(1,1) — title + jargon body  |  StaticPanel(1,1) — vector projection
+Row 2  TimeSeriesPanel(4,1) - chirp + twin inst-freq Line
+Row 3  CompositePanel(2,1) - 4 stacked stem rows  |  CompositePanel(1,1) - title + jargon body  |  StaticPanel(1,1) - vector projection
 
 Coverage
 --------
@@ -25,7 +25,7 @@ Panel kinds   : StaticPanel · StaticPanel3D · TimeSeriesPanel · HeatmapPanel 
 Plottables    : Vector · VectorComponents · Heatmap · TimeSeries · Line · Stem
 
 DynamicPanel / InteractivePanel and the decoration plottables (Annotation,
-Dropline, Spotlight) are out of scope for v3 — they re-enter in a later
+Dropline, Spotlight) are out of scope for v3 - they re-enter in a later
 revision once the v3 visual language is locked.
 """
 from __future__ import annotations
@@ -85,7 +85,7 @@ CHIRP_RAMP_POWER = 2.0
 # Breathing-room factor for the chirp amp ylim. Main amp is plotted in [-1, 1]
 # but the spine extends past the signal so it doesn't kiss the borders. The
 # twin (inst-freq) ylim scales identically so a y-position on the twin always
-# corresponds to the same y-position on the main — i.e. amp=-1 line coincides
+# corresponds to the same y-position on the main - i.e. amp=-1 line coincides
 # with twin tick at 20 Hz, amp=+1 line coincides with 100 Hz tick.
 CHIRP_AMP_LIM = 1.05
 
@@ -113,19 +113,19 @@ def _build_chirp_placeholder() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 def _build_gaussian(sigma: float = 0.35) -> np.ndarray:
-    """Centroid heatmap — single peak with Gaussian falloff, centered."""
+    """Centroid heatmap - single peak with Gaussian falloff, centered."""
     coords = np.linspace(-1.0, 1.0, GRID_N)
     X, Y = np.meshgrid(coords, coords)
     return np.exp(-(X ** 2 + Y ** 2) / (2.0 * sigma ** 2))
 
 
 def _build_gaf(n: int = GRID_N, base_freq_hz: float = 4.0) -> np.ndarray:
-    """Gramian Angular Field weave — diagonal-band interference pattern.
+    """Gramian Angular Field weave - diagonal-band interference pattern.
 
     Raw cos-sum is in [-1, 1]; remap to [0, 1] then apply a <1 power so
     midrange lifts brighter (most of the field reads as purple → orange)
     while the trough still bottoms out at 0 (black) and the peak stays at 1
-    (yellow). Power < 1 makes the black-to-yellow transition QUICK — narrow
+    (yellow). Power < 1 makes the black-to-yellow transition QUICK - narrow
     black bands around the troughs, then a fast climb through the inferno
     palette to bright peaks.
     """
@@ -137,7 +137,7 @@ def _build_gaf(n: int = GRID_N, base_freq_hz: float = 4.0) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Row 1 — four 1×1 panels
+# Row 1 - four 1×1 panels
 # ---------------------------------------------------------------------------
 def _r1_vector_2d() -> StaticPanel:
     panel = StaticPanel(
@@ -238,7 +238,7 @@ def _r1_heatmap_centroid() -> HeatmapPanel:
 
 
 # ---------------------------------------------------------------------------
-# Row 2 — full-width chirp with twin inst-freq Line overlay
+# Row 2 - full-width chirp with twin inst-freq Line overlay
 # ---------------------------------------------------------------------------
 def _r2_chirp_with_inst_freq() -> TimeSeriesPanel:
     sig, inst_f, t = _build_chirp_placeholder()
@@ -274,7 +274,7 @@ def _r2_chirp_with_inst_freq() -> TimeSeriesPanel:
 
 
 # ---------------------------------------------------------------------------
-# Row 3 — stems composite | jargon panel | vector projection
+# Row 3 - stems composite | jargon panel | vector projection
 # ---------------------------------------------------------------------------
 def _stem_row_panel(
     t: np.ndarray,
@@ -287,12 +287,12 @@ def _stem_row_panel(
     """Inner stem row for the composite.
 
     Y axis stripped entirely (no ticks, no label) so the rows read as a
-    pure waveform stack — the wave shape itself identifies the row. Only the
+    pure waveform stack - the wave shape itself identifies the row. Only the
     bottom row carries x-axis decoration (share_x strips it elsewhere) and
     its last x-tick sits at STEM_N (= the right edge of the plot).
 
     `color`: uniform Stem color (mutually exclusive with color_per_sample).
-    `color_per_sample`: per-sample hex colors — emits N single-sample Stems
+    `color_per_sample`: per-sample hex colors - emits N single-sample Stems
     so the row reads as a colormap-encoded magnitude scan (e.g. inferno over
     |y|).
     """
@@ -323,15 +323,15 @@ def _r3_stem_quartet() -> CompositePanel:
     n = STEM_N
     t = np.arange(n, dtype=np.float64)
 
-    # Row 1 — square wave (unitary ±1, NEUTRAL_COLOR / white)
+    # Row 1 - square wave (unitary ±1, NEUTRAL_COLOR / white)
     square = np.where(t < n // 2, 1.0, -1.0)
 
-    # Rows 2 & 3 — 5 Hz and 10 Hz sines across n=100 samples (sample rate
+    # Rows 2 & 3 - 5 Hz and 10 Hz sines across n=100 samples (sample rate
     # implicit = n Hz → freq cycles per second = freq cycles per n samples).
     sin_low = np.sin(2.0 * np.pi * STEM_SINE_HZ_LOW * t / n)
     sin_high = np.sin(2.0 * np.pi * STEM_SINE_HZ_HIGH * t / n)
 
-    # Row 4 — triangle wave: -1 at t=0, +1 at midpoint, -1 at end.
+    # Row 4 - triangle wave: -1 at t=0, +1 at midpoint, -1 at end.
     # Per-sample inferno colormap encodes magnitude so the row reads as a
     # heat-scan: dim at the zero-crossings, brightest at the apex/troughs.
     triangle = 1.0 - 4.0 * np.abs(t / (n - 1) - 0.5)
@@ -364,19 +364,19 @@ JARGON_BODY = (
 
 
 def _r3_jargon_panel() -> CompositePanel:
-    """Text Panel — title sits in the composite's chrome zone (same y as
+    """Text Panel - title sits in the composite's chrome zone (same y as
     every other panel's title), body fills the one and only inner cell.
 
     Body uses justify mode: each line distributes its words across the cell
     width (Microsoft-Word-style "Justify"). Font size is pinned explicitly to
     DEFAULT_TITLE_FONT_SIZE so the caption type matches the panel title
     typography. show_ghost_border draws a faint rectangle at the same content
-    rect the justify pipeline targets — the caption's borders.
+    rect the justify pipeline targets - the caption's borders.
     """
     body = TextPanel(
         JARGON_BODY,
         units=(1, 1),
-        # Decoupled from DEFAULT_TITLE_FONT_SIZE — caption type should sit
+        # Decoupled from DEFAULT_TITLE_FONT_SIZE - caption type should sit
         # well below the title visually, and auto_shrink needs headroom
         # between font_size (start) and min_font_size (floor) to actually
         # fit a multi-line body into the cell.
@@ -420,7 +420,7 @@ def _r3_vector_projection() -> StaticPanel:
     scalar = dot / b_sq
     proj = (scalar * b[0], scalar * b[1])
 
-    # b — purple, drawn first so a overlays on top
+    # b - purple, drawn first so a overlays on top
     panel.add(Vector(
         b,
         color=style.SECONDARY_COLOR,
@@ -428,7 +428,7 @@ def _r3_vector_projection() -> StaticPanel:
         label="b",
         zorder=2,
     ))
-    # a — orange, the projected vector
+    # a - orange, the projected vector
     panel.add(Vector(
         a,
         color=style.PRIMARY_COLOR,
@@ -436,7 +436,7 @@ def _r3_vector_projection() -> StaticPanel:
         label="a",
         zorder=3,
     ))
-    # proj_b(a) — orange parallel-to-b component, half-alpha so b shows through
+    # proj_b(a) - orange parallel-to-b component, half-alpha so b shows through
     panel.add(Vector(
         proj,
         color=style.PRIMARY_COLOR,
@@ -445,7 +445,7 @@ def _r3_vector_projection() -> StaticPanel:
         show_tip=False,
         zorder=4,
     ))
-    # perpendicular drop from a's tip to proj's tip — dashed, neutral
+    # perpendicular drop from a's tip to proj's tip - dashed, neutral
     panel.add(Vector(
         (a[0] - proj[0], a[1] - proj[1]),
         origin=proj,
@@ -584,10 +584,10 @@ def embed(target: object | None = None) -> Figure:
     v3 behaviour:
       - ``target is None``: behave like show() WITHOUT chrome suppression
         (returns the Figure for the caller to display however they like).
-      - ``target: matplotlib.figure.Figure``: NotImplementedError — re-hosting
+      - ``target: matplotlib.figure.Figure``: NotImplementedError - re-hosting
         the kitchen-sink layout onto a caller-provided Figure is reserved
         for a later revision.
-      - ``target: matplotlib.axes.Axes``: NotImplementedError — Axes-targeting
+      - ``target: matplotlib.axes.Axes``: NotImplementedError - Axes-targeting
         is reserved for simpler single-panel figure modules.
     """
     import matplotlib.axes
@@ -600,12 +600,12 @@ def embed(target: object | None = None) -> Figure:
     if isinstance(target, mpl_figure.Figure):
         raise NotImplementedError(
             "sample_template.embed(target: Figure) is reserved for a later "
-            "revision — the kitchen-sink layout cannot currently re-host "
+            "revision - the kitchen-sink layout cannot currently re-host "
             "onto a caller Figure cleanly. Use render() or show()."
         )
     if isinstance(target, matplotlib.axes.Axes):
         raise NotImplementedError(
-            "sample_template.embed(target: Axes) is not supported — "
+            "sample_template.embed(target: Axes) is not supported - "
             "Axes-targeting is reserved for simpler single-panel figure "
             "modules. Use render() or show()."
         )

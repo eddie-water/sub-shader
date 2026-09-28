@@ -1,7 +1,7 @@
 """Log-frequency tick computation for CWT-style heatmaps.
 
 Maps a sorted log-spaced frequency array to bin positions on a heatmap y-axis.
-Pure numpy helper — no external project imports.
+Pure numpy helper - no external project imports.
 
 Label formatting: frequencies >= 1000 Hz render as "{khz}k" (e.g. "2k", "20k");
 frequencies < 1000 Hz render as the integer Hz value (e.g. "20", "200").
@@ -25,8 +25,8 @@ def compute_freq_yticks(
     Returns
     -------
     (ytick_bins, ytick_labels)
-        ytick_bins  — float positions in bin space (suitable for ax.set_yticks)
-        ytick_labels — string labels formatted "{khz}k" or "{int(hz)}"
+        ytick_bins  - float positions in bin space (suitable for ax.set_yticks)
+        ytick_labels - string labels formatted "{khz}k" or "{int(hz)}"
     """
     freq_min, freq_max = freqs[0], freqs[-1]
     n = len(freqs)

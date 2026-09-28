@@ -1,4 +1,4 @@
-"""Signal registry — single source of truth for test/comparison signals.
+"""Signal registry - single source of truth for test/comparison signals.
 
 Adding a new signal: append a dict to SIGNALS and drop the audio file
 in assets/audio/reference/ (or assets/audio/generated/ for synthesized).

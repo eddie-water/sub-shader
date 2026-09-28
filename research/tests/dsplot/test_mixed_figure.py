@@ -1,9 +1,9 @@
-"""Mixed-type Figure composition tests — Plan 09-04 Task 3 (automated portion).
+"""Mixed-type Figure composition tests - Plan 09-04 Task 3 (automated portion).
 
 These tests pin the programmatic guarantees that mixed Static + Dynamic /
 Static + Interactive Figures compose without crashing. The wall-clock
 visual verification (animation actually loops; widget controls respond
-to clicks) is the human-verify checkpoint — pytest can't observe a live
+to clicks) is the human-verify checkpoint - pytest can't observe a live
 FuncAnimation timer or an ipywidgets event loop.
 
 Per LOCKED non-goal #6, if the headless smoke fails, the fallback is
@@ -57,7 +57,7 @@ def test_mixed_static_dynamic_figure_renders():
         assert "a" in static_labels, f"static panel missing 'a': {static_labels}"
         assert "b" in dyn_labels, f"dynamic panel missing 'b': {dyn_labels}"
         assert fig._anim is not None, (
-            "Figure master FuncAnimation reference dropped — would freeze on frame 0"
+            "Figure master FuncAnimation reference dropped - would freeze on frame 0"
         )
         assert dyn_panel._anim is None, (
             "DynamicPanel inside a Figure should defer to the figure clock; "
@@ -101,7 +101,7 @@ def test_mixed_static_interactive_figure_renders():
 
 
 def test_mixed_figure_savefig_writes_png(tmp_path):
-    """Mixed Static+Dynamic Figure can savefig — one of the consumer
+    """Mixed Static+Dynamic Figure can savefig - one of the consumer
     workflows (export a single still frame from a mixed figure for README)."""
     from dsplot import Figure, StaticPanel, DynamicPanel, Vector
 

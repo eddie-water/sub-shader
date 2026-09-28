@@ -477,7 +477,7 @@ def generate_method_comparison(
     os.makedirs(output_dir, exist_ok=True)
 
     if input_signal is not None:
-        # Custom audio file — no registry entry, no DAW reference image
+        # Custom audio file - no registry entry, no DAW reference image
         signal_label = os.path.splitext(os.path.basename(input_signal))[0]
         safe_name = signal_label.replace(" ", "_").lower()
         filename = f"{safe_name}_comparison{'_STUB_PYWT' if stub else ''}.png"

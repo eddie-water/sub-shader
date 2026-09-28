@@ -1,17 +1,17 @@
 # Signal Decomposition
+🚧 Under Construction 🚧
 
-> 🚧 Under Construction 🚧
 
 ## 1. Motivations
-
-- To visualize an audio signal effectively, we need an extremely precise method for representing it's behavior
-- Specifically, we want to know **what** frequencies are present and **when** they occur in the signal - this is the primary motivation for finding a highly accurate **time-frequency** analysis method 
-  - The standard approach is to use the **Fourier Transform**, but in this context it has limitations
-  - The more recent **Wavelet Transform** was basically designed for this kind of task
-
-  *[TODO Insert CWT vs STFT Figure]*
+- To visualize an audio signal effectively, we need a precise method for representing its behavior
+- Specifically, we want to know **what** frequencies are present and **when** they occur in the signal 
+- This is the primary motivation for finding a highly accurate **time-frequency** analysis method 
+  - The textbook approach is the **Fourier Analysis**, but in this context it has limitations
+  - The more recently popularized **Wavelet Analysis** is much better suited for this kind of task
 - Both are built on the same foundation - **signal decomposition** 
-- Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of how these methods actually work, and explore the different areas where they excel and fall short
+- Beginning with simple examples, we will build up to a comprehensive and intuitive understanding of how these methods actually work, and explore the different areas where they excel and fall short → Section 2
+
+![Fourier vs Wavelet - STFT and CWT of the same signal, a chirp sweep punctuated by clicks (Figure 1)](../../../assets/images/dsp/figures/by_figure/fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_hero_v43_equal_bands.png)
 
 ---
 
@@ -20,7 +20,7 @@
 ### 2.1 Signal Decomposition - The Goal
 
 - The end goal is to **decompose** any given signal into its fundamental **components**
-- In simpler terms, we want to break it down into its **basic building blocks** and see how much of each exists in the signal originally 
+- In simpler terms, we want to break a signal down into its **basic building blocks** and see how much of each "block" exists in the signal originally 
 - This is like trying to unmix a can of paint to figure out how much of each color ingredient contributed to the overall color of the paint - where would you even begin?
 - This type of problem motivates us to do two things:
     1. **Define what a signal's fundamental components are** 
@@ -29,7 +29,9 @@
 
 ### 2.2 Inner Product - The Tool
 
-- The **Inner Product** gives us a generic way to compare a function **f** (the signal) and a reference function **g** (something that embodies the signal properties we want to measure) to calculate, effectively, a "**similarity score**"
+- The **Inner Product** gives us a generic way to compare and compute a "**similarity score**" between
+    - A function **f** - the signal 
+    - A reference function **g** - something that embodies the signal properties we want to measure 
 
 <div align="center">
 
@@ -44,13 +46,13 @@ $$
 
 </div>
 
-- The result is a measurement of how **correlated** these function are, indicating their **similarity**
-- But to understand how this actually works, it's helpful to see how the Inner Product operates in its simplest form: the **Dot Product**
+- The result is a measurement of how **correlated** these functions are, indicating their **similarity**
+- But to understand how this actually works, it's helpful to see how the Inner Product operates in its simplest form - the **Dot Product**
 
 ### 2.3 Dot Product - The Basic Case
 
-- The Inner Product is a generalization of what the **Dot Product** does to **vectors** in $\mathbb{R}^n$ 
-- All this means is we'll be applying these concepts to just plain, regular, real numbers - no imaginary or abstract numbers in weird math domains (yet)
+- The Inner Product generalizes what the **Dot Product** does to **vectors** in $\mathbb{R}^n$ 
+- All this means is we will just be applying these concepts to just plain, regular, real numbers - no imaginary or abstract numbers in weird math domains (yet)
 - As long as you can do basic **multiplication** and **addition**, it's really not too bad
 
 <div align="center">
@@ -62,7 +64,7 @@ $$
 <em>Dot Product Notation</em>
 </div>
 
-- Read this as: "Multiply each term in vector **a** with each term in vector **b** and sum them all up"
+- In plain English this is called a **sum of products** - **multiply** each term in vector **a** with each term in vector **b** and then **add** them all together
     <!-- 1. Take the first term from **a** 
     2. Take the first term from **b**
     3. **Multiply** them together
@@ -112,240 +114,318 @@ $$
 </div>
 
 - But what does this result even really mean? And what does this operation even really do? 
-- The result indicates how **parallel** vectors **a** and **b** are - this is the key insight to understanding that the Dot Product operation measures **"similarity"** by  calculating how **aligned** **a** and **b** are in terms of their parallel-ness so to speak
+- Spoiler, the result indicates how **parallel** vectors **a** and **b** are - this is the key insight to understanding that the Dot Product operation measures **"similarity"** by calculating how **aligned** **a** and **b** are in terms of their "parallel-ness"
 - This clicks more visually during **Vector Projection**, our first attempt at any form of **decomposition**
 
 ### 2.4 Vector Projection - The Geometric Interpretation
 
-#### 2.4.1 Projection onto a Reference Direction
+#### 2.4.1 Projecting onto a Reference Direction
 
 - A **vector** can be thought of as an **arrow** described by two of its properties
   - **magnitude** - how long it is 
   - **direction** - where it points
 
-- To decompose a vector into its basic components, we **project it along the directions** of all the dimensions it exists in - think of it like the vector casting its **"shadow"** onto the x and y reference axes - this is how we break the vector down into its x and y components
+- To **decompose** a vector, or break it down into its most basic components, we **project it along** the directions of **all the dimensions** it exists in - **Figure 2.4.1.a**
+  - Since **a** is defined by two dimensions, think of it like the vector casting its **"shadows"** onto the x and y axes 
+  - Notice how as **a** grows or shrinks in any particular direction, the "shadow" **aligned** with each dimension compensates itself accordingly
+  - This illustrates how projecting **a** onto these axes reveals the components of **a** that are **parallel** to x and y 
 
-- The **length** of each "shadow" *is* its **component** for that dimension and reveals how much each dimension **contributes** to the original vector as a whole - we designate these "shadows" as the vector's **basic components** since they 
-  - **Can be combined in any order** to reconstruct the original - when rebuilding them tip-to-tail, if you start with x first and then y, or y first then x, regardlessly, you still end up with the original  
-  - **Cannot be described in terms of each other** - geometrically x and y are at right angles, meaning any change in value for the x component goes completely unnoticed by, and does not affect, the y component
+- We are able to designate these "shadow" lengths as the vector's **basic components** since they
+  1. **Can be combined in any order** to reconstruct the original - **Figure 2.4.1.b** 
+      - Stacking the components tip-to-tail rebuilds vector **a** 
+      - Notice when recombining these components - either starting with x first and then y, or y first and then x, regardlessly, you still end up with the **original**
+  2. **Measure independent information** about the original - **Figure 2.4.1.c**
+      - Being independent of each other means knowing the value of one component **tells you nothing** about the other 
+      - Notice how as the vector sweeps through each direction, the other direction's component is fully unaware and unaffected 
+      - Since they point at **right angles** to each other, each dimension is **unrelated** - **x cannot measure any information that y measures** and vice versa - we call this being **orthogonal**
 
-![Basic Vector Projection (3 panels, a = (3, 4)): Figure 2.4.1.a — projection of vector a onto x/y axes (left); Figure 2.4.1.b — tip-to-tail reconstruction of a in both orders forming a bounding rectangle (middle); Figure 2.4.1.c — vectors a and a' = (-3, 4) sharing the same y-component but with opposite-sign x-components, with a and its x-component muted so a' reads as the spotlight — independence beat (right)](../../../assets/images/figures/components_recombine/either_order_v19.png)
+![Basic Vector Projection (3 panels, a = (3, 4)): Figure 2.4.1.a - projection of vector a onto the x/y axes (left); Figure 2.4.1.b - tip-to-tail reconstruction of a in both orders (middle); Figure 2.4.1.c - independence of the x and y components (right)](../../../assets/images/dsp/figures/by_figure/fig_2_4_1_xy_recombine/fig_2_4_1_xy_recombine_composite_v20.png)
 
-#### 2.4.2 Projection onto Another Vector
-- When projecting one vector onto another, like **a** onto **b**, we use **b** as the **reference direction**, revealing which components of **a** are **aligned** with **b** 
-- The more **parallel** the two vectors are, the larger **a**'s projection onto **b** is 
-- When performing the Dot Product on these vector components, using b as the direction
- TODO how does the dot product intuitively come into play here? sure we know how to decompose into dimensional components, but lets tie it back to the idea
+#### 2.4.2 Projecting onto Another Vector
 
-- Notice how when we project **a** onto **b** or **b** onto **a**, the resulting __ [the visual annotates each component of each projection - do the math for each exmaple - display how the dot product in either case produces the same result - this basically means we don't really care which one is the reference dimension - show math example in the with each - ]
+- So far we've established how projection reveals a vector's **parallel component**  
+  - Previously, we projected onto the directions of the familiar **x and y axes** to reveal the components **parallel to them** 
+  - Similarly, we can project onto the direction of **any other vector** to reveal the component **parallel to it**
+  - This involves the two vectors in an interesting relationship 
 
-![Projection of a onto b (left) and b onto a (right), each shown with both reconstruction paths — parallel-then-perp and perp-then-parallel — demonstrating order independence for any reference direction](../../../assets/images/dsp/figures/projection_reconstruction/either_order_v9.png)
+- The relative **angle** between **a** and **b** has direct control of the projected parallel component - **Figure 2.4.2.a**
+  - Here you can see its **size and direction** track the **alignment** of the two vectors by 
+    - Growing **large in one direction** when they point **similarly parallel** 
+    - Reducing to **zero** when they point perpendicularly (perfectly **not parallel**)
+    - Growing **large in the other direction** when they point **oppositely parallel**
 
-<!-- WRITE 2.4.1 beat 4 — symmetry of the dot product (right panel).
-     Even though "a onto b" and "b onto a" produce visibly different
-     shadows (different lengths along different reference directions), the
-     scalar dot product comes out the same: a · b = b · a. The reference
-     direction is your choice; the answer doesn't care.
-     The figure carries this in two juxtaposed panels — same a, same b,
-     reference direction flipped, with the matching a · b = 12 dot
-     product result substituted in the LaTeX block below. -->
+- This relationship should sound familiar
+  - Earlier, we claimed performing the Dot Product on two vectors produces a "similarity score" for the same thing
+  - Yet the operation itself is deceptively simple - all you do is **multiply** corresponding terms and **add** them together
+  - How does a simple **multiply-and-add** operation, performing *no visible trig*, capture a relationship clearly so dependent on the vectors' relative angle?
+
+- It turns out the Dot Product and Vector Projection are two views of a shared geometric relationship - **Figure 2.4.2.b**
+  - Notice how they both produce the **same result** even as the angle changes
+  - Apparently, the Dot Product can be derived from the **triangle** formed by the vectors like in [this video](https://youtu.be/PnJoKGynu_U?si=qr-2XD9gF5MeU9n5) - it abides the age-old [Law of Cosines](https://www.reddit.com/media?url=https%3A%2F%2Fcf.preview.redd.it%2Flaw-of-cosines-v0-arli6kvsxkga1.jpg%3Fwidth%3D1080%26crop%3Dsmart%26auto%3Dwebp%26s%3D6fd1802a88aa4c78470f2878b22f684e43d8765b) which is like the Pythagorean Theorem but for any triangle
+  - Basically, as the angle between the vectors changes, their **x** and **y** components are simultaneously **changing with it**
+  - This means the Dot Product already has this precious angle **baked into** the components **before** operating on them directly
 
 <div align="center">
 
 $$
-\vec{a} = (a_x,\, a_y) = (2,\, 3) \qquad \vec{b} = (b_x,\, b_y) = (3,\, 2)
+\vec{a} \cdot \vec{b}
+=
+|\vec{a}| |\vec{b}| \cos(\theta)
+=
+a_x b_x + a_y b_y
 $$
 
-$$
-\vec{a} \cdot \vec{b} = a_x b_x + a_y b_y = (2)(3) + (3)(2) = 6 + 6 = 12
-$$
-
-$$
-\vec{b} \cdot \vec{a} = b_x a_x + b_y a_y = (3)(2) + (2)(3) = 6 + 6 = 12
-$$
+<em>2D Dot Product - Cosine and Component Form</em>
 
 </div>
 
-- [This actually works because of the symmetry found the geometry of the triangle these two vectors make - this the area equation of a triangle - watch this video to see how it relates to the Dot Product - but otherwise just trust they can be derived from each other link - https://www.youtube.com/watch?v=PnJoKGynu_U]
+- This lets us use the Dot Product and Vector Projection as different framings of the same relationship - parallelism
+  - Both measure the **alignment** of two vectors, which we said reflects their **similarity**
+    - Projection reveals this geometrically through **trig** using each vector as a whole
+    - The Dot Product computes it using a simple **sum of products** on their individual components
+  - Naturally, this relationship exists beyond two dimensions
 
-![Four canonical angles between a and b: parallel-same → positive, parallel-opposite → negative, perpendicular → zero, oblique → partial](../../../assets/images/dsp/figures/dot_product/geometry.png)
+![Projection of a onto b as the angle between them changes - the parallel component grows large when aligned, shrinks to zero when perpendicular, and flips sign when opposed (Figure 2.4.2.a)](../../../assets/images/dsp/figures/by_figure/fig_2_4_2_a_onto_b/fig_2_4_2_a_onto_b_v8.png)
 
-- The projection's magnitude tells us how aligned **b** and **a** are. Three extreme cases:
-    - **parallel + same direction** → full projection → large positive result
-    - **parallel + opposite direction** → flipped projection → large negative result
-    - **perpendicular** → no projection → zero result
-    
-<!-- WRITE 2.4.1 beat 5 — angle controls sign and magnitude.
-     The projection's magnitude AND sign depend on the angle between the
-     two vectors. Four canonical cases land it:
-       - parallel + same direction → max positive result
-       - parallel + opposite direction → max negative result
-       - perpendicular → zero
-       - oblique (anything in between) → partial result, sign matches
-         whether they "lean toward each other" or "lean apart"
-     This is the angle → sign mapping the dot product gives you for free. -->
+<!-- Figure 2.4.2.b (dot product and projection producing the same result as the
+     angle changes) - final render TBD; animated cycle exists at
+     ../../../assets/images/dsp/figures/by_figure/fig_2_4_2_a_onto_b/fig_2_4_2_a_onto_b_cycle_v1.gif -->
 
+#### 2.4.3 Projection in 3D and Beyond
 
-#### 2.4.3 Beyond 2D — Same Operation, More Dimensions
+- The Vector Projection and Dot Product equivalence also extends to vectors described by **three** dimensions - **Figure 2.4.3.a**
+  - To add a third dimension, we orient the z axis at **right angles** to the others x and y 
+  - It's important they are all **perpendicular** - as we said in §2.4.1 this relationship relies on them all being **independent** of one other
+  - This way, the parallel projection and triangle relationship still occur here, however, the angle becomes tough to isolate even with trig now that it cuts through multiple planes
+  - It's a lot simpler for us to just use the Dot Product on the individual components to score their similarity
 
-<!-- WRITE 2.4.2 beat 1 — 3D, with the figure as the visual proof.
-     The same operation extends to 3D unchanged: pick reference directions
-     (now x, y, z), project a onto each, get three components. Concrete
-     example to walk through:
-       a · b = a₁b₁ + a₂b₂ + a₃b₃    (same multiply-and-sum, one more term)
-     Then call out what the figure also reveals: the components can be
-     recombined in any order — the orange path (x → y → z) and the blue
-     path (z → y → x) both arrive at the same tip a. Order independence
-     is a property of the projection, not an accident of 2D. -->
+- To no surprise, this relationship applies to **any number** of dimensions
+  - Past three dimensions, we can no longer visualize the parallel projection - it's not visually possible to orient any more axes at right angles to the others
+    - At this point, we need to **reconsider what a vector and its components really are**
+    - For three dimensions, each vector is a set of three components whose values represent the independent contributions of each dimension
+    - For any number of dimensions, we will treat every vector like a **set of "independent values"** instead of "dimensions"
+  - The audio signals we'll be working with are all just collections of independently measured **values** sampled in time
+    - Not measured along x, y, or z - just values captured at regular intervals, usually far more than three
+    - Each value belongs to an **independent moment in time**, so just like for vector components, knowing the value of one **tells you nothing** about the others
+    - Because of this, the Dot Product can still measure this concept of similarity and is why we even care about doing this beyond three dimensions
+  - To lock this in, we'll drop the geometric view entirely and examine what the Dot Product is actually doing operationally
 
-![Vector a in 3D, decomposed into x/y/z components, recombined in two different orders (x→y→z and z→y→x) — both paths arrive at the same tip](../../../assets/images/dsp/figures/vector_projection_3d/v2_combo5_palette.png)
-
-<!-- WRITE 2.4.2 beat 2 — ND reframe (locked bridge sentence).
-     Polish this sentence — the locked phrasing is:
-       "Notice how the pattern in two dimensions applied to three
-        dimensions, and the pattern expands to any number of n — but we
-        can't really visualize n dimensions, so we'll drop that
-        terminology and think of it in terms of N pair-wise multiplications
-        whose sign agreements accumulate into one running total."
-     Let "n dimensions" be the geometric framing we leave behind, and
-     "N pair-wise multiplications" be the algebraic framing we carry into
-     §2.5. -->
-
-<!-- WRITE 2.4.2 beat 3 — handoff into §2.5.
-     One-sentence pivot: we've been treating the dot product as one
-     number, but it's built from N signed products — and the signs do
-     most of the work. The next section opens up the sum and watches the
-     agreement accumulate. -->
+![Vector a in 3D, decomposed into x/y/z components, recombined in two different orders (x-y-z and z-y-x) - both paths arrive at the same tip (Figure 2.4.3.a)](../../../assets/images/dsp/figures/by_figure/fig_2_4_3_dot_product_3d/fig_2_4_3_dot_product_3d_inline_titles_v9.png)
 
 ### 2.5 Sign Accumulation - The Agreement Mechanism
 
-<!-- WRITE 2.5 lead-in — pick up where §2.4.2 left off.
-     The dot product is a signed similarity accumulator. Each pair of
-     matching components contributes one signed product to a running
-     total. The signs do the voting. -->
+- The Dot Product's multiply-and-add operation measures how two sets of values **move together or apart** by assessing their total **sign agreement** 
+  - This is basically what is known as **correlation** - typically we'd normalize all the values but the underlying operation is functionally the same
+  - Each **product** reveals whether or not each pair of values move in the same direction or in opposition
+    - When they **agree** in sign, their product **increases** the sum - making it more **positively correlated**
+    - When they **disagree** in sign, their product **decreases** the sum - making it more **negatively correlated**
+    - When one is **zero**, their product does **nothing** to the sum - implying **no correlation**
+  - The **sum** of all these products capture the net sign agreement across every pair
 
-- Dot product is a signed similarity accumulator
-- Same signs → positive contribution (agreement)
-- Opposite signs → negative contribution (disagreement)
-- Final sum = net agreement across all elements
-- This process of measuring similarity between two sequences is called **correlation**
+  <!-- example all except one sign are the same, some are same, some are oppsoite, all except one are opposite, some are zeros, all are zeros -->
 
-*[Interactive: color-coded element products]*
+- This **agreement mechanism** is the true essence of what the Dot Product is really doing
+  - The result is strongest when each set share the same **sign pattern**, most negative when completely opposite, and zero when no net agreement
+  - This is effectively **pattern detection** - assessing each pair's sign agreement accumulates **evidence of a shared pattern** between the two
+  - Vector Projection introduced the concept of breaking something whole into its parts and parallel components revealed the parts that two vectors have in common 
+  - The Dot Product captures this same exact relationship by pair-wise comparing their individual parts 
+  - So now that we have the ability to detect the presence of a common pattern between two sets of data, how do we specifically choose the patterns we're looking for?
 
-### 2.6 Basis Functions - Achieving Signal Decomposition
+![Sign accumulation - each pairwise product votes agreement or disagreement, accumulating into the correlation result (Figure 2.5)](../../../assets/images/dsp/figures/by_figure/fig_2_5_sign_accumulation/fig_2_5_sign_accumulation_composite_v49_border_flush.png)
 
-- Accomplishing this really depends on the signal being analyzed and the properties we're interested in measuring
-- The function we compare against is called a **basis function** - a known reference **pattern**
-- The choice of basis function determines what features we can detect
-- The scalar result of this comparison is called a **coefficient** - it tells you "how much" of that basis function is present
+### 2.6 Basis Functions - Full Signal Decomposition
 
-<!-- FIGURE relocated here from §2.4 per the consolidation pass — once §2.6
-     is being authored, place the tip-to-tail recombination panel where it
-     reinforces "components form a basis": the same components recombined
-     in different orders both reconstruct a, which is exactly the property
-     a basis function family relies on.
-     ![Same components recombined tip-to-tail in opposite orders both reconstruct a](../../../assets/images/dsp/figures/vector_xy_reconstruction/baseline.png)
+- In its raw form, a signal's properties are all mixed together - we can't see or work with any of them individually
+  - To separate what's been entangled, we need a way to measure each property on its own - this is exactly what the Dot Product allows us to do
+  - It compares two sets of values - measuring how much of one pattern exists within the other
+    - One set is the audio signal
+    - The other is a reference function - a pattern that embodies the property we want to measure
+  - To measure for a **particular frequency**, we make the reference function a **pure sine wave** oscillating at that frequency - **Figure 2.6**
+  - This is the goal of **full signal decomposition** - break down a signal into all of its parts by measuring the properties embodied in a set of reference patterns
+
+- To do this **completely** and **non-redundantly** - no information lost, no information double-counted
+  - We transform the signal into a format where every property has been independently accounted for
+  - Transforming **N independent samples** in time into **N independent measurements** in frequency - preserving equivalent amounts of information in the new format
+  - This set of N reference functions is called a **basis**
+
+- Creating a sinusoidal basis transforms the signal into a format where we can see the presence of each frequency
+  - By completely representing all information, we preserve the ability to **reconstruct** the original
+  - How do we pick the specific frequencies? → Section 3
+
+![Measuring a signal against pure sine references at 2 Hz and 10 Hz - the dot product reveals how much of each frequency is present (Figure 2.6)](../../../assets/images/dsp/figures/by_figure/fig_2_6_sine_basis/fig_2_6_sine_basis_2hz_10hz_v21.png)
+
+---
+
+## 3. Fourier Analysis - Frequency Representation
+
+### 3.1 Sampling Rate and Duration
+
+- To create a complete frequency representation - really just a bunch of dot products with different frequencies - we need to understand what we can measure in the first place
+
+- **Sampling rate** controls how far apart each sample is spaced in time
+  - We only have snapshots at each sample time - we can't know what's going on between samples
+  - To detect a frequency, you need at least two samples per cycle - **Nyquist limit**
+  - Audio is sampled at 44.1kHz - ceiling at ~22kHz
+  - **Figure 3.1.a** - continuous signal with samples overlaid, the invisible gap
+
+- **Duration** controls how finely we measure frequencies below the ceiling
+  - To measure 1Hz, you need 1 second - one complete cycle
+  - This is the lowest measurable frequency - the **fundamental** (1/duration)
+  - To distinguish 10Hz from 11Hz, you need enough time for them to diverge
+  - **Figure 3.1.b** - 10Hz vs 11Hz, short duration: identical, longer: clearly different
+
+### 3.2 Building the Orthogonal Basis
+
+- Integer multiples of the fundamental fill the range from floor to ceiling
+  - 1Hz vs 2Hz: half the time they agree in sign, half they disagree - cancels to zero
+  - Same for all integer multiples - sign agreement always balances out
+  - Callback to §2.4.1: same **orthogonality**, now at the function level
+  - **Figure 3.2.a** - 1Hz vs 2Hz, 1Hz vs 3Hz sign cancellation
+
+- N orthogonal frequencies for N samples = complete, non-redundant basis
+  - **Figure 3.2.b** - 5Hz + 0.1 amp 10Hz, only those bins light up
+
+### 3.3 The Stationarity Assumption
+
+**GAP TO CALL OUT:** We need to bridge from "we have a perfect basis" to "but it breaks in practice" - the bridge is: this works great for signals whose frequencies don't change. Real audio changes.
+
+- The Fourier transform completely turns time-domain data into pure frequency information - but we lose all concept of *when*
+  - The basis functions (sine waves) assume the frequency exists the **entire time** of the window
+  - A sine wave in reality exists forever - its frequency is persistent - we're only computing it for one window
+  - So the DFT measures *what frequencies exist in the window you gave it* - not when they happened
+
+- What happens when a frequency changes **during** the window?
+  - The dot product accumulates evidence in the first half when the frequency is active
+  - After it goes away, it stops accumulating - the result is half as strong
+  - When reconstructing, it takes that value and assumes the frequency existed throughout - reconstructing a half-strength sine wave across the entire window
+  - This is inaccurate - the frequency was full-strength for half the time, not half-strength for all the time
+
+- **Figure 3.3.a** - two signals, same spectrum (callback to ataspinar concept). Signal A: four frequencies simultaneously. Signal B: same four, one per quarter. Identical spectrums.
+
+- **Goal visual** - 3D spectrogram of the chirp from Figure 1, GIF showing the dot product being assessed at each point in time
+
+### 3.4 STFT and the Resolution Tradeoff
+
+- So what do we do? We take the DFT **multiple times**
+  - After the window: place the next window right after, no overlap - chunk the signal into moments of time
+  - During the window: overlap the windows by some amount - a little redundant (overlapped part measures same signal twice) but worth it for a smoother representation
+
+- But what about the edge effects?
+  - The stationarity assumption implies the signal is one period of itself
+  - When the edges are non-zero, we accumulate evidence of energy (or lack of) that skews results
+  - Apply a **Hanning window** to taper edges - reduces artifacts but affects overall energy
+  - Smart windowing helps: placing the peak of one frame's window over the edge of the other
+  - Plant flag: this is a form of **shaping the analysis window** - becomes important for wavelets
+
+- What about adjusting the window size?
+  - **Shorter window**: you've limited the lower range (higher fundamental), fewer samples = fat blocky resolution, many frequencies per bin - accurate, just not high-definition
+  - **Longer window**: do you extend the sine wave? It stops mid-cycle, skewing correlation. Do you scale it? You've stretched the frequency - it doesn't measure the same thing anymore
+  - So you pick a window size to measure the lowest frequency you want - and stick with it
+
+- This is the fundamental tradeoff
+  - No matter what window you pick, it's ideal for one end and not the other
+  - Tune for better high-frequency resolution → low frequencies suffer
+  - Tune for better low-frequency resolution → high frequencies suffer
+  - **Figure 3.4.a** - same signal, wide vs narrow STFT windows showing the tradeoff
+
+- What if the window **adapted** to the frequency? → Section 4
+
+### 3.5 Convolution Theorem
+
+- FFT computes same N dot products in O(N log N) instead of O(N²) by reusing redundant math
+  - Same answers, same dot products, just faster
+- Correlation in time = multiplication in frequency domain
+  - CWT uses this same trick
+- No visual needed
+
+**GAPS IDENTIFIED (authoring notes):**
+
+1. **2.6 → 3.1 bridge**: Currently solid - "how do we pick the frequencies" → "understand what we can measure first"
+
+2. **3.2 → 3.3 bridge**: Need to say "this basis works perfectly for stationary signals - but real audio isn't stationary"
+
+3. **3.3 → 3.4 bridge**: Need to explicitly say "we need time localization - the STFT gives us that, but introduces new problems"
+
+4. **Visual: 3D spectrogram GIF**: Where does it go? Probably 3.3 or 3.4 - showing the row-by-row, column-by-column construction of the STFT, then reused for CWT with variable window length
+
+5. **Edge effects**: Currently in 3.4 - should this be its own subsection or stay folded in? Given your preference for fewer sections, keep it folded.
+
+6. **Convolution theorem placement**: 3.5 feels disconnected - could fold into 3.4 as a brief note, or keep separate as a short canonical beat that plants the flag for CWT.
+
+---
+
+## 4. Wavelet Transform: Adaptive Resolution
+
+<!-- Synced from dsp.ipynb planning outline (cell ceefb0f6) 2026-08-10 - the newest
+planned structure for this section; merge during authoring. (Note: its Section 3
+numbering differs by one from the live 3.x sections above.)
+
+### 4.1 The Wavelet as a Basis Function
+- Sinusoid shaped by a Gaussian envelope
+- Callback to STFT windowing - the wavelet *is* the window
+- No artificial periodicity assumption - the Gaussian naturally tapers to zero
+
+### 4.2 Scaling the Wavelet
+- Stretching for low frequencies, compressing for high
+- This is where the adaptive resolution comes from
+- Callback to §3.3: CWT answers the question STFT couldn't
+- Wide wavelet (low freq) → good frequency resolution
+- Narrow wavelet (high freq) → good time resolution
+
+### 4.3 Sliding the Wavelet
+- Correlation at every time position - this is where the "sliding" concept enters
+- Callback to §3.1 where we explicitly said "Fourier doesn't slide"
+- Each position gives one correlation result - stack all positions across all scales → time-frequency matrix
+
+### 4.4 Overcomplete and Redundant
+- CWT deliberately breaks orthogonality from §2.6
+- Callback to the orthogonality flag: DFT and DWT preserve it, CWT trades it for smoother coverage and better edge resolution
+- The redundancy is the feature, not the bug
+
+### 4.5 Edge Effects and the Cone of Influence
+- Callback to STFT windowing artifacts from §3.2
+- Wider wavelets (low freq) extend further beyond signal boundaries → more edge contamination
+- The cone of influence marks which results are reliable
+
+## Visuals Summary
+
+| Figure | Section | What it shows | Why it matters |
+|  ------|---------|---------------|----------------|
+| 3.1.a | 3.1 | Two close sinusoids diverging over time | Signal length = frequency resolution |
+| 3.1.b | 3.1 | 5Hz + 10Hz signal, dot products across all bins | Orthogonality payoff - only matching bins light up |
+| 3.2.a | 3.2 | Two signals, same spectrum | DFT collapses temporal information |
+| 3.3.a | 3.3 | Wide vs narrow STFT windows on same signal | The resolution tradeoff made visible |
+| 3.4 | 3.4 | None needed | Just acknowledge the speedup exists |
+| 4.1 | 4.1 | Morlet wavelet - sinusoid × Gaussian | The wavelet IS the window |
+| 4.2 | 4.2 | Scaled wavelets at different frequencies | Adaptive window size |
+| 4.3 | 4.3 | Wavelet sliding across signal | Time-localized correlation |
+| 4.4 | 4.4 | DFT uniform tiling vs CWT adaptive tiling | Why redundancy gives better resolution |
+| 4.5 | 4.5 | Cone of influence mask | Which results to trust |
+
+## Callback Map
+
+| Flag planted | Where | Called back | Where |
+|-------------|-------|------------|-------|
+| Orthogonality (independence) | §2.4.1 | Function-level orthogonality | §2.6, §3.1 |
+| Orthogonality (independence) | §2.4.1 | CWT breaks orthogonality | §4.4 |
+| Sign accumulation = correlation | §2.5 | Fourier = correlation with sinusoids | §3.1 |
+| Basis = complete, non-redundant | §2.6 | DFT achieves this, CWT deliberately doesn't | §3.1, §4.4 |
+| Fourier doesn't slide | §3.1 | CWT slides the wavelet | §4.3 |
+| STFT window shaping | §3.2 | Wavelet IS the window | §4.1 |
+| Fixed resolution tradeoff | §3.3 | CWT adapts the window | §4.2 |
+| Convolution theorem | §3.4 | CWT uses same trick | §4.3 |
+| STFT edge artifacts | §3.2 | Cone of influence | §4.5 |
+| Chirp/clicks motivation | §1 | DFT can't capture them | §3.2 |
+| Chirp/clicks motivation | §1 | CWT handles them | §4.2 |
 -->
 
-This is all about re-representing **all the information** from the original signal into a **different format**, while also being able to perform the **reverse process** to **reconstruct** the original  
-
----
-
-## 3. Fourier Transform: Sinusoidal Basis Functions
-
-### 3.1 The Basis Function Question
-
-- We have a signal (sequence of samples)
-- Inner product measures similarity to... what?
-- Answer: known reference patterns (basis functions)
-- So what basis functions should we use?
-
-
-### 3.2 Sine Waves as Basis Functions
-
-- What if we made the basis function a pure sine wave?
-- Compare signal to a sine wave at a particular frequency
-- High similarity score → that frequency is present (large **coefficient**)
-- Low similarity score → that frequency is absent (small **coefficient**)
-- To get a full picture, repeat for many frequencies
-
-### 3.3 The Fourier Transform
-
-- Inner product of signal with sine waves at every frequency
-- Each frequency gets a similarity score (a **Fourier coefficient**)
-- Result: frequency spectrum
-- The collection of all coefficients forms the **spectrum** - a map of frequency content
-
-### 3.4 How FFT Actually Works
-
-- Infinite sine wave basis functions (no start/end)
-- Accumulates similarity across entire signal duration
-- Produces magnitude and phase for each frequency
-- In signal processing terms, this is **correlation** between the signal and each sinusoidal basis function
-
-*[Example: Sign Accumulation of a sine wave]*
-
-### 3.5 FFT Limitations
-
-#### 3.5.1 Temporal Information Loss
-
-- Sine basis functions span entire signal
-- Result: knows *what* frequencies exist, not *when*
-- A note at the beginning vs end → same FFT result
-
-#### 3.5.2 Stationarity Assumption
-
-- Assumes signal properties don't change over time
-- Music is full of non-stationarities (attacks, decays, transitions)
-- FFT smears these together
-
-#### 3.5.3 Examples
-
-- Two close notes played sequentially vs simultaneously
-- Chirp (frequency sweep)
-- Transient vs sustained sounds
-
----
-
-## 4. STFT: Windowed Compromise
-
-### 4.1 Windowing Approach
-
-- Chop signal into short segments
-- Apply FFT to each segment
-- Now have time information (which window) + frequency information
-- The window function acts as a **filter** - it selects which portion of the signal to analyze
-
-### 4.2 The Resolution Tradeoff
-
-- Window size is fixed
-- Short window → good time resolution, poor frequency resolution
-- Long window → good frequency resolution, poor time resolution
-
-### 4.3 Why This Tradeoff Exists
-
-- Need enough cycles to measure a frequency accurately
-- Low frequencies need longer windows (slower cycles)
-- High frequencies need shorter windows (fast cycles)
-- Fixed window can't serve both optimally
-
-### 4.4 Practical Impact
-
-- 100 Hz vs 200 Hz = 100% difference (very audible)
-- 10,000 Hz vs 10,100 Hz = 1% difference (barely audible)
-- Fixed resolution wastes precision where it's not needed, lacks it where it is
-
----
-
-## 5. Wavelet Transform: Adaptive Resolution
-
-### 5.1 Core Idea
+### 4.1 Core Idea
 
 - What if the basis function's width varied with frequency?
 - Low frequencies → wide basis function (good frequency resolution)
 - High frequencies → narrow basis function (good time resolution)
 
-### 5.2 Wavelets as Basis Functions
+### 4.2 Wavelets as Basis Functions
 
 - Localized oscillations (not infinite like sine waves)
 - The prototype shape is called the **mother wavelet** - the base pattern before any scaling
@@ -353,13 +433,17 @@ This is all about re-representing **all the information** from the original sign
 - Still using inner product - same fundamental operation
 - In implementation, the wavelet becomes the **kernel** - the pattern we slide across the signal
 
-### 5.3 Why This Works for Audio
+### 4.3 Why This Works for Audio
 
 - Matches how human hearing perceives frequency differences
 - Matches how musical information is structured (chromatic scale)
 - Computational cost is higher, but results are more meaningful
 
-### 5.4 Convolution Implementation
+<!-- Relocated from README §2 (2026-08-17) — authored prose, lands in this beat: -->
+
+Low-end frequencies take longer in time to complete cycles, so knowing **when** they happen doesn't need super fine precision in time. However, small variations in frequency at the low-end produce a relatively drastic and perceivably different pitch, so knowing **which** particular frequency matters a lot. High-end frequencies are the opposite where cycles complete almost instantly, so knowing **when** they happen is everything. At the high-end, a small change in frequency is proportionally negligible and audibly unnoticeable, so a coarser frequency resolution is totally fine. Because of this proportional trade, each detail is measured at the appropriate resolution it needs.
+
+### 4.4 Convolution Implementation
 
 - To get coefficients at every time point, we slide the kernel across the signal
 - At each position: compute inner product → get coefficient for that time and frequency
@@ -369,42 +453,42 @@ This is all about re-representing **all the information** from the original sign
 
 ---
 
-## 6. Implementation Deep Dive
+## 5. Implementation Deep Dive
 
-### 6.1 Wavelet Construction
+### 5.1 Wavelet Construction
 
 - Gaussian envelope
 - Carrier frequency
 - Admissibility conditions
 - Mother wavelet → daughter wavelets (scaled versions)
 
-### 6.2 Post-Processing Pipeline
+### 5.2 Post-Processing Pipeline
 
-#### 6.2.1 Scale Normalization
+#### 5.2.1 Scale Normalization
 
 - Why normalization is needed
 - Different approaches (1/√f vs other methods)
 - Impact on visualization
 
-#### 6.2.2 Edge Effects
+#### 5.2.2 Edge Effects
 
 - Cone of Influence (COI)
 - Why edges are unreliable
 - Strategies for handling edge artifacts
 
-#### 6.2.3 Magnitude Conversion
+#### 5.2.3 Magnitude Conversion
 
 - Complex → magnitude
 - Magnitude vs power (|CWT| vs |CWT|²)
 - dB scaling for visualization
 
-#### 6.2.4 Downsampling
+#### 5.2.4 Downsampling
 
 - From full resolution to target width
 - Interpolation strategies
 - Preserving temporal accuracy
 
-### 6.3 GPU Acceleration
+### 5.3 GPU Acceleration
 
 - Memory bandwidth bottlenecks
 - Ring buffer optimization
@@ -413,9 +497,9 @@ This is all about re-representing **all the information** from the original sign
 
 ---
 
-## 7. Beyond Time-Frequency: Hierarchical Feature Extraction
+## 6. Beyond Time-Frequency: Hierarchical Feature Extraction
 
-### 7.1 The Feature Hierarchy
+### 6.1 The Feature Hierarchy
 
 Understanding audio analysis requires thinking in layers of abstraction:
 
@@ -461,7 +545,7 @@ These require aggregating and interpreting low-level features.
 
 These require machine learning models trained on mid-level features.
 
-### 7.2 CWT as a Feature Extractor
+### 6.2 CWT as a Feature Extractor
 
 **Why wavelets matter for ML:**
 
@@ -505,9 +589,9 @@ Audio → CWT → Track dominant frequency ridge
 
 ---
 
-## 8. Future Directions: Machine Learning Integration
+## 7. Future Directions: Machine Learning Integration
 
-### 8.1 Classical ML Pipeline
+### 7.1 Classical ML Pipeline
 
 ```
 Audio → CWT → Feature Engineering → ML Model → Prediction
@@ -537,7 +621,7 @@ Audio → CWT → Feature Engineering → ML Model → Prediction
    
 **Use cases:** Genre classification, mood detection, speaker identification
 
-### 8.2 Deep Learning Approaches
+### 7.2 Deep Learning Approaches
 
 ```
 Audio → CWT → CNN/RNN → End-to-End Learning
@@ -608,7 +692,7 @@ Audio → CWT → CNN/RNN → End-to-End Learning
   - **Transformer models**: Self-attention on time-frequency patches
   - **U-Net**: Encoder-decoder for source separation
 
-### 8.3 Why Wavelets + Neural Networks?
+### 7.3 Why Wavelets + Neural Networks?
 
 **Computational Advantages:**
 
@@ -662,9 +746,9 @@ Benefits:
 
 ---
 
-## 9. Practical Applications
+## 8. Practical Applications
 
-### 9.1 Music Information Retrieval (MIR)
+### 8.1 Music Information Retrieval (MIR)
 
 **Audio Fingerprinting (Shazam-style)**
 - Hash unique spectral patterns from CWT
@@ -688,7 +772,7 @@ Benefits:
   - Rhythmic patterns (tempo, groove)
   - Harmonic content (chord progressions)
 
-### 9.2 Audio Production
+### 8.2 Audio Production
 
 **Source Separation**
 - Isolate vocals, drums, bass from mixed tracks
@@ -710,7 +794,7 @@ Benefits:
 - Compress loud parts, boost quiet parts
 - Per-band processing for natural sound
 
-### 9.3 Health & Accessibility
+### 8.3 Health & Accessibility
 
 **Cardiac Sound Analysis**
 - Heart murmur detection from phonocardiogram
@@ -733,7 +817,7 @@ Benefits:
   - Compress loud transients
 - Improve speech intelligibility
 
-### 9.4 Research & Science
+### 8.4 Research & Science
 
 **Bioacoustics**
 - Whale song analysis
@@ -760,7 +844,7 @@ Benefits:
 
 ---
 
-## 10. Appendix: Terminology Reference
+## 9. Appendix: Terminology Reference
 
 ### Concept Ladder
 
@@ -829,3 +913,7 @@ Using the inner product (or other operations) to measure how much of each patter
 - Add case studies from real-world applications
 - Include links to relevant research papers
 - Develop Jupyter notebooks with hands-on exercises
+
+---
+
+**Related:** [MAP](../../../MAP.md) · [AUDIO](../audio/AUDIO.md) · [RENDERER](../renderer/RENDERER.md) · [TIMING](../../../assets/timing/TIMING.md) · [README](../../../README.md) · [Continuous Wavelet Transform](../../../notes/concepts/continuous-wavelet-transform.md) · [Time-Frequency Resolution Tradeoff](../../../notes/concepts/time-frequency-resolution-tradeoff.md)

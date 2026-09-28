@@ -1,4 +1,4 @@
-"""DSP module — all time-frequency analysis backends."""
+"""DSP module - all time-frequency analysis backends."""
 
 from .dsp import DSP
 from .cwt import CWT, CpuCWT, GpuCWT

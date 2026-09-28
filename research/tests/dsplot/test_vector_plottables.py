@@ -2,9 +2,9 @@
 (2D only) Plottables.
 
 D-02: ONE Vector class handles 2-tuple and 3-tuple input.
-D-06: Asymmetric dispatch — 3-tuple onto 2D Axes raises TypeError; 2-tuple
+D-06: Asymmetric dispatch - 3-tuple onto 2D Axes raises TypeError; 2-tuple
       onto Axes3D silently extends to z=0.
-D-05: Lazy style lookup — reassigning a None-defaulted constant between
+D-05: Lazy style lookup - reassigning a None-defaulted constant between
       construct and draw uses the NEW value.
 """
 from __future__ import annotations
@@ -116,7 +116,7 @@ def test_vector_2d_label_renders_text():
 
 def test_vector_2d_dashed_renders_dashed_shaft_and_solid_head():
     """A dashed vector draws a dashed Line2D shaft PLUS a solid, full-size
-    `-|>` head patch — not a single dashed patch. A single dashed patch would
+    `-|>` head patch - not a single dashed patch. A single dashed patch would
     dash the head OUTLINE too, and the thick dashed edge chews visible chunks
     out of the small head silhouette. The head keeps the same mutation_scale as
     a solid vector's, so component heads still match their bold parents (the
@@ -237,17 +237,17 @@ def test_vector_components_y_first_renders_y_then_x():
         arrow_patches = [p for p in ax.patches if isinstance(p, FancyArrowPatch)]
         assert len(arrow_patches) == 2
         # First arrow is y-first: its head tip lands at (0, 3.0). The head patch
-        # is a stub at the tip (posA = stub tail, posB = tip), so check the tip
-        # plus the dashed shaft line that spans origin -> tip.
-        (_start, end) = arrow_patches[0]._posA_posB
+        # is a stub at the tip (posA = stub tail, posB = tip); the dashed shaft
+        # runs from the origin to the stub tail so it never pokes through the head.
+        (head_base, end) = arrow_patches[0]._posA_posB
         assert tuple(end) == (0.0, 3.0)
         shafts = [
             l for l in ax.lines
             if l.get_linestyle() in ("--", "dashed")
             and list(l.get_xdata()) == [0.0, 0.0]
-            and list(l.get_ydata()) == [0.0, 3.0]
+            and list(l.get_ydata()) == [0.0, head_base[1]]
         ]
-        assert shafts, "expected a dashed shaft from origin to (0, 3.0)"
+        assert shafts, "expected a dashed shaft from origin to the y-arrow's head"
     finally:
         plt.close(fig)
 

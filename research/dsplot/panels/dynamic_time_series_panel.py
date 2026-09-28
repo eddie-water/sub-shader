@@ -1,7 +1,7 @@
-"""DynamicTimeSeriesPanel — a DynamicPanel rendered on TIME-SERIES axes.
+"""DynamicTimeSeriesPanel - a DynamicPanel rendered on TIME-SERIES axes.
 
 DynamicPanel sets its axes up through ``setup_vector_axes`` (square aspect,
-symmetric ±lim, no ticks) — right for vector figures, wrong for a stem plot
+symmetric ±lim, no ticks) - right for vector figures, wrong for a stem plot
 over a sample index. This subclass swaps only the background pass: it pins an
 explicit ``xlim``/``ylim``, lays out ``xticks``/``yticks`` with the shared
 ``_apply_axis_decoration`` chrome (exactly like ``TimeSeriesPanel``), and then
@@ -9,7 +9,7 @@ locks autoscale OFF so the per-frame artists drawn by the inherited
 ``_animate`` loop can never nudge the limits frame-to-frame.
 
 Because it subclasses ``DynamicPanel``, ``Figure`` discovers it through the
-same ``isinstance(panel, DynamicPanel)`` checks that drive the master clock —
+same ``isinstance(panel, DynamicPanel)`` checks that drive the master clock -
 no figure.py changes are needed to animate one of these in a composed grid.
 """
 from __future__ import annotations

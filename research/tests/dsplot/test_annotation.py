@@ -1,7 +1,7 @@
 """Tests for the Annotation Plottable (2D, with axes-relative transform support).
 
 Annotation supports both data-coord placement (default) and axes-relative
-placement (transform="axes") — the latter enables the "result text below
+placement (transform="axes") - the latter enables the "result text below
 the panel" pattern used by dot_product_geometry without coupling the figure
 to data limits.
 """

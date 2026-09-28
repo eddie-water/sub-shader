@@ -1,4 +1,4 @@
-"""Plottable units — concrete subclasses re-exported here as they land."""
+"""Plottable units - concrete subclasses re-exported here as they land."""
 
 from .accumulator_strip import AccumulatorStrip
 from .annotation import Annotation
@@ -10,6 +10,8 @@ from .rich_text import RichText
 from .spotlight import Spotlight
 from .stem import Stem
 from .stem_arrows import StemArrows
+from .surface_heatmap import SurfaceHeatmap
+from .tile_bars import TileBars
 from .time_series import TimeSeries
 from .vector import Vector
 from .vector_components import VectorComponents
@@ -25,6 +27,8 @@ __all__ = [
     "Spotlight",
     "Stem",
     "StemArrows",
+    "SurfaceHeatmap",
+    "TileBars",
     "TimeSeries",
     "Vector",
     "VectorComponents",

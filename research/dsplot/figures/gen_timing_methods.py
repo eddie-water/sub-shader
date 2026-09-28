@@ -1,7 +1,7 @@
-"""Timing figure — Fourier vs Wavelet Performance (method comparison).
+"""Timing figure - Fourier vs Wavelet Performance (method comparison).
 
 The sibling of Figure 1 ("Fourier vs Wavelet Analysis"): same dark optichrome
-template — title band, white-bordered panel grid, a right-hand caption column —
+template - title band, white-bordered panel grid, a right-hand caption column -
 but the panel is a horizontal bar chart (the new BarPanel + Barh vocabulary)
 instead of a spectrogram. Four transforms timed on the same audio, log time axis,
 each bar carrying its own time + frequency-resolution character; the caption
@@ -69,10 +69,10 @@ def _time_text(ms: float) -> str:
 
 def _res_text(r: dict) -> str:
     if r.get("res_kind") == "log":
-        return "Variable — 1 Semitone / Octave"
+        return "Variable - 1 Semitone / Octave"
     parts = (r.get("native_res") or "").split()
     hz = parts[0] if parts else "?"
-    return f"Fixed — {hz} Hz everywhere"
+    return f"Fixed - {hz} Hz everywhere"
 
 
 def _params_caption(rows: list[dict]) -> str:
@@ -101,7 +101,7 @@ def _params_caption(rows: list[dict]) -> str:
 
 
 def _caption_panel(title: str, caption: str) -> CompositePanel:
-    """Right-hand caption column — same construction as Figure 1's row labels."""
+    """Right-hand caption column - same construction as Figure 1's row labels."""
     body = TextPanel(
         caption,
         units=LABEL_PANEL_UNITS,
@@ -137,7 +137,7 @@ def build_figure() -> Figure:
         ylim=(n - 0.4, -0.6),  # fastest (index 0) at the top, room for top label
     )
     bar_panel.add(Barh(ys, widths, colors=colors))
-    # Axis caption placed by hand (axes-relative) below the unit ticks — the
+    # Axis caption placed by hand (axes-relative) below the unit ticks - the
     # shared x-label inset would land it on the tick row in this short cell.
     bar_panel.add(Annotation(
         "Time (Log Scale)", (0.5, -0.17), transform="axes",
@@ -169,7 +169,7 @@ def build_figure() -> Figure:
         rows=[
             [SuptitlePanel("Fourier vs Wavelet Performance", units=(total_w, 1))],
             [bar_panel, caption],
-            [SuptitlePanel("Figure — SubShader Timing", units=(total_w, 1))],
+            [SuptitlePanel("Figure - SubShader Timing", units=(total_w, 1))],
         ],
         row_heights=[0.25, 1.0, 0.25],
         total_width_inches=style.FIGURE_WIDTH_INCHES,

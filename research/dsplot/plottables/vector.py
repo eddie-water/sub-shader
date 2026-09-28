@@ -1,4 +1,4 @@
-"""Vector Plottable — polymorphic on tuple length (D-02).
+"""Vector Plottable - polymorphic on tuple length (D-02).
 
 A 2-tuple input renders a 2D arrow on a regular matplotlib Axes via
 FancyArrowPatch (sharp head, configurable head dimensions). A 3-tuple
@@ -187,7 +187,7 @@ class Vector(Plottable):
         # Solid vectors (and arrows too short to split) are a single
         # FancyArrowPatch: the shaft and the full-size filled `-|>` head in one
         # path. For a DASHED vector that single path would dash the HEAD outline
-        # too — a thick dashed edge eats visible chunks out of the small head
+        # too - a thick dashed edge eats visible chunks out of the small head
         # silhouette ("chewed arrowhead"). So a dashed vector is split: a dashed
         # Line2D shaft plus a SOLID head drawn over a stub long enough that
         # matplotlib doesn't scale the head down (`head_len * 1.25`). The head
@@ -200,7 +200,7 @@ class Vector(Plottable):
             stub = head_len * 1.25
             stub_tail = (tip[0] - ux * stub, tip[1] - uy * stub)
             # Dashed shaft terminates at the BACK of the head (stub_tail), NOT at
-            # the tip — otherwise the last dash overruns the head and a flat dash
+            # the tip - otherwise the last dash overruns the head and a flat dash
             # bar pokes past the arrow point. The solid head patch then draws a
             # short solid neck (stub_tail → head base) plus the filled `-|>`, so
             # the handoff reads continuous and the point stays clean.
@@ -271,13 +271,13 @@ class Vector(Plottable):
             ax.add_artist(arrow)
 
         if self.show_arrowhead and norm > 1e-9 and self.linestyle == "-":
-            # Solid arrow: one FancyArrowPatch-in-3D — shaft + crisp filled head,
+            # Solid arrow: one FancyArrowPatch-in-3D - shaft + crisp filled head,
             # matching the 2D vectors (no crude quiver line-cone).
             _add_head_arrow(origin, tip, linestyle="-")
         elif self.show_arrowhead and norm > 1e-9:
             # Dashed arrow: dashed shaft (ax.plot) + a SOLID head stub. Dashing
             # the head outline would "chew" its silhouette, so the head is a solid
-            # crisp stub at the tip — the 3D analog of the 2D split.
+            # crisp stub at the tip - the 3D analog of the 2D split.
             ux, uy, uz = vx / norm, vy / norm, vz / norm
             stub = norm * _ARROW_HEAD_RATIO_3D * 1.6
             stub_tail = (tip[0] - ux * stub,

@@ -1,4 +1,4 @@
-"""DynamicPanel tests — Plan 09-04 Task 1.
+"""DynamicPanel tests - Plan 09-04 Task 1.
 
 Verifies the 9 behaviors from the plan:
   1. constructs with frames list
@@ -8,7 +8,7 @@ Verifies the 9 behaviors from the plan:
   5. panel._anim has event_source + repeat flag honored
   6. _animate(0) draws frame-0 plottables
   7. _animate(1) then _animate(0) leaves same artist counts as _animate(0)
-     alone — proves per-frame artist cleanup works
+     alone - proves per-frame artist cleanup works
   8. save_gif writes a file > 0 bytes
   9. base_plottables drawn once; survive frame transitions (axhline/axvline
      count stable across multiple _animate calls)

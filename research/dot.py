@@ -1,11 +1,11 @@
-"""dot.py — sandbox for the dot product as a frequency-measurement operation.
+"""dot.py - sandbox for the dot product as a frequency-measurement operation.
 
 Backs the intuition for §3.1 of DSP.md. Run it and read the list top to
 bottom: reference function on the left, its dot-product score on the right.
 
 Everything here stays real-valued (plain sine references) on a one-second
-window. That window pins the frequency bins to the integers — bin spacing is
-1 / duration = 1 Hz — and makes the integer-Hz sines a clean orthogonal set.
+window. That window pins the frequency bins to the integers - bin spacing is
+1 / duration = 1 Hz - and makes the integer-Hz sines a clean orthogonal set.
 No complex sinusoids yet; phase is a real wrinkle, surfaced in Experiment 3.
 
     python research/dot.py
@@ -60,13 +60,13 @@ def experiment_pure_tone():
         sine(1),
     )
     print("   Only the 1 Hz reference scores. Every other integer reference")
-    print("   has its positive and negative accumulations cancel to ~0 — that")
+    print("   has its positive and negative accumulations cancel to ~0 - that")
     print("   cancellation IS orthogonality.\n")
 
 
 def experiment_self_similarity():
     signal = sine(1)
-    print("2) Self-similarity — nothing is more similar to a signal than itself")
+    print("2) Self-similarity - nothing is more similar to a signal than itself")
     print(f"   signal . signal      = {dot(signal, signal):8.3f}   <- maximum (= energy)")
     print(f"   signal . (-signal)   = {dot(signal, -signal):8.3f}   <- flip: same size, negated")
     print(f"   signal . sin(2 Hz)   = {dot(signal, sine(2)):8.3f}   <- orthogonal: ~0")
@@ -75,7 +75,7 @@ def experiment_self_similarity():
 
 def experiment_phase_wrinkle():
     signal = sine(1)
-    print("3) The phase wrinkle — a single real sine reference is phase-blind")
+    print("3) The phase wrinkle - a single real sine reference is phase-blind")
     for degrees in (0, 45, 90, 180):
         score = coefficient(signal, 1, phase=np.deg2rad(degrees))
         print(f"   1 Hz signal vs 1 Hz ref shifted {degrees:3d} deg  ->  {score:+.3f}")
@@ -95,9 +95,9 @@ def experiment_example_signal():
         "4) Example signal  1.0*sin(2 Hz) + 0.5*sin(5 Hz)  swept 1..10 Hz",
         signal,
     )
-    print("   Two bins respond at exactly their amplitudes — 2 Hz -> 1.0, 5 Hz -> 0.5.")
+    print("   Two bins respond at exactly their amplitudes - 2 Hz -> 1.0, 5 Hz -> 0.5.")
     print(f"   The measurements don't interfere, and self-dot energy = {dot(signal, signal):.1f}")
-    print("   = (1.0^2 + 0.5^2) * N/2 — the sum of the squared scores.\n")
+    print("   = (1.0^2 + 0.5^2) * N/2 - the sum of the squared scores.\n")
 
 
 def reconstruct_from(signal, refs):
@@ -113,7 +113,7 @@ def rms_error(a, b):
 
 def experiment_reconstruction():
     signal = example_signal()
-    print("5) Reconstruction — add the measured pieces back up; do we recover the signal?")
+    print("5) Reconstruction - add the measured pieces back up; do we recover the signal?")
     print()
     reference_sets = [
         ("complete",  "{2, 5}",            "orthogonal, minimal",      [sine(2), sine(5)]),

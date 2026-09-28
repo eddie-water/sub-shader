@@ -1,14 +1,14 @@
-"""Barh Plottable — horizontal bars (grouped rows or one stacked row).
+"""Barh Plottable - horizontal bars (grouped rows or one stacked row).
 
 The library's first bar vocabulary, added for the timing report figures. A
 single ``Barh`` draws one ``ax.barh`` call, so it covers both shapes the timing
 charts need:
 
-    grouped   — one bar per category:  ys=[0,1,2], widths=[v0,v1,v2]
-    stacked   — segments in one row:    ys=[0,0,0], widths=segs, lefts=cumsum
+    grouped   - one bar per category:  ys=[0,1,2], widths=[v0,v1,v2]
+    stacked   - segments in one row:    ys=[0,0,0], widths=segs, lefts=cumsum
 
 Colors may be one shared color or a per-bar list. Value labels and in-bar text
-are NOT drawn here — compose them with the existing ``Annotation`` plottable, so
+are NOT drawn here - compose them with the existing ``Annotation`` plottable, so
 bars stay a pure geometry primitive (mirrors how ``Stem``/``Line`` stay pure).
 
 None-valued color resolves against ``style.PRIMARY_COLOR`` at draw() time;

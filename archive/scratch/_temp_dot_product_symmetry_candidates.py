@@ -4,7 +4,7 @@ Each row in the output is one (a, b) candidate showing:
   - Left panel:  a onto b   (a's shadow on b's direction)
   - Right panel: b onto a   (b's shadow on a's direction)
 
-Both labels on each row carry the same scalar a·b — that's the symmetry. The
+Both labels on each row carry the same scalar a·b - that's the symmetry. The
 visual the user is judging: how clearly do the two shadows differ in length?
 """
 import os

@@ -1,10 +1,10 @@
-"""StemArrows Plottable — discrete values rendered as colored arrows.
+"""StemArrows Plottable - discrete values rendered as colored arrows.
 
 A "stem plot" whose stems are full :class:`Vector` arrows rather than the
 classic line+marker: each value ``v_i`` becomes a vertical arrow from
 ``(x_i, baseline)`` up (positive) or down (negative) to ``(x_i, baseline + v_i)``.
 Because each stem is a real Vector, the bars read with the SAME arrow
-vocabulary (head shape, linewidth, color) as every other panel in a figure —
+vocabulary (head shape, linewidth, color) as every other panel in a figure -
 so a "components as bars" panel sits beside "components as vectors" panels
 without a visual register change.
 
@@ -16,7 +16,7 @@ upward stem labels below it.
 
 None-valued ``linewidth`` resolves against
 ``style.DEFAULT_VECTOR_BOLD_LINEWIDTH`` at draw() time (lazy per D-05). Unlike
-:class:`Stem`, StemArrows NEVER touches axis limits — it draws inside the
+:class:`Stem`, StemArrows NEVER touches axis limits - it draws inside the
 host Panel's existing line-axis chrome (a fixed ±lim vector cell).
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ from .vector import Vector
 class StemArrows(Plottable):
     """Discrete values drawn as vertical Vector arrows at evenly-spaced x-slots.
 
-    ``values``, ``colors`` (and optional ``labels``) are parallel sequences —
+    ``values``, ``colors`` (and optional ``labels``) are parallel sequences -
     one entry per stem. ``x_positions`` overrides the default symmetric
     even spacing across ``x_span``; pass explicit slots to GROUP entries
     (e.g. a-family negative x, b-family positive x).

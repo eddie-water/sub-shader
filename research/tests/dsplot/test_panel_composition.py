@@ -1,4 +1,4 @@
-"""Panel composition contract tests — Plan 09-02 Task 1.
+"""Panel composition contract tests - Plan 09-02 Task 1.
 
 Verifies:
   - Panel is an abstract base class
@@ -11,7 +11,7 @@ Verifies:
 
 The Plottable contract is duck-typed (anything with a .draw(ax) method qualifies),
 so these tests use a local _FakePlottable shim instead of coupling to 09-01's
-Vector / VectorComponents — that integration is exercised at the orchestrator's
+Vector / VectorComponents - that integration is exercised at the orchestrator's
 post-merge verification step.
 """
 from __future__ import annotations
@@ -90,7 +90,7 @@ def test_static_panel_title_and_subtitle_use_style_defaults():
     try:
         panel.attach(ax)
         panel.render()
-        assert ax.get_title() == "X"
+        assert any(t.get_text() == "X" for t in ax.texts), "title text not found on axes"
         subtitle_texts = [t for t in ax.texts if t.get_text() == "Y"]
         assert subtitle_texts, "subtitle text not found on axes"
         subtitle = subtitle_texts[0]

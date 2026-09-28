@@ -1,10 +1,10 @@
-"""DynamicPanel — multi-frame Panel rendered as a matplotlib FuncAnimation loop.
+"""DynamicPanel - multi-frame Panel rendered as a matplotlib FuncAnimation loop.
 
 Frame model: each frame is a `list[Plottable]` drawn onto the panel's axes for
 that frame. Frames are either pre-computed (`frames`) or generated lazily
 (`frame_fn` + `num_frames`).
 
-LOAD-BEARING DETAIL — DO NOT REMOVE:
+LOAD-BEARING DETAIL - DO NOT REMOVE:
     The FuncAnimation instance MUST be held on the Panel via `self._anim`.
     If you write `_ = FuncAnimation(...)` (or otherwise let it fall out of
     scope), matplotlib garbage-collects the animation timer thread and the
@@ -32,7 +32,7 @@ from .base import Panel
 from .static_panel import StaticPanel  # for type-cross-ref (not subclassed)
 
 
-Frame = List["Plottable"]  # noqa: F821 — forward reference for typing only
+Frame = List["Plottable"]  # noqa: F821 - forward reference for typing only
 
 
 class DynamicPanel(Panel):
@@ -97,7 +97,7 @@ class DynamicPanel(Panel):
         self.show_ticks = show_ticks
         self.show_grid = show_grid
         self.tick_positions = tick_positions
-        # External gutter labels — matches StaticPanel's x_label/y_label path.
+        # External gutter labels - matches StaticPanel's x_label/y_label path.
         # Routed through heatmap_panel._apply_axis_decoration in _render_background.
         self.x_label = x_label
         self.y_label = y_label
@@ -241,7 +241,7 @@ class DynamicPanel(Panel):
         before_collections = set(id(p) for p in ax.collections)
         before_texts = set(id(p) for p in ax.texts)
         before_images = set(id(p) for p in ax.images)
-        # Generic artists (ax.add_artist) — e.g. offsetbox AnnotationBbox used
+        # Generic artists (ax.add_artist) - e.g. offsetbox AnnotationBbox used
         # by RichText for multi-color text. Tracked so they're cleared per frame.
         before_artists = set(id(p) for p in ax.artists)
 
@@ -275,7 +275,7 @@ class DynamicPanel(Panel):
         # When a Figure is orchestrating this panel (e.g. multi-panel mixed
         # Figure), it installs its own master FuncAnimation that ticks every
         # DynamicPanel from a shared clock. Skip the per-panel FuncAnimation
-        # in that case — the figure-level timer is the single source of truth.
+        # in that case - the figure-level timer is the single source of truth.
         if self._managed_externally:
             return
 

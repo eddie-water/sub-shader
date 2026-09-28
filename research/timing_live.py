@@ -1,4 +1,4 @@
-"""Live timing driver — profile the real SubShader pipeline on a song clip.
+"""Live timing driver - profile the real SubShader pipeline on a song clip.
 
 Runs the actual production pipeline (AudioStream -> CWT -> Renderer) for a few
 seconds of a real song, paced by the audio device clock exactly like a normal
@@ -9,7 +9,7 @@ Why this lives in research/ and not src/
 SubShader.run() is a 3-line loop: ``next_chunk -> dsp.process -> renderer.update``.
 The per-stage ``@timed`` tags already exist inside src/ (CWT stages + renderer).
 So we construct the real ``SubShader`` and run a *timed copy* of that loop around
-its public stages — src/ is untouched, and the numbers have parity with live
+its public stages - src/ is untouched, and the numbers have parity with live
 performance because it IS the live pipeline (same objects, audio-clock paced).
 
 The ``next_chunk()`` call blocks on the audio clock, so its time is real-time
@@ -40,23 +40,24 @@ from utilities import (
     time_call,
 )
 
-from timing_report import update_report
-
+# update_report is imported lazily (inside run_live_timing, only on the
+# `report=True` path) rather than at module load - timing_campaign.py imports
+# this module on its --smoke path too, which must not touch timing_report.py.
 DEFAULT_SECONDS = 5.0
 
-# CWT stages AFTER the transform — each is @timed in src (attr -> stage label).
+# CWT stages AFTER the transform - each is @timed in src (attr -> stage label).
 # The transform itself is handled separately: one `raw_cwt` blob normally, or the
 # split GPU legs when transfer profiling is on.
 _POST_STAGES = {
     # normalize omitted: _normalize_by_scale is a deliberate no-op (energy bias is
-    # corrected at kernel construction), not @timed — it would only add a 0.00 row.
+    # corrected at kernel construction), not @timed - it would only add a 0.00 row.
     "magnitude":  "_timing__compute_mag_ms",
     "edge_trim":  "_timing_discard_unreliable_coefs_ms",
     "hop_center": "_timing_extract_hop_center_ms",
     "downsample": "_timing_downsample_ms",
 }
 
-# Render sub-stages — each is @timed in src, but the attrs live on the renderer's
+# Render sub-stages - each is @timed in src, but the attrs live on the renderer's
 # sub-objects (frame_buffer / gpu_renderer / gl_context). Read after update().
 # label -> (sub-object attr on Renderer, timing attr on that sub-object)
 _RENDER_LEGS = {
@@ -143,6 +144,44 @@ def _target_frames(sample_rate, hop_size, seconds):
     return max(1, int(round(seconds / frame_period_s)))
 
 
+def collect_init_stage_ms(shader, init_ms):
+    """Per-stage init breakdown for a freshly constructed `shader` whose full
+    construction took `init_ms`. Returns a flat dict of module-level costs
+    (unprefixed: "audio", "dsp", "renderer", "prescan", "prime", "other") plus
+    any fine-grained timed_block sub-stages recorded during construction
+    (unprefixed: e.g. "cuda", "dsp_kernels"). Callers prefix keys with "init:"
+    when building a stage_arrays/JSON dict.
+
+    Shared by run_live_timing (one warm-pipeline sample) and
+    timing_campaign's --child mode (one fresh-process sample) so both read the
+    exact same stage set the exact same way.
+    """
+    # Fine sub-stage breakdown (timed_block context managers inside each
+    # constructor). Read BEFORE computing the "other" residual so init:cuda -
+    # recorded directly on `shader` by pipeline.py's `timed_block(self, "cuda")`,
+    # not a sub-object - gets pulled out of the residual along with the
+    # module-level costs below. `shader` itself must be in this tuple; it's the
+    # only object that owns the CUDA-availability probe.
+    substages = {}
+    for module in (shader, shader.audio, shader.dsp, shader.renderer):
+        substages.update(getattr(module, "_init_substages", {}) or {})
+    cuda_ms = substages.get("cuda", 0.0)
+
+    audio_ms = getattr(shader.audio, "_timing___init___ms", 0.0)
+    dsp_ms = getattr(shader.dsp, "_timing___init___ms", 0.0)
+    renderer_ms = getattr(shader.renderer, "_timing___init___ms", 0.0)
+    prescan_ms = getattr(shader, "_timing__prescan_intensity_ms", 0.0)
+    prime_ms = getattr(shader, "_timing__prime_pipeline_ms", 0.0)
+    other_ms = max(0.0, init_ms - (audio_ms + dsp_ms + renderer_ms
+                                   + prescan_ms + prime_ms + cuda_ms))
+
+    coarse = {
+        "audio": audio_ms, "dsp": dsp_ms, "renderer": renderer_ms,
+        "prescan": prescan_ms, "prime": prime_ms, "other": other_ms,
+    }
+    return {**coarse, **substages}
+
+
 def _cwt_config_from(config):
     """Rebuild a CWTConfig the same way SubShader does internally (for dsp swaps).
 
@@ -163,7 +202,8 @@ def _cwt_config_from(config):
 def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
                     profile_gpu_transfers=True, profile_render=True,
                     chunk_size=None, overlap_factor=None, num_octaves=None,
-                    backend=None, paced=True, quiet=False):
+                    backend=None, paced=True, quiet=False,
+                    record=True, report=True):
     """Profile the live pipeline on `seconds` of `audio_path`; record to CSV + MD.
 
     When `profile_gpu_transfers` and the backend is GpuCWT, the CWT is swapped for
@@ -177,11 +217,21 @@ def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
         paced    True paces to the audio clock (real-time parity); False runs the
             frames back-to-back to measure raw compute throughput (used by the sweep).
         quiet    suppress the verbose readout; print one compact line instead.
+        record   True (default): record the run + print the summary, returning
+            run_id - original behaviour. False: skip recording entirely and
+            return the raw (stage_arrays, meta, collected) tuple instead, so a
+            caller (timing_campaign) can merge in its own N-sample init arrays
+            before making one combined record_run() call under one run_id.
+        report   Only consulted when `record` is True. Call update_report()
+            after recording (default True). Set False to defer regenerating
+            the standard report PNGs/TIMING.md (e.g. a smoke run).
 
-    Returns the recorded `run_id` (or None if no frames were collected).
+    Returns the recorded `run_id` (record=True), or the raw
+    (stage_arrays, meta, collected) tuple (record=False). Returns None in
+    either mode if no frames were collected.
     """
     log = (lambda *a, **k: None) if quiet else print
-    log(f"\nSubShader Live Timing — {seconds:.0f}s of {audio_path}\n")
+    log(f"\nSubShader Live Timing - {seconds:.0f}s of {audio_path}\n")
 
     cfg_kwargs = {"file_path": audio_path}
     if chunk_size is not None:
@@ -199,26 +249,16 @@ def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
     shader, init_ms = time_call(SubShader, config)
     sample_rate = config.sample_rate
     hop_size = config.hop_size
-    # Per-module init breakdown. Each constructor (AudioStream / GpuCWT|CpuCWT /
-    # Renderer) is @timed, and _prescan_intensity is @timed separately. Read here,
-    # before the backend swap (which would overwrite shader.dsp) and before
-    # cleanup() nulls the sub-objects. `init:other` is the leftover glue/config.
-    init_audio_ms = getattr(shader.audio, "_timing___init___ms", 0.0)
-    init_dsp_ms = getattr(shader.dsp, "_timing___init___ms", 0.0)
-    init_renderer_ms = getattr(shader.renderer, "_timing___init___ms", 0.0)
-    init_prescan_ms = getattr(shader, "_timing__prescan_intensity_ms", 0.0)
-    init_other_ms = max(0.0, init_ms - (init_audio_ms + init_dsp_ms
-                                        + init_renderer_ms + init_prescan_ms))
-
-    # Per-module sub-stage breakdown (timed_block context managers inside each
-    # constructor). Read before the backend swap recreates shader.dsp. Each dict
-    # maps a sub-stage key (e.g. "dsp_kernels") to its construction time in ms.
-    init_substages = {}
-    for module in (shader.audio, shader.dsp, shader.renderer):
-        init_substages.update(getattr(module, "_init_substages", {}) or {})
+    # Per-module + per-substage init breakdown. Each constructor (AudioStream /
+    # GpuCWT|CpuCWT / Renderer) is @timed, and _prescan_intensity/_prime_pipeline
+    # are @timed separately; init:cuda and other timed_block sub-stages are read
+    # off the shader/sub-objects. Read here, before the backend swap (which would
+    # overwrite shader.dsp) and before cleanup() nulls the sub-objects.
+    # `init:other` is the leftover glue/config.
+    init_stage_ms = collect_init_stage_ms(shader, init_ms)
 
     # Force a backend if requested (the renderer's output shape is identical across
-    # backends — (num_freqs, target_width) — so the swap is safe). Mirrors how
+    # backends - (num_freqs, target_width) - so the swap is safe). Mirrors how
     # SubShader builds its internal CWTConfig.
     if backend == "cpu" and type(shader.dsp).__name__ != "CpuCWT":
         from subshader.dsp.cwt import CpuCWT
@@ -257,7 +297,7 @@ def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
 
     # Pacing. With `paced`, the audio device clock drives the loop (real-time
     # parity); on a remote/headless box with no output device we fall back to a
-    # silent software clock — compute timings are identical, only audible playback
+    # silent software clock - compute timings are identical, only audible playback
     # + device-clock pacing drop. With `paced=False` (sweep) frames run back-to-back
     # to measure raw compute throughput.
     frame_period_s = hop_size / sample_rate
@@ -275,7 +315,7 @@ def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
     loop_start = time.perf_counter()
     while collected < num_frames and not shader.renderer.should_close():
         if use_audio_clock:
-            # next_chunk() blocks on the audio clock — its time is real-time slack,
+            # next_chunk() blocks on the audio clock - its time is real-time slack,
             # not the read compute (which it does internally, not via @timed get_chunk).
             t0 = time.perf_counter()
             chunk = shader.audio.next_chunk()
@@ -288,7 +328,7 @@ def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
             audio_read_ms = getattr(shader.audio, "_timing_get_chunk_ms", 0.0)
             wait_ms = 0.0  # software-paced: set below; un-paced: stays 0
         if chunk is None:
-            continue  # EOF/loop boundary — reader/audio handles reset, don't count it
+            continue  # EOF/loop boundary - reader/audio handles reset, don't count it
 
         coefs = shader.dsp.process(chunk)
         shader.renderer.update(coefs)
@@ -334,18 +374,9 @@ def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
         print("No frames collected (window closed immediately?). Nothing recorded.")
         return None
 
-    stage_arrays = {
-        "init:audio": np.array([init_audio_ms]),
-        "init:dsp": np.array([init_dsp_ms]),
-        "init:renderer": np.array([init_renderer_ms]),
-        "init:prescan": np.array([init_prescan_ms]),
-        "init:other": np.array([init_other_ms]),
-    }
-    # Fine-grained init sub-stages (e.g. init:dsp_kernels, init:render_glcontext).
-    # Emitted alongside the coarse module rows: the coarse rows remain the
-    # authoritative per-module totals; these break each module down.
-    for key, ms in init_substages.items():
-        stage_arrays[f"init:{key}"] = np.array([float(ms)])
+    # Coarse module rows ("init:audio", ...) plus any fine-grained timed_block
+    # sub-stages ("init:cuda", "init:dsp_kernels", ...) - see collect_init_stage_ms.
+    stage_arrays = {f"init:{k}": np.array([v]) for k, v in init_stage_ms.items()}
     stage_arrays.update({k: np.asarray(v, dtype=float) for k, v in stages.items()})
 
     meta = dict(
@@ -357,9 +388,14 @@ def run_live_timing(audio_path=AUDIO_BELTRAN, seconds=DEFAULT_SECONDS,
         overlap_factor=config.overlap_factor,
     )
 
+    if not record:
+        return stage_arrays, meta, collected
+
     recorder = TimingRecorder()
     run_id = recorder.record_run(meta, stage_arrays)
-    update_report()
+    if report:
+        from timing_report import update_report
+        update_report()
 
     period_ms = hop_size / sample_rate * 1000.0
     if quiet:

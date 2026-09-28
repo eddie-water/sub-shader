@@ -1,4 +1,4 @@
-"""StaticPanel3D — single-state Panel for Axes3D cells.
+"""StaticPanel3D - single-state Panel for Axes3D cells.
 
 3D cells need different chrome from 2D cells:
   - mpl's default 3D axis chrome (panes, gridlines, ticks, bounding box) is
@@ -7,7 +7,7 @@
     the polymorphic Vector Plottable (3-tuples per LOCKED D-02) so depth
     sorting plays nicely with the rest of the scene.
   - ``computed_zorder = False`` so the Panel's plottable insertion order
-    (and per-Plottable ``zorder`` kwargs) controls draw order — without
+    (and per-Plottable ``zorder`` kwargs) controls draw order - without
     this, mpl's depth sort would hide the diagonal vector behind segments
     whose projection bounds overlap.
 
@@ -17,7 +17,7 @@ silently extends to ``(x, y, 0)`` (D-06).
 
 The 3D chrome (scene config + spines/ticks/labels/border) lives in
 module-level functions so DynamicPanel3D can reuse it without duplicating
-StaticPanel3D — both panels host the same Axes3D look.
+StaticPanel3D - both panels host the same Axes3D look.
 """
 from __future__ import annotations
 
@@ -29,17 +29,24 @@ from .base import Panel
 
 
 def apply_3d_scene(ax, *, lim_3d: float, view_init: Tuple[float, float],
-                   box_zoom: float = 1.55) -> None:
-    """Configure an Axes3D as a dark, chrome-less cube viewed from view_init.
+                   box_zoom: float = 1.55,
+                   box_aspect: Tuple[float, float, float] = (1, 1, 1)) -> None:
+    """Configure an Axes3D as a dark, chrome-less box viewed from view_init.
 
     Hides mpl's default 3D chrome, sets symmetric ±lim_3d limits on all three
-    axes, applies the camera angle, and zooms the cube outward so it fills the
+    axes, applies the camera angle, and zooms the box outward so it fills the
     cell. ``computed_zorder = False`` hands draw order to per-Plottable zorder.
 
-    ``box_zoom`` magnifies the cube within the axes bbox. The legacy default
+    ``box_zoom`` magnifies the box within the axes bbox. The legacy default
     (1.55) fills the cell, but at that magnification a vector pointing toward a
-    cell edge can overflow the axes rectangle and have its arrowhead clipped —
+    cell edge can overflow the axes rectangle and have its arrowhead clipped -
     lower it (toward ~1.3) for figures whose vectors reach the cell border.
+
+    ``box_aspect`` sets the visual x:y:z proportions of the scene box. The
+    default (1, 1, 1) is the legacy cube; a wide scene (e.g. a time-axis
+    surface at spectrogram proportions) passes something like (3, 1, 0.6).
+    Data limits stay symmetric ±lim_3d regardless - only the drawn box
+    stretches.
     """
     ax.set_axis_off()
     ax.set_facecolor(style.BG_COLOR)
@@ -49,11 +56,11 @@ def apply_3d_scene(ax, *, lim_3d: float, view_init: Tuple[float, float],
     ax.set_ylim(-lim_3d, lim_3d)
     ax.set_zlim(-lim_3d, lim_3d)
     ax.view_init(elev=view_init[0], azim=view_init[1])
-    ax.set_box_aspect((1, 1, 1), zoom=box_zoom)
+    ax.set_box_aspect(box_aspect, zoom=box_zoom)
 
 
 def draw_3d_floor_grid(ax, *, lim_3d: float) -> None:
-    """A light grid on the z=0 (xy) plane only — the scene 'floor'.
+    """A light grid on the z=0 (xy) plane only - the scene 'floor'.
 
     set_axis_off() kills mpl's native 3D grid/panes, so the floor reference is
     drawn manually: integer lines parallel to x and y, at z=0, spanning the cube.
@@ -84,7 +91,7 @@ def draw_3d_spines(ax, *, lim_3d: float, spine_extension: float,
     rendered as two Vectors (one positive direction, one negative) so the origin
     sits in the middle. Spine length = ``lim_3d * spine_extension`` so spines
     can reach past the visible cube into the panel border area. ``alpha`` is the
-    spine opacity — the legacy default (0.55) reads faint; bump it toward 1.0
+    spine opacity - the legacy default (0.55) reads faint; bump it toward 1.0
     for crisper, higher-contrast spines.
     """
     lim = lim_3d * spine_extension
@@ -108,7 +115,7 @@ def draw_3d_spine_ticks(ax, *, lim_3d: float, show_labels: bool = True) -> None:
     Uses short orthogonal Vectors as tick crosses (same polymorphic-Vector
     approach as the spines themselves) so depth sort plays nicely. When
     ``show_labels`` is False the tick crosses are kept but the numeric labels
-    are dropped — declutters a busy animated scene.
+    are dropped - declutters a busy animated scene.
     """
     positions = [
         float(i) for i in range(-int(lim_3d), int(lim_3d) + 1)
@@ -162,7 +169,7 @@ def draw_3d_axis_labels(
     Anchor radii (data coords along each spine) default to the legacy values:
     x + z anchor just inside the cube edge (``lim_3d * 0.95``) and y is pushed
     further radially (``lim_3d * spine_extension * 1.15``). Pass explicit
-    ``anchor_x/y/z`` to override — e.g. push x/z out to the border and pull y
+    ``anchor_x/y/z`` to override - e.g. push x/z out to the border and pull y
     back in.
     """
     label_kwargs_3d = dict(
@@ -194,6 +201,7 @@ def render_3d_chrome(
     label_anchors: Optional[Tuple[float, float, float]] = None,
     spine_alpha: float = 0.55,
     box_zoom: float = 1.55,
+    box_aspect: Tuple[float, float, float] = (1, 1, 1),
     show_floor_grid: bool = True,
 ) -> None:
     """Apply the full Axes3D chrome: scene config, then spines/ticks/labels.
@@ -201,11 +209,13 @@ def render_3d_chrome(
     ``show_spine_tick_labels=False`` keeps the tick crosses but drops the
     numeric labels. ``label_anchors`` (x, y, z) overrides the per-axis label
     radii along each spine. ``spine_alpha`` sets the spine opacity. ``box_zoom``
-    magnifies the cube (lower it if edge-pointing vectors get arrowhead-clipped).
+    magnifies the box (lower it if edge-pointing vectors get arrowhead-clipped).
+    ``box_aspect`` stretches the scene box (see ``apply_3d_scene``).
     ``show_floor_grid`` lays a light grid on the z=0 plane for ground reference.
-    Does NOT draw the figure-coord border or chrome titles — callers handle those.
+    Does NOT draw the figure-coord border or chrome titles - callers handle those.
     """
-    apply_3d_scene(ax, lim_3d=lim_3d, view_init=view_init, box_zoom=box_zoom)
+    apply_3d_scene(ax, lim_3d=lim_3d, view_init=view_init, box_zoom=box_zoom,
+                   box_aspect=box_aspect)
     if show_floor_grid:
         draw_3d_floor_grid(ax, lim_3d=lim_3d)
     if show_spines:
@@ -245,7 +255,7 @@ class StaticPanel3D(Panel):
 
     Constructor kwargs:
       - ``lim_3d``: symmetric ±lim_3d on x, y, z.
-      - ``view_init``: (elev, azim) tuple — defaults match the legacy
+      - ``view_init``: (elev, azim) tuple - defaults match the legacy
         ``_plot_vector_projection_3d`` perspective.
       - ``title`` / ``subtitle``: rendered via ``ax.set_title`` /
         ``ax.text2D`` respectively when set.
@@ -268,6 +278,10 @@ class StaticPanel3D(Panel):
         show_spine_ticks: bool = True,
         show_border: bool = True,
         spine_extension: float = 1.0,
+        box_zoom: float = 1.55,
+        box_aspect: Tuple[float, float, float] = (1, 1, 1),
+        stretch_fill: bool = False,
+        show_floor_grid: bool = True,
     ) -> None:
         super().__init__(units=units)
         self.lim_3d = float(lim_3d)
@@ -278,6 +292,22 @@ class StaticPanel3D(Panel):
         self.show_spines = show_spines
         self.show_spine_ticks = show_spine_ticks
         self.show_border = show_border
+        self.box_zoom = float(box_zoom)
+        self.box_aspect = (
+            float(box_aspect[0]), float(box_aspect[1]), float(box_aspect[2]),
+        )
+        # Axes3D.apply_aspect re-squares the axes position box on every draw -
+        # mpl offers no supported way to let a 3D scene span a non-square
+        # cell. stretch_fill=True no-ops apply_aspect on this panel's axes so
+        # the projection stretches anamorphically to the axes rect (pair with
+        # fill_cell=True and wide `units` for README-band proportions). The
+        # freq/z proportions on screen then depend on the CELL aspect, not
+        # just box_aspect.
+        self.stretch_fill = bool(stretch_fill)
+        # z=0 floor reference grid. Turn off when plottables span the full
+        # cube height (e.g. SurfaceHeatmap z_base=-lim) - the grid would
+        # slice through the scene mid-height instead of grounding it.
+        self.show_floor_grid = bool(show_floor_grid)
         # Multiplier on lim_3d for the visible spine length and label position.
         # 1.0 = spines end at the visible cube faces (±lim_3d). >1 lets spines
         # extend past the cube so they reach the panel border instead of the
@@ -289,6 +319,8 @@ class StaticPanel3D(Panel):
             raise RuntimeError("StaticPanel3D.render() called before attach()")
 
         ax = self.ax
+        if self.stretch_fill:
+            ax.apply_aspect = lambda *args, **kwargs: None
         render_3d_chrome(
             ax,
             lim_3d=self.lim_3d,
@@ -296,6 +328,9 @@ class StaticPanel3D(Panel):
             spine_extension=self.spine_extension,
             show_spines=self.show_spines,
             show_spine_ticks=self.show_spine_ticks,
+            box_zoom=self.box_zoom,
+            box_aspect=self.box_aspect,
+            show_floor_grid=self.show_floor_grid,
         )
 
         self._render_chrome_titles()

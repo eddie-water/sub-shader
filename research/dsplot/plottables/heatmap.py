@@ -1,4 +1,4 @@
-"""Heatmap Plottable — 2D array rendered via imshow.
+"""Heatmap Plottable - 2D array rendered via imshow.
 
 Drives the CWT / STFT spectrogram panel used by the motivator and alignment
 diagnostic figures. When `log_freq=True` and `freqs` is provided, y-tick
@@ -11,7 +11,7 @@ vmax resolution priority (highest first):
   3. style.DEFAULT_HEATMAP_VMAX_PERCENTILE → np.percentile(data, default)
 
 cmap defaults to `style.DEFAULT_HEATMAP_CMAP` when unset (lazy lookup per
-D-05 — runtime reassignment between construction and draw is observable).
+D-05 - runtime reassignment between construction and draw is observable).
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from .base import Plottable
 class Heatmap(Plottable):
     """2D array rendered via imshow.
 
-    Default extent matches `Heatmap(cwt_data, duration_s, freqs)` — the
+    Default extent matches `Heatmap(cwt_data, duration_s, freqs)` - the
     image spans `[0, duration_s]` on x and `[0, len(freqs)]` on y so that
     log-frequency tick bins computed by `freq_axis.compute_freq_yticks`
     line up directly.
@@ -74,18 +74,24 @@ class Heatmap(Plottable):
         self.aspect = aspect
         self.extent = extent
 
+    def _resolve_vmax(self) -> float:
+        """Resolve vmax per the priority order documented on the class.
+
+        Shared with `SurfaceHeatmap.draw` so the 2D and 3D renderings of the
+        same array always agree on their color/height ceiling.
+        """
+        if self.vmax is not None:
+            return float(self.vmax)
+        percentile = (
+            self.vmax_percentile
+            if self.vmax_percentile is not None
+            else style.DEFAULT_HEATMAP_VMAX_PERCENTILE
+        )
+        return float(np.percentile(self.data, percentile))
+
     def draw(self, ax: Axes) -> None:
         cmap = self.cmap if self.cmap is not None else style.DEFAULT_HEATMAP_CMAP
-
-        if self.vmax is not None:
-            vmax = float(self.vmax)
-        else:
-            percentile = (
-                self.vmax_percentile
-                if self.vmax_percentile is not None
-                else style.DEFAULT_HEATMAP_VMAX_PERCENTILE
-            )
-            vmax = float(np.percentile(self.data, percentile))
+        vmax = self._resolve_vmax()
 
         if self.extent is not None:
             extent = list(self.extent)

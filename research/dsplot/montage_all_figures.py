@@ -9,14 +9,14 @@ BASE = Path("assets/images/dsp/figures/by_figure")
 OUT = BASE / "_review" / "all_figures_composite_v1.png"
 
 ITEMS = [
-    ("fig 1  — main",     "fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_lower_longer2_v45.png"),
-    ("fig 1  — hero",     "fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_hero_v1.png"),
-    ("fig 1  — antihero", "fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_antihero_v1.png"),
-    ("fig 2.4.1 — xy recombine",  "fig_2_4_1_xy_recombine/fig_2_4_1_xy_recombine_composite_v20.png"),
-    ("fig 2.4.2 — a onto b",      "fig_2_4_2_a_onto_b/fig_2_4_2_a_onto_b_v8.png"),
-    ("fig 2.4.3 — dot product 3d","fig_2_4_3_dot_product_3d/fig_2_4_3_dot_product_3d_inline_titles_v9.png"),
-    ("fig 2.5 — sign accumulation","fig_2_5_sign_accumulation/fig_2_5_sign_accumulation_composite_v49_border_flush.png"),
-    ("fig 2.6 — sine basis",       "fig_2_6_sine_basis/fig_2_6_sine_basis_2hz_10hz_v21.png"),
+    ("fig 1  - main",     "fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_lower_longer2_v45.png"),
+    ("fig 1  - hero",     "fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_hero_v1.png"),
+    ("fig 1  - antihero", "fig_1_fourier_vs_wavelet/fig_1_fourier_vs_wavelet_antihero_v1.png"),
+    ("fig 2.4.1 - xy recombine",  "fig_2_4_1_xy_recombine/fig_2_4_1_xy_recombine_composite_v20.png"),
+    ("fig 2.4.2 - a onto b",      "fig_2_4_2_a_onto_b/fig_2_4_2_a_onto_b_v8.png"),
+    ("fig 2.4.3 - dot product 3d","fig_2_4_3_dot_product_3d/fig_2_4_3_dot_product_3d_inline_titles_v9.png"),
+    ("fig 2.5 - sign accumulation","fig_2_5_sign_accumulation/fig_2_5_sign_accumulation_composite_v49_border_flush.png"),
+    ("fig 2.6 - sine basis",       "fig_2_6_sine_basis/fig_2_6_sine_basis_2hz_10hz_v21.png"),
 ]
 
 W = 1500          # common content width

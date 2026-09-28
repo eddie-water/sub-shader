@@ -378,6 +378,32 @@ README_BOX_RADIUS = 0.15
 # low end (20 px @ 2950), matplotlib labels at the high end (16 pt @ ~2450 px).
 README_LABEL_EM_FRACTION = (0.010, 0.014)
 
+# README display spec: sizes in pixels as GitHub shows the figure, with the
+# modules flowchart as the reference. Every README PNG is fitted to
+# README_SUPERSAMPLE x its shown width (dsplot.export.fit_readme_width), and
+# every generator converts these through readme_pt / readme_drawio, so frame,
+# line and label read the same size in every figure.
+README_SHOWN_PX = 888              # a width="100%" image in the README column
+README_SUPERSAMPLE = 3             # exported PNG px per shown px
+README_FRAME_PX = 3.8              # outer frame
+README_LINE_PX = 2.0               # boxes, arrows, rules
+README_TEXT_PX = 14.5              # label em
+
+
+def readme_content_px(shown_px=README_SHOWN_PX):
+    """Shown width of the figure's content, inside the edge pad."""
+    return shown_px - 2 * README_EDGE_PAD_PX / README_SUPERSAMPLE
+
+
+def readme_pt(display_px, content_in, shown_px=README_SHOWN_PX):
+    """Matplotlib points that show as display_px on a content_in-wide canvas."""
+    return display_px * content_in * 72 / readme_content_px(shown_px)
+
+
+def readme_drawio(display_px, content_units, shown_px=README_SHOWN_PX):
+    """draw.io units that show as display_px on a content_units-wide page."""
+    return display_px * content_units / readme_content_px(shown_px)
+
 # ============================================================
 # TICK DECORATION (direction + inset scaling)
 # ============================================================

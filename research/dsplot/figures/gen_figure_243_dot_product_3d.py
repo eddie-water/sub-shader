@@ -1,28 +1,28 @@
-"""figure_2_4_3 — §2.4.3 The Dot Product in 3D (4 synced panels).
+"""figure_2_4_3 - §2.4.3 The Dot Product in 3D (4 synced panels).
 
 The 3D sequel to §2.4.2, rebuilt to the same 4-panel template. All panels ride
 ONE shared sweep clock (the figure's master FuncAnimation ticks every dynamic
 panel from the same global frame index), so the 3D scenes, the stem bars, and
 the live footer arithmetic move in lockstep.
 
-A sweeps around B exactly as in §2.4.2 — its xy-magnitude triangle-waves
-3 -> 2 -> 3 while its angle turns a full revolution — but now A also lifts off
+A sweeps around B exactly as in §2.4.2 - its xy-magnitude triangle-waves
+3 -> 2 -> 3 while its angle turns a full revolution - but now A also lifts off
 the floor: a z-component grows 0 -> +3 -> 0 over rev 1 and 0 -> -3 -> 0 over
 rev 2. B stays FIXED in the xy-plane (z = 0). The sweep pauses ~1s at every 45°.
 
 The pedagogical spine: because B has no z-component, A's height contributes
 NOTHING to a · b (a_z · b_z = a_z · 0 = 0). The dot product only "sees" A's
-shadow on the xy-floor — and in panel D the b_z stem is always empty, so the
+shadow on the xy-floor - and in panel D the b_z stem is always empty, so the
 third product term visibly vanishes.
 
 Two conceptual halves, each a 2-panel column group:
 
-  COSINE FORM (A, B) — the relative angle controls the size of the projection:
+  COSINE FORM (A, B) - the relative angle controls the size of the projection:
     - Panel A: a (with its height, floor-shadow and vertical drop) and b.
-    - Panel B: drop A to the floor, then project its shadow onto B's line —
+    - Panel B: drop A to the floor, then project its shadow onto B's line -
       the white parallel component is the score.
 
-  COMPONENT FORM (C, D) — the angle is already baked into the components:
+  COMPONENT FORM (C, D) - the angle is already baked into the components:
     - Panel C: the x/y/z component staircases of a and b (b has no z leg).
     - Panel D: each product term as a side-by-side pair of "stem" arrows at an
       x / y / z slot (aₓ next to bₓ, …); b_z is empty, so the z-term vanishes.
@@ -70,7 +70,7 @@ _ACCUM_GAUGE_YLIM = (-8.54, 8.54)
 _VIEW_INIT = (24.0, -58.0)
 
 
-# Shared sweep parameters — ONE clock for all four panels. Mirrors §2.4.2.
+# Shared sweep parameters - ONE clock for all four panels. Mirrors §2.4.2.
 _SWEEP_STEP_RAD = math.pi / 24.0
 _SWEEP_FRAMES_PER_REV = 48
 _SWEEP_NUM_REVS = 2
@@ -85,7 +85,7 @@ _SWEEP_MAG_PERIOD = 2 * _SWEEP_FRAMES_PER_REV  # 96 logical frames
 # 0 -> -3 -> 0. Peaks at mid-rev (a 45° pause), so the tallest/lowest A holds.
 _Z_AMP = 3.0
 
-# B — FIXED at 45° in the xy-plane (z = 0); A starts collinear with B, z = 0.
+# B - FIXED at 45° in the xy-plane (z = 0); A starts collinear with B, z = 0.
 _B_SWEEP_MAG = 3.0
 _B_SWEEP_ANGLE = math.pi / 4.0
 _B_SWEEP = (_B_SWEEP_MAG * math.cos(_B_SWEEP_ANGLE),
@@ -113,7 +113,7 @@ _NUMBER_FONT_WEIGHT = "normal"
 
 _MUTED_ALPHA = style.DEFAULT_MUTED_ALPHA
 
-# Faded ghost outline for the decomposed vectors in panel C — fainter than the
+# Faded ghost outline for the decomposed vectors in panel C - fainter than the
 # standard muted alpha so the components are unambiguously the hero.
 _GHOST_ALPHA = 0.16
 
@@ -123,11 +123,11 @@ _GHOST_ALPHA = 0.16
 # linestyle reads as the same dash rhythm across the 2D and 3D figures.
 _PROJ_DASH = "--"
 
-# Stem panel D: THREE slots — an "x", "y" and "z" slot, one per product term.
+# Stem panel D: THREE slots - an "x", "y" and "z" slot, one per product term.
 # At each slot the two multiplicands of that term sit side by side (aₓ next to
 # bₓ; aᵧ next to bᵧ; a_z next to b_z), a-family left, b-family right, so the
 # pairs the dot product multiplies read at a glance. b_z is always 0, so the
-# z-slot's purple bar is absent — the third product term visibly vanishes.
+# z-slot's purple bar is absent - the third product term visibly vanishes.
 _PAIR_SLOTS = (-2.5, 0.0, 2.5)         # x-term, y-term, z-term
 _PAIR_OFFSET = 0.42
 _SLOT_TICK_HALF = 0.16
@@ -288,7 +288,7 @@ def _common_3d_kwargs() -> dict:
         # fill_cell expands the Axes3D to the whole gridspec cell (matching the 2D
         # sibling §2.4.2). WITHOUT it the axes is inset and mpl's box_zoom barely
         # grows the cube; WITH it box_zoom actually fills. This is the real fill
-        # lever — box_zoom/lim/elevation only matter once fill_cell is on.
+        # lever - box_zoom/lim/elevation only matter once fill_cell is on.
         fill_cell=True,
         box_zoom=2.80,   # fills the (now SQUARE cell-sized) axes. Higher overflows
                          # the cell; lower leaves the legacy centered-cube margin.
@@ -298,7 +298,7 @@ def _common_3d_kwargs() -> dict:
     )
 
 
-# Panel A — cosine form: the vectors (and the angle between them) ============
+# Panel A - cosine form: the vectors (and the angle between them) ============
 
 
 def _panel_a_frame(frame_idx: int) -> list:
@@ -323,7 +323,7 @@ def _panel_a() -> DynamicPanel3D:
     )
 
 
-# Panel B — cosine form: drop to the floor, project onto b ===================
+# Panel B - cosine form: drop to the floor, project onto b ===================
 
 
 def _floor_overlay(a) -> list:
@@ -378,7 +378,7 @@ def _panel_b() -> DynamicPanel3D:
     )
 
 
-# Panel C — component form: the x/y/z component staircases ===================
+# Panel C - component form: the x/y/z component staircases ===================
 
 
 def _axis_legs(v, color, *, zorder: int) -> list:
@@ -423,11 +423,11 @@ def _panel_c() -> DynamicPanel3D:
     )
 
 
-# Panel D — component form: each multiplied pair as side-by-side arrows =======
+# Panel D - component form: each multiplied pair as side-by-side arrows =======
 
 
 def _slot_chrome() -> list:
-    """The horizontal baseline plus an 'x', 'y' and 'z' tick — the three slots
+    """The horizontal baseline plus an 'x', 'y' and 'z' tick - the three slots
     that hold each multiplied pair. Drawn fresh each frame (DynamicPanel clears)."""
     chrome: list = [
         Line(np.array([-_SLOT_BASELINE_HALF, _SLOT_BASELINE_HALF]),
@@ -524,7 +524,7 @@ def _footer_b_frame(frame_idx: int) -> list:
 
 
 def _footer_c_frame(frame_idx: int) -> list:
-    """Symbolic component form — three terms (static across frames)."""
+    """Symbolic component form - three terms (static across frames)."""
     return [_footer_richtext(
         [("a", _A), (" · ", _W), ("b", _B), (" = ", _W),
          ("$a_x$", _A), ("$b_x$", _B), (" + ", _W),
@@ -534,7 +534,7 @@ def _footer_c_frame(frame_idx: int) -> list:
 
 
 def _footer_d_frame(frame_idx: int) -> list:
-    """Live substituted component arithmetic — three terms (a_z·b_z -> 0)."""
+    """Live substituted component arithmetic - three terms (a_z·b_z -> 0)."""
     a, b, _ = _ab_for_frame(frame_idx)
     ax_v, ay_v, az_v = a
     bx_v, by_v, bz_v = b
@@ -592,7 +592,7 @@ _ROW_HEIGHTS = [0.22, 0.30, 1.0, 0.22, 0.18, 0.20]
 
 
 # ---------------------------------------------------------------------------
-# Static PNG — the §2.4.2 [ 3D visual | a·b strip | text ] template.
+# Static PNG - the §2.4.2 [ 3D visual | a·b strip | text ] template.
 # Two rows (cosine form, component form), each a big 3D scene beside the same
 # dot-product strip and an explanation. Mirrors gen_figure_242_a_onto_b so the
 # pair reads as one system. The notebook/GIF path keeps the 4-panel _rows().
@@ -600,7 +600,7 @@ _ROW_HEIGHTS = [0.22, 0.30, 1.0, 0.22, 0.18, 0.20]
 _STATIC_FRAME = 18   # a lifted-A, off-axis frame so the height + angle both read
 
 
-# Static-PNG chrome — mirrors gen_figure_242_a_onto_b's _STATIC_CHROME so the
+# Static-PNG chrome - mirrors gen_figure_242_a_onto_b's _STATIC_CHROME so the
 # two figures share one look: tight margins/gutters (otherwise the global 3.0"
 # column gutter starves a 9-unit row down to ~0.1"/unit) and the cell-border
 # frame model (spines off; show_cell_borders draws every box).
@@ -619,7 +619,7 @@ _STATIC_CHROME = {
     # share one type system (slot labels, 3D glyphs, footer math).
     "DEFAULT_AXIS_LABEL_SIZE": 42,
     # In-plot 3D vector labels (a, b) match the x/y/z axis glyphs (3D axis labels
-    # render at AXIS_LABEL_SIZE + 2 = 44) — they were reading too small.
+    # render at AXIS_LABEL_SIZE + 2 = 44) - they were reading too small.
     "DEFAULT_LABEL_FONT_SIZE": 44,
 }
 
@@ -638,13 +638,13 @@ def _static_chrome():
 _COSINE_TEXT = (
     "Dot Product - Cosine Form\n\n"
     "a · b = |a| |b| cos θ. In 3D the dot product still tracks only the shared "
-    "direction. a's height adds nothing because b lies flat on the floor — the "
+    "direction. a's height adds nothing because b lies flat on the floor - the "
     "shadow of a on b's line is the score."
 )
 _COMPONENT_TEXT = (
     "Dot Product - Component Form\n\n"
     "a · b = aₓbₓ + aᵧbᵧ + a_zb_z. Multiply matching axes and add. b has no z, "
-    "so a_zb_z = 0 — the height drops out and the answer matches the cosine form."
+    "so a_zb_z = 0 - the height drops out and the answer matches the cosine form."
 )
 
 
@@ -671,7 +671,7 @@ def _static_panel_component() -> DynamicPanel3D:
 
 
 def _static_accum(dot: float) -> TimeSeriesPanel:
-    """The a·b strip — same value in both rows (same answer, two ways).
+    """The a·b strip - same value in both rows (same answer, two ways).
 
     Figure 2.5's accumulator look (matches §2.4.2): SYMMETRIC y-range so the
     baseline sits centered in the square cell and the bar grows up from the
@@ -682,7 +682,7 @@ def _static_accum(dot: float) -> TimeSeriesPanel:
         xlim=(-1.0, 1.0), ylim=_ACCUM_GAUGE_YLIM,
         show_xticklabels=False, show_yticklabels=False,
         show_border=False,
-        # No x/y crosshair — AccumulatorStrip draws its own zero baseline; the
+        # No x/y crosshair - AccumulatorStrip draws its own zero baseline; the
         # default "line" axis would add a stray vertical at x=0 (matches §2.4.2).
         axis_style="none",
     )
@@ -691,7 +691,7 @@ def _static_accum(dot: float) -> TimeSeriesPanel:
         # Bar centered in the strip cell; readout drops into the empty well
         # (matches §2.4.2).
         x=0.0,
-        # Crisp bone-white bar at full opacity (matches §2.4.2) — the a·b RESULT
+        # Crisp bone-white bar at full opacity (matches §2.4.2) - the a·b RESULT
         # reads as a neutral gauge, distinct from the orange vectors it scores.
         color="#EEEEEE", alpha=1.0,
         linewidth=style.DEFAULT_ACCUM_STEM_LINEWIDTH,
@@ -772,7 +772,7 @@ def show(debug: bool = False) -> Figure:
 
 def render(output_dir: str,
            output_filename: str = "dot_product_3d/baseline.png") -> str:
-    """Render the static §2.4.3 on the §2.4.2 template — two [3D | a·b | text]
+    """Render the static §2.4.3 on the §2.4.2 template - two [3D | a·b | text]
     rows on the shared 28" canvas, A lifted off the floor at _STATIC_FRAME."""
     a, b, _ = _ab_for_frame(_STATIC_FRAME)
     dot = _dot3(a, b)

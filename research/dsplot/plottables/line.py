@@ -1,4 +1,4 @@
-"""Line Plottable — generic 1D line plot (x, y) for overlays.
+"""Line Plottable - generic 1D line plot (x, y) for overlays.
 
 Distinct from `TimeSeries`, which is a single-signal fill_between against a
 sample-rate-derived time axis. `Line` takes explicit x and y arrays so it can
@@ -23,7 +23,7 @@ from .base import Plottable
 class Line(Plottable):
     """1D line plot of y vs x onto a matplotlib Axes.
 
-    The Line draws onto whatever Axes the owning Panel passes in — it does NOT
+    The Line draws onto whatever Axes the owning Panel passes in - it does NOT
     set xlim / ylim / facecolor, so it composes cleanly onto a twin y-axis
     without stomping the primary axis's limits.
     """

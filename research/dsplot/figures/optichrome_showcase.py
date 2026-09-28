@@ -1,4 +1,4 @@
-"""optichrome_showcase — the Optichrome colormaps, side by side.
+"""optichrome_showcase - the Optichrome colormaps, side by side.
 
 Optichrome is Felipe Pantone's saturated full-spectrum palette. One grid,
 four rows, one variant per row; three columns hold the same three fields
@@ -12,9 +12,9 @@ and a column compares all four colormaps on one plot.
     Row 4  optichrome_pixel   Weave | Centroid | CWT  (posterized steps)
 
 Colormaps come from `dsplot.colormaps` (registered on import). The fields
-are synthetic stand-ins — a Gramian-angular-field weave, a Gaussian
+are synthetic stand-ins - a Gramian-angular-field weave, a Gaussian
 centroid, and a log-frequency chirp ridge that reads like a CWT magnitude
-spectrogram — so the figure is self-contained (no GPU / audio needed).
+spectrogram - so the figure is self-contained (no GPU / audio needed).
 
 Three-mode contract: render() / show() / embed(). Iterate the look by
 bumping output_filename: v1.png -> v2.png -> vN.png.
@@ -49,7 +49,7 @@ from .. import (
 ROW_WIDTH_UNITS = 3
 GRID_N = 96
 
-# The Optichrome aesthetic is posterized — a finite palette in hard-edged
+# The Optichrome aesthetic is posterized - a finite palette in hard-edged
 # blocks, not a smooth ramp. Every variant is quantized to BANDS discrete
 # colors so the fields read as the blocky artwork rather than a gradient.
 BANDS = 8
@@ -67,10 +67,10 @@ VARIANT_LABELS = {
 
 
 # ---------------------------------------------------------------------------
-# Data builders — synthetic stand-ins for the real fields
+# Data builders - synthetic stand-ins for the real fields
 # ---------------------------------------------------------------------------
 def _build_weave(n: int = GRID_N, base_freq_hz: float = 4.0) -> np.ndarray:
-    """Gramian Angular Field weave — diagonal-band interference, in [0, 1]."""
+    """Gramian Angular Field weave - diagonal-band interference, in [0, 1]."""
     t = np.linspace(0, 1, n)
     sig = np.sin(2.0 * np.pi * base_freq_hz * t)
     phi = np.arccos(np.clip(sig, -1.0, 1.0))
@@ -86,7 +86,7 @@ def _build_centroid(n: int = GRID_N, sigma: float = 0.35) -> np.ndarray:
 
 
 def _build_cwt(n_f: int = CWT_N_FREQS, n_t: int = CWT_N_TIME) -> np.ndarray:
-    """Log-frequency chirp ridge magnitude field — reads like a CWT.
+    """Log-frequency chirp ridge magnitude field - reads like a CWT.
 
     A primary ridge sweeps low→high in bin space (a log chirp is ~linear in
     log-frequency bins), with a Gaussian cross-frequency spread, a quieter
@@ -170,7 +170,7 @@ def _build_figure(
     """Compose the 4-variant × 3-field grid (un-rendered)."""
     colormaps.register()
     row0 = [SuptitlePanel(
-        f"Optichrome Colormaps — 4 Variants · {BANDS} bands",
+        f"Optichrome Colormaps - 4 Variants · {BANDS} bands",
         units=(ROW_WIDTH_UNITS, 1),
     )]
     variant_rows = [_variant_row(v) for v in colormaps.OPTICHROME_VARIANTS]

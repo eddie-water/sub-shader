@@ -1,4 +1,4 @@
-"""TimeSeriesPanel — semantic StaticPanel subclass for wide time-axis content.
+"""TimeSeriesPanel - semantic StaticPanel subclass for wide time-axis content.
 
 `default_units = (3, 1)` so wide signal displays compose naturally in a
 Figure.compose row. Overrides `render()` to release the square aspect lock
@@ -64,7 +64,7 @@ class TimeSeriesPanel(StaticPanel):
         # xlim/ylim kwargs let the caller PIN axis limits after plottables
         # draw. Some plottables (Stem, Line) auto-fit limits to their data,
         # which clobbers the StaticPanel default. Setting these explicitly
-        # gives the caller final say — useful for adding head/tail breathing
+        # gives the caller final say - useful for adding head/tail breathing
         # room around a waveform that would otherwise fill the cell exactly.
         self.xlim = xlim
         self.ylim = ylim
@@ -104,7 +104,7 @@ class TimeSeriesPanel(StaticPanel):
             show_xticklabels=self.show_xticklabels,
             show_yticklabels=self.show_yticklabels,
         )
-        # Pin xlim/ylim AFTER super().render() (which ran the plottables —
+        # Pin xlim/ylim AFTER super().render() (which ran the plottables -
         # some auto-fit to data, e.g. Stem) and AFTER axis decoration so a
         # caller's explicit limits override any plottable auto-fit.
         if self.xlim is not None:
@@ -119,7 +119,7 @@ class TimeSeriesPanel(StaticPanel):
         # twinx() positions the twin at the host's ORIGINAL gridspec rect, not
         # any inset the host already received (e.g. content_left_pad_inches).
         # Match the host's current rect before decorating so the twin's y-axis
-        # label inset is computed against the inset spine — otherwise the
+        # label inset is computed against the inset spine - otherwise the
         # figure-edge clamp collapses the label onto the spine.
         self.ax_twin.set_position(self.ax.get_position())
 

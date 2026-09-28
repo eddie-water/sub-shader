@@ -4,7 +4,7 @@ Audio Player Module for SubShader.
 Handles real-time audio playback via sounddevice OutputStream with a thread-safe
 sample counter that serves as the timing reference for the render loop.
 
-Accepts a PipelineConfig — reads file_path and sample_rate from config after
+Accepts a PipelineConfig - reads file_path and sample_rate from config after
 AudioReader has written the discovered sample_rate back to config.
 """
 
@@ -62,7 +62,7 @@ class AudioPlayer:
         if audio_data.ndim > 1:
             audio_data = audio_data[:, 0]
 
-        # Store as float32 — PortAudio does not support float64 natively (Pitfall 1)
+        # Store as float32 - PortAudio does not support float64 natively (Pitfall 1)
         self._data = audio_data.astype(np.float32)
         self._sample_rate = float(config.sample_rate)
         self._current_frame = 0
@@ -82,7 +82,7 @@ class AudioPlayer:
         The lock protecting _current_frame is held only for a single int read/write.
         """
         if status:
-            # status reports xruns — cannot log here safely, just note it
+            # status reports xruns - cannot log here safely, just note it
             pass
 
         with self._lock:
@@ -164,12 +164,18 @@ class AudioPlayer:
     def stop(self) -> None:
         """Stop audio playback and release the device (D-12).
 
+        Uses abort() rather than stop(): Pa_StopStream waits for pending
+        buffers to drain, which is unbounded on a stalled stream (observed
+        67 s hang after an AudioStreamStalledError with the GLFW window
+        unpumped). Pa_AbortStream discards pending buffers immediately -
+        correct semantics for teardown, where the audio tail is irrelevant.
+
         Safe to call multiple times. Called from AudioStream.cleanup().
         """
         if self._stream is not None:
             try:
-                self._stream.stop(ignore_errors=True)
-                self._stream.close()
+                self._stream.abort(ignore_errors=True)
+                self._stream.close(ignore_errors=True)
             except Exception:
                 pass  # Best-effort cleanup
             finally:

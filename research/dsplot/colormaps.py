@@ -1,4 +1,4 @@
-"""dsplot colormaps — named palettes + a one-call default swap.
+"""dsplot colormaps - named palettes + a one-call default swap.
 
 The single global knob for heatmap color is `style.DEFAULT_HEATMAP_CMAP`
 (a matplotlib colormap *name*, resolved lazily at draw time by every
@@ -9,30 +9,30 @@ plot is a single line:
     from dsplot import colormaps
     colormaps.set_default("optichrome_cyclic")   # every heatmap, instantly
 
-Per-plot override still wins — `Heatmap(..., cmap="optichrome_polar")` only
+Per-plot override still wins - `Heatmap(..., cmap="optichrome_polar")` only
 recolors that one field.
 
 Optichrome palette
 ------------------
-"Optichrome" is Felipe Pantone's saturated full-spectrum palette — the
+"Optichrome" is Felipe Pantone's saturated full-spectrum palette - the
 high-chroma gradients of his kinetic op-art work. Every variant here is
 anchored BLACK = lowest value, WHITE = peak, with the Optichrome hues
 threading the midrange. Five takes on the same spectrum, because it reads
 differently depending on how it's swept:
 
   optichrome        sequential black→spectrum→white (general magnitude map)
-  optichrome_cyclic endpoints match (black) — wraps seamlessly; white-
+  optichrome_cyclic endpoints match (black) - wraps seamlessly; white-
                     centered peak (phase / angle / polar)
   optichrome_polar  black floor, white peak, cool→warm hue path (radial)
   optichrome_pixel  posterized discrete steps (the blocky artwork look)
   optichrome_rwbk   red/white/blue/black melt-loop (clean wrap, 2-param wheel)
   optichrome_rwbk_warm  black→maroon→red→orange→yellow→white (sequential
-                        magnitude map — inferno-like, Pantone hues)
+                        magnitude map - inferno-like, Pantone hues)
   optichrome_rwbk_cool  black→navy→…→cyan→frost→white (icy sequential mirror)
 
 The rwbk *loop* returns to black at value 1.0, so it reads right for phase /
 angle, not magnitude. The `_warm` / `_cool` cuts climb monotonically to white,
-so the brightest value is the brightest color — use those for ordinary
+so the brightest value is the brightest color - use those for ordinary
 heatmaps / spectrograms. Each sequential cut also has a posterized `_steps`
 sibling. `register()` is idempotent and runs once on import.
 """
@@ -48,11 +48,11 @@ from . import style
 
 # Number of discrete bands a variant collapses to when quantized. The
 # Optichrome aesthetic lives in hard-edged blocks of a small fixed palette,
-# not a smooth ramp — DEFAULT_LEVELS ≈ the artwork's distinct-swatch count.
+# not a smooth ramp - DEFAULT_LEVELS ≈ the artwork's distinct-swatch count.
 DEFAULT_LEVELS = 8
 
 # ---------------------------------------------------------------------------
-# Optichrome anchor colors — high-chroma points on the hue wheel.
+# Optichrome anchor colors - high-chroma points on the hue wheel.
 # ---------------------------------------------------------------------------
 OPTICHROME_BLUE    = "#1b4fd6"
 OPTICHROME_CYAN    = "#22c4ec"
@@ -68,7 +68,7 @@ OPTICHROME_BLACK   = "#0a0a0a"
 # the peak. The saturated Optichrome hues thread the midrange so the ramp
 # climbs black → cool → warm → white instead of bottoming/topping in a color.
 
-# Sequential sweep — black floor, white peak. Cool dark hues lift off the
+# Sequential sweep - black floor, white peak. Cool dark hues lift off the
 # floor (violet→blue), the warm spectrum carries the midbody (crimson→red→
 # orange→yellow), and the brightest hue resolves into white.
 _OPTICHROME_SEQUENCE: Sequence[str] = (
@@ -82,7 +82,7 @@ _OPTICHROME_SEQUENCE: Sequence[str] = (
     OPTICHROME_WHITE,
 )
 
-# Cyclic sweep — first == last (BLACK) so the ramp tiles with no seam. WHITE
+# Cyclic sweep - first == last (BLACK) so the ramp tiles with no seam. WHITE
 # sits dead-center as the peak, cool hues climbing into it and warm hues
 # falling back out, so a wrapped/polar map still reads black-low / white-peak
 # at the seam and center respectively.
@@ -98,7 +98,7 @@ _OPTICHROME_CYCLE: Sequence[str] = (
     OPTICHROME_BLACK,
 )
 
-# Polar sweep — black floor, white peak, routed cool→warm with cyan riding
+# Polar sweep - black floor, white peak, routed cool→warm with cyan riding
 # high near the ceiling (a distinct hue path from the sequential variant so
 # the two read differently on the same field).
 _OPTICHROME_DIVERGING: Sequence[str] = (
@@ -112,7 +112,7 @@ _OPTICHROME_DIVERGING: Sequence[str] = (
     OPTICHROME_WHITE,
 )
 
-# Posterized steps — the literal blocky artwork palette, black floor → white
+# Posterized steps - the literal blocky artwork palette, black floor → white
 # peak, full Optichrome spectrum quantized into discrete bands.
 _OPTICHROME_PIXELS: Sequence[str] = (
     OPTICHROME_BLACK,
@@ -126,7 +126,7 @@ _OPTICHROME_PIXELS: Sequence[str] = (
 )
 
 # ---------------------------------------------------------------------------
-# True Optichrome steps — the vivid block colors measured from Felipe Pantone's
+# True Optichrome steps - the vivid block colors measured from Felipe Pantone's
 # painting. Source: the clean pixel scan `optichrome_felipe_pantone.png`, whose
 # native block grid (17 cols × 22 rows) was recovered by within-block-variance
 # search, then every block assigned to its nearest hue family (each color below
@@ -134,7 +134,7 @@ _OPTICHROME_PIXELS: Sequence[str] = (
 # 17×22 = 374 blocks). Median-cut was rejected: it averaged across hard block
 # edges into muddy tones that aren't real swatches.
 #
-# Thirteen swatches, not ten — finer clustering surfaced three intermediates
+# Thirteen swatches, not ten - finer clustering surfaced three intermediates
 # the 10-family fit had folded into their neighbors: FROST (pale icy white,
 # split from WHITE), OCEAN (deep blue, split from ROYAL), and NAVY (blue-black,
 # split from BLACK). With those pulled out, BLACK and WHITE land truer/purer.
@@ -157,7 +157,7 @@ OPTI_NAVY   = "#1b1c2c"   # blue-black (violet→black bridge)
 
 # The rwbk loop in melt order, each color paired with the AREA it occupies in
 # the original painting (nearest-family assignment over the 374 source blocks).
-# Black & white dominate; the warm hues are thin accents — so the colormap
+# Black & white dominate; the warm hues are thin accents - so the colormap
 # spends its range proportionally, matching the canvas instead of equal bands.
 # Black anchors both ends (floor + seam); white is the center peak.
 _RWBK_LOOP: tuple[tuple[str, float], ...] = (
@@ -176,11 +176,11 @@ _RWBK_LOOP: tuple[tuple[str, float], ...] = (
     (OPTI_NAVY,   0.080),
 )
 
-# Raw loop colors (equal, unweighted) — for angular uses like the 2-param
+# Raw loop colors (equal, unweighted) - for angular uses like the 2-param
 # wheel where each direction wants one distinct color.
 RWBK_LOOP_COLORS: tuple[str, ...] = tuple(c for c, _ in _RWBK_LOOP)
 
-# Sequential cuts of the rwbk loop — black floor → white peak, one half of the
+# Sequential cuts of the rwbk loop - black floor → white peak, one half of the
 # loop each. Unlike the full loop (which returns to black at value 1.0 and so
 # only reads right for phase/angle), these climb monotonically to white, so
 # they work as ordinary magnitude maps: the brightest value is the brightest
@@ -238,7 +238,7 @@ OPTICHROME_COLORMAPS: dict[str, Colormap] = {
     "optichrome_rwbk_cool_steps": ListedColormap(list(_RWBK_COOL), name="optichrome_rwbk_cool_steps"),
 }
 
-# Stable display order — drives the showcase grid and any "list the variants"
+# Stable display order - drives the showcase grid and any "list the variants"
 # caller. Sequential, wrap-around, polar, posterized.
 OPTICHROME_VARIANTS: tuple[str, ...] = (
     "optichrome",
@@ -261,7 +261,7 @@ def register() -> None:
 
 
 def get(name: str) -> Colormap:
-    """Return a Colormap by name — Optichrome palettes first, else matplotlib's.
+    """Return a Colormap by name - Optichrome palettes first, else matplotlib's.
 
     Lets figure code pass an object straight to `Heatmap(cmap=...)` without
     caring whether the name is one of ours or a built-in.
@@ -280,7 +280,7 @@ def quantize(
     Samples `cmap` at `n_levels` evenly spaced points and returns a
     `ListedColormap` of just those colors. Under imshow's default norm, data
     snaps to the nearest band, so the field reads as discrete blocks with
-    boundaries at i/n_levels — the posterized Optichrome look — instead of a
+    boundaries at i/n_levels - the posterized Optichrome look - instead of a
     smooth gradient. Accepts a name (Optichrome or built-in) or a Colormap.
     """
     base = cmap if isinstance(cmap, Colormap) else get(cmap)

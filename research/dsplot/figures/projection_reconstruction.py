@@ -2,7 +2,7 @@
 
 Two-panel figure showing the symmetry of the dot product via projection:
 panel 1 projects ``a`` onto ``b``, panel 2 projects ``b`` onto ``a``.
-Both projections produce the same dot-product magnitude — the projection
+Both projections produce the same dot-product magnitude - the projection
 "shadows" land on different axes but encode the same scalar.
 
 Per LOCKED D-02, all Vectors here use 2-tuple inputs and are drawn on
@@ -30,7 +30,7 @@ def _projection(source: tuple[float, float],
                 target: tuple[float, float]) -> tuple[float, float]:
     """Return the foot of the perpendicular from ``source`` onto the line
     through origin along ``target``. The foot is ``(target_hat · source) *
-    target_hat`` — i.e. the projection of source onto target.
+    target_hat`` - i.e. the projection of source onto target.
     """
     src = np.asarray(source, dtype=float)
     tgt = np.asarray(target, dtype=float)
@@ -67,7 +67,7 @@ def _panel(
 
     foot = _projection(source=source, target=target)
 
-    # Target arrow (the "reference direction" — drawn bold in its own role color).
+    # Target arrow (the "reference direction" - drawn bold in its own role color).
     panel.add(
         Vector(target,
                color=target_color,
@@ -77,7 +77,7 @@ def _panel(
                linewidth=style.DEFAULT_VECTOR_BOLD_LINEWIDTH)
     )
 
-    # Projection arrow (neutral white — the "shadow" of source along target).
+    # Projection arrow (neutral white - the "shadow" of source along target).
     panel.add(
         Vector(foot,
                color=style.NEUTRAL_COLOR,

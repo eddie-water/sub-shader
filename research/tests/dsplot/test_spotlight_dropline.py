@@ -34,7 +34,7 @@ from dsplot import Dropline, Spotlight, style
 
 
 # ============================================================
-# Spotlight — rectangle mode
+# Spotlight - rectangle mode
 # ============================================================
 
 def test_spotlight_rectangle_x_range_adds_axvspan_patch() -> None:
@@ -71,7 +71,7 @@ def test_spotlight_rectangle_no_ranges_raises_value_error_on_draw() -> None:
 
 
 # ============================================================
-# Spotlight — scatter mode
+# Spotlight - scatter mode
 # ============================================================
 
 def test_spotlight_scatter_adds_scatter_collection() -> None:
@@ -83,7 +83,7 @@ def test_spotlight_scatter_adds_scatter_collection() -> None:
 
 
 # ============================================================
-# Spotlight — glow mode
+# Spotlight - glow mode
 # ============================================================
 
 def test_spotlight_glow_adds_circle_with_alpha_lt_one() -> None:
@@ -97,7 +97,7 @@ def test_spotlight_glow_adds_circle_with_alpha_lt_one() -> None:
 
 
 # ============================================================
-# Spotlight — invalid mode validation
+# Spotlight - invalid mode validation
 # ============================================================
 
 def test_spotlight_invalid_mode_raises_value_error_with_valid_modes_listed() -> None:

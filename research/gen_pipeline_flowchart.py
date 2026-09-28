@@ -1,13 +1,13 @@
 """Generate a draw.io flowchart mapping the SubShader pipeline.
 
-A hardware / memory swim-lane: three columns — DISK, CPU, GPU — with a single
+A hardware / memory swim-lane: three columns - DISK, CPU, GPU - with a single
 flow threaded from start-up (top) through the runtime loop (bottom). Each step
 sits in the column where its work runs; the important buffers are drawn inline
 in the column where the data lives. Cross-column arrows are the data transfers
 (disk→cpu read, cpu↔gpu copies) and are highlighted; same-column arrows are
 plain. A "next frame" loop-back closes the runtime cycle.
 
-No timing numbers — this is the structural/data-flow view. Output is plain
+No timing numbers - this is the structural/data-flow view. Output is plain
 draw.io XML (open in app.diagrams.net or the VS Code Draw.io extension).
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ from xml.sax.saxutils import escape
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 OUT = os.path.join(ROOT, "assets", "timing", "pipeline_flowchart.drawio")
 
-# Optichrome v52 palette (copied as constants — no dsplot dependency).
+# Optichrome v52 palette (copied as constants - no dsplot dependency).
 BG, FG = "#1A1A1A", "#EEEEEE"
 AUDIO, DSP, RENDER, HILITE, SPINE = (
     "#ffd27d", "#7b6fe1", "#ff5a1f", "#22d3ee", "#444444")
@@ -55,7 +55,7 @@ FLOW = [
     ("step", "glctx",        "Create Window + GL Context",    "gpu"),
     ("step", "shader",       "Compile Shader + Texture",      "gpu"),
     ("buf",  "gl_texture",   "Frame Texture · persists",      "gpu"),
-    ("step", "colormap",     "Color Map Init — pre-scan",     "gpu"),
+    ("step", "colormap",     "Color Map Init - pre-scan",     "gpu"),
     # ---- runtime loop (RUNTIME_START) ----
     ("step", "fetch",        "Fetch Audio Samples",           "cpu"),
     ("step", "fft_in",       "FFT Input Signal",              "cpu"),
@@ -134,7 +134,7 @@ class XML:
         return key
 
     def buffer(self, key, label, lane, y):
-        """A memory buffer — drawn as a cylinder so it reads as storage."""
+        """A memory buffer - drawn as a cylinder so it reads as storage."""
         c = LANE_C[lane]
         x = LANE_X[lane] + (LANE_W - BUF_W) // 2
         style = (f"shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;"
@@ -188,7 +188,7 @@ class XML:
 
 def build():
     x = XML()
-    x.text(40, 22, 800, 34, "SubShader — Pipeline Data Flow (Disk · CPU · GPU)",
+    x.text(40, 22, 800, 34, "SubShader - Pipeline Data Flow (Disk · CPU · GPU)",
            size=22)
 
     bottom = _yrow(len(FLOW) - 1) + BUF_H + 24

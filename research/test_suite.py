@@ -1,4 +1,4 @@
-"""SubShader test suite — research, benchmarking, and figure generation.
+"""SubShader test suite - research, benchmarking, and figure generation.
 
 Usage:
     python research/test_suite.py --live-timing      # Profile the live pipeline on a song clip

@@ -43,7 +43,7 @@ def test_library_has_zero_subshader_imports():
         if "subshader" in text:
             offenders.append(str(path.relative_to(DSPLOT_DIR.parent)))
     assert offenders == [], (
-        f"D-01 violation — subshader references found in dsplot library proper: {offenders}"
+        f"D-01 violation - subshader references found in dsplot library proper: {offenders}"
     )
 
 
@@ -54,7 +54,7 @@ def test_global_override_mode():
     try:
         style.PRIMARY_COLOR = "#abcdef"
         assert style.PRIMARY_COLOR == "#abcdef"
-        importlib.reload  # ensure name available; we don't reload — reassignment must persist
+        importlib.reload  # ensure name available; we don't reload - reassignment must persist
         assert style.PRIMARY_COLOR == "#abcdef"
     finally:
         style.PRIMARY_COLOR = original

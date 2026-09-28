@@ -22,7 +22,7 @@ class IntensityTracker:
 
     Holds a single fixed intensity max value set at construction. The value
     is clamped to floor_value to prevent division-by-zero in the shader.
-    update() is a no-op — the reference never adapts during playback.
+    update() is a no-op - the reference never adapts during playback.
     """
 
     def __init__(
@@ -44,7 +44,7 @@ class IntensityTracker:
 
     def update(self, frame: Union[np.ndarray, 'cp.ndarray']) -> float:
         """
-        No-op update — returns the fixed global_max unchanged.
+        No-op update - returns the fixed global_max unchanged.
 
         The frame argument is accepted for interface compatibility with
         CircularFrameBuffer, but is not used.
