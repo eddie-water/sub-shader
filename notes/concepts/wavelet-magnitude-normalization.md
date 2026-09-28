@@ -16,4 +16,4 @@ Applied in [`WaveletKernel.__init__`](../../src/subshader/dsp/wavelet_kernel.py)
 
 ---
 
-**Related:** [Morlet Wavelet](morlet-wavelet.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Intensity Normalization](intensity-normalization.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Morlet Wavelet](morlet-wavelet.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Intensity Normalization](intensity-normalization.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

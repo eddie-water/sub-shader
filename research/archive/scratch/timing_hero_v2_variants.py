@@ -8,7 +8,7 @@ elements. Story: the one-time setup cost buys computational headroom at runtime.
     c_equal    - same-length rows: init vs the ~6 frame budgets it equals
     d_pulse    - init block, then work squares pulsing on an empty timeline
 
-Outputs: archive/scratch-images/timing_hero_v2_{a,b,c,d}.png
+Outputs: research/archive/scratch-images/timing_hero_v2_{a,b,c,d}.png
 """
 import os
 import sys

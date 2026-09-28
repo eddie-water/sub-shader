@@ -17,4 +17,4 @@ Consecutive analysis chunks overlap by design: each `get_chunk()` reads a full `
 
 ---
 
-**Related:** [Real-Time Frame Budget](real-time-frame-budget.md) · [Cone of Influence](cone-of-influence.md) · [AUDIO](../../src/subshader/audio/AUDIO.md) · [MAP](../../MAP.md)
+**Related:** [Real-Time Frame Budget](real-time-frame-budget.md) · [Cone of Influence](cone-of-influence.md) · [AUDIO](../../src/subshader/audio/AUDIO.md) · [MAP](../MAP.md)

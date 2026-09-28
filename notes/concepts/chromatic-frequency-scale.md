@@ -18,4 +18,4 @@ Built by `CWT._generate_chromatic_scale()` in [`cwt.py`](../../src/subshader/dsp
 
 ---
 
-**Related:** [Sampling and Nyquist Limit](sampling-and-nyquist-limit.md) · [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Sampling and Nyquist Limit](sampling-and-nyquist-limit.md) · [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

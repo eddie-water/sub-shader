@@ -14,4 +14,4 @@ Displaying a scrolling history of the last N CWT frames without reallocating mem
 
 ---
 
-**Related:** [Real-Time Frame Budget](real-time-frame-budget.md) · [Intensity Normalization](intensity-normalization.md) · [Colormap and Gamma Correction](colormap-and-gamma-correction.md) · [RENDERER](../../src/subshader/renderer/RENDERER.md) · [MAP](../../MAP.md)
+**Related:** [Real-Time Frame Budget](real-time-frame-budget.md) · [Intensity Normalization](intensity-normalization.md) · [Colormap and Gamma Correction](colormap-and-gamma-correction.md) · [RENDERER](../../src/subshader/renderer/RENDERER.md) · [MAP](../MAP.md)

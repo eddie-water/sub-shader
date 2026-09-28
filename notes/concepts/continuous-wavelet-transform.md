@@ -18,4 +18,4 @@ Implemented in [`CWT`](../../src/subshader/dsp/cwt.py) (base class builds the ke
 
 ---
 
-**Related:** [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Morlet Wavelet](morlet-wavelet.md) · [Convolution and Kernel](convolution-and-kernel.md) · [GPU-Accelerated FFT Convolution](gpu-accelerated-fft-convolution.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Morlet Wavelet](morlet-wavelet.md) · [Convolution and Kernel](convolution-and-kernel.md) · [GPU-Accelerated FFT Convolution](gpu-accelerated-fft-convolution.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

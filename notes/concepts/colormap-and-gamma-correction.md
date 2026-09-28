@@ -18,4 +18,4 @@ The fragment shader runs once per screen pixel per frame with the flattened fram
 
 ---
 
-**Related:** [Intensity Normalization](intensity-normalization.md) · [Circular Frame Buffer](circular-frame-buffer.md) · [RENDERER](../../src/subshader/renderer/RENDERER.md) · [MAP](../../MAP.md)
+**Related:** [Intensity Normalization](intensity-normalization.md) · [Circular Frame Buffer](circular-frame-buffer.md) · [RENDERER](../../src/subshader/renderer/RENDERER.md) · [MAP](../MAP.md)

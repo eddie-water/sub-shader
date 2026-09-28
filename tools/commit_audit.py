@@ -10,12 +10,12 @@ By default filters to the current git user.email. Use --all-authors to
 include everyone, or --author EMAIL to pin a specific author.
 
 Examples:
-    scripts/commit_audit.py
-    scripts/commit_audit.py --start 9 --end 18
-    scripts/commit_audit.py --author edevlin64@gmail.com
-    scripts/commit_audit.py --all-authors
-    scripts/commit_audit.py --diff a4e5f65
-    scripts/commit_audit.py --diff a4e5f65 --stat-only
+    tools/commit_audit.py
+    tools/commit_audit.py --start 9 --end 18
+    tools/commit_audit.py --author edevlin64@gmail.com
+    tools/commit_audit.py --all-authors
+    tools/commit_audit.py --diff a4e5f65
+    tools/commit_audit.py --diff a4e5f65 --stat-only
 """
 
 from __future__ import annotations

@@ -14,4 +14,4 @@ Framed in [DSP §3.4](../../src/subshader/dsp/DSP.md#34-stft-and-the-resolution-
 
 ---
 
-**Related:** [Short-Time Fourier Transform](short-time-fourier-transform.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../../MAP.md)
+**Related:** [Short-Time Fourier Transform](short-time-fourier-transform.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../MAP.md)

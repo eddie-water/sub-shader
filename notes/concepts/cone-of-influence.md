@@ -16,4 +16,4 @@ SubShader uses a uniform (rectangular) keep-region sized by the *widest* wavelet
 
 ---
 
-**Related:** [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Audio Overlap and Hop Size](audio-overlap-and-hop-size.md) · [Real-Time Frame Budget](real-time-frame-budget.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Audio Overlap and Hop Size](audio-overlap-and-hop-size.md) · [Real-Time Frame Budget](real-time-frame-budget.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

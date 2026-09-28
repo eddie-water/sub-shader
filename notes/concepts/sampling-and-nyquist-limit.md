@@ -14,4 +14,4 @@ Covered in [DSP §3.1](../../src/subshader/dsp/DSP.md#31-sampling-rate-and-durat
 
 ---
 
-**Related:** [Basis Functions](basis-functions.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [Chromatic Frequency Scale](chromatic-frequency-scale.md) · [MAP](../../MAP.md)
+**Related:** [Basis Functions](basis-functions.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [Chromatic Frequency Scale](chromatic-frequency-scale.md) · [MAP](../MAP.md)

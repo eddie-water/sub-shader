@@ -18,4 +18,4 @@ One [`WaveletKernel`](../../src/subshader/dsp/wavelet_kernel.py) is built per fr
 
 ---
 
-**Related:** [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Morlet Wavelet](morlet-wavelet.md) · [Chromatic Frequency Scale](chromatic-frequency-scale.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Morlet Wavelet](morlet-wavelet.md) · [Chromatic Frequency Scale](chromatic-frequency-scale.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

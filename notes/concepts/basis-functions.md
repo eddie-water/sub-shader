@@ -14,4 +14,4 @@ Introduced in [DSP §2.6](../../src/subshader/dsp/DSP.md#26-basis-functions---fu
 
 ---
 
-**Related:** [Inner Product and Correlation](inner-product-and-correlation.md) · [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Sampling and Nyquist Limit](sampling-and-nyquist-limit.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Inner Product and Correlation](inner-product-and-correlation.md) · [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Sampling and Nyquist Limit](sampling-and-nyquist-limit.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

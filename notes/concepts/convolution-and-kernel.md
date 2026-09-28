@@ -14,4 +14,4 @@ Convolution is correlation (inner product) computed at every position — slidin
 
 ---
 
-**Related:** [Inner Product and Correlation](inner-product-and-correlation.md) · [Morlet Wavelet](morlet-wavelet.md) · [GPU-Accelerated FFT Convolution](gpu-accelerated-fft-convolution.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Inner Product and Correlation](inner-product-and-correlation.md) · [Morlet Wavelet](morlet-wavelet.md) · [GPU-Accelerated FFT Convolution](gpu-accelerated-fft-convolution.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

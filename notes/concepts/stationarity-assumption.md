@@ -12,4 +12,4 @@ Covered in [DSP §3.3](../../src/subshader/dsp/DSP.md#33-the-stationarity-assump
 
 ---
 
-**Related:** [Short-Time Fourier Transform](short-time-fourier-transform.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Short-Time Fourier Transform](short-time-fourier-transform.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

@@ -17,4 +17,4 @@ Covered in [DSP §3.4](../../src/subshader/dsp/DSP.md#34-stft-and-the-resolution
 
 ---
 
-**Related:** [Stationarity Assumption](stationarity-assumption.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../../MAP.md)
+**Related:** [Stationarity Assumption](stationarity-assumption.md) · [Time-Frequency Resolution Tradeoff](time-frequency-resolution-tradeoff.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../MAP.md)

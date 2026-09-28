@@ -18,4 +18,4 @@ Constructed in [`WaveletKernel`](../../src/subshader/dsp/wavelet_kernel.py) as `
 
 ---
 
-**Related:** [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Wavelet Magnitude Normalization](wavelet-magnitude-normalization.md) · [Convolution and Kernel](convolution-and-kernel.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Mother Wavelet and Scaling](mother-wavelet-and-scaling.md) · [Wavelet Magnitude Normalization](wavelet-magnitude-normalization.md) · [Convolution and Kernel](convolution-and-kernel.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

@@ -22,4 +22,4 @@ Running the full wavelet bank's FFT convolution against every audio chunk is the
 
 ---
 
-**Related:** [Convolution and Kernel](convolution-and-kernel.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Real-Time Frame Budget](real-time-frame-budget.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../../MAP.md)
+**Related:** [Convolution and Kernel](convolution-and-kernel.md) · [Continuous Wavelet Transform](continuous-wavelet-transform.md) · [Real-Time Frame Budget](real-time-frame-budget.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../MAP.md)

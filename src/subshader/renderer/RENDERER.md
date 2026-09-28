@@ -131,4 +131,4 @@ Shader files:
 
 ---
 
-**Related:** [MAP](../../../MAP.md) · [DSP](../dsp/DSP.md) · [AUDIO](../audio/AUDIO.md) · [TIMING](../../../assets/timing/TIMING.md) · [Circular Frame Buffer](../../../notes/concepts/circular-frame-buffer.md) · [Intensity Normalization](../../../notes/concepts/intensity-normalization.md)
+**Related:** [MAP](../../../notes/MAP.md) · [DSP](../dsp/DSP.md) · [AUDIO](../audio/AUDIO.md) · [TIMING](../../../assets/timing/TIMING.md) · [Circular Frame Buffer](../../../notes/concepts/circular-frame-buffer.md) · [Intensity Normalization](../../../notes/concepts/intensity-normalization.md)

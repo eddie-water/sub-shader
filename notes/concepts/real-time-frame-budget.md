@@ -19,4 +19,4 @@ Measured in [TIMING.md](../../assets/timing/TIMING.md#process-loop); per-stage t
 
 ---
 
-**Related:** [GPU-Accelerated FFT Convolution](gpu-accelerated-fft-convolution.md) · [Circular Frame Buffer](circular-frame-buffer.md) · [Audio Overlap and Hop Size](audio-overlap-and-hop-size.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../../MAP.md)
+**Related:** [GPU-Accelerated FFT Convolution](gpu-accelerated-fft-convolution.md) · [Circular Frame Buffer](circular-frame-buffer.md) · [Audio Overlap and Hop Size](audio-overlap-and-hop-size.md) · [TIMING](../../assets/timing/TIMING.md) · [MAP](../MAP.md)

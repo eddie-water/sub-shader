@@ -54,4 +54,4 @@ concept notes.
 
 ---
 
-**Related:** [MAP](../MAP.md) · [DSP](../src/subshader/dsp/DSP.md) · [RENDERER](../src/subshader/renderer/RENDERER.md)
+**Related:** [MAP](MAP.md) · [DSP](../src/subshader/dsp/DSP.md) · [RENDERER](../src/subshader/renderer/RENDERER.md)

@@ -14,4 +14,4 @@ Foundational math in [DSP §2](../../src/subshader/dsp/DSP.md#2-foundations) (In
 
 ---
 
-**Related:** [Basis Functions](basis-functions.md) · [Convolution and Kernel](convolution-and-kernel.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../../MAP.md)
+**Related:** [Basis Functions](basis-functions.md) · [Convolution and Kernel](convolution-and-kernel.md) · [DSP](../../src/subshader/dsp/DSP.md) · [MAP](../MAP.md)

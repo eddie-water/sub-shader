@@ -15,4 +15,4 @@ Computed by a pipeline pre-scan before the render loop starts, consumed per-fram
 
 ---
 
-**Related:** [Wavelet Magnitude Normalization](wavelet-magnitude-normalization.md) · [Colormap and Gamma Correction](colormap-and-gamma-correction.md) · [Circular Frame Buffer](circular-frame-buffer.md) · [RENDERER](../../src/subshader/renderer/RENDERER.md) · [MAP](../../MAP.md)
+**Related:** [Wavelet Magnitude Normalization](wavelet-magnitude-normalization.md) · [Colormap and Gamma Correction](colormap-and-gamma-correction.md) · [Circular Frame Buffer](circular-frame-buffer.md) · [RENDERER](../../src/subshader/renderer/RENDERER.md) · [MAP](../MAP.md)
