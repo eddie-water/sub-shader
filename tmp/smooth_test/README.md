@@ -1,10 +1,18 @@
 # TEMP — smooth playback test (delete before merge)
 
-Avril 14th, 30–50 s. Tap a link to play it in your browser:
+Avril 14th, 30–50 s. The side-by-side one has text labels burned in (top: current 5.4 fps, bottom: smooth 60 fps). The other two are the smooth 60 fps and 30 fps clips on their own.
 
-- ▶️ [**Side by side** — top: current (5.4 fps), bottom: smooth (60 fps)](https://github.com/eddie-water/sub-shader/raw/gsd/phase-08-codebase-refactoring-and-module-cleanup/tmp/smooth_test/smooth_compare.mp4)
-- ▶️ [Smooth 60 fps](https://github.com/eddie-water/sub-shader/raw/gsd/phase-08-codebase-refactoring-and-module-cleanup/tmp/smooth_test/smooth_60fps.mp4)
-- ▶️ [Smooth 30 fps](https://github.com/eddie-water/sub-shader/raw/gsd/phase-08-codebase-refactoring-and-module-cleanup/tmp/smooth_test/smooth_30fps.mp4)
+### Clip 1
+
+https://github.com/user-attachments/assets/a8f7c64e-81c1-4a92-8d07-d02aa7634f82
+
+### Clip 2
+
+https://github.com/user-attachments/assets/0f080c99-9044-4b30-b43c-c0d5aa500ac3
+
+### Clip 3
+
+https://github.com/user-attachments/assets/e3ec2a37-d304-47d0-9243-78d3ad9e1a3b
 
 Same moment in all three — left: current, middle: 30 fps, right: 60 fps (same look, only the motion changes):
 
