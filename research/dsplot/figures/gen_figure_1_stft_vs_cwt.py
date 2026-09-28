@@ -1,12 +1,12 @@
-"""Figure 1 — Fourier vs Wavelet Analysis motivator (dsplot rebuild).
+"""Figure 1 - Fourier vs Wavelet Analysis motivator (dsplot rebuild).
 
 Same content as the old `motivator.py::section1`, rebuilt with the dsplot
 Panel/Plottable framework. Three vertically stacked panels share a 0–2 s
 time axis:
 
-  Row 1 — chirp time-series (TimeSeriesPanel + TimeSeries)
-  Row 2 — STFT magnitude (HeatmapPanel + Heatmap, log-spaced bins)
-  Row 3 — CWT magnitude  (HeatmapPanel + Heatmap, log-spaced bins)
+  Row 1 - chirp time-series (TimeSeriesPanel + TimeSeries)
+  Row 2 - STFT magnitude (HeatmapPanel + Heatmap, log-spaced bins)
+  Row 3 - CWT magnitude  (HeatmapPanel + Heatmap, log-spaced bins)
 
 Data prep mirrors the old motivator: 2.36 s chirp spline → compute_full_cwt
 trims the chunk-boundary edge-effect regions (~175 ms each side) →
@@ -39,6 +39,7 @@ from .. import (
     nb_compact_style,
     style,
 )
+from ..export import crop_to_content
 from utilities import compute_full_cwt
 from utilities.dsp_helpers import (
     build_waypoint_chirp,
@@ -49,19 +50,19 @@ from utilities.dsp_helpers import (
 
 
 # ============================================================
-# Chirp design (mirrors motivator.py::section1 — DO NOT CHANGE without
+# Chirp design (mirrors motivator.py::section1 - DO NOT CHANGE without
 # re-tuning duration_s / trim accounting; see comments below).
 # ============================================================
 SR = 44100
 DURATION_S = 2.36
 WAYPOINTS: tuple[tuple[float, float], ...] = (
     (0.00, 50.0),
-    (0.05, 22.0),      # sub-trim — bleeds 22 Hz CWT energy into the left edge
+    (0.05, 22.0),      # sub-trim - bleeds 22 Hz CWT energy into the left edge
     (0.18, 800.0),     # peak 1
-    (0.32, 60.0),      # deep dip — the only intentional STFT-smearing trough
+    (0.32, 60.0),      # deep dip - the only intentional STFT-smearing trough
     (0.55, 12000.0),   # peak 2
     (0.75, 2000.0),    # modest trough (above STFT smear threshold)
-    (1.00, 25000.0),   # tail-trim — clean off-screen ascent
+    (1.00, 25000.0),   # tail-trim - clean off-screen ascent
 )
 DISPLAY_FREQ_LIM_HZ = (20.0, 21500.0)
 DISPLAY_FREQ_TICKS = (200, 2000, 20000)
@@ -101,42 +102,42 @@ ROW_GUTTER_INCHES = 1.0
 # Suptitle gets a full 1.4" top reserve (matches earlier passes).
 TOP_RESERVE_INCHES = 1.4
 # Bottom reserve hosts the "Figure 1" footer SuptitlePanel. Sized like the
-# suptitle row — short single-line band at the bottom of the figure.
+# suptitle row - short single-line band at the bottom of the figure.
 BOTTOM_RESERVE_INCHES = 0.6
-# Default footer text — shown as a bottom-positioned SuptitlePanel.
+# Default footer text - shown as a bottom-positioned SuptitlePanel.
 FOOTER_TEXT = "Figure 1"
 
 # ============================================================
-# Hero — bouncy chirp (200 → 60 → 1.8k → 70 → 20k Hz) + broadband click
-# at midpoint. Same STFT/CWT analysis as v8 — only the signal varies.
+# Hero - bouncy chirp (200 → 60 → 1.8k → 70 → 20k Hz) + broadband click
+# at midpoint. Same STFT/CWT analysis as v8 - only the signal varies.
 #
 # Story: starts at 200 Hz where STFT resolves fine, dips to 60/70 Hz where
 # STFT smears but CWT tracks the contour, peaks at 1.8 kHz, ends smooth at
 # 20 kHz. A 5 ms broadband click at t=0.5·duration adds an abrupt transient
 # that STFT averages away (window ≫ click) and CWT shows as a vertical
-# streak — showcases contour tracking AND transient localization in one
+# streak - showcases contour tracking AND transient localization in one
 # figure.
 # ============================================================
 HERO_DURATION_S = 2.36  # build duration; ~2.0 visible after v8-style CWT trim + ZC snap
 HERO_WAYPOINTS: tuple[tuple[float, float], ...] = (
     (0.00, 5500.0),     # boundary: trim brings visible-start down to ~1.9 kHz
-    (0.55, 180.0),      # mid-signal dip — spline undershoots to ~98 Hz visible (32 ms CWT lag)
-    (0.85, 13000.0),    # intermediate ascent anchor — controls climb rate so the visible right edge actually reaches ~20 kHz
+    (0.55, 180.0),      # mid-signal dip - spline undershoots to ~98 Hz visible (32 ms CWT lag)
+    (0.85, 13000.0),    # intermediate ascent anchor - controls climb rate so the visible right edge actually reaches ~20 kHz
     (1.00, 27000.0),    # tail-trim: overshoot display ceiling, the steepest spline portion gets eaten by CWT trim, leaving visible right edge at ~21 kHz
 )
 HERO_CLICK_T_FRAC = 0.525   # places cluster centre near the 1.0 s tick (trim offset ≈ 0.233 s)
-HERO_CLICK_DURATION_S = 0.008      # 8 ms FWHM per click — narrow envelope keeps each burst's spectrum flat
+HERO_CLICK_DURATION_S = 0.008      # 8 ms FWHM per click - narrow envelope keeps each burst's spectrum flat
 HERO_CLICK_AMP = 7.0               # well above chirp peak so each click reads bright in CWT
 HERO_CHIRP_AMP = 2.0               # multiplier applied to chirp post-build; click normalization uses the pre-amp peak so the click absolute level is unchanged when this knob is raised
-HERO_CLICK_COUNT = 5               # N broadband bursts in the cluster — STFT smears into one blob, CWT resolves each
+HERO_CLICK_COUNT = 5               # N broadband bursts in the cluster - STFT smears into one blob, CWT resolves each
 HERO_CLICK_SPACING_S = 0.020       # 20 ms between cluster members
 HERO_MIRROR_PAD_S = 0.20           # symmetric mirror pad applied to BOTH STFT & CWT input
-HERO_PANEL_UNITS = (3, 1)          # data panel is 3 units wide; label sits beside it (1 unit) — total row width = 4
+HERO_PANEL_UNITS = (3, 1)          # data panel is 3 units wide; label sits beside it (1 unit) - total row width = 4
 HERO_DISPLAY_FREQ_LIM_HZ: tuple[float, float] = (20.0, 21500.0)
 HERO_DISPLAY_FREQ_TICKS: tuple[int, ...] = (20, 200, 2000, 20000)
 
 # ============================================================
-# Anti-hero — on hold; see project_figure_1.md memory for design state.
+# Anti-hero - on hold; see project_figure_1.md memory for design state.
 # ============================================================
 ANTIHERO_DURATION_S = 1.5
 ANTIHERO_CARRIER_HZ = 60.0
@@ -144,25 +145,25 @@ ANTIHERO_DEPTH_HZ = 20.0
 ANTIHERO_MOD_HZ = 8.0
 
 # ============================================================
-# Contender — low-frequency visible-cycles chirp, waypoint-spline contour
+# Contender - low-frequency visible-cycles chirp, waypoint-spline contour
 # (mid → dip → climb, kept within ~200 Hz). Hybrid of the v8/hero figure
 # (same `build_waypoint_chirp` spline) and the visible-cycles aesthetic: the
 # frequency stays low enough that individual oscillations are visible in the
 # time-series, with the bright orange PRIMARY_COLOR inst-freq overlay (not
 # the gold INST_FREQ_COLOR the v8/hero rows use).
 #
-# Story: an ASYMMETRIC low-valley chirp on log-frequency — dip low EARLY, hold long,
+# Story: an ASYMMETRIC low-valley chirp on log-frequency - dip low EARLY, hold long,
 # rise high LATE. It starts high (~1 kHz) but dips fast right away to a flat floor
 # (~38 Hz) it reaches by ~20% across, HOLDS that floor for ~1.4 s so the low
 # frequencies stay visible a long while (slow, readable time-series cycles + a clean
 # low CWT line), then ramps back UP to high only near the end. The flat valley is a
 # CONSTANT low tone, which the CWT draws as a crisp horizontal line (the smudge only
-# comes from MOVING through low f — the early descent is clean, and the late ascent is
+# comes from MOVING through low f - the early descent is clean, and the late ascent is
 # eased just enough not to fan). The STFT's fixed window blurs the
 # fast-moving high ends of the U, while the CWT keeps the whole curve crisp. The
 # endpoints overshoot above the display top (1.6 kHz) because the CWT trim eats
 # time off both edges, landing the visible ends near 1 kHz.
-# STFT/CWT analysis settings are unchanged from v8 — only the signal varies.
+# STFT/CWT analysis settings are unchanged from v8 - only the signal varies.
 # ============================================================
 CONTENDER_DURATION_S = 2.62   # build duration; ~2.0 s visible after CWT trim (~0.44 s front, ~0.17 s back) + ZC snap
 # --- Oscillating log sweep (current contender shape) ----------------------------
@@ -172,9 +173,9 @@ CONTENDER_DURATION_S = 2.62   # build duration; ~2.0 s visible after CWT trim (~
 # undulating ribbon instead of one obvious symmetric fan. Built via
 # build_log_sweep_oscillating(); replaces the bull-horn waypoint shape below
 # (kept for reference / quick A-B).
-CONTENDER_SWEEP_F_START = 24.0    # build-time start (Hz); really low — slow, readable cycles
+CONTENDER_SWEEP_F_START = 24.0    # build-time start (Hz); really low - slow, readable cycles
 CONTENDER_SWEEP_F_END = 650.0     # build-time end (Hz); high but not so high the right half packs solid
-CONTENDER_SWEEP_OSC_OCTAVES = 0.0   # clean log sweep — no wobble (decramps the time series)
+CONTENDER_SWEEP_OSC_OCTAVES = 0.0   # clean log sweep - no wobble (decramps the time series)
 CONTENDER_SWEEP_N_OSC = 3.0       # (unused while OSC_OCTAVES = 0)
 CONTENDER_SWEEP_OSC_PHASE = 0.0   # wobble phase offset (radians)
 CONTENDER_SWEEP_OSC_DECAY = 0.0   # (unused while OSC_OCTAVES = 0)
@@ -182,7 +183,7 @@ CONTENDER_SWEEP_RAMP_POWER = 5.2  # >1 dwells low; hugs the ~24 Hz floor well pa
 
 CONTENDER_WAYPOINTS: tuple[tuple[float, float], ...] = (
     # "Bull horns": high on both ends, a long FLAT low valley, AGGRESSIVE steep walls.
-    # Built with interp="pchip" (shape-preserving) — CubicSpline overshoots violently
+    # Built with interp="pchip" (shape-preserving) - CubicSpline overshoots violently
     # on walls this steep (horns rocket off-screen, valley sags). PCHIP holds the horn
     # tips at their waypoint value (no rocket) and the equal-valued valley points flat
     # (no sag), so the walls can be near-vertical cleanly.
@@ -190,9 +191,9 @@ CONTENDER_WAYPOINTS: tuple[tuple[float, float], ...] = (
     (0.000, 1120.0), # brief high start
     (0.180, 1080.0), # hold high only briefly, then DIP early
     (0.300,   38.0), # bottom of the early descent wall (reaches the floor by ~20% of view)
-    (0.550,   38.0), # flat valley floor (~38 Hz held — low freqs visible ~1.4 s, slow cycles)
+    (0.550,   38.0), # flat valley floor (~38 Hz held - low freqs visible ~1.4 s, slow cycles)
     (0.780,   38.0), # valley held long, well past center
-    (0.940, 1100.0), # LATE ascent — rises high only near the visible end (eased so no fan)
+    (0.940, 1100.0), # LATE ascent - rises high only near the visible end (eased so no fan)
     (1.000, 1120.0), # high end
 )
 # Ceiling raised to ~1.5 kHz so the high-band click cluster floats in clear space
@@ -201,7 +202,7 @@ CONTENDER_WAYPOINTS: tuple[tuple[float, float], ...] = (
 # cone out toward the bottom (the CWT's 1/f time resolution warps it into a fan);
 # band-limiting the clicks to a HIGH band keeps the CWT response a clean, near-
 # vertical tick with no low-frequency fan. The CWT's transient advantage still
-# reads — its short support at 750 Hz resolves each tick, while the STFT's fixed
+# reads - its short support at 750 Hz resolves each tick, while the STFT's fixed
 # ~100 ms window smears the whole cluster into one time-blurred blob.
 CONTENDER_DISPLAY_FREQ_LIM_HZ: tuple[float, float] = (9.0, 1500.0)
 CONTENDER_DISPLAY_FREQ_TICKS: tuple[int, ...] = (10, 100, 1000)
@@ -220,38 +221,38 @@ CONTENDER_PANEL_UNITS = (3, 1)
 # ridge more but raise the floor (50 ms → 20 Hz clipped the dip's skirt flat; 23 ms
 # → ~43 Hz blinds the STFT to the dip AND starts resolving the clicks). Longer
 # (≥110 ms) would clear the 9 Hz display bottom entirely but thins the ridge. CWT is
-# window-independent (constant-Q) — smooth low contour, resolved ticks, full reach.
+# window-independent (constant-Q) - smooth low contour, resolved ticks, full reach.
 CONTENDER_STFT_NPERSEG = 3528
 # High-band click CLUSTER: N short Gabor atoms (Gaussian-windowed tone bursts)
 # centered well ABOVE the chirp ribbon, so they read as crisp vertical ticks
-# floating in clear space — NOT broadband cones rooted in the ribbon. A broadband
+# floating in clear space - NOT broadband cones rooted in the ribbon. A broadband
 # click must cone out at low frequency (the CWT's 1/f resolution fans it into a
 # warp); band-limiting it to a high band keeps the CWT response a clean tick with
 # no low-f fan. The 2 ms FWHM envelope is sharp in time (CWT crisp, STFT smears)
 # and gives a frequency footprint around the carrier. The ticks are spaced 28 ms
-# apart — far below the STFT's ~100 ms time resolution, so Fourier FUSES them into
+# apart - far below the STFT's ~100 ms time resolution, so Fourier FUSES them into
 # one blurred blob, while the CWT (short support at 750 Hz) RESOLVES each. Cluster
 # centre is in DISPLAY time (x-axis seconds), converted to build time in
 # _prepare_contender via the CWT-trim + ZC-snap offset.
 CONTENDER_CLICK_CENTER_S = 1.0       # cluster centre on the rendered x-axis
 CONTENDER_CLICK_COUNT = 5            # ticks in the cluster
-CONTENDER_CLICK_SPACING_S = 0.028    # 28 ms apart — CWT splits; still << 100 ms STFT window, so STFT fuses
-CONTENDER_CLICK_CARRIER_HZ = 750.0   # tone-burst carrier — floats clear above the ~160 Hz ribbon
-CONTENDER_CLICK_DURATION_S = 0.003   # 3 ms FWHM — a touch wider in time (fatter tick), still CWT-crisp
+CONTENDER_CLICK_SPACING_S = 0.028    # 28 ms apart - CWT splits; still << 100 ms STFT window, so STFT fuses
+CONTENDER_CLICK_CARRIER_HZ = 750.0   # tone-burst carrier - floats clear above the ~160 Hz ribbon
+CONTENDER_CLICK_DURATION_S = 0.003   # 3 ms FWHM - a touch wider in time (fatter tick), still CWT-crisp
 # × chirp peak. Band-concentrated energy reads bright per-bin, so this is
-# moderate — enough that the ticks sit clearly above the dB floor without blowing
+# moderate - enough that the ticks sit clearly above the dB floor without blowing
 # out. vmax stays pinned to the chirp ridge (see _prepare_contender) so the chirp
 # keeps its brightness and the ticks ride the scale as accents.
 CONTENDER_CLICK_AMP = 12.0
 # Spectrograms are displayed in dB (log magnitude) referenced to the chirp
 # ridge (0 dB). dB compresses the wide dynamic range so the strong tonal chirp
-# AND the weak broadband clicks are both visible — the standard reason audio
+# AND the weak broadband clicks are both visible - the standard reason audio
 # spectrograms are shown in dB. This floor is the darkest level shown (vmin);
 # anything quieter clamps to black. Raise toward 0 to hide more of the floor.
 CONTENDER_DB_FLOOR = -18.0
 # Audio-panel y-axis is pinned to ±(chirp peak × this) so the ramping sine
 # FILLS the time-series plot like the clickless version. The clicks (many×
-# louder) shoot past and clip cleanly at the frame edges — reading as abrupt
+# louder) shoot past and clip cleanly at the frame edges - reading as abrupt
 # transient markers without crushing the chirp's visible cycles. Decouples the
 # click loudness (which drives spectrogram brightness) from the waveform's look.
 CONTENDER_TS_YLIM_PAD = 1.04
@@ -279,7 +280,7 @@ CONTENDER_ROW3_CAPTION = (
 # references it.
 CONTENDER_CAPTION_FONT_SIZE = 44
 # Tight-padding profile scoped to the contender (the user signed off on this
-# look for figure 1 only — NOT yet promoted to style.py defaults, which would
+# look for figure 1 only - NOT yet promoted to style.py defaults, which would
 # retighten every figure). PAD 1.5 → 0.7 grows the plot's cell-fill from ~57%
 # to ~74%; axis-label insets sit close to the cell border so the "Hz"/"s"
 # labels read as "just enough room". Applied via a temporary style override
@@ -288,7 +289,7 @@ CONTENDER_TIGHT_STYLE = {
     "DEFAULT_PAD_INCHES": 0.4,
     # Cell-border weight scaled to THIS figure's width so it reads at 2.4.1's
     # border thickness when each figure is viewed at a common display width
-    # (the cross-figure border rule — wider canvas needs a heavier pt line to
+    # (the cross-figure border rule - wider canvas needs a heavier pt line to
     # look equally thick). Fig 1 is ~46.8" wide vs 241's 31.1" reference, so
     # 3.0 × 46.8/31.1 ≈ 4.5pt. (Base 3.0 lives in style.DEFAULT_FRAME_LINEWIDTH.)
     "DEFAULT_FRAME_LINEWIDTH": 4.5,
@@ -300,14 +301,14 @@ CONTENDER_TIGHT_STYLE = {
     # fills to the figure edge independently of the margin.
     "DEFAULT_MARGIN_INCHES": 0.25,
     # Soft white (#EEEEEE = NEUTRAL_COLOR, the template-showcase white) for
-    # EVERYTHING — one consistent value. TICK_LABEL_COLOR drives tick labels,
+    # EVERYTHING - one consistent value. TICK_LABEL_COLOR drives tick labels,
     # axis labels, panel titles, captions, heatmap labels AND the row-1
     # time-series waveform (passed the same constant). SUPTITLE_COLOR (bound
     # separately at import) covers the suptitle + footer. SPINE_COLOR whitens
     # the plot box around each panel to match the cell-border rectangles
     # (already drawn in NEUTRAL_COLOR).
-    "TICK_LABEL_COLOR": "#EEEEEE",
-    "SUPTITLE_COLOR": "#EEEEEE",
+    "TICK_LABEL_COLOR": style.NEUTRAL_COLOR,
+    "SUPTITLE_COLOR": style.NEUTRAL_COLOR,
     # No plot box: spines invisible so each plot reads as bare content (heatmap
     # tick marks use TICK_LABEL_COLOR, so they survive). Drives host AND twin
     # spines across every panel in one knob.
@@ -315,7 +316,7 @@ CONTENDER_TIGHT_STYLE = {
     # Tick numbers + axis labels grow WITH the (now larger) caption so the axis
     # chrome and body text stay one type system. The caption is a figure-1-local
     # override (CONTENDER_CAPTION_FONT_SIZE), so the label sizes are local here
-    # too — NOT bumped in shared style.py, which would grow the other figures'
+    # too - NOT bumped in shared style.py, which would grow the other figures'
     # labels without their boxes/captions growing. Relationship preserved from the
     # shared defaults: tick numbers == caption size; axis label ≈ 1.2× tick (the
     # dominant label voice). The taller 2-unit plots have ample room for the 3
@@ -373,7 +374,7 @@ def _prepare() -> dict:
         signal, SR, root_note_hz=cwt_root_hz, num_octaves=num_octaves
     )
 
-    # Trim + re-zero — discards CWT edge-effect regions; all three panels
+    # Trim + re-zero - discards CWT edge-effect regions; all three panels
     # share x ∈ [0, trimmed_duration] with no edge gaps.
     signal = signal[start_sample:end_sample]
     inst_freq = inst_freq[start_sample:end_sample]
@@ -382,7 +383,7 @@ def _prepare() -> dict:
     else:
         t = t[:0]
 
-    # Zero-crossing snap — removes the boundary slab that fill_between
+    # Zero-crossing snap - removes the boundary slab that fill_between
     # otherwise draws at t=0 (because trim leaves signal[0] at arbitrary
     # phase). Shift is ≤ half a cycle, imperceptible against the 2.0 s panel.
     if len(signal) > 1:
@@ -416,7 +417,7 @@ def _stft_on_log_bins(signal: np.ndarray, sr: int, log_freqs: np.ndarray,
 
     ``nperseg`` (when given) sets the STFT window length in samples directly.
     A LONGER window lowers the STFT frequency floor (= sr/nperseg) so the
-    transform reaches lower frequencies — at the cost of time resolution
+    transform reaches lower frequencies - at the cost of time resolution
     (the window spans nperseg/sr seconds). When None, falls back to the v8
     auto value (≤1024) for apples-to-apples with the legacy chirp path.
     """
@@ -464,7 +465,7 @@ def _stft_visible_window(signal: np.ndarray, sr: int, log_freqs: np.ndarray,
     """Compute STFT on `signal` (the full padded buffer) and slice time bins to
     the visible window [t_start_s, t_end_s] before resampling onto `log_freqs`.
 
-    Same STFT settings as `_stft_on_log_bins` — apples-to-apples with the
+    Same STFT settings as `_stft_on_log_bins` - apples-to-apples with the
     visible-signal STFT path; only the analysed buffer is wider.
     """
     from scipy.signal import stft as scipy_stft
@@ -498,11 +499,11 @@ def _row_label_panel(title: str, caption: str,
     only inner TextPanel. Both inherit current style.* values lazily so
     the notebook compact profile reshapes them automatically.
 
-    ``caption_font_size`` (when set) PINS the caption to a fixed size — pass
+    ``caption_font_size`` (when set) PINS the caption to a fixed size - pass
     the same value for every row so all captions render at one uniform size
     instead of auto-shrinking to a different size per text length.
     """
-    # EXACT match of sample_template._r3_jargon_panel — that pattern works.
+    # EXACT match of sample_template._r3_jargon_panel - that pattern works.
     # show_ghost_border=True is the key: the library already extends the
     # content rect OUT to the cell border (by style.DEFAULT_PAD_INCHES) and
     # insets it by 1/8 of cell width.
@@ -561,7 +562,7 @@ def _build_3row_figure(
 
     STFT/CWT analysis settings are held identical across callers (see
     `_stft_on_log_bins` and the v8 `compute_full_cwt` defaults) so figures
-    differ only by their input signal — apples-to-apples comparison.
+    differ only by their input signal - apples-to-apples comparison.
 
     If ``data["stft_mag_log"]`` is present (caller pre-computed STFT, e.g.
     for mirror-padded analysis), it is used directly. Otherwise STFT is
@@ -621,7 +622,7 @@ def _build_3row_figure(
         units=panel_units,
         x_label=row_x_label,
         xticks=xticks,
-        # Time axis is shared across all 3 rows — by default only row 3 owns
+        # Time axis is shared across all 3 rows - by default only row 3 owns
         # the x-tick labels at the figure bottom (showing them on row 1 too
         # eats the chrome zone between rows 1 and 2). Set
         # ``show_xticklabels_all_rows=True`` to give every plot its own time
@@ -660,7 +661,7 @@ def _build_3row_figure(
         x_label=row_x_label,
         y_label="Hz",
         xticks=xticks,
-        # Shared time axis — row 3 owns x-tick labels by default (see row1).
+        # Shared time axis - row 3 owns x-tick labels by default (see row1).
         show_xticklabels=show_xticklabels_all_rows,
     )
     row2.add(Heatmap(
@@ -691,7 +692,7 @@ def _build_3row_figure(
         vmax=data.get("cwt_vmax"),
     ))
 
-    # Row labels: CompositePanel(title, [[TextPanel(caption)]]) — title sits
+    # Row labels: CompositePanel(title, [[TextPanel(caption)]]) - title sits
     # in the panel's chrome zone above the cell, caption fills the cell body.
     # Same structure as `sample_template._r3_jargon_panel` so the row labels
     # read with consistent typography across the library.
@@ -702,13 +703,13 @@ def _build_3row_figure(
     label2 = _row_label_panel(ROW2_TITLE, cap2, caption_font_size)
     label3 = _row_label_panel(ROW3_TITLE, cap3, caption_font_size)
 
-    # Row 0 — top SuptitlePanel spanning the full row width.
+    # Row 0 - top SuptitlePanel spanning the full row width.
     total_row_width = LABEL_PANEL_UNITS[0] + panel_units[0]
     suptitle_row: list = [
         SuptitlePanel(suptitle or "", units=(total_row_width, 1))
     ]
 
-    # Row 4 — bottom footer SuptitlePanel spanning the full row width. Same
+    # Row 4 - bottom footer SuptitlePanel spanning the full row width. Same
     # styling as the top suptitle (SUPTITLE_* style family); positioned at
     # the bottom by virtue of being the last row in the gridspec.
     footer_row: list = [
@@ -716,7 +717,7 @@ def _build_3row_figure(
     ]
 
     # Pass hspace ONLY when caller explicitly overrides row_gutter_inches.
-    # Otherwise let compose derive hspace from style.DEFAULT_GUTTER_INCHES —
+    # Otherwise let compose derive hspace from style.DEFAULT_GUTTER_INCHES -
     # this is critical because Panel._render_chrome_titles uses the STYLE
     # gutter for chrome title placement; if the actual gridspec gutter
     # diverges from the style gutter (via an hspace_override), title text
@@ -746,7 +747,7 @@ def _build_3row_figure(
         dpi=dpi,
         unit_inches=unit_inches,
         unit_height_inches=unit_height_inches,
-        # Same lego-kitchen-sink chrome as figure 2.4.1 — subtle gray rect
+        # Same lego-kitchen-sink chrome as figure 2.4.1 - subtle gray rect
         # around each cell makes the layout structure visually explicit.
         show_cell_borders=True,
         # debug=True overlays layout guide lines + red brackets above/below
@@ -792,14 +793,14 @@ def show() -> Figure:
 
 def _prepare_hero() -> dict:
     """Hero pipeline: bouncy chirp + broadband click. Mirrors v8 `_prepare()`
-    pattern — only the signal differs.
+    pattern - only the signal differs.
 
     1. Build chirp from HERO_WAYPOINTS (200 → 60 → 1.8k → 70 → 20k Hz) over
        HERO_DURATION_S (2.36 s build → ~2.0 s visible after trim + ZC snap).
     2. Add a Gaussian-windowed broadband white-noise click at midpoint.
     3. CWT via compute_full_cwt; trim + zero-crossing snap (same as v8).
        STFT is computed downstream in `_build_3row_figure` on the same
-       visible signal — apples-to-apples with v8 and with whatever future
+       visible signal - apples-to-apples with v8 and with whatever future
        anti-hero we land on.
     """
     chirp_signal, inst_freq, t_chirp = build_waypoint_chirp(
@@ -871,7 +872,7 @@ def _prepare_antihero() -> dict:
 
     Mirrors the structure of `_prepare()`. Returns the same bundle dict.
     CWT bank covers the full 20-21500 Hz range (same as v8/hero).
-    Tighter display narrowing is a v2 task — see TODO below.
+    Tighter display narrowing is a v2 task - see TODO below.
     """
     signal, inst_freq, t = build_low_vibrato(
         SR, ANTIHERO_DURATION_S,
@@ -945,12 +946,12 @@ def _build_hero_figure(
 
 
 def _build_antihero_figure() -> Figure:
-    # On hold per user direction — defaults match v8 (apples-to-apples).
+    # On hold per user direction - defaults match v8 (apples-to-apples).
     data = _prepare_antihero()
     return _build_3row_figure(
         data,
         xticks=_auto_xticks(data["duration_s"]),
-        suptitle="Anti-hero — TBD",
+        suptitle="Anti-hero - TBD",
         footer=FOOTER_TEXT,
     )
 
@@ -985,7 +986,7 @@ def _to_db(mag: np.ndarray, ref: float, floor_db: float) -> np.ndarray:
     """Magnitude → dB referenced to `ref` (0 dB == ref), clamped at `floor_db`.
 
     20·log10(mag/ref): the chirp ridge (mag ≈ ref) lands near 0 dB and stays
-    bright, while broadband clicks — far below ref per-bin — lift off the floor
+    bright, while broadband clicks - far below ref per-bin - lift off the floor
     instead of vanishing the way they do on a linear scale.
     """
     mag = np.abs(np.asarray(mag, dtype=np.float64))
@@ -998,7 +999,7 @@ def _prepare_contender() -> dict:
     kept within ~10-100 Hz) PLUS short broadband clicks. The chirp is the
     time-frequency contour; the clicks are sharp transients that expose the
     time-resolution half of the STFT-vs-CWT tradeoff. Mirrors v8 `_prepare()`
-    — only the signal differs.
+    - only the signal differs.
     """
     chirp_signal, inst_freq, t = build_log_sweep_oscillating(
         SR, CONTENDER_DURATION_S,
@@ -1019,7 +1020,7 @@ def _prepare_contender() -> dict:
 
     # Chirp-referenced 0 dB level: take the chirp-ALONE ridge magnitude as the
     # 0 dB reference for each panel so the bright end of the dB colormap tracks
-    # the chirp — NOT the broadband clicks. The chirp ridge then stays pinned
+    # the chirp - NOT the broadband clicks. The chirp ridge then stays pinned
     # bright regardless of click loudness, while the clicks lift off the dB
     # floor (see _to_db / CONTENDER_DB_FLOOR). 99.5th percentile (not max) so a
     # lone hot pixel doesn't set the reference.
@@ -1085,7 +1086,7 @@ def _prepare_contender() -> dict:
             # slicing. Indexing the hop-rate array with raw sample indices chops
             # hundreds of columns off the left and slides the whole scalogram out
             # of time-sync with the waveform (the STFT, recomputed on the trimmed
-            # signal, stays aligned — so only the CWT drifts).
+            # signal, stays aligned - so only the CWT drifts).
             n_samples = len(signal)
             n_cols = cwt_data.shape[1]
             col_lo = int(round(first_zc / n_samples * n_cols))
@@ -1165,16 +1166,16 @@ def _build_contender_figure(
 
 # ============================================================
 # Stacked layout (v32+): the three plots tile flush on top of each other
-# (hspace=0, shared time axis — only the bottom plot carries x ticks/label),
+# (hspace=0, shared time axis - only the bottom plot carries x ticks/label),
 # Hz ticks form a dedicated column in the left margin, and the row labels move
 # to a text column on the RIGHT. Distinct from the shared `_build_3row_figure`
 # (still used by hero/anti-hero) so this restyle can't perturb those figures.
 # ============================================================
-# Grid layout — a SQUARE-UNIT system. One panel unit is a square (width unit ==
+# Grid layout - a SQUARE-UNIT system. One panel unit is a square (width unit ==
 # height unit == STACK_SQUARE_INCHES). The caption is exactly ONE square; each
 # plot spans STACK_PLOT_COLS squares wide × one square tall, in the same row as
 # its caption square. The y-axis labels (Hz/amp + numbers) render INSIDE the
-# plot's own panel box — a strip STACK_LABEL_PAD_INCHES wide is reserved on the
+# plot's own panel box - a strip STACK_LABEL_PAD_INCHES wide is reserved on the
 # plot's left (via the panel's content_left_pad_inches hook), so there is no
 # separate label column. Three body rows + a header band + a footer band.
 STACK_SQUARE_INCHES = 5.0     # the panel unit: one square (width unit == height unit)
@@ -1188,12 +1189,12 @@ STACK_UNIT_INCHES = STACK_SQUARE_INCHES     # height unit == square
 STACK_PLOT_UNITS = (STACK_PLOT_COLS, 1)     # K squares wide × 1 row tall
 STACK_TEXT_UNITS = (STACK_TEXT_COLS, 1)     # 2×2 square (2 cols, 2-unit-tall row)
 STACK_PLOT_ROW_HEIGHT = 2     # each body row is TWO squares tall (taller plots)
-STACK_BAND_HEIGHT = 0.4       # header / footer bands — short relative to a square
+STACK_BAND_HEIGHT = 0.4       # header / footer bands - short relative to a square
 # Strip reserved on each plot's LEFT (inside its cell box) for the y-axis label
 # + tick numbers. The plot's data axes is inset rightward by this much, so the
 # labels live inside the panel box instead of a separate column.
 STACK_LABEL_PAD_INCHES = 2.6
-# A little air between panels (inches) — uniform gutter between stacked plots
+# A little air between panels (inches) - uniform gutter between stacked plots
 # (rows) and between each plot and its caption square. Matched to 2.4.1's
 # column gutter (0.30) so Figure 1's cells are the SAME size as the other
 # figures' tiles (the shared-square model) instead of ~12% larger.
@@ -1221,13 +1222,13 @@ def _side_text_panel(
 ) -> TextPanel:
     """Right-hand row label: title lead-in + justified caption, rendered
     ENTIRELY inside the cell (no chrome-zone title) so it survives hspace=0
-    stacking — a chrome title would render in the now-zero gutter and collide
+    stacking - a chrome title would render in the now-zero gutter and collide
     with the panel above.
 
     ``font_size`` is the CEILING of the auto-fit search and is set to the
     size at which the LONGEST caption (the STFT/FOURIER block) just fits its
     cell. Because every caption shares that ceiling and the shorter ones also
-    fit at it, all three render at the same size — uniform across the column,
+    fit at it, all three render at the same size - uniform across the column,
     with shorter captions leaving a void below rather than scaling up.
     """
     # Default the auto-fit CEILING to the shared caption size so axis labels and
@@ -1243,7 +1244,7 @@ def _side_text_panel(
         color=style.TICK_LABEL_COLOR,
         fontweight="bold",
         auto_shrink=False,
-        # Left-justified (ragged right) — top_anchor still drives the wrap
+        # Left-justified (ragged right) - top_anchor still drives the wrap
         # pipeline so the block starts at the cell's top-left; justify=False
         # just drops the full-width word spreading.
         justify=False,
@@ -1254,11 +1255,11 @@ def _side_text_panel(
         # Text starts in the cell's top-left corner with a uniform margin in
         # from the cell border (content_margin_frac is measured from the cell
         # border, not the inset axes box). 0.055 of the ~10" cell ≈ 0.55" of
-        # air on every side — picked from the 4-variation padding mock (the
+        # air on every side - picked from the 4-variation padding mock (the
         # earlier 0.018 read tight against the borders). Uniform across all
         # three captions for alignment.
         content_margin_frac=0.055,
-        # No inner ghost outline — the cell border (show_cell_borders) frames
+        # No inner ghost outline - the cell border (show_cell_borders) frames
         # each caption as a single clean box matching the plot cells. The
         # inner content-margin rect drew a redundant second line (double border).
         show_ghost_border=False,
@@ -1288,6 +1289,7 @@ def _build_contender_stacked_figure(
     cell_vpad_inches: float | None = None,
     range_bar_yaxis: bool = False,
     show_captions: bool = True,
+    only_row: int | None = None,
     dpi: int = 150,
     unit_inches: float | None = None,
     unit_height_inches: float | None = None,
@@ -1295,8 +1297,12 @@ def _build_contender_stacked_figure(
 ) -> Figure:
     if data is None:
         data = _prepare_contender()
+    # only_row (1-based) composes a single body row as a standalone figure -
+    # that row then owns the x-axis instead of row 3. All three panels are
+    # still built (cheap); only the selected one is composed.
+    xaxis_row = only_row if only_row is not None else 3
     # No-caption mode: the text column is dropped and each plot absorbs its
-    # squares, spanning the full row width — the canvas stays the same size,
+    # squares, spanning the full row width - the canvas stays the same size,
     # the plots just run wider.
     plot_units = (STACK_PLOT_UNITS if show_captions
                   else (STACK_PLOT_COLS + STACK_TEXT_COLS, 1))
@@ -1341,20 +1347,21 @@ def _build_contender_stacked_figure(
     spec_extent = (0.0, disp_dur, 0.0, float(len(cwt_freqs)))
     xticks = _auto_xticks(disp_dur)
 
-    # Row 1 — chirp waveform. Two axis treatments, chosen by the data bundle:
-    #   default (ts_yticks absent) — the contender look: the host amplitude
+    # Row 1 - chirp waveform. Two axis treatments, chosen by the data bundle:
+    #   default (ts_yticks absent) - the contender look: the host amplitude
     #   scale is hidden and a LEFT twin carries the Hz/bin ticks so row 1's
     #   frequency axis column-aligns with rows 2/3 (the twin also positions
     #   the orange inst-freq overlay in bin space).
-    #   amp mode (ts_yticks present) — the host axis shows the time-series'
+    #   amp mode (ts_yticks present) - the host axis shows the time-series'
     #   own amplitude ticks on the left and no frequency twin is created.
     ts_yticks = data.get("ts_yticks")
     amp_axis = ts_yticks is not None
     row1 = TimeSeriesPanel(
         units=plot_units,
+        x_label="s" if (show_xaxis and xaxis_row == 1) else None,
         xticks=xticks,
         xlim=(0.0, disp_dur),
-        show_xticklabels=False,
+        show_xticklabels=show_xaxis and xaxis_row == 1,
         ylim=data.get("ts_ylim"),
         yticks=list(ts_yticks) if amp_axis else [],
         show_yticklabels=amp_axis,
@@ -1377,10 +1384,12 @@ def _build_contender_stacked_figure(
             linewidth=style.INST_FREQ_LINEWIDTH + 7.0, alpha=1.0,
         ))
 
-    # Rows 2/3 — STFT then CWT. Only row 3 owns the shared x axis.
+    # Rows 2/3 - STFT then CWT. Only row 3 owns the shared x axis.
     row2 = HeatmapPanel(
-        units=plot_units, y_label=y_unit, xticks=xticks,
-        show_xticklabels=False,
+        units=plot_units,
+        x_label="s" if (show_xaxis and xaxis_row == 2) else None,
+        y_label=y_unit, xticks=xticks,
+        show_xticklabels=show_xaxis and xaxis_row == 2,
     )
     row2.add(Heatmap(
         stft_mag_log, duration_s=duration_s, freqs=cwt_freqs, log_freq=True,
@@ -1388,8 +1397,10 @@ def _build_contender_stacked_figure(
         vmin=data.get("stft_vmin", 0.0), vmax=data.get("stft_vmax"),
     ))
     row3 = HeatmapPanel(
-        units=plot_units, x_label="s" if show_xaxis else None, y_label=y_unit,
-        xticks=xticks, show_xticklabels=show_xaxis,
+        units=plot_units,
+        x_label="s" if (show_xaxis and xaxis_row == 3) else None,
+        y_label=y_unit,
+        xticks=xticks, show_xticklabels=show_xaxis and xaxis_row == 3,
     )
     row3.add(Heatmap(
         cwt_data, duration_s=duration_s, freqs=cwt_freqs, log_freq=True,
@@ -1397,7 +1408,7 @@ def _build_contender_stacked_figure(
         vmin=data.get("cwt_vmin", 0.0), vmax=data.get("cwt_vmax"),
     ))
 
-    # Reserve the in-panel label strip on every plot — the y-axis label + tick
+    # Reserve the in-panel label strip on every plot - the y-axis label + tick
     # numbers render inside this strip, inside each plot's own cell box, so no
     # separate y-tick column is needed.
     strip_in = (label_strip_inches if label_strip_inches is not None
@@ -1405,7 +1416,7 @@ def _build_contender_stacked_figure(
     row1.content_left_pad_inches = strip_in
     row2.content_left_pad_inches = strip_in
     row3.content_left_pad_inches = strip_in
-    # Maximize each plot vertically — expand the data axes to fill its panel cell
+    # Maximize each plot vertically - expand the data axes to fill its panel cell
     # height (the left label strip is preserved by fill_cell_vertical), but inset
     # top + bottom by STACK_CELL_VPAD_INCHES so the extreme y-ticks (1k/10) don't
     # sit on the cell-border line.
@@ -1473,24 +1484,27 @@ def _build_contender_stacked_figure(
         [row2],
         [row3],
     ])
-    row_heights = [
-        STACK_PLOT_ROW_HEIGHT, STACK_PLOT_ROW_HEIGHT, STACK_PLOT_ROW_HEIGHT,
-    ]
+    header_titles = row_header_titles
+    if only_row is not None:
+        rows = [rows[only_row - 1]]
+        if header_titles is not None:
+            header_titles = (header_titles[only_row - 1],)
+    row_heights = [STACK_PLOT_ROW_HEIGHT] * len(rows)
     # Row headers: a SuptitlePanel band above each plot row names the row
-    # ("Audio Signal" / "Fourier Analysis" / "Wavelet Analysis") — the in-figure
+    # ("Audio Signal" / "Fourier Analysis" / "Wavelet Analysis") - the in-figure
     # replacement for the caption column's row titles when show_captions=False.
     # Same STACK_BAND_HEIGHT as the suptitle/footer bands so every non-plot
     # row in the grid shares one height.
-    if row_header_titles is not None:
+    if header_titles is not None:
         header_rows = [
             [SuptitlePanel(t, units=(total_w, 1), font_size=44)]
-            for t in row_header_titles
+            for t in header_titles
         ]
         rows = [r for pair in zip(header_rows, rows) for r in pair]
         mid_band = STACK_BAND_HEIGHT - STACK_MID_BAND_TRIM_INCHES / u_h
-        row_heights = [STACK_BAND_HEIGHT, STACK_PLOT_ROW_HEIGHT,
-                       mid_band, STACK_PLOT_ROW_HEIGHT,
-                       mid_band, STACK_PLOT_ROW_HEIGHT]
+        row_heights = [STACK_BAND_HEIGHT, STACK_PLOT_ROW_HEIGHT]
+        for _ in range(len(header_rows) - 1):
+            row_heights += [mid_band, STACK_PLOT_ROW_HEIGHT]
     if title_band:
         rows.insert(0, suptitle_row)
         row_heights.insert(0, STACK_BAND_HEIGHT)
@@ -1507,7 +1521,7 @@ def _build_contender_stacked_figure(
             # the x axis suppressed entirely there is nothing to seat.
             bottom_reserve_inches=None if (footer_band or not show_xaxis) else 1.9,
             # A small uniform gutter between plots (rows) and between the
-            # y-tick / plot / caption columns — breathing room, not flush.
+            # y-tick / plot / caption columns - breathing room, not flush.
             hspace=hspace,
             wspace=wspace,
             dpi=dpi,
@@ -1533,18 +1547,18 @@ def render_contender(
     return os.path.abspath(output_path)
 
 
-# ~23 ms window — the "slug" shape: on the log-frequency axis the short window
+# ~23 ms window - the "slug" shape: on the log-frequency axis the short window
 # bloats the ridge at the low end (poor frequency resolution) and thins it at
 # the top, showing the fixed-resolution tradeoff in one stroke. The 20 ms-spaced
 # clicks render as separate faint columns rather than one fused blob.
 HERO_STACKED_STFT_NPERSEG = 1024
 # Hero-only dB floor. The broadband clicks spread their energy across the whole
-# band, so per-bin they sit far below the chirp-referenced 0 dB ridge — at the
+# band, so per-bin they sit far below the chirp-referenced 0 dB ridge - at the
 # contender's -18 dB they clip to black. -30 dB leaves the ridge contrast alone
 # but lets the click columns lift faintly off the floor.
 HERO_STACKED_DB_FLOOR = -30.0
 
-# Hero row labels — sentence-case titles (the contender keeps its uppercase
+# Hero row labels - sentence-case titles (the contender keeps its uppercase
 # AUDIO/FOURIER/WAVELET lead-ins) and captions tightened for the README hero.
 HERO_STACKED_ROW_TITLES = ("Audio Signal", "Fourier Analysis", "Wavelet Analysis")
 HERO_STACKED_ROW1_CAPTION = (
@@ -1565,8 +1579,8 @@ HERO_STACKED_ROW3_CAPTION = (
 
 def _prepare_hero_stacked() -> dict:
     """Hero signal (bouncy full-range chirp + broadband click cluster) with the
-    contender-style post-processing — chirp-referenced dB magnitudes and the
-    hop-rate-correct zero-crossing slice — so it can feed the stacked (v47)
+    contender-style post-processing - chirp-referenced dB magnitudes and the
+    hop-rate-correct zero-crossing slice - so it can feed the stacked (v47)
     layout. The signal construction itself is the locked hero design from
     `_prepare_hero`; only the downstream conditioning differs.
     """
@@ -1594,7 +1608,7 @@ def _prepare_hero_stacked() -> dict:
     )
     stft_ref = float(np.percentile(chirp_stft, 99.5)) or 1.0
 
-    # Broadband click cluster — verbatim hero design (`_prepare_hero`).
+    # Broadband click cluster - verbatim hero design (`_prepare_hero`).
     sigma = HERO_CLICK_DURATION_S / 2.3548200450309493  # FWHM → sigma
     cluster_center_t = HERO_CLICK_T_FRAC * HERO_DURATION_S
     cluster_half_span = (HERO_CLICK_COUNT - 1) * HERO_CLICK_SPACING_S / 2.0
@@ -1647,14 +1661,20 @@ def _prepare_hero_stacked() -> dict:
     stft_db = _to_db(stft_mag, stft_ref, HERO_STACKED_DB_FLOOR)
 
     # Row 1 shows the waveform on its own ±1 amplitude axis (ts_yticks →
-    # amp mode in the stacked builder; no Hz twin). Normalize to unit peak —
-    # FULL signal peak, clicks included (~7× the chirp) — so the dense chirp
+    # amp mode in the stacked builder; no Hz twin). Normalize to unit peak -
+    # FULL signal peak, clicks included (~7× the chirp) - so the dense chirp
     # band compresses into the middle of the panel with the clicks spiking
     # out of it, and the -1/0/1 ticks are honest.
     sig_peak = float(np.max(np.abs(signal))) or 1.0
+    analysis_signal = signal
     signal = signal / sig_peak
     return {
         "signal": signal,
+        # Pre-normalization signal + STFT reference level, exported so display
+        # variants (the linear-axis split) can recompute the STFT on another
+        # frequency grid with identical dB scaling.
+        "analysis_signal": analysis_signal,
+        "stft_ref": stft_ref,
         "inst_freq": inst_freq,
         "t": t,
         "duration_s": duration_s,
@@ -1666,21 +1686,59 @@ def _prepare_hero_stacked() -> dict:
         "stft_vmin": HERO_STACKED_DB_FLOOR,
         "stft_vmax": 0.0,
         # Exactly ±1 (no pad): the -1/1 ticks sit AT the panel corners so the
-        # y-axis extremes coincide with the x-axis line — the unit-peak clicks
+        # y-axis extremes coincide with the x-axis line - the unit-peak clicks
         # touch the frame edges by design.
         "ts_ylim": (-1.0, 1.0),
         "ts_yticks": (-1.0, 0.0, 1.0),
     }
 
 
-# Range-bar y-axis: promoted into the dsplot library — the treatment itself
+# Linear-axis split: y-ticks for the linear frequency display. The log
+# display's (20, 200, 2k, 20k) crush onto the baseline of a linear axis.
+HERO_LINEAR_DISPLAY_FREQ_TICKS: tuple[int, ...] = (20, 5000, 10000, 15000, 20000)
+
+
+def _hero_linear_data(data: dict, n_lin: int = 1024) -> dict:
+    """Re-grid the hero spectrogram bundle onto a LINEAR frequency axis.
+
+    The stacked builder displays whatever `cwt_freqs` grid it is handed in
+    uniform bin space (imshow extent 0..n_bins, ticks interpolated over the
+    freqs array), so a linearly-spaced grid renders as a linear y-axis with
+    no builder changes.
+
+    The CWT is measured on the chromatic (log) bank, so its linear view is a
+    per-column interpolation of those measurements. The STFT is natively
+    linear - it is recomputed directly on the target grid (same window,
+    same chirp-referenced dB scaling) so the top octaves keep their native
+    bin detail instead of round-tripping through the 12-bins-per-octave
+    log grid.
+    """
+    disp_lo, disp_hi = HERO_DISPLAY_FREQ_LIM_HZ
+    lin_freqs = np.linspace(disp_lo, disp_hi, n_lin)
+    log_freqs = data["cwt_freqs"]
+    cwt_db = data["cwt_data"]
+    floor = float(data.get("cwt_vmin", HERO_STACKED_DB_FLOOR))
+    cwt_lin = np.empty((n_lin, cwt_db.shape[1]), dtype=cwt_db.dtype)
+    for j in range(cwt_db.shape[1]):
+        cwt_lin[:, j] = np.interp(lin_freqs, log_freqs, cwt_db[:, j],
+                                  left=floor, right=floor)
+    stft_lin = _to_db(
+        _stft_on_log_bins(data["analysis_signal"], SR, lin_freqs,
+                          nperseg=HERO_STACKED_STFT_NPERSEG),
+        data["stft_ref"], HERO_STACKED_DB_FLOOR,
+    )
+    return {**data, "cwt_freqs": lin_freqs, "cwt_data": cwt_lin,
+            "stft_mag_log": stft_lin}
+
+
+# Range-bar y-axis: promoted into the dsplot library - the treatment itself
 # (bar linewidth, end-label pad, strip-centered labels) lives in
 # Figure._apply_range_bar_yaxes with its knobs in style.RANGE_BAR_LINEWIDTH /
 # style.RANGE_BAR_LABEL_END_PAD_INCHES. The hero opts in per-panel via
 # _build_contender_stacked_figure(range_bar_yaxis=True); only the layout
 # choices below remain hero-local.
 # Sized so the visible left strip (figure border to range bar) comes out
-# 1.95" — the same as the header/footer band heights, squaring the frame.
+# 1.95" - the same as the header/footer band heights, squaring the frame.
 HERO_LABEL_STRIP_IN = 1.75
 # End tick labels no longer straddle the border, so the plots fill their cells
 # completely: zero pad puts the plot's top/bottom edges (= the y-lims) exactly
@@ -1696,7 +1754,7 @@ def _clamp_top_row_to_border(fig: Figure) -> None:
 
     With the title band removed, the gridspec's first row tops out at the
     figure edge (y=1.0) while the perimeter cell border draws inset by
-    ``style.DEFAULT_FRAME_EDGE_GAP_INCHES`` — so the row-1 axes (and the range
+    ``style.DEFAULT_FRAME_EDGE_GAP_INCHES`` - so the row-1 axes (and the range
     bar drawn to its top) poke past the border line at the top-left. Clamp the
     axes top to the border path and shorten the already-drawn range-bar
     Line2D to match, so the bar tucks under the border like it does at the
@@ -1725,18 +1783,19 @@ def _clamp_top_row_to_border(fig: Figure) -> None:
                 art.set_ydata([min(yd), border_y])
 
 
-def _apply_hero_band_xaxis(fig: Figure, *, flush_right_to_border: bool = False) -> None:
+def _apply_hero_band_xaxis(fig: Figure, *, flush_right_to_border: bool = False,
+                           corner_label: str = "f vs t") -> None:
     """Rebuild row 3's x-axis as footer-band furniture (hero-only).
 
     Every plot row is widened by half the column gutter so its right spine
-    lands ON the plot/caption divider line — the horizontal match to the
+    lands ON the plot/caption divider line - the horizontal match to the
     vpad-0 "plot edges on the border lines" treatment, and what makes the
     2.0 s mark coincide with the divider. With ``flush_right_to_border``
     (the no-caption layout, where no divider exists) each row is instead
     widened until its right spine lands on the figure's perimeter border
     line. The stock x-axis is then hidden and redrawn inside the bordered
     footer band: numbers sit centered on their tick positions (no physical
-    tick marks — labels only), with the first/last numbers tucked inside the
+    tick marks - labels only), with the first/last numbers tucked inside the
     cell by matching edge pads so nothing straddles a border. The band is
     split by a divider continuing the plot's left edge: the corner cell under
     the y-label strip carries "f vs t", naming both axes in place of the
@@ -1792,7 +1851,7 @@ def _apply_hero_band_xaxis(fig: Figure, *, flush_right_to_border: bool = False) 
     # Corner cell: the plot's left edge continues down through the band, and
     # "f vs t" centers in the strip under the y labels (same centerline the
     # range-bar tick numbers use). The label shrinks to leave a proportional
-    # margin on both sides — at full tick-label size it spans the whole strip
+    # margin on both sides - at full tick-label size it spans the whole strip
     # and crowds the divider.
     perim_x = style.DEFAULT_FRAME_EDGE_GAP_INCHES / fig_w
     mpl_fig.add_artist(mlines.Line2D(
@@ -1800,7 +1859,7 @@ def _apply_hero_band_xaxis(fig: Figure, *, flush_right_to_border: bool = False) 
         color=style.DEFAULT_FRAME_COLOR,
         linewidth=style.DEFAULT_FRAME_LINEWIDTH,
     ))
-    corner_text = mpl_fig.text((perim_x + pos.x0) / 2.0, y_label, "f vs t",
+    corner_text = mpl_fig.text((perim_x + pos.x0) / 2.0, y_label, corner_label,
                                ha="center", **text_kwargs)
     mpl_fig.canvas.draw()
     corner_w_px = corner_text.get_window_extent().width
@@ -1817,12 +1876,12 @@ def _apply_hero_band_xaxis(fig: Figure, *, flush_right_to_border: bool = False) 
         frac = (tick - xlim[0]) / span
         x = pos.x0 + frac * pos.width
         if frac <= 0.001:
-            # First tick sits ON the corner-cell divider — tuck the number
+            # First tick sits ON the corner-cell divider - tuck the number
             # inside the cell instead of straddling the line.
             mpl_fig.text(pos.x0 + edge_pad, y_label, lab,
                          ha="left", **text_kwargs)
         elif tick == last_tick and flush_right_to_border:
-            # Last tick sits ON the perimeter border — mirror the first
+            # Last tick sits ON the perimeter border - mirror the first
             # tick's inset so the two ends read symmetrically.
             mpl_fig.text(x - edge_pad, y_label, lab,
                          ha="right", **text_kwargs)
@@ -1839,12 +1898,12 @@ def render_hero_stacked(
 ) -> str:
     """Hero signal through the stacked (v47/montage-style) layout.
 
-    ``show_captions=False`` drops the right-hand caption column entirely —
+    ``show_captions=False`` drops the right-hand caption column entirely -
     the plots absorb its squares and span the full row width (the caption
     prose moves into the document that embeds the figure).
 
     ``row_headers=True`` puts a thin header band above each plot row carrying
-    its ``HERO_STACKED_ROW_TITLES`` name — row identification for the
+    its ``HERO_STACKED_ROW_TITLES`` name - row identification for the
     no-captions layout, where the caption column's titles are gone.
 
     ``show_xaxis=False`` drops row 3's x-tick numbers + "s" label AND the
@@ -1872,7 +1931,7 @@ def render_hero_stacked(
             show_captions=show_captions,
         )
         fig.render()
-        # No physical tick marks anywhere — the faint stubs poke through the
+        # No physical tick marks anywhere - the faint stubs poke through the
         # shared border lines as edge discontinuities. Labels are separate
         # artists and survive; length=0 covers host and twin axes alike.
         for mpl_ax in fig._mpl_fig.axes:
@@ -1884,6 +1943,237 @@ def render_hero_stacked(
     output_path = os.path.join(output_dir, output_filename)
     fig.savefig(output_path)
     return os.path.abspath(output_path)
+
+
+HERO_SPLIT_ROW_KEYS = ("audio", "fourier", "wavelet")
+
+
+def render_hero_split(
+    output_dir: str = "assets/images/dsp/figures/figure_1",
+    filename_prefix: str = "hero_split_v1",
+    rows: tuple[int, ...] = (1, 2, 3),
+    resolution_grid: bool = False,
+    freq_scale: str = "log",
+) -> tuple[str, ...]:
+    """Render the hero as standalone PNGs - one per row of the v43
+    equal-bands layout (Audio Signal / Fourier Analysis / Wavelet Analysis).
+
+    Each figure keeps the v43 visual language (header band, range-bar y-axis,
+    bordered footer band) but owns its OWN x-axis: the footer band under every
+    plot carries the time ticks plus the axes corner label ("a vs t" for the
+    amplitude row, "f vs t" for the spectrogram rows).
+
+    ``rows`` selects which of the three figures to render (1-based, default
+    all). ``resolution_grid=True`` overlays each spectrogram row with its
+    transform's time-frequency resolution lattice - see
+    `_overlay_resolution_grid` for the tiling story. ``freq_scale="linear"``
+    re-grids the spectrograms onto a linear frequency axis
+    (`_hero_linear_data`); the overlay adapts automatically since it derives
+    all positions from the freqs grid.
+    """
+    data = _prepare_hero_stacked()
+    if freq_scale == "linear":
+        data = _hero_linear_data(data)
+    display_ticks = (HERO_LINEAR_DISPLAY_FREQ_TICKS if freq_scale == "linear"
+                     else HERO_DISPLAY_FREQ_TICKS)
+    os.makedirs(output_dir, exist_ok=True)
+    paths = []
+    for row_idx, key in enumerate(HERO_SPLIT_ROW_KEYS, start=1):
+        if row_idx not in rows:
+            continue
+        with _contender_tight_style():
+            fig = _build_contender_stacked_figure(
+                data=data,
+                display_freq_lim_hz=HERO_DISPLAY_FREQ_LIM_HZ,
+                display_freq_ticks=display_ticks,
+                row_captions=(HERO_STACKED_ROW1_CAPTION,
+                              HERO_STACKED_ROW2_CAPTION,
+                              HERO_STACKED_ROW3_CAPTION),
+                row_titles=HERO_STACKED_ROW_TITLES,
+                row_header_titles=HERO_STACKED_ROW_TITLES,
+                only_row=row_idx,
+                show_xaxis=True,
+                y_unit=None,
+                uppercase_titles=False,
+                title_band=False,
+                footer_band=True,
+                show_inst_freq=False,
+                label_strip_inches=HERO_LABEL_STRIP_IN,
+                cell_vpad_inches=HERO_CELL_VPAD_IN,
+                range_bar_yaxis=True,
+                show_captions=False,
+            )
+            fig.render()
+            for mpl_ax in fig._mpl_fig.axes:
+                mpl_ax.tick_params(axis="both", which="both", length=0)
+            _clamp_top_row_to_border(fig)
+            _apply_hero_band_xaxis(
+                fig, flush_right_to_border=True,
+                corner_label="a vs t" if row_idx == 1 else "f vs t",
+            )
+            if resolution_grid and row_idx in (2, 3):
+                _overlay_resolution_grid(
+                    fig, "fourier" if row_idx == 2 else "wavelet", data,
+                )
+        output_path = os.path.join(output_dir, f"{filename_prefix}_{key}.png")
+        fig.savefig(output_path)
+        paths.append(os.path.abspath(crop_to_content(output_path)))
+    return tuple(paths)
+
+
+# ============================================================
+# Resolution-tiling grid overlay (v45) - draws the time-frequency
+# resolution lattice each transform actually imposes over its spectrogram.
+# Both tiles have unit area (Δt·Δf ≈ 1); only the ALLOCATION differs:
+#   fourier - one fixed tile everywhere: Δt = nperseg/sr (~23 ms),
+#     Δf = sr/nperseg (~43 Hz). On the log-f axis the fixed-Hz rows leave
+#     the bottom octave one undivided slab and pile into sub-pixel density
+#     at the top; the time columns stay uniform.
+#   wavelet - a constant-Q tile per frequency: Δt = num_fwhm_cycles/f (the
+#     pipeline wavelet's Gaussian FWHM), Δf = FWHM²/(2π·cycles)·f - its
+#     exact Fourier-transform pair (~0.29·f Hz ≈ 0.43 octave). Rows render
+#     uniform on the log axis; brick widths halve per octave upward.
+# Analysis parameters are untouched - the overlay is display chrome.
+# ============================================================
+GRID_LINE_COLOR = "#FFFFFF"
+GRID_LINE_ALPHA = 0.38
+GRID_LINEWIDTH = 1.5        # pt - hairline, subordinate to the 4.5pt borders
+# Below this on-screen line spacing, per-line alpha fades proportionally so
+# bunching lines never composite into solid ink over the data.
+GRID_FADE_START_PX = 8.0
+# Below this spacing individual lines are meaningless (sub-pixel); the region
+# is covered by one flat tint rect at the same effective coverage the faded
+# lines converge to (GRID_LINE_ALPHA·lw/GRID_FADE_START_PX), so the veil is
+# continuous where the lattice outruns the pixel grid.
+GRID_TINT_CUTOFF_PX = 1.0
+# CWTConfig().num_fwhm_cycles - the pipeline wavelet's Gaussian FWHM spans
+# this many cycles of its center frequency (FWHM_t = 3/f seconds).
+GRID_CWT_FWHM_CYCLES = 3
+# Gaussian FWHM in sigmas: 2·sqrt(2·ln 2) ≈ 2.3548.
+_GAUSS_FWHM_SIGMAS = 2.0 * math.sqrt(2.0 * math.log(2.0))
+
+
+def _overlay_resolution_grid(fig: Figure, kind: str, data: dict) -> None:
+    """Overlay the transform's resolution lattice on a hero-split spectrogram.
+
+    Draws in data space (x: 0–2 s, y: CWT bin index) on the figure's
+    HeatmapPanel axes, after all layout passes, so the lattice registers
+    exactly with the rendered spectrogram. ``kind`` is "fourier" (fixed
+    Δt×Δf lattice) or "wavelet" (constant-Q rows with 1/f brick courses).
+    """
+    from matplotlib.collections import LineCollection
+    from matplotlib.patches import Rectangle
+
+    panel = next(p for p, *_ in fig.panels if isinstance(p, HeatmapPanel))
+    ax = panel.ax
+
+    # Same display slice the stacked builder applies to the CWT bin grid.
+    disp_lo, disp_hi = HERO_DISPLAY_FREQ_LIM_HZ
+    freqs = data["cwt_freqs"]
+    bin_lo = int(np.searchsorted(freqs, disp_lo, side="left"))
+    bin_hi = int(np.searchsorted(freqs, disp_hi, side="right"))
+    bin_lo = max(0, min(bin_lo, len(freqs) - 1))
+    bin_hi = max(bin_lo + 1, min(bin_hi, len(freqs)))
+    freqs = freqs[bin_lo:bin_hi]
+    n_bins = float(len(freqs))
+    bin_idx = np.arange(len(freqs), dtype=np.float64)
+    disp_dur = 2.0
+
+    mpl_fig = fig._mpl_fig
+    mpl_fig.canvas.draw()
+    bbox = ax.get_window_extent()
+    px_per_sec = bbox.width / disp_dur
+    px_per_bin = bbox.height / n_bins
+    lw_px = GRID_LINEWIDTH / 72.0 * mpl_fig.dpi
+    tint_alpha = GRID_LINE_ALPHA * lw_px / GRID_FADE_START_PX
+
+    def freq_to_bin(f):
+        # Generic over the freqs grid - geometric (log axis) or uniform
+        # (linear axis) alike, matching compute_freq_yticks' tick mapping.
+        return np.interp(f, freqs, bin_idx)
+
+    def spacing_alpha(spacing_px: float) -> float:
+        return GRID_LINE_ALPHA * min(1.0, spacing_px / GRID_FADE_START_PX)
+
+    def tint_rect(y0: float, y1: float) -> Rectangle:
+        return Rectangle(
+            (0.0, y0), disp_dur, y1 - y0,
+            facecolor=GRID_LINE_COLOR, alpha=tint_alpha,
+            edgecolor="none", zorder=2.5,
+        )
+
+    line_kw = dict(color=GRID_LINE_COLOR, linewidth=GRID_LINEWIDTH, zorder=2.5)
+
+    def hlines_with_fade(ys: np.ndarray) -> None:
+        # Per-line alpha follows the gap to the next line up; contiguous runs
+        # of sub-pixel gaps merge into flat tint rects, so a crush at either
+        # end of the axis (log: treble pile-up; linear: bass pile-up) renders
+        # as one continuous veil instead of fused ink.
+        ys = ys[(ys > 0.0) & (ys < n_bins)]
+        tint_start = None
+        for j, y in enumerate(ys):
+            y_next = ys[j + 1] if j + 1 < len(ys) else n_bins
+            spacing_px = (y_next - y) * px_per_bin
+            if spacing_px < GRID_TINT_CUTOFF_PX:
+                if tint_start is None:
+                    tint_start = y
+                continue
+            if tint_start is not None:
+                ax.add_patch(tint_rect(tint_start, y))
+                tint_start = None
+            ax.axhline(y, alpha=spacing_alpha(spacing_px), **line_kw)
+        if tint_start is not None:
+            ax.add_patch(tint_rect(tint_start, n_bins))
+
+    if kind == "fourier":
+        dt = HERO_STACKED_STFT_NPERSEG / SR
+        df = SR / HERO_STACKED_STFT_NPERSEG
+        # Uniform time columns - the fixed analysis window.
+        col_alpha = spacing_alpha(dt * px_per_sec)
+        for i in range(1, int(disp_dur / dt) + 1):
+            ax.axvline(i * dt, alpha=col_alpha, **line_kw)
+        # Fixed-Δf rows. The first line (1·Δf) is the STFT's blind floor -
+        # everything below it is the interp-zeroed black band. On the log
+        # axis the rows pile into the veil toward the treble; on the linear
+        # axis they are uniform everywhere.
+        f_lines = df * np.arange(1, int(float(freqs[-1]) / df) + 1)
+        hlines_with_fade(freq_to_bin(f_lines))
+    else:
+        # Constant-Q rows: successive bands grow by a fixed ratio - uniform
+        # on the log axis, geometrically stretching on the linear axis.
+        fwhm_frac = _GAUSS_FWHM_SIGMAS ** 2 / (2.0 * math.pi * GRID_CWT_FWHM_CYCLES)
+        ratio = (1.0 + fwhm_frac / 2.0) / (1.0 - fwhm_frac / 2.0)
+        bounds = [float(freqs[0])]
+        while bounds[-1] * ratio < float(freqs[-1]):
+            bounds.append(bounds[-1] * ratio)
+        bounds.append(float(freqs[-1]))
+        hlines_with_fade(freq_to_bin(np.asarray(bounds[1:-1])))
+        # Brick courses: each row's time tile is the wavelet FWHM at the
+        # row's geometric-center frequency - wide at the bottom, halving
+        # per octave, flat tint once widths outrun the pixel grid.
+        segments, seg_colors = [], []
+        for f_lo_b, f_hi_b in zip(bounds[:-1], bounds[1:]):
+            y0 = float(freq_to_bin(f_lo_b))
+            y1 = float(freq_to_bin(f_hi_b))
+            if (y1 - y0) * px_per_bin < GRID_TINT_CUTOFF_PX:
+                # Row thinner than a pixel (linear-axis bass crush) - the
+                # row-line veil already covers it; bricks would be invisible.
+                continue
+            f_center = math.sqrt(f_lo_b * f_hi_b)
+            width_s = GRID_CWT_FWHM_CYCLES / f_center
+            width_px = width_s * px_per_sec
+            if width_px < GRID_TINT_CUTOFF_PX:
+                ax.add_patch(tint_rect(y0, n_bins))
+                break
+            brick_alpha = spacing_alpha(width_px)
+            for x in np.arange(width_s, disp_dur, width_s):
+                segments.append([(x, y0), (x, y1)])
+                seg_colors.append((1.0, 1.0, 1.0, brick_alpha))
+        if segments:
+            ax.add_collection(LineCollection(
+                segments, colors=seg_colors,
+                linewidths=GRID_LINEWIDTH, zorder=2.5,
+            ))
 
 
 def show_contender(debug: bool = False) -> Figure:
@@ -1935,7 +2225,7 @@ def show_hero(debug: bool = False) -> Figure:
 
     ``debug=True`` overlays figure-level guide lines (cyan/yellow/orange/lime
     for chrome bands and cell gutters) plus a red bracket above and below
-    every rendered Text artist — titles, captions, suptitle, footer, axis
+    every rendered Text artist - titles, captions, suptitle, footer, axis
     labels, tick labels. Anything that overflows its band shows as text
     crossing a guide line.
     """
@@ -1943,7 +2233,7 @@ def show_hero(debug: bool = False) -> Figure:
     with nb_compact_style():
         # unit_inches == unit_height_inches so that 1×1 cells (label panels,
         # suptitle, footer) render as squares. Data cells at (3, 1) become
-        # 3× wider than tall — wide spectrogram aspect ratio falls out
+        # 3× wider than tall - wide spectrogram aspect ratio falls out
         # naturally from the unit ratio, not from a separate unit_height.
         # NO bottom_reserve_inches override: compose lifts the footer
         # SuptitlePanel into a bottom band sized from its row height. Passing
@@ -1957,7 +2247,7 @@ def show_hero(debug: bool = False) -> Figure:
         )
         fig._display_width = "75%"
         fig.render()
-    # Suppress the ipympl widget chrome ("Figure 1" / toolbar) — that header
+    # Suppress the ipympl widget chrome ("Figure 1" / toolbar) - that header
     # is matplotlib canvas chrome, distinct from the figure-bottom footer
     # SuptitlePanel that we render in the gridspec.
     canvas = fig._mpl_fig.canvas

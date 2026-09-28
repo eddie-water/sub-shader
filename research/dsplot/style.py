@@ -1,12 +1,12 @@
-"""Inheritable style template for dsplot — D-05.
+"""Inheritable style template for dsplot - D-05.
 
 Every dsplot figure inherits these defaults. Two override modes:
 
-  (1) GLOBAL reassignment — affects every figure rendered after:
+  (1) GLOBAL reassignment - affects every figure rendered after:
           import dsplot
           dsplot.style.PRIMARY_COLOR = "#new"
 
-  (2) LOCAL override — a figure module derives its own constant from a default,
+  (2) LOCAL override - a figure module derives its own constant from a default,
       leaving the global untouched (affects only that figure):
           from dsplot import style
           LABEL_RATIO = style.DEFAULT_LABEL_RATIO * 1.5
@@ -18,22 +18,29 @@ call site.
 
 Naming convention:
   - Palette colors use ROLE names directly (PRIMARY_COLOR, BG_COLOR,
-    DROPLINE_COLOR) — they identify a role, not a default.
-  - Everything else uses DEFAULT_* prefix — they're the inheritable defaults
+    DROPLINE_COLOR) - they identify a role, not a default.
+  - Everything else uses DEFAULT_* prefix - they're the inheritable defaults
     figures can override locally.
 """
 
 # ============================================================
-# PALETTE (role-named — identity slots, not "defaults")
+# PALETTE (role-named - identity slots, not "defaults")
 # ============================================================
 PRIMARY_COLOR    = "#ff5a1f"
 SECONDARY_COLOR  = "#7b6fe1"
 TERTIARY_COLOR   = "#ffd27d"
-NEUTRAL_COLOR    = "#EEEEEE"
+NEUTRAL_COLOR    = "#FFFFFF"
 HIGHLIGHT_COLOR  = "#22d3ee"
-BG_COLOR         = "#1A1A1A"
+BG_COLOR         = "#000000"
+# Pipeline-stage identity: every figure that names a stage (draw.io swimlanes,
+# timing hybrids, module flowchart) colours it from these three, not its own copy.
+AUDIO_COLOR, DSP_COLOR, RENDER_COLOR = TERTIARY_COLOR, SECONDARY_COLOR, PRIMARY_COLOR
 SPINE_COLOR      = "#444444"
-TICK_LABEL_COLOR = "#888888"
+# Bone white, not grey. Every figure was overriding the old #888888 locally to
+# get here (fig 1 via CONTENDER_TIGHT_STYLE, 2.4.x/2.5/2.6 via _static_chrome),
+# which is the tell that grey was never the intended default. SUPTITLE_COLOR
+# is bound to this below, so titles and footers follow.
+TICK_LABEL_COLOR = NEUTRAL_COLOR                  # "#EEEEEE"
 DROPLINE_COLOR   = "#888888"
 
 # ============================================================
@@ -45,7 +52,7 @@ DROPLINE_COLOR   = "#888888"
 # stay bold. These constants are vector-panel-only (fig 1 has no vectors), so
 # the bump is isolated from the spectrogram figures.
 # ONE hero linework weight shared by vectors, stem plots, parallel/dashed
-# components, and accumulator stems across every figure — so a stem in 2.5
+# components, and accumulator stems across every figure - so a stem in 2.5
 # reads at the same thickness as a vector in 2.4.1 / 2.4.2 and a component arm
 # in 2.4.3. Both the "thin" and "bold" vector weights are this single value
 # (no thin/bold split anymore) so component arrows and main vectors match.
@@ -55,7 +62,7 @@ DEFAULT_VECTOR_LINEWIDTH      = 16.0
 DEFAULT_VECTOR_BOLD_LINEWIDTH = 16.0
 DEFAULT_SPINE_LINEWIDTH       = 0.8
 # 3D axis spines are manual data-space Vector lines (static_panel_3d.draw_3d_spines),
-# NOT matplotlib spines — so DEFAULT_SPINE_LINEWIDTH (a 2D-panel knob) doesn't reach
+# NOT matplotlib spines - so DEFAULT_SPINE_LINEWIDTH (a 2D-panel knob) doesn't reach
 # them. They get their own weight here: quiet chrome, well under the 12.5 vector line
 # they used to borrow, so the 3D vectors read as the subject and the spines recede.
 DEFAULT_SPINE_3D_LINEWIDTH    = 4.0
@@ -69,23 +76,23 @@ DEFAULT_DROPLINE_LINESTYLE    = "--"
 # ONE frame model across every figure (the figure-1 / 2.5 model): per-axes
 # spines are off, and the cell border drawn by Figure(show_cell_borders=True)
 # IS each panel's frame. These knobs make that single frame a clean, visible
-# thin line shared everywhere — change them once, every figure's frame updates.
+# thin line shared everywhere - change them once, every figure's frame updates.
 DEFAULT_FRAME_COLOR     = NEUTRAL_COLOR   # "#EEEEEE"
-# ONE common cell-border weight for EVERY figure — matches figure 1's border
+# ONE common cell-border weight for EVERY figure - matches figure 1's border
 # (4.5pt, the thickness the user signed off on). The earlier per-figure
 # width-scaling (3.0 base, 2.5→4.14, 2.6→4.62) was abandoned: the montage tiles
-# all figures at a common px/inch, so equal POINTS read as equal pixels — a
+# all figures at a common px/inch, so equal POINTS read as equal pixels - a
 # single shared value is what actually makes the borders look identical there.
 DEFAULT_FRAME_LINEWIDTH = 4.5
 DEFAULT_FRAME_ALPHA     = 1.0
 
 # ============================================================
-# COMMON CANVAS — cross-figure type consistency
+# COMMON CANVAS - cross-figure type consistency
 # ============================================================
 # Every figure renders at ONE physical width + dpi so a shared point-size type
 # scale (header / label / annotation / body-text / tick) reads at the SAME
 # visual size in every figure, both in the montage and in DSP.md. 28" @ 150dpi
-# is figure 1's canvas — the cross-figure gold standard — so conforming the
+# is figure 1's canvas - the cross-figure gold standard - so conforming the
 # other figures to it leaves fig 1 untouched as the reference. Compose figures
 # opt in via `Figure.compose(total_width_inches=style.FIGURE_WIDTH_INCHES)`,
 # which back-solves unit_inches to hit this width.
@@ -96,7 +103,7 @@ FIGURE_DPI          = 150
 # matched pair in DSP.md. They share this width (via
 # `Figure.compose(total_width_inches=...)`) AND a common per-row cell height
 # (both pass `unit_height_inches=SHARED_UNIT_INCHES`), so a single row of 2.6 has
-# the SAME vertical proportions as a single row of 2.5 — graph-paper consistency.
+# the SAME vertical proportions as a single row of 2.5 - graph-paper consistency.
 # They do NOT share total height: 2.5 has 3 case rows, 2.6 has 2, so 2.6 is
 # naturally shorter. Value = 2.6's natural width (the wider of the two), so
 # matching widens 2.5 slightly rather than shrinking 2.6.
@@ -104,7 +111,7 @@ PAIR_25_26_WIDTH_INCHES  = 43.1
 
 # Fixed PHYSICAL height (inches) of the top header band on the common 28"
 # canvas, so every figure's title sits in an identically-sized band with the
-# same air above/below — regardless of its column count. Without this the band
+# same air above/below - regardless of its column count. Without this the band
 # height is `row_heights[0] × unit_height`, and unit_height swings ~3× between a
 # 3-column and a 9-column figure, so the same relative row-height renders a wildly
 # different physical band (titles float in one figure, cram against the panels in
@@ -114,12 +121,12 @@ PAIR_25_26_WIDTH_INCHES  = 43.1
 # Opt in via `Figure.compose(header_band_inches=style.HEADER_BAND_INCHES)`.
 HEADER_BAND_INCHES = 2.0
 
-# Shared physical size (inches) of ONE tile — the cross-figure "graph paper"
+# Shared physical size (inches) of ONE tile - the cross-figure "graph paper"
 # unit that §2.4.1-onward compose on (pass
 # `Figure.compose(unit_inches=style.SHARED_UNIT_INCHES)`, DO NOT pass
 # total_width_inches), so a 1×1 cell is the same size in every figure and a
 # panel that spans N×M cells matches its twin in another figure exactly.
-# Figures end up at DIFFERENT widths (width = n_cols·unit + gutters + margins) —
+# Figures end up at DIFFERENT widths (width = n_cols·unit + gutters + margins) -
 # the montage tiles them at true scale instead of squashing every figure to one
 # width. Value = figure 1's TEXT BOX (its caption square = 2×STACK_SQUARE_INCHES
 # = 10.0"): the user picked fig-1's caption box as THE canonical tile, so a
@@ -169,7 +176,7 @@ RANGE_BAR_LABEL_END_PAD_INCHES = 0.25
 # many arrows sit together in 242's staircase) while the length stays up so the
 # head still reads as a distinct triangle, not a stubby flare. Mutation scales
 # the whole head uniformly so the L/W proportion is preserved. At M26: head_width
-# 0.36 × 26 ≈ 9.4pt base — slim but still flaring past the 16pt shaft once the
+# 0.36 × 26 ≈ 9.4pt base - slim but still flaring past the 16pt shaft once the
 # FancyArrowPatch head renders wider than its point count; head_length 0.74 × 26
 # ≈ 19.2pt keeps a clean, pointed tip.
 DEFAULT_ARROW_HEAD_LENGTH = 0.74
@@ -199,7 +206,7 @@ DEFAULT_SUBTITLE_BOTTOM_PAD = 0.10
 # styling; size 14 keeps it visibly smaller than the bumped subtitle (now 20).
 DEFAULT_CAPTION_FONT_SIZE  = 40
 DEFAULT_CAPTION_Y          = -0.26
-# Figure-level caption chrome — `Figure N` identifier + explanatory caption
+# Figure-level caption chrome - `Figure N` identifier + explanatory caption
 # rendered at the bottom of the figure (vs. panel-level subtitle/caption).
 DEFAULT_FIGURE_NUMBER_FONT_SIZE  = 26
 DEFAULT_FIGURE_CAPTION_FONT_SIZE = 26
@@ -219,7 +226,7 @@ DEFAULT_TICK_LABEL_FONT_WEIGHT = "bold"
 DEFAULT_TICK_LENGTH        = 8.0
 DEFAULT_TICK_WIDTH         = 1.5
 # Inch-domain offset from the axes spine to the axis-label text. Constrained
-# by a hard upper bound — the y-label MUST fit inside half the inter-cell
+# by a hard upper bound - the y-label MUST fit inside half the inter-cell
 # gutter so the rotated text doesn't visually encroach into the neighboring
 # cell's chrome territory. With DEFAULT_GUTTER = 2.0" → half-gutter = 1.0";
 # y-inset = 0.7" leaves 0.3" between the label center and the cell border
@@ -227,7 +234,7 @@ DEFAULT_TICK_WIDTH         = 1.5
 # labels project vertically only (constrained by font height ~0.3" at 22pt),
 # so x-inset can be tighter than y-inset and still clear the tick labels.
 # DEFAULT_AXIS_LABEL_INSET_INCHES retained for back-compat (= the x-default).
-# Axis label center sits at PAD/2 inches from the spine — exactly half-way
+# Axis label center sits at PAD/2 inches from the spine - exactly half-way
 # in the padding zone between the spine and the cell border (PAD = 1.5 →
 # inset = 0.75). Hardcoded rather than derived to keep style.py top-down
 # readable (DEFAULT_PAD_INCHES is declared below in the LAYOUT section).
@@ -235,12 +242,12 @@ DEFAULT_X_AXIS_LABEL_INSET_INCHES = 0.75
 DEFAULT_Y_AXIS_LABEL_INSET_INCHES = 0.75
 DEFAULT_AXIS_LABEL_INSET_INCHES = DEFAULT_X_AXIS_LABEL_INSET_INCHES
 DEFAULT_SUPTITLE_FONT_SIZE = 44
-# SUPTITLE_* family — sibling constants for SuptitlePanel (mirrors TITLE_*
+# SUPTITLE_* family - sibling constants for SuptitlePanel (mirrors TITLE_*
 # pattern). Defaults preserve the legacy `_mpl_fig.suptitle(...)` rendering
 # contract bit-identically; `DEFAULT_SUPTITLE_FONT_SIZE` is left intact
 # because `figure.py` still reads it in the legacy sugar path.
 SUPTITLE_FONT_SIZE = DEFAULT_SUPTITLE_FONT_SIZE  # 32
-SUPTITLE_COLOR     = TICK_LABEL_COLOR             # "#888888"
+SUPTITLE_COLOR     = TICK_LABEL_COLOR             # "#EEEEEE"
 SUPTITLE_WEIGHT    = "bold"
 DEFAULT_ROW_LABEL_SIZE     = 16
 
@@ -259,7 +266,7 @@ DEFAULT_HSPACE      = 0.18
 DEFAULT_WSPACE      = 0.04
 DEFAULT_LABEL_RATIO = 0.18
 
-# THE unitary spacing knob — every cell in the figure has this much padding
+# THE unitary spacing knob - every cell in the figure has this much padding
 # on all 4 sides (between its cell border and its inner panel spine). Cells
 # tile densely:
 #   - perimeter cells touch the figure edge → perimeter margin = 1 PAD
@@ -274,7 +281,7 @@ DEFAULT_PAD_INCHES = 1.5
 # Derived: perimeter cell's outer padding = 1 PAD = the figure margin.
 DEFAULT_MARGIN_INCHES = DEFAULT_PAD_INCHES
 # Derived: inter-cell gutter = two cells × 1 PAD per cell = 2 PAD.
-# Rows and columns share the same gutter unit — uniform spacing.
+# Rows and columns share the same gutter unit - uniform spacing.
 DEFAULT_GUTTER_INCHES = 2.0 * DEFAULT_PAD_INCHES
 DEFAULT_COLUMN_GUTTER_INCHES = 2.0 * DEFAULT_PAD_INCHES
 # Reserved title band sitting above the axes spine. Title text V-centers
@@ -301,7 +308,7 @@ DEFAULT_INNER_GUTTER_INCHES = 0.6
 # ============================================================
 DEFAULT_VECTOR_LABEL_OFFSET = 0.30
 DEFAULT_VECTOR_LIM          = 4.0
-# Alpha applied to a plottable that's been demoted to "framing" — present for
+# Alpha applied to a plottable that's been demoted to "framing" - present for
 # context but not the subject of the panel. Used when a figure spotlights an
 # overlay (components, projection) ON TOP of muted base vectors.
 DEFAULT_MUTED_ALPHA         = 0.6
@@ -310,7 +317,7 @@ DEFAULT_AXIS_GRID_COLOR     = "white"
 # but vanished once the montage downscaled it. 0.16 + a 0.9 line reads as a quiet
 # grid without competing with the vectors.
 DEFAULT_AXIS_GRID_ALPHA     = 0.16
-# 3D floor (z=0 plane) grid sits a touch higher than the 2D grid — perspective
+# 3D floor (z=0 plane) grid sits a touch higher than the 2D grid - perspective
 # foreshortening + the dark scene dim it further.
 DEFAULT_AXIS_GRID_ALPHA_3D  = 0.22
 DEFAULT_AXIS_GRID_LINEWIDTH = 0.9
@@ -350,9 +357,16 @@ DEFAULT_FIGURE_CAPTION_FONT_STYLE  = "italic"
 DEFAULT_MONO_FONT_FAMILY = "monospace"
 # THE sans family for ALL non-numeric text (titles, axis/tick labels, body
 # copy, glyphs) across every figure. Set into rcParams at Figure creation so
-# every text artist inherits it — the single knob for the figure type system.
+# every text artist inherits it - the single knob for the figure type system.
 # Numeric readouts opt into DEFAULT_MONO_FONT_FAMILY explicitly and override it.
-DEFAULT_FONT_FAMILY = "DejaVu Sans"
+DEFAULT_FONT_FAMILY = "Liberation Sans"
+# draw.io exports render on Windows, where Arial is the same face (Liberation
+# Sans is its metric-compatible clone); the generator writes this name.
+DRAWIO_FONT_FAMILY = "Arial"
+FONT_STACK = (DEFAULT_FONT_FAMILY, DRAWIO_FONT_FAMILY, "DejaVu Sans")
+# Outer margin of every README figure: content bbox + this many pixels, applied
+# by dsplot.export.crop_to_content and tools/drawio_export.py alike.
+README_EDGE_PAD_PX = 30
 
 # ============================================================
 # TICK DECORATION (direction + inset scaling)
@@ -370,13 +384,13 @@ DEFAULT_HEATMAP_TICK_DIRECTION  = "out"
 DEFAULT_HEATMAP_AXIS_EDGE_CLEARANCE_INCHES = 0.15
 
 # ============================================================
-# VECTOR-AXES DECORATION — weights, label glyphs, readout
+# VECTOR-AXES DECORATION - weights, label glyphs, readout
 # (companion to the VECTOR-AXES DECORATION block above)
 # ============================================================
 # Faint x–y reference-axis (crosshair / arrow) weight a vector sits on.
 DEFAULT_AXIS_DECORATION_ALPHA     = 0.85
 # 28"-canvas weights (were 1.8 / 0.9 / 14 at ~13"): the faint x-y reference
-# axis the vectors sit on must stay visible at the wider canvas — but thin enough
+# axis the vectors sit on must stay visible at the wider canvas - but thin enough
 # to read as a quiet reference crosshair, not a structural line competing with the
 # vectors (the grid carries the scale).
 DEFAULT_AXIS_DECORATION_LINEWIDTH = 2.0
@@ -385,7 +399,7 @@ DEFAULT_AXIS_ARROW_MUTATION       = 28
 # x/y glyph labels ("x", "y") sit at this fraction of the axis limit, render a
 # touch larger than tick numbers, and carry the axis emphasis. Pushed back OUT
 # toward the spine tip (0.84 → 0.96) so x/y ride near the cell border instead of
-# floating inside it — the labels read as "this edge IS the axis".
+# floating inside it - the labels read as "this edge IS the axis".
 DEFAULT_AXIS_LABEL_POS_FRAC    = 0.96
 DEFAULT_AXIS_LABEL_SIZE_BUMP   = 2
 DEFAULT_AXIS_LABEL_ALPHA       = 0.95
@@ -401,7 +415,7 @@ DEFAULT_STEM_MARKER          = "o"
 DEFAULT_STEM_MARKERSIZE      = 6.0
 # The ONE circle size for every hero stem tip across figures (data stems,
 # spectrum coefficient stems, accumulator/sum bars). Stems are differentiated by
-# HEIGHT alone — the tip dome is uniform everywhere — so a tall stem may run off
+# HEIGHT alone - the tip dome is uniform everywhere - so a tall stem may run off
 # the panel ("half plotted") rather than shrinking its marker to fit. Domes the
 # 16.0 hero stem at a ~1.6 marker:stem ratio.
 DEFAULT_HERO_STEM_MARKERSIZE = 26.0
@@ -455,7 +469,7 @@ DEFAULT_BOTTOM_PAD_BUFFER_INCHES = 0.05
 # print at ~unit_inches=4.0; at nb scale (~unit_inches=2.0–2.5) the chrome
 # inches and font points dominate cells. Every figure module's show()/embed()
 # wraps build + render in `with nb_compact_style(): ...` so the entire dsplot
-# library shares one nb visual tone — figures stay consistent.
+# library shares one nb visual tone - figures stay consistent.
 #
 # To rebalance the nb tone, edit the values in NB_COMPACT_OVERRIDES below;
 # the change applies to every figure's show() simultaneously.
@@ -463,7 +477,7 @@ from contextlib import contextmanager as _contextmanager
 import sys as _sys
 
 NB_COMPACT_OVERRIDES = {
-    # Fonts — sized for ~2.0–2.5" cells.
+    # Fonts - sized for ~2.0–2.5" cells.
     "DEFAULT_TITLE_FONT_SIZE": 16,
     "DEFAULT_SUBTITLE_FONT_SIZE": 16,
     "DEFAULT_LABEL_FONT_SIZE": 16,
@@ -476,7 +490,7 @@ NB_COMPACT_OVERRIDES = {
     "DEFAULT_FIGURE_CAPTION_FONT_SIZE": 10,
     "DEFAULT_TICK_LENGTH": 4.0,
     "DEFAULT_TICK_WIDTH": 1.0,
-    # Layout inches — chrome zone shrinks to leave room for the plot inside
+    # Layout inches - chrome zone shrinks to leave room for the plot inside
     # smaller cells. PAD bumped 0.5 → 0.7 vs prior pass so axis labels have
     # 0.40" (not 0.20") between themselves and the cell border.
     "DEFAULT_PAD_INCHES": 0.7,
@@ -490,7 +504,7 @@ NB_COMPACT_OVERRIDES = {
     "DEFAULT_X_AXIS_LABEL_INSET_INCHES": 0.35,
     "DEFAULT_Y_AXIS_LABEL_INSET_INCHES": 0.35,
     "DEFAULT_AXIS_LABEL_INSET_INCHES": 0.35,
-    # Plottable-specific (cosmetic — keeps lines from looking heavy in nb).
+    # Plottable-specific (cosmetic - keeps lines from looking heavy in nb).
     "INST_FREQ_LINEWIDTH": 1.4,
 }
 
@@ -500,7 +514,7 @@ NB_COMPACT_OVERRIDES = {
 # ============================================================
 # A render profile is a NAMED bundle of style-module overrides describing a
 # whole RENDER PATH: production print PNG, the live notebook (ipynb), or an
-# exported GIF. It generalizes nb_compact_style() — instead of each figure
+# exported GIF. It generalizes nb_compact_style() - instead of each figure
 # hand-stacking context managers per path, a figure enters ONE profile and the
 # entire library shares that path's scale/tone:
 #
@@ -508,7 +522,7 @@ NB_COMPACT_OVERRIDES = {
 #         fig = build(); fig.render()
 #
 # Profiles carry only CROSS-CUTTING, path-level concerns (font + layout scale,
-# and — as the system grows — dpi / tick direction / border model). Genuinely
+# and - as the system grows - dpi / tick direction / border model). Genuinely
 # figure-specific tone (a figure's own font tier, a one-off border treatment)
 # stays a figure-local override layered ON TOP, per the override ladder at the
 # top of this module:  global defaults → profile → figure-local → per-object.
@@ -522,10 +536,10 @@ NB_COMPACT_OVERRIDES = {
 #               figure show()/save_gif() call sites are byte-identical.
 #   "gif"       currently the notebook scale (exported animations render at
 #               notebook chrome:cell ratio). Kept as its own name so it can
-#               diverge from "notebook" — e.g. a dedicated gif dpi / border
-#               model — without disturbing the live-notebook look.
+#               diverge from "notebook" - e.g. a dedicated gif dpi / border
+#               model - without disturbing the live-notebook look.
 #
-# NOTE on dpi: notebook dpi legitimately varies per figure (72 vs 80 — a
+# NOTE on dpi: notebook dpi legitimately varies per figure (72 vs 80 - a
 # deliberate per-figure choice), so it is NOT folded into the notebook bundle.
 # A path with a single canonical dpi (print=150) reads it from DEFAULT_DPI.
 # Folding a canonical gif dpi into the "gif" profile is a migration step taken
@@ -574,7 +588,7 @@ def nb_compact_style():
 
     Retained because every figure module's show()/save_gif() calls it directly.
     The notebook profile reuses NB_COMPACT_OVERRIDES, so this is byte-identical
-    to the original implementation — just routed through the unified profile
+    to the original implementation - just routed through the unified profile
     system so there is one place that defines "notebook scale".
     """
     with render_profile("notebook"):
@@ -582,7 +596,7 @@ def nb_compact_style():
 
 
 # =============================================================================
-# HORIZONTAL BAR CHARTS (additive — timing report figures)
+# HORIZONTAL BAR CHARTS (additive - timing report figures)
 # =============================================================================
 # Bars are a new plottable vocabulary (Barh + BarPanel) layered on top of the
 # existing panel/plottable system. These constants tune them for the shared 28"

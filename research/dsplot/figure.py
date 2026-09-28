@@ -1,7 +1,7 @@
-"""Figure orchestrator — composes Panels into one matplotlib Figure.
+"""Figure orchestrator - composes Panels into one matplotlib Figure.
 
 Layout defaults (figsize, hspace, wspace, dpi) resolve LAZILY against
-`dsplot.style.DEFAULT_*` at construction time (per D-05) — reassigning a
+`dsplot.style.DEFAULT_*` at construction time (per D-05) - reassigning a
 style constant between `Figure(...)` calls is observable through subsequent
 gridspec configuration. The Figure NEVER hardcodes layout numerics.
 
@@ -14,7 +14,7 @@ be composed via the same flow as 2D cells:
     fig.savefig("mixed.png")
 
 A panel that accepts a 3D Axes is expected to do its own 2D-vs-3D branching
-(or be a subclass — e.g. a future StaticPanel3D for the 3D foundation figure).
+(or be a subclass - e.g. a future StaticPanel3D for the 3D foundation figure).
 The Figure itself only wires the Axes; it does not adapt panel chrome to
 dimensionality.
 """
@@ -45,7 +45,7 @@ _JUPYTER_DARK_CSS_INJECTED = False
 def apply_jupyter_dark(bg_color: Optional[str] = None) -> None:
     """Inject one-time CSS into the current Jupyter session that paints the
     cell-output container behind ipympl figures (and other widget outputs)
-    dark, matching `style.BG_COLOR`. Safe to call multiple times — the
+    dark, matching `style.BG_COLOR`. Safe to call multiple times - the
     injection is idempotent within a session.
 
     No-op outside Jupyter (silently returns).
@@ -133,7 +133,7 @@ class Figure:
             # Width scales by sum(width_ratios) so non-uniform columns produce
             # cells that match the panel's natural aspect ratio. Without this,
             # a column with width_ratio=1 inside a 3-column figsize=(15,10) is
-            # 5x5 inches but a column with width_ratio=2 is 10x5 — and square
+            # 5x5 inches but a column with width_ratio=2 is 10x5 - and square
             # aspect="equal" panels in the wide column leave dead vertical
             # space that pushes panel titles away from their content.
             width_units = sum(width_ratios) if width_ratios else n_cols
@@ -175,7 +175,7 @@ class Figure:
         # single type-system knob). Set on rcParams so every text artist
         # inherits it; numeric readouts pass family= explicitly and override.
         plt.rcParams["font.family"] = "sans-serif"
-        plt.rcParams["font.sans-serif"] = [style.DEFAULT_FONT_FAMILY, "DejaVu Sans"]
+        plt.rcParams["font.sans-serif"] = list(style.FONT_STACK)
         self._mpl_fig = plt.figure(figsize=figsize, dpi=dpi)
         self._mpl_fig.patch.set_facecolor(style.BG_COLOR)
         self._gs = self._mpl_fig.add_gridspec(
@@ -187,7 +187,7 @@ class Figure:
 
         if suptitle is not None:
             # Suptitle lives in a band one `margin` tall at the top of the
-            # figure with its text V-centered in that band — equal breathing
+            # figure with its text V-centered in that band - equal breathing
             # room above and below the text. Below the band is another full
             # `margin` of gap before the first panel border. So the total
             # top reserve is `2 * margin`.
@@ -214,7 +214,7 @@ class Figure:
                 va="center",
             )
 
-        # Footer band — mirror of the suptitle band, anchored to the figure
+        # Footer band - mirror of the suptitle band, anchored to the figure
         # BOTTOM. Compose lifts the last row's SuptitlePanel here so the
         # footer text sits in a clean band identical in height to the top
         # suptitle band, with no surrounding gridspec chrome.
@@ -236,7 +236,7 @@ class Figure:
 
         # Figure-level `Figure N` identifier + explanatory caption rendered at
         # the bottom of the figure. Counterpart to the per-panel subtitle +
-        # caption — same typographic hierarchy (bold italic identifier,
+        # caption - same typographic hierarchy (bold italic identifier,
         # smaller italic-bold caption) but in the figure-bottom reserve band.
         # `figure_number` is centered horizontally and sits in its own padded
         # band; `figure_caption` is LEFT-aligned to the leftmost panel cell's
@@ -265,7 +265,7 @@ class Figure:
             # Caption: left edge anchors to the leftmost panel cell's left
             # border (figure left margin); top anchored at va="top" so the
             # first line sits at a known y and subsequent lines extend
-            # downward toward the figure bottom — predictable layout when
+            # downward toward the figure bottom - predictable layout when
             # the caption is multi-line.
             if figure_caption is not None:
                 self._mpl_fig.text(
@@ -341,7 +341,7 @@ class Figure:
         #   n_cols·unit_inches + (n_cols-1)·col_gutter + 2·margin
         # so unit_inches = (W - 2·margin - (n_cols-1)·col_gutter) / n_cols.
         # unit_height defaults to unit_inches downstream, so the whole figure
-        # scales uniformly to the target width — same proportions, one canvas
+        # scales uniformly to the target width - same proportions, one canvas
         # size shared across every figure (→ a shared pt type scale is visually
         # consistent everywhere). Overrides any explicit unit_inches.
         if total_width_inches is not None:
@@ -486,7 +486,7 @@ class Figure:
         # mpl's hspace/wspace are interpreted as fractions of the AVERAGE cell
         # dimension, not as multiples of unit_inches. The naive formula
         # `gutter / unit_inches` only lands the right gap when every cell is
-        # uniform — once row_heights has a 0.25-tall suptitle row, mpl's
+        # uniform - once row_heights has a 0.25-tall suptitle row, mpl's
         # proportional allocation produces both gap and cell sizes that drift
         # from the declared inch values. Closed-form fix (derived from mpl's
         # gridspec law `gap = hspace × avg_cell`, given target gap = g and
@@ -527,10 +527,10 @@ class Figure:
         elif _suptitle_band_inches is not None:
             # Row-0 SuptitlePanel was lifted into top_reserve. Two stacked
             # reservations from figure-top downward:
-            #   1) `_suptitle_band_inches` — the band itself, anchored to the
+            #   1) `_suptitle_band_inches` - the band itself, anchored to the
             #      figure top edge with NO leading perimeter margin. Suptitle
             #      text V-centers inside the band.
-            #   2) `row_gutter_in / 2` — chrome zone for the first body row's
+            #   2) `row_gutter_in / 2` - chrome zone for the first body row's
             #      panel titles (which render half a row-gutter above the
             #      spine via Panel._render_chrome_titles). Skipping it makes
             #      the suptitle text and row-1 panel titles land at the same
@@ -549,20 +549,20 @@ class Figure:
         # zone hosts the last body row's x-axis labels / per-panel subtitle
         # text (rendered below the spine via Panel._render_chrome_*) so they
         # don't pack against the footer text. The cell border bottom touches
-        # the footer band top — same as the top side, where the suptitle band
+        # the footer band top - same as the top side, where the suptitle band
         # bottom touches the row-1 cell border. No visible whitespace between
         # cell border and band. Caller's explicit bottom_reserve_inches still
         # wins.
         # Subtitle-band geometry (inches, measured from the figure bottom up).
         # When a multi-column subtitle row was lifted, the subtitle band sits
-        # DIRECTLY ON the footer band (they tile, sharing a cell-border edge —
+        # DIRECTLY ON the footer band (they tile, sharing a cell-border edge -
         # the same way the body row tiles against the suptitle band at the top)
         # so the per-panel subtitles and the figure number read as one tight
         # caption block. Above the band is a half-gutter chrome zone before the
         # body row, mirroring the half-gutter the suptitle band leaves below it.
         # A gap between the subtitle band and the footer would read as a void
         # (both bands centre their text, so the gap compounds with their empty
-        # halves) — hence band-on-band with no inter-band gap.
+        # halves) - hence band-on-band with no inter-band gap.
         _subtitle_band_center_in: Optional[float] = None
         _subtitle_band_top_in: Optional[float] = None
         _subtitle_band_bottom_in: Optional[float] = None
@@ -574,7 +574,7 @@ class Figure:
             # With a footer band below, the subtitle band tiles on top of it.
             # With nothing below, the subtitle band IS the bottom of the figure,
             # so it sits flush on the perimeter (0.0) instead of floating a
-            # margin above it — that float renders as dead space under the
+            # margin above it - that float renders as dead space under the
             # footer text.
             _subtitle_band_bottom_in = foot if foot > 0.0 else 0.0
             _subtitle_band_top_in = _subtitle_band_bottom_in + _subtitle_band_inches
@@ -589,7 +589,7 @@ class Figure:
         else:
             bottom_reserve = margin
         # Common-canvas normalization (height): back-solve unit_height so the
-        # finished figure is exactly `total_height_inches` tall — the vertical
+        # finished figure is exactly `total_height_inches` tall - the vertical
         # mirror of total_width_inches. figsize[1] = grid_h + bottom_reserve +
         # top_reserve, and the reserves + row gutters are FIXED physical inches
         # (independent of unit_height), so the only height-scaled term is
@@ -647,7 +647,7 @@ class Figure:
             ) / figsize[1]
         else:
             suptitle_y_resolved = 1.0 - (top_reserve / 2.0) / figsize[1]
-        # Plot-area center x for figure_number alignment — chrome rows (e.g.
+        # Plot-area center x for figure_number alignment - chrome rows (e.g.
         # TextPanel label columns) are excluded so the figure_number sits
         # under the plot's x-axis label rather than the full figure midline.
         # Falls back to figure center when no TextPanels are present.
@@ -789,7 +789,7 @@ class Figure:
                 ax.set_facecolor(style.BG_COLOR)
             # Reserve a label strip INSIDE the panel's cell: inset the data
             # axes rightward by `content_left_pad_inches` so the y-axis label +
-            # tick numbers render in the reserved strip — inside the panel's
+            # tick numbers render in the reserved strip - inside the panel's
             # cell border rather than in a separate column. Applied BEFORE
             # render() so the axis-label inset math sees the inset spine (its
             # figure-edge clamp keys off the axes' left edge). Opt-in via a
@@ -804,11 +804,11 @@ class Figure:
                     [pos.x0 + dx, pos.y0, max(pos.width - dx, 0.01), pos.height]
                 )
             # Hand control of the animation clock to the figure for any
-            # DynamicPanel — the panel itself skips FuncAnimation construction
+            # DynamicPanel - the panel itself skips FuncAnimation construction
             # in its render() when this flag is set. CompositePanels are not
             # DynamicPanels themselves, but may hold DynamicPanel children; flag
             # those before composite.render() runs (it calls child.render()), so
-            # the master clock — not per-child timers — drives them.
+            # the master clock - not per-child timers - drives them.
             if isinstance(panel, DynamicPanel):
                 panel._managed_externally = True
             else:
@@ -833,8 +833,8 @@ class Figure:
             self._draw_debug_guides()
             self._force_all_tick_labels()
             self._draw_text_bbox_guides()
-        # Expand fill_cell panels last — after borders/guides read the original
-        # gridspec positions — so the expansion doesn't perturb those reads.
+        # Expand fill_cell panels last - after borders/guides read the original
+        # gridspec positions - so the expansion doesn't perturb those reads.
         self._apply_fill_cell()
         # Range-bar y-axes read the FINAL axes positions, so they run after
         # the fill_cell expansion.
@@ -907,7 +907,7 @@ class Figure:
 
         Returns (half_row, half_col) in figure-coordinate fractions. Reads
         the ACTUAL spine-to-spine gap between rendered panels instead of
-        the style constant — survives `Figure.compose(hspace=...)` overrides
+        the style constant - survives `Figure.compose(hspace=...)` overrides
         so cell borders land at the midpoint of the *actual* gutter, not
         the gutter that style.py declares.
 
@@ -943,14 +943,14 @@ class Figure:
         perim_x_frac=0.0, perim_y_frac=0.0,
     ) -> tuple[float, float, float, float]:
         """Figure-fraction (left, bottom, right, top) of the gridspec CELL that
-        encloses one panel — the cell border bounds. Perimeter sides snap to
+        encloses one panel - the cell border bounds. Perimeter sides snap to
         the figure edge (or suptitle / footer / subtitle band edge); interior
         sides sit at the half-gutter midline. Shared by the cell-border tiler
         and the fill_cell axes expansion so both agree on cell bounds.
 
         ``perim_x_frac`` / ``perim_y_frac`` inset the OUTER perimeter sides off
         the figure edge by that fraction (the opt-in ``frame_inset`` path). At
-        the default 0.0 perimeter sides snap to the canvas edge as before —
+        the default 0.0 perimeter sides snap to the canvas edge as before -
         which renders the line right at the edge where it is effectively clipped
         to invisibility. A non-zero inset (the figure margin) pulls those lines
         inboard so the outer frame and header/footer bands read as full boxes.
@@ -982,7 +982,7 @@ class Figure:
             elif self._bottom_reserve_is_explicit and self._bottom_pad is not None:
                 # Caller reserved unbordered bottom space via
                 # bottom_reserve_inches (already baked into _bottom_pad as a
-                # figure fraction) — the bottom row's cell stops at the reserve
+                # figure fraction) - the bottom row's cell stops at the reserve
                 # top so borders and fill_cell don't spill into it.
                 cell_bot = self._bottom_pad
             else:
@@ -996,7 +996,7 @@ class Figure:
 
         Runs AFTER cell borders are drawn (those read the original gridspec
         positions). Cell rects are computed from the un-expanded positions
-        first, then applied — so no panel's expansion perturbs another's
+        first, then applied - so no panel's expansion perturbs another's
         gutter measurement.
 
         Two opt-in modes:
@@ -1042,7 +1042,7 @@ class Figure:
             cur = panel.ax.get_position()
             # A titled panel keeps its natural chrome zone at the top (the gap
             # between the gridspec axes top and the cell top) so the inline title
-            # still has a home above the plot — otherwise fill_cell pushes the
+            # still has a home above the plot - otherwise fill_cell pushes the
             # axes to the very top of the cell and the title lands in the row
             # above. Bottom + sides still expand to fill.
             if getattr(panel, "title", None):
@@ -1054,7 +1054,7 @@ class Figure:
                 # An optional `fill_cell_pad_inches` insets the filled axes from
                 # the cell's top and bottom so the extreme y-tick labels (e.g.
                 # 1k at top, 10 at bottom) lift off the cell-border line instead
-                # of sitting flush on it — breathing room inside the cell.
+                # of sitting flush on it - breathing room inside the cell.
                 vpad_in = float(getattr(panel, "fill_cell_pad_inches", 0.0) or 0.0)
                 vpad_frac = vpad_in / fig_h
                 bot_p = bot + vpad_frac
@@ -1072,7 +1072,7 @@ class Figure:
         """Swap opted-in panels' stock y-axes for the range-bar treatment.
 
         Opt-in via ``panel.range_bar_yaxis = True`` on a panel that reserves an
-        in-cell label strip (``content_left_pad_inches``). Post-layout pass —
+        in-cell label strip (``content_left_pad_inches``). Post-layout pass -
         runs after ``_apply_fill_cell`` so it reads FINAL axes positions:
 
           - snaps the y-view to the outermost ticks so the range ENDS at the
@@ -1169,7 +1169,7 @@ class Figure:
         """Tile the figure with one bordered Rectangle per gridspec cell.
 
         Each cell encloses one panel's chrome (title above, x-label below,
-        y-labels on left/right) AND the panel's inner spine border — matching
+        y-labels on left/right) AND the panel's inner spine border - matching
         the "ideal template" reference. Cells tile densely: shared edges
         between adjacent cells appear as a single line.
 
@@ -1187,7 +1187,7 @@ class Figure:
         # canvas edge by style.DEFAULT_FRAME_EDGE_GAP_INCHES so it reads as a
         # framed figure on a page (and the full stroke renders instead of being
         # half-clipped at fraction 0.0/1.0). A fixed INCH value gives every
-        # figure the same visible gap regardless of dpi. One shared default —
+        # figure the same visible gap regardless of dpi. One shared default -
         # change the style knob, every figure's edge gap moves together.
         inset_in = style.DEFAULT_FRAME_EDGE_GAP_INCHES
         perim_x_frac = inset_in / fig_w
@@ -1208,7 +1208,7 @@ class Figure:
             # also includes the row-1 chrome zone (= half row gutter) so the
             # first body row's panel titles render between the band bottom and
             # the row-1 spine. The cell border must anchor to the BAND
-            # bottom (above the chrome zone & above the panel titles) — not
+            # bottom (above the chrome zone & above the panel titles) - not
             # to the gridspec top (= spine top, which puts titles OUTSIDE the
             # border). Preference order:
             #   1. explicit `_suptitle_band_inches` from compose (lifted band)
@@ -1221,7 +1221,7 @@ class Figure:
             sup_band_bot_frac = 1.0
 
         # The cell border IS each panel's single frame (the figure-1 / 2.5
-        # border model — spines off, this box is the one visible frame). Styled
+        # border model - spines off, this box is the one visible frame). Styled
         # from the shared DEFAULT_FRAME_* knobs so every figure's frame is one
         # clean visible thin line, tuned in one place (style.py).
         border_kwargs = dict(
@@ -1260,7 +1260,7 @@ class Figure:
             )
             fig.add_artist(rect)
 
-        # Footer band cell border — mirror of the suptitle band. Anchored to
+        # Footer band cell border - mirror of the suptitle band. Anchored to
         # the figure BOTTOM at y=0, extending up to the band height.
         if self._footer_band_inches is not None:
             footer_band_top_frac = self._footer_band_inches / fig_h
@@ -1272,14 +1272,14 @@ class Figure:
             )
             fig.add_artist(rect)
 
-        # Subtitle band cell borders — one per column, aligned to the body
+        # Subtitle band cell borders - one per column, aligned to the body
         # grid columns so each label sits in a thin cell beneath its panel.
         if self._subtitle_band_inches is not None and self._subtitle_specs:
             sub_top = self._subtitle_band_top_inches / fig_h
             sub_bot = self._subtitle_band_bottom_inches / fig_h
             # When the subtitle band is the bottom-most element (no footer band
             # beneath it) its bottom edge IS the figure perimeter, so it honors
-            # perim_y_frac exactly like the body cells / header band — otherwise
+            # perim_y_frac exactly like the body cells / header band - otherwise
             # the band floats a margin above the canvas and reads as dead space
             # under the footer text.
             sub_bot_draw = max(sub_bot, perim_y_frac)
@@ -1311,7 +1311,7 @@ class Figure:
         """Draw horizontal lines above and below every visible Text artist.
 
         Surfaces where titles, captions, suptitle, footer, and axis labels
-        ACTUALLY render — so overflows (text crossing a cell border) and
+        ACTUALLY render - so overflows (text crossing a cell border) and
         misalignments (text not centered in its chrome band) are visible
         at a glance. Each text gets a red bracket: bottom line at the
         glyph baseline area's bottom, top line at the glyph cap height.
@@ -1444,7 +1444,7 @@ class Figure:
         # --- Per-panel: title band + axes bbox sides + axis-label insets ---
         # yellow: title band top + spine top.
         # orange: axes bbox left/right edges (= y-label sit zone reference).
-        # red:    axis-label inset markers — where the actual axis label TEXT
+        # red:    axis-label inset markers - where the actual axis label TEXT
         #         centers sit, drawn as a short bracket on each side of the
         #         panel. Derived from style.DEFAULT_{X,Y}_AXIS_LABEL_INSET so
         #         it matches what the panels actually render.
@@ -1459,7 +1459,7 @@ class Figure:
             title_band_top = bbox.y1 + title_band_v_frac
             hline(title_band_top, "#ffd400", None)
             hline(bbox.y1, "#ffd400", None)
-            # Orange verticals at axes left/right — y-labels live to the left
+            # Orange verticals at axes left/right - y-labels live to the left
             # of x0, twin y-labels to the right of x1.
             ln_l = Line2D(
                 [bbox.x0, bbox.x0], [bbox.y0, bbox.y1],
@@ -1477,7 +1477,7 @@ class Figure:
             # Red brackets at the axis-label inset positions, with a second
             # marker on the CELL-BORDER side so the user can see whether the
             # axis label sits centered between spine and cell border. Skipped
-            # entirely for text-only panels — those have no axis labels, so
+            # entirely for text-only panels - those have no axis labels, so
             # the brackets would mark nothing and confuse the debug overlay.
             if getattr(panel, "is_text_only", False):
                 continue
@@ -1497,7 +1497,7 @@ class Figure:
             y_lbl_x_right = bbox.x1 + y_inset_in / fig_w
             y_border_x_right = bbox.x1 + half_col_g_frac
             # First color = label-center marker (close to spine)
-            # Second color = cell-border marker (far from spine) — lighter shade
+            # Second color = cell-border marker (far from spine) - lighter shade
             # so the user can distinguish which line is which.
             marker_pairs = (
                 # x-axis: label marker + outer cell-border marker
@@ -1574,7 +1574,7 @@ class Figure:
             max(p._total_frames() for p in dynamic_panels)
             + hold_ticks
         )
-        # All DynamicPanels share the first panel's interval — they're meant
+        # All DynamicPanels share the first panel's interval - they're meant
         # to be in lockstep; mismatched intervals would be a user error.
         interval = dynamic_panels[0].interval_ms
 
@@ -1593,7 +1593,7 @@ class Figure:
         )
 
     def _apply_jupyter_display_styling(self) -> None:
-        """Style the ipympl canvas widget and cell-output container — only
+        """Style the ipympl canvas widget and cell-output container - only
         meaningful under `%matplotlib widget` / ipympl. No-op otherwise.
 
         - Hides the ipympl toolbar/header/footer chrome unless show_toolbar
@@ -1605,11 +1605,11 @@ class Figure:
             return
         # ipympl canvases expose a `layout` attribute holding a widget Layout
         # with a writable `width` field. Qt/Agg canvases expose `layout` as a
-        # bound method (PyQt's QWidget.layout()) — distinguish by checking
+        # bound method (PyQt's QWidget.layout()) - distinguish by checking
         # for the widget-Layout-specific `width` attribute.
         layout = getattr(canvas, "layout", None)
         if layout is None or not hasattr(layout, "width"):
-            return  # not an ipympl Canvas widget — non-interactive backend
+            return  # not an ipympl Canvas widget - non-interactive backend
 
         # Disable ipympl's resize-observer BEFORE touching width. With
         # resizable=True the observer reserves the figure's *native* pixel
@@ -1630,7 +1630,7 @@ class Figure:
         if target_width is not None:
             canvas.layout.width = target_width
             # height="auto" makes the widget box follow the (aspect-locked)
-            # scaled canvas instead of the reserved native height — this is
+            # scaled canvas instead of the reserved native height - this is
             # what removes the trailing whitespace and the bottom clipping.
             canvas.layout.height = "auto"
 
@@ -1639,6 +1639,19 @@ class Figure:
                 setattr(canvas, attr, self._show_toolbar)
 
         apply_jupyter_dark()
+
+    def show(self) -> None:
+        """Display the rendered figure in the active matplotlib backend.
+
+        With an interactive backend (Qt5Agg/TkAgg under WSLg, ``%matplotlib
+        widget`` in notebooks) this opens a live window - 3D panels get
+        mouse-drag rotation for free. The backend must be selected BEFORE
+        the Figure is constructed (its canvas is bound at creation), so
+        scripts should call ``matplotlib.use("Qt5Agg")`` before importing
+        figure-building code. Under Agg this is a no-op.
+        """
+        import matplotlib.pyplot as plt
+        plt.show()
 
     def savefig(self, path: str, **kwargs) -> str:
         """Save the figure at exactly ``figsize × dpi`` pixels.
@@ -1650,7 +1663,7 @@ class Figure:
 
           * Decorators (labels, callouts, annotations) cannot expand the
             saved canvas. Anything anchored outside [0, 1] figure-coord
-            space clips at the figure edge — visibly and predictably.
+            space clips at the figure edge - visibly and predictably.
           * All margins and padding are governed solely by the
             ``subplots_adjust(left=, right=, top=, bottom=)`` knobs the
             Figure already sets (the ``top_pad`` reserved for suptitle,

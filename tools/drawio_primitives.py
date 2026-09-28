@@ -12,6 +12,13 @@ stay smooth at any size. Every primitive is a group: border box + stencil (+ lab
 import base64, json, math, re, sys, urllib.parse, zlib
 from xml.sax.saxutils import escape
 
+sys.path.insert(0, __file__.rsplit("/", 2)[0])
+from research.dsplot import style
+
+
+def _rgb(hex_color):
+    return tuple(int(hex_color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+
 TILE_W, TILE_H = 160, 80
 AMP = 0.40 * TILE_H
 MID = TILE_H / 2
@@ -404,7 +411,7 @@ def deck_cards(kind, n=5, card_w=62, card_h=62, dx=7, dy=7, x0=2, y0=None, conte
             strokes.append("")
     return filled, strokes
 
-PAL_DSP, PAL_REND, PAL_AUDIO = (0x6A, 0x5C, 0xD6), (0xF0, 0x52, 0x1A), (0xE8, 0xA3, 0x17)
+PAL_DSP, PAL_REND, PAL_AUDIO = _rgb(style.DSP_COLOR), _rgb(style.RENDER_COLOR), _rgb(style.AUDIO_COLOR)
 def ramp(v):
     """Fixed heat ramp, theme independent: black -> purple -> red -> orange -> yellow -> white."""
     stops = [(0.0, (0, 0, 0)), (0.2, PAL_DSP), (0.4, (0xD0, 0x22, 0x2A)), (0.6, PAL_REND),
@@ -438,6 +445,15 @@ def spectro(tx, fy):
     burst = g(tx - 0.72, 0.07) * g(fy - 0.72, 0.16)
     return min(1.0, 0.95 * max(tone, chirp, burst))
 
+def readme_sweep(tx, fy):
+    """The README's Figure 1 signal: a sweep that dips from ~2 kHz to ~100 Hz then climbs to 20 kHz, punctuated at
+    the halfway point by a burst of clicks (vertical broad-band lines fading out below mid band)."""
+    g = lambda a, s: math.exp(-0.5 * (a / s) ** 2)
+    curve = 0.22 + (0.43 * ((0.4 - tx) / 0.4) ** 2 if tx < 0.4 else 0.78 * ((tx - 0.4) / 0.6) ** 2)
+    sweep = g(fy - curve, 0.045)
+    clicks = max(g(tx - c, 0.01) for c in (0.5125, 0.5625, 0.6125)) * min(1.0, max(0.0, (fy - 0.3) / 0.25))
+    return min(1.0, max(sweep, clicks))
+
 def weave(tx, fy, cycles=4.0, contrast=1):
     """dsplot's Gramian Angular Field weave (research/dsplot/figures/sample_template.py): diagonal-band
     interference of one sine against itself in [0,1]. `contrast` smoothstep passes push peaks up and troughs down
@@ -465,22 +481,23 @@ def heatmap_ops(x, y, w, h, nx, ny, outline=True, mode="color", field=None):
             if mode == "ink":
                 ops += f'<strokealpha alpha="{alpha(v)}"/><path><move x="{cx:.2f}" y="{cy + ch / 2:.2f}"/><line x="{cx + cw:.2f}" y="{cy + ch / 2:.2f}"/></path><stroke/>'
             else:
-                ops += f'<fillcolor color="{ramp(v)}"/><rect x="{cx:.2f}" y="{cy:.2f}" w="{cw:.2f}" h="{ch:.2f}"/><fill/>'
+                ops += f'<fillcolor color="{ramp(v)}"/><rect x="{cx:.2f}" y="{cy:.2f}" w="{cw + 0.6:.2f}" h="{ch + 0.6:.2f}"/><fill/>'
     ops += "<restore/>"
     if outline:
         ops += f"<path>{rect(x, y, w, h)}</path><stroke/>"
     return ops
 
-def checker_ops(x, y, w, h, n, outline=True, color="#000000", other=None):
+def checker_ops(x, y, w, h, n, outline=True, color="#000000", other=None, ny=None):
     """Checkerboard: `color` on the odd cells; `other` on the even cells, or the canvas when None. Painted
     black-and-white it is a fixed test pattern, theme independent: an allocated, empty frame."""
+    nx, ny = n, ny or n
     ops = "<save/>"
-    for j in range(n):
-        for i in range(n):
+    for j in range(ny):
+        for i in range(nx):
             c = color if (i + j) % 2 else other
             if c is None:
                 continue
-            ops += f'<fillcolor color="{c}"/><rect x="{x + i * w / n:.2f}" y="{y + j * h / n:.2f}" w="{w / n:.2f}" h="{h / n:.2f}"/><fill/>'
+            ops += f'<fillcolor color="{c}"/><rect x="{x + i * w / nx:.2f}" y="{y + j * h / ny:.2f}" w="{w / nx:.2f}" h="{h / ny:.2f}"/><fill/>'
     ops += "<restore/>"
     if outline:
         ops += f"<path>{rect(x, y, w, h)}</path><stroke/>"
@@ -508,6 +525,8 @@ def stencil_raw(name, w, h, fg):
 def add_raw(group, key, title, fg, w=TILE_W, h=TILE_H, fillcolor=None):
     RAW[key] = fg
     add(group, key, title, [], w=w, h=h, fillcolor=fillcolor)
+
+WEAVE = lambda tx, fy: weave(tx, fy, 3.0)
 
 def deck_fg(kind, n=9, card=50, d=50 / 8, x0=0, extra=""):
     """Opaque cards in the shape's own fill (theme canvas colour), back to front; every card carries its own content.
@@ -538,6 +557,8 @@ def deck_fg(kind, n=9, card=50, d=50 / 8, x0=0, extra=""):
             fg += heatmap_ops(x, y, card, card, 8, 6, outline=True, mode="ink")
         elif kind == "checker":
             fg += checker_ops(x, y, card, card, 5, color="#000000", other="#FFFFFF")
+        elif kind == "weave":
+            fg += heatmap_ops(x, y, card, card, 16, 16, outline=True, mode="ink", field=WEAVE)
         elif kind == "spikes":
             px = x + card * (0.15 + 0.7 * k / (n - 1))
             fg += f"<path>{seg(x, y + card - 8, x + card, y + card - 8) + seg(px, y + card - 8, px, y + 8)}</path><stroke/>"
@@ -597,6 +618,91 @@ add("scheme", "scheme_hann50", "chunks + Hann (50%)", strip_hann(3, 0.5))
 add("scheme", "scheme_hann75", "chunks + Hann (75%)", strip_hann(5, 0.75))
 add("scheme", "scheme_hop", "hop glyph", [rect(10, 20, 80, 40), rect(70, 20, 80, 40), seg(10, 72, 70, 72) + chevron(70, 72, 0) + seg(10, 68, 10, 76)])
 
+
+# --- runtime stage symbols (square, boxed, stroke-only so they stay theme ink) ---
+SQ = 100
+SQ_BOX = rect(0, 0, SQ, SQ)
+def P(path): return f"<path>{path}</path><stroke/>"
+def DOT(path, pattern="1 3"): return f'<save/><dashed dashed="1"/><dashpattern pattern="{pattern}"/><path>{path}</path><stroke/><restore/>'
+def solid_band(x, y, w, h):
+    """A band filled in the shape's own stroke colour (butt-capped thick stroke), so it follows the theme."""
+    return (f'<save/><linecap cap="flat"/><strokewidth width="{w:.2f}"/>'
+            f'<path>{seg(x + w / 2, y, x + w / 2, y + h)}</path><stroke/><restore/>')
+def xmark(cx, cy, r=4): return seg(cx - r, cy - r, cx + r, cy + r) + seg(cx - r, cy + r, cx + r, cy - r)
+def hatch(x, y, w, h, step=8):
+    out = ""
+    for k in range(int((w + h) / step) + 1):
+        d = k * step
+        x0, y0 = x + max(0, d - h), y + min(d, h)
+        x1, y1 = x + min(d, w), y + max(0, d - w)
+        out += seg(x0, y0, x1, y1)
+    return out
+def noise(t):
+    comps = [(2.3, 1.0, 0.4), (5.1, 0.55, 2.1), (8.7, 0.35, 4.0), (13.9, 0.22, 1.3), (19.3, 0.08, 5.2)]
+    return sum(a * math.sin(2 * math.pi * f * t + ph) for f, a, ph in comps) / 1.9
+def add_sq(key, title, fg, fillcolor=None): add_raw("stage", key, title, P(SQ_BOX) + fg, w=SQ, h=SQ, fillcolor=fillcolor)
+
+add_sq("sig_noise", "audio chunk (noisy waveform)", P(hermite_path(lambda t: 50 - 34 * noise(t), 160, 8, 92)))
+_bins = [(2, 70), (5, 52), (8, 38), (11, 26), (14, 16)]
+_floor = {0: 5, 1: 8, 3: 6, 4: 10, 6: 7, 7: 5, 9: 9, 10: 6, 12: 8, 13: 5, 15: 6}
+_bars = seg(8, 88, 92, 88)
+for i in range(16):
+    x = 10 + i * 5.33
+    hgt = dict(_bins).get(i, _floor.get(i, 5))
+    _bars += seg(x, 88, x, 88 - hgt)
+add_sq("sig_spectrum", "spectrum (FFT of chunk, bars)", P(_bars))
+_spec = lambda t: 88 - sum(h * math.exp(-0.5 * ((t - c) / 0.022) ** 2) for c, h in [(0.18, 70), (0.36, 52), (0.54, 38), (0.72, 26), (0.9, 16)]) - 4 * (1 + math.sin(37 * t)) / 2
+add_sq("sig_spectrum_curve", "spectrum (FFT of chunk, curve)", P(seg(8, 88, 92, 88)) + P(hermite_path(_spec, 160, 8, 92)))
+add_raw("stage", "frame_single", "one frame (intensity ink)", deck_fg("heatmap_gray", n=1, card=SQ), w=SQ, h=SQ, fillcolor="default")
+def crosshatch(x, y, w, h, step=10):
+    out = hatch(x, y, w, h, step)
+    for k in range(int((w + h) / step) + 1):          # other diagonal
+        d = k * step
+        x0, y0 = x + max(0, d - h), y + h - min(d, h)
+        x1, y1 = x + min(d, w), y + h - max(0, d - w)
+        out += seg(x0, y0, x1, y1)
+    return out
+add_sq("mask_discard_hatch", "discard edges (criss-cross bands)",
+       P(seg(25, 0, 25, 100) + seg(75, 0, 75, 100)) + P(crosshatch(0, 0, 25, 100) + crosshatch(75, 0, 25, 100)))
+# 3-4-5 triangle, 16 px per unit, centred: a = 3 along the bottom, b = 4 vertical, c = 5 (bold hypotenuse)
+_ax, _ay, _bx, _cy = 26, 82, 74, 18
+_tri = seg(_ax, _ay, _bx, _ay) + seg(_bx, _ay, _bx, _cy) + seg(_bx - 8, _ay, _bx - 8, _ay - 8) + seg(_bx - 8, _ay - 8, _bx, _ay - 8)
+_txt = lambda s, x, y: f'<fontsize size="12"/><fontstyle style="1"/><text str="{s}" x="{x}" y="{y}" align="center" valign="middle"/>'
+_mag_fg = P(_tri) + f'<save/><strokewidth width="4"/><path>{seg(_bx, _cy, _ax, _ay)}</path><stroke/><restore/>'
+add_sq("mag_345", "magnitude (3-4-5 triangle, c\u00b2 = a\u00b2 + b\u00b2)",
+       _mag_fg + _txt("a\u00b2", 50, 91) + _txt("b\u00b2", 84, 50) + _txt("c\u00b2", 38, 44))
+add_sq("mag_345_plain", "magnitude (3-4-5 triangle, labels added by the diagram)", _mag_fg)
+_left = hermite_path(lambda t: 46 - 30 * noise(t / 2), 80, 8, 50)       # the same chunk as sig_noise, split at the hop
+_right = hermite_path(lambda t: 46 - 30 * noise(0.5 + t / 2), 80, 50, 92)
+add_sq("hop_signal", "new hop (50% overlap: old half muted, new half regular)",
+       f'<save/><strokealpha alpha="0.3"/><path>{_left}</path><stroke/><restore/>' + P(_right)
+       + DOT(seg(50, 0, 50, 100), "4 3")
+       + P(seg(4, 88, 50, 88) + chevron(50, 88, 0) + seg(4, 84, 4, 92)))
+add_sq("downsample16", "down-sample (16 columns, 1 solid : 3 hollow)", P(cells(0, 0, 100, 100, 16)) + "".join(solid_band(i * 6.25, 0, 6.25, 100) for i in range(0, 16, 4)))
+
+# --- vocabulary: frame / frame buffer / texture / screen, one glyph per object, one fill per state ---
+def raster(state, x, y, w, h, density=1, field=None):
+    """One raster region in a given state. Cell size follows the region: 10 px checker, 32 weave cells per 100 px,
+    8 x 6 intensity cells per 100 px (so a 2:1 texture is two frames' worth of columns)."""
+    if state == "checker":
+        return checker_ops(x, y, w, h, int(w / 10), color="#000000", other="#FFFFFF", ny=int(h / 10))
+    if state == "weave":
+        return heatmap_ops(x, y, w, h, int(w * 0.32), int(h * 0.32), mode="ink", field=WEAVE)
+    nx, ny = int(w * 0.08 * density), int(h * 0.06 * density)
+    if state == "gray":
+        return heatmap_ops(x, y, w, h, nx, ny, mode="ink", field=field)
+    return heatmap_ops(x, y, w, h, nx, ny, field=field)
+
+DECK_KIND = dict(init="checker", raw="heatmap_gray", color="heatmap")
+INIT_PATTERN = "checker"                      # or "weave"
+def raster_state(state, x, y, w, h, density=1, field=None):
+    return raster(INIT_PATTERN if state == "init" else ("gray" if state == "raw" else "color"), x, y, w, h, density, field)
+for state, title in (("init", "init"), ("raw", "raw"), ("color", "color mapped")):
+    g = f"vocab_{state}"
+    add_raw(g, f"v_frame_{state}", f"single frame, {title}", raster_state(state, 0, 0, 100, 100), w=100, h=100, fillcolor="default")
+    add_raw(g, f"v_deck_{state}", f"deck, {title}", deck_fg(DECK_KIND[state] if state != "init" else INIT_PATTERN), w=100, h=100, fillcolor="default")
+    add_raw(g, f"v_texture_{state}", f"texture, {title}", raster_state(state, 0, 0, 200, 100, density=2.5 if state != "init" else 1, field=readme_sweep), w=200, h=100, fillcolor="default")
+
 # --- flow badges ---
 add("flow", "xfer_right", "transfer (right)", [rect(0, 0, 80, 40), seg(16, 20, 64, 20) + chevron(64, 20, 0)], w=80, h=40)
 add("flow", "xfer_left", "transfer (left)", [rect(0, 0, 80, 40), seg(64, 20, 16, 20) + chevron(16, 20, 180)], w=80, h=40)
@@ -618,7 +724,9 @@ sections = [
     ("Heatmaps & Color Maps", ["heatmaps"]),
     ("Banks (rows)", ["banks"]),
     ("Windowing Scheme", ["scheme"]),
+    ("Stage Symbols (square)", ["stage"]),
     ("Flow", ["flow"]),
+    ("Vocabulary: single frame / deck / texture", ["vocab_init", "vocab_raw", "vocab_color"]),
 ]
 
 def item_style(it, st):
@@ -642,11 +750,11 @@ def tile_cells(idx, it, st, x, y):
         </mxCell>'''
     for j, (text, lx, ly, lw, lh) in enumerate(it["labels"]):
         out += f'''
-        <mxCell id="{gid}l{j}" value="{escape(text)}" style="text;html=1;align=right;verticalAlign=middle;fontSize=11;fontColor=#000000;" vertex="1" parent="{gid}">
+        <mxCell id="{gid}l{j}" value="{escape(text)}" style="text;html=1;align=right;verticalAlign=middle;fontFamily={style.DRAWIO_FONT_FAMILY};fontSize=11;fontStyle=1;fontColor=#000000;" vertex="1" parent="{gid}">
           <mxGeometry x="{lx}" y="{ly}" width="{lw}" height="{lh}" as="geometry" />
         </mxCell>'''
     out += f'''
-        <mxCell id="{gid}c" value="{escape(it["title"])}" style="text;html=1;align=center;verticalAlign=top;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+        <mxCell id="{gid}c" value="{escape(it["title"])}" style="text;html=1;align=center;verticalAlign=top;fontFamily={style.DRAWIO_FONT_FAMILY};fontSize=11;fontStyle=1;fontColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="{x}" y="{y + h + 4}" width="{w + label_w}" height="20" as="geometry" />
         </mxCell>'''
     return out
@@ -655,18 +763,22 @@ stencils = {it["key"]: (stencil_raw(it["key"], it["w"], it["h"], RAW[it["key"]])
                         else stencil(it["key"], it["w"], it["h"], it["paths"], it["fill"], it["dashed"], it["filled"])) for it in items}
 
 
-def main():
+def primitives_diagram(items):
     cells_xml = ""
     idx = 0
     y = ORIGIN_Y
     for header, groups in sections:
+        if not any(it["group"] in groups for it in items):
+            continue
         cells_xml += f'''
-            <mxCell id="hdr-{re.sub(r"[^a-z]", "", header.lower())}" value="{escape(header)}" style="text;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;fontColor=#000000;" vertex="1" parent="1">
+            <mxCell id="hdr-{re.sub(r"[^a-z]", "", header.lower())}" value="{escape(header)}" style="text;html=1;align=left;verticalAlign=middle;fontFamily={style.DRAWIO_FONT_FAMILY};fontSize=16;fontStyle=1;fontColor=#000000;" vertex="1" parent="1">
               <mxGeometry x="{ORIGIN_X}" y="{y}" width="300" height="{HEADER_H}" as="geometry" />
             </mxCell>'''
         y += HEADER_H
         for group in groups:
             group_items = [it for it in items if it["group"] == group]
+            if not group_items:
+                continue
             x = ORIGIN_X
             row_h = max(it["h"] for it in group_items)
             for it in group_items:
@@ -684,7 +796,11 @@ def main():
           </root>
         </mxGraphModel>
       </diagram>'''
+    return diagram
 
+
+def main():
+    diagram = primitives_diagram(items)
     library = []
     for it in items:
         model = (f'<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
@@ -693,6 +809,10 @@ def main():
         library.append({"xml": compress(model), "w": it["w"], "h": it["h"], "title": it["title"], "aspect": "variable"})
 
     src_path, out_path, lib_path = sys.argv[1], sys.argv[2], sys.argv[3]
+    if len(sys.argv) > 4:                # optional: the Primitives page carries only these keys (the library keeps all)
+        keep = set(sys.argv[4].split(","))
+        page_items = [it for it in items if it["key"] in keep]
+        diagram = primitives_diagram(page_items)
     src = open(src_path).read()
     src = re.sub(r'\n  <diagram name="(Primitives|Sinusoids|Wavelets|Windows|Filters)".*?</diagram>', "", src, flags=re.S)
     open(out_path, "w").write(src.replace("</mxfile>", diagram + "\n</mxfile>"))
