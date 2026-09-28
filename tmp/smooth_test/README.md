@@ -17,3 +17,10 @@ https://github.com/user-attachments/assets/e3ec2a37-d304-47d0-9243-78d3ad9e1a3b
 Same moment in all three — left: current, middle: 30 fps, right: 60 fps (same look, only the motion changes):
 
 ![stills](stills_stock_30_60.png)
+
+## More 60 fps renders
+
+Upload these from Downloads to get players here — until then the files are in this folder:
+
+- Beltran, 16 bars (29 s): `beltran_16bar_60fps.mp4`
+- Baby, 1:00–1:30: `baby_60s-90s_60fps.mp4`
