@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="LI05zg6XyyKic5iJjcqK-7" value="SubShader" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontStyle=1;fontSize=20;strokeWidth=3;arcSize=28;labelBackgroundColor=none;strokeColor=none;verticalAlign=top;align=left;labelBorderColor=none;convertToSvg=1;spacingLeft=10;spacing=0;spacingTop=1;fontColor=#FFFFFF;fontFamily=Arial;" parent="1" vertex="1">
+        <mxCell id="LI05zg6XyyKic5iJjcqK-7" value="SubShader" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;fontStyle=1;fontSize=20;strokeWidth=6;arcSize=28;labelBackgroundColor=none;strokeColor=#FFFFFF;verticalAlign=top;align=left;labelBorderColor=none;convertToSvg=1;spacingLeft=10;spacing=0;spacingTop=1;fontColor=#FFFFFF;fontFamily=Arial;" parent="1" vertex="1">
           <mxGeometry x="80" y="80" width="640" height="280" as="geometry" />
         </mxCell>
         <mxCell id="LI05zg6XyyKic5iJjcqK-1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;fontColor=#FFFFFF;fontSize=20;fontStyle=1;align=center;verticalAlign=middle;arcSize=16;strokeWidth=3;labelBackgroundColor=none;" parent="1" vertex="1">

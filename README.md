@@ -73,7 +73,7 @@ The CWT is like an **array of lenses** spanning from microscopic to macroscopic 
 
 Composed of individual stages, the pipeline **fetches** audio samples from a file, **processes** the audio, and **renders** the visual as a rolling frequency-vs-time **energy spectrum plot** - all in sync with the system's audio playback device.
 
-<p align="left"><img src="assets/timing/subshader_modules_v7.png" width="500"></p>
+<p align="left"><img src="assets/timing/subshader_modules_v8.png" width="500"></p>
 
 ### Documentation  
 
