@@ -43,3 +43,7 @@ research/archive/figure-iterations/
 # Reference music and demo renders stay local; the README hero clip is a GitHub attachment
 assets/audio/reference/
 assets/video/
+
+# Claude Code and GSD planning stay local for now (may return as a submodule)
+.claude/
+.planning/
