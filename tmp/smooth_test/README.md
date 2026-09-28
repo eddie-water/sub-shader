@@ -2,7 +2,7 @@
 
 ### Avril 14th — full song, 60 fps
 
-[avril_14th_full_60fps.mp4](https://github.com/eddie-water/sub-shader/blob/gsd/phase-08-codebase-refactoring-and-module-cleanup/tmp/smooth_test/avril_14th_full_60fps.mp4)
+https://github.com/user-attachments/assets/cbcdb3e9-d12f-4ec0-8edd-500ab9e9c5f6
 
 ### Beltran — 16 bars, 60 fps
 
