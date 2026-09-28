@@ -4,4 +4,4 @@ subshader.
 
 ---
 
-**Related:** [MAP](../../notes/MAP.md) · [AUDIO](../../src/subshader/audio/AUDIO.md) · [README](../../README.md)
+**Related:** [MAP](../../research/notes/MAP.md) · [AUDIO](../../src/subshader/audio/AUDIO.md) · [README](../../README.md)

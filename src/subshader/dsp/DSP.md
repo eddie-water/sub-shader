@@ -916,4 +916,4 @@ Using the inner product (or other operations) to measure how much of each patter
 
 ---
 
-**Related:** [MAP](../../../notes/MAP.md) · [AUDIO](../audio/AUDIO.md) · [RENDERER](../renderer/RENDERER.md) · [TIMING](../../../assets/timing/TIMING.md) · [README](../../../README.md) · [Continuous Wavelet Transform](../../../notes/concepts/continuous-wavelet-transform.md) · [Time-Frequency Resolution Tradeoff](../../../notes/concepts/time-frequency-resolution-tradeoff.md)
+**Related:** [MAP](../../../research/notes/MAP.md) · [AUDIO](../audio/AUDIO.md) · [RENDERER](../renderer/RENDERER.md) · [TIMING](../../../assets/timing/TIMING.md) · [README](../../../README.md) · [Continuous Wavelet Transform](../../../research/notes/concepts/continuous-wavelet-transform.md) · [Time-Frequency Resolution Tradeoff](../../../research/notes/concepts/time-frequency-resolution-tradeoff.md)

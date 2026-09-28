@@ -130,4 +130,4 @@ audio_input.cleanup()
 
 ---
 
-**Related:** [MAP](../../../notes/MAP.md) · [DSP](../dsp/DSP.md) · [RENDERER](../renderer/RENDERER.md) · [README](../../../README.md) · [Audio Overlap and Hop Size](../../../notes/concepts/audio-overlap-and-hop-size.md)
+**Related:** [MAP](../../../research/notes/MAP.md) · [DSP](../dsp/DSP.md) · [RENDERER](../renderer/RENDERER.md) · [README](../../../README.md) · [Audio Overlap and Hop Size](../../../research/notes/concepts/audio-overlap-and-hop-size.md)

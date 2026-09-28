@@ -36,7 +36,7 @@ ledger/yyyy-mm-dd_HH-MM-SS_<shortsha>_<slug>.md
    (Fix 3's `gen_ledger_evidence_downsample.py` is the pattern). Pure-speed
    fixes state "none" instead.
 7. Run the fix's tests verbosely and paste the output:
-   `python -m pytest tests/<file>.py -v`
+   `python -m pytest research/tests/pipeline/<file>.py -v`
 8. Write the log from the template below; add one row to the Index above.
    New figure iterations get new `_v<N>` files — never overwrite a PNG.
 
@@ -69,7 +69,7 @@ qualifies the comparison, and what the result points at next.>
 
 ### Tests
 
-<`pytest tests/<file>.py -v` output in a fence, with the date it was run>
+<`pytest research/tests/pipeline/<file>.py -v` output in a fence, with the date it was run>
 
 ## Code diff
 
