@@ -4,12 +4,13 @@ SubShader is a **real-time audio visualizer** written in Python. It uses modern 
 
 This project uses **[wavelet](https://youtu.be/jnxqHcObNK4?si=x98elLTbz6QLe03g&t=1996)**-based signal processing methods - a modern adaptation of traditional **[Fourier](https://youtu.be/spUNpyF58BY?si=jXTsOaIHUwB8meoc)**-based DSP. It converts audio information into a **time-frequency** representation while adhering to real-time performance deadlines. The advantages and justification of using wavelets for real-world signal processing are discussed in this project.
 
-<!-- HERO DEMO CLIP — GitHub attachment upload of assets/video/avril_14th.mp4.
+<!-- HERO DEMO CLIP — GitHub attachment upload of the full Avril 14th render at 60 fps
+     (hop 735, target_width 6, num_frames 341).
      Re-rendering the clip means re-uploading (drag into the github.com editor) and
      swapping this URL. -->
 > ▶️ Demo Clip
 
-https://github.com/user-attachments/assets/01707520-7ac6-4e85-bd37-6630733e54f7
+https://github.com/user-attachments/assets/cbcdb3e9-d12f-4ec0-8edd-500ab9e9c5f6
 
 Demonstrating my technical skills in real-time signal analysis and GPU acceleration, I'm using this project to branch into DSP, Machine Learning, Data Science, and Computer Engineering. **It took a lot of effort and care to make this, so thank you for taking the time to read!**
 
@@ -109,7 +110,7 @@ The plot is rendered with a GPU shader for similar reasoning - [matplotlib](http
 
 To keep the runtime loop free of large allocations and memory transfers, every expensive setup cost is paid once up front - the CUDA context, kernel and FFT-plan compilation, generating and uploading the wavelet bank, and the OpenGL context. Constructing the pipeline takes about **800 ms**. Roughly 80% of this is GPU bring-up which makes sense since this was all developed in Python and WSL.
 
-<p align="center"><img src="assets/images/drawio/startup_lanes_v31_black.png" width="100%"></p>
+<p align="center"><img src="assets/images/drawio/vertical_startup_v5_black.png" width="100%"></p>
 
 <p align="center"><img src="assets/timing/timing_startup_hybrid_v4.png" width="100%"></p>
 
@@ -117,7 +118,7 @@ To keep the runtime loop free of large allocations and memory transfers, every e
 
 During runtime, overlapping frames of audio samples are delivered to the DSP stages for parallel processing, and results are stored in a circular buffer for the renderer to color-map in chronological order.
 
-<p align="center"><img src="assets/images/drawio/runtime_lanes_v39_black.png" width="100%"></p>
+<p align="center"><img src="assets/images/drawio/vertical_runtime_v5_black.png" width="100%"></p>
 
 In a single shot of the pipeline, one frame of **8K audio samples** is fetched, processed, and rendered in about **6 ms**. With a sampling rate of **44.1K s/s**, each frame of 8K samples are worth about **186 ms** of time which is our figurative deadline for this much audio. Meaning the pipeline completed its work **31×** times faster than it took to actually play out this much audio.
 
